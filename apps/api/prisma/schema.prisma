@@ -1,0 +1,339 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum GenderPreference {
+  MALE
+  FEMALE
+  OTHER
+  ALL
+}
+
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  BANNED
+}
+
+enum OnboardingStep {
+  PHONE_VERIFIED
+  VIDEO_VERIFICATION_PENDING
+  VIDEO_VERIFIED
+  PAYMENT_PENDING
+  PAID
+  PROFILE_PENDING
+  ACTIVE
+}
+
+enum VideoVerificationStatus {
+  NOT_REQUESTED
+  PENDING
+  IN_PROGRESS
+  APPROVED
+  REJECTED
+}
+
+enum OnboardingPaymentStatus {
+  NOT_STARTED
+  PENDING
+  PAID
+  FAILED
+}
+
+enum PaymentPlan {
+  YEARLY
+}
+
+enum PaymentStatus {
+  PAID
+  REFUNDED
+  MOCK
+}
+
+enum LikeType {
+  LIKE
+  PASS
+}
+
+enum ConsentResponse {
+  YES
+  NO
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+enum VerificationRequestStatus {
+  REQUESTED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+enum NotificationType {
+  NEW_LIKE
+  NEW_MATCH
+  VIDEO_VERIFICATION_UPDATE
+}
+
+model User {
+  id           String   @id @default(uuid())
+  phone        String   @unique
+  email        String?  @unique
+  passwordHash String
+  role         Role     @default(USER)
+  isAdmin      Boolean  @default(false)
+  status       UserStatus @default(PENDING)
+  onboardingStep OnboardingStep @default(PHONE_VERIFIED)
+  videoVerificationStatus VideoVerificationStatus @default(NOT_REQUESTED)
+  paymentStatus OnboardingPaymentStatus @default(NOT_STARTED)
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+  verifiedAt   DateTime?
+  phoneVerifiedAt DateTime?
+  profileCompletedAt DateTime?
+  deactivatedAt DateTime?
+  deletedAt DateTime?
+
+  profile       Profile?
+  photos        Photo[]
+  payments      Payment[]
+  deviceTokens  DeviceToken[]
+  likesSent     Like[]   @relation("likesSent")
+  likesReceived Like[]   @relation("likesReceived")
+  matchesA      Match[]  @relation("matchesA")
+  matchesB      Match[]  @relation("matchesB")
+  consents      Consent[]
+  reportsSent   Report[] @relation("reportsSent")
+  reportsRecv   Report[] @relation("reportsRecv")
+  refunds       RefundRequest[]
+  verificationSlots VerificationSlot[]
+  verificationRequests VerificationRequest[]
+  notifications Notification[] @relation("userNotifications")
+  notificationsSent Notification[] @relation("notificationActors")
+  auditLogs     AuditLog[] @relation("actorLogs")
+}
+
+model Profile {
+  userId      String @id
+  name        String
+  gender      Gender
+  genderPreference GenderPreference @default(ALL)
+  age         Int
+  city        String
+  profession  String
+  bioShort    String
+  preferences Json
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Photo {
+  id        String   @id @default(uuid())
+  userId    String
+  url       String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model PendingUser {
+  id           String   @id @default(uuid())
+  phone        String   @unique
+  email        String?
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  @@map("PendingUser")
+}
+
+model OtpCode {
+  phone     String @id
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id      String @id @default(uuid())
+  userId  String
+  plan    PaymentPlan
+  amount  Int
+  status  PaymentStatus
+  paidAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model DeviceToken {
+  id         String   @id @default(uuid())
+  userId     String
+  tokenHash  String   @unique
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Like {
+  id         String   @id @default(uuid())
+  fromUserId String
+  toUserId   String
+  type       LikeType
+  createdAt  DateTime @default(now())
+
+  fromUser User @relation("likesSent", fields: [fromUserId], references: [id])
+  toUser   User @relation("likesReceived", fields: [toUserId], references: [id])
+
+  @@unique([fromUserId, toUserId])
+}
+
+model Match {
+  id       String   @id @default(uuid())
+  userAId  String
+  userBId  String
+  createdAt DateTime @default(now())
+
+  userA User @relation("matchesA", fields: [userAId], references: [id])
+  userB User @relation("matchesB", fields: [userBId], references: [id])
+  consents Consent[]
+  phoneExchange PhoneExchangeEvent?
+  notifications Notification[]
+
+  @@unique([userAId, userBId])
+}
+
+model Consent {
+  id         String @id @default(uuid())
+  matchId    String
+  userId     String
+  response   ConsentResponse
+  respondedAt DateTime @default(now())
+
+  match Match @relation(fields: [matchId], references: [id])
+  user  User @relation(fields: [userId], references: [id])
+
+  @@unique([matchId, userId])
+}
+
+model PhoneExchangeEvent {
+  id        String @id @default(uuid())
+  matchId   String @unique
+  createdAt DateTime @default(now())
+
+  match Match @relation(fields: [matchId], references: [id])
+}
+
+model Report {
+  id             String @id @default(uuid())
+  reporterId     String
+  reportedUserId String
+  reason         String
+  details        String?
+  status         ReportStatus @default(OPEN)
+  createdAt      DateTime @default(now())
+
+  reporter     User @relation("reportsSent", fields: [reporterId], references: [id])
+  reportedUser User @relation("reportsRecv", fields: [reportedUserId], references: [id])
+}
+
+model RefundRequest {
+  id        String @id @default(uuid())
+  userId    String
+  requestedAt DateTime @default(now())
+  status    RefundStatus @default(PENDING)
+  decisionAt DateTime?
+  reason    String?
+  eligibleAt DateTime
+  computedEligibilitySnapshot Json
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model VerificationSlot {
+  id        String   @id @default(uuid())
+  startAt   DateTime
+  endAt     DateTime
+  createdAt DateTime @default(now())
+  isBooked  Boolean  @default(false)
+  userId    String?
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([startAt])
+  @@index([userId])
+}
+
+model VerificationRequest {
+  id        String @id @default(uuid())
+  userId    String
+  status    VerificationRequestStatus @default(REQUESTED)
+  verificationLink String?
+  linkExpiresAt DateTime?
+  createdAt DateTime @default(now())
+  completedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  type        NotificationType
+  userId      String
+  actorUserId String?
+  matchId     String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  isRead      Boolean  @default(false)
+
+  user  User  @relation("userNotifications", fields: [userId], references: [id])
+  actor User? @relation("notificationActors", fields: [actorUserId], references: [id])
+  match Match? @relation(fields: [matchId], references: [id])
+
+  @@unique([userId, type, actorUserId, matchId])
+  @@index([userId])
+  @@index([matchId])
+}
+
+model AuditLog {
+  id          String @id @default(uuid())
+  actorUserId String?
+  action      String
+  targetType  String
+  targetId    String
+  metadata    Json
+  createdAt   DateTime @default(now())
+
+  actor User? @relation("actorLogs", fields: [actorUserId], references: [id])
+}
