@@ -19,6 +19,28 @@ type Profile = {
 
 const PAGE_SIZE = 8;
 const SWIPE_THRESHOLD = 120;
+const intentLabel: Record<string, string> = {
+  serious: "Serious",
+  casual: "Casual"
+};
+const distanceLabel: Record<string, string> = {
+  local: "Local",
+  anywhere: "Anywhere"
+};
+
+function formatPreference(preferences: Record<string, any> | null | undefined) {
+  if (!preferences) return [];
+  const intent = typeof preferences.intent === "string" ? preferences.intent : "";
+  const distance = typeof preferences.distance === "string" ? preferences.distance : "";
+  const items = [];
+  if (intent) {
+    items.push({ label: "Intent", value: intentLabel[intent] ?? intent });
+  }
+  if (distance) {
+    items.push({ label: "Distance", value: distanceLabel[distance] ?? distance });
+  }
+  return items;
+}
 
 export default function DiscoverPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -330,8 +352,14 @@ export default function DiscoverPage() {
                   <p>{detailProfile.bioShort}</p>
                   {detailProfile.preferences && Object.keys(detailProfile.preferences).length ? (
                     <div className="detail-preferences">
-                      <h4>Interests</h4>
-                      <p className="card-subtitle">{JSON.stringify(detailProfile.preferences)}</p>
+                      <h4>Preferences</h4>
+                      <div className="preference-list">
+                        {formatPreference(detailProfile.preferences).map((item) => (
+                          <span key={item.label} className="preference-chip">
+                            {item.label}: {item.value}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   ) : null}
                 </div>
