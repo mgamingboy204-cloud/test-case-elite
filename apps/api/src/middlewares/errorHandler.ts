@@ -6,6 +6,9 @@ import { logger } from "../utils/logger";
 import { formatZodError } from "../utils/validation";
 
 export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction) {
+  // ✅ critical: don't try to respond twice
+  if (res.headersSent) return next(err);
+
   if (err instanceof HttpError) {
     return res.status(err.status).json(err.body);
   }
