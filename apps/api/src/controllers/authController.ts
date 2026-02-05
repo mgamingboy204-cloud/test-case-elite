@@ -117,10 +117,19 @@ export async function login(req: Request, res: Response) {
 
 export async function logout(req: Request, res: Response) {
   req.session.destroy(() => undefined);
+
+  // Clear session cookie
   res.clearCookie(sessionCookieName, sessionCookieOptions);
-  res.clearCookie(refreshCookieName, refreshCookieOptions);
+
+  // Clear refresh cookie (must match the same options used when setting it)
+  res.clearCookie(
+    refreshCookieName,
+    buildRefreshCookieOptions(env.REFRESH_TOKEN_TTL_DAYS)
+  );
+
   return res.json({ ok: true });
 }
+
 
 export async function refreshAccessToken(req: Request, res: Response) {
   const { refreshToken: refreshTokenFromBody } = (req.body ?? {}) as { refreshToken?: string };
