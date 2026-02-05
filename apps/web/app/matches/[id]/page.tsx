@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { apiFetch } from "../../lib/api";
+import { apiFetch } from "../../../lib/api";
 import RouteGuard from "../../components/RouteGuard";
 import AppShell from "../../components/AppShell";
 
