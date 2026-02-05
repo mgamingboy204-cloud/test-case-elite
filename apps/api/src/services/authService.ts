@@ -38,9 +38,8 @@ export async function upsertOtpCode(phone: string) {
     create: { phone, codeHash, expiresAt, attempts: 0 }
   });
 
-  if (env.NODE_ENV === "development") {
-    logger.info(`[DEV OTP] ${phone}: ${otp}`);
-  }
+  if (env.DEV_OTP_LOG === "true") {
+  logger.info(`[DEV OTP] ${phone}: ${otp}`);
 }
 
 export async function verifyOtpAndGetUser(phone: string, code: string) {
