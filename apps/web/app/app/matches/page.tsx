@@ -29,7 +29,7 @@ export default function MatchesPage() {
 
   return (
     <RouteGuard>
-      <div className="card">
+      <div className="card app-page">
         <div>
           <h2>Matches</h2>
           <p className="card-subtitle">Review consent and unlock phone numbers.</p>

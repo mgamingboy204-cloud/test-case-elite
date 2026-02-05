@@ -14,8 +14,8 @@ const baseLinks = [
 
 const protectedLinks = [
   { href: "/app/discover", label: "Discover" },
-  { href: "/app/matches", label: "Matches" },
-  { href: "/app/requests", label: "Requests" }
+  { href: "/app/requests", label: "Likes" },
+  { href: "/app/matches", label: "Matches" }
 ];
 
 export default function TopNav() {
