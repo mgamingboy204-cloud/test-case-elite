@@ -6,10 +6,10 @@ import { logger } from "./utils/logger";
 
 registerPrismaShutdown();
 
-const port = env.PORT;
+const port = Number(process.env.PORT) || Number(env.PORT) || 10000;
 
-app.listen(port, () => {
+app.listen(port, "0.0.0.0", () => {
   const dbInfo = getDatabaseInfo(env.DATABASE_URL);
-  logger.info(`API running on http://localhost:${port}`);
+  logger.info(`API running on port ${port}`);
   logger.info(`Database connected: ${dbInfo.database} on ${dbInfo.host}`);
 });
