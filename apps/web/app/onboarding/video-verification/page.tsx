@@ -107,80 +107,81 @@ export default function VideoVerificationPage() {
   const linkReady = Boolean(request?.verificationLink);
 
   return (
-    <div className="verification-layout">
+    <div className="verification-shell">
       <section className="card verification-card">
-        <div className="verification-header">
-          <div className="verification-badge">Secure</div>
-          <div>
-            <h2>Identity Verification Call</h2>
-            <p className="card-subtitle">
-              A short, private video call with our team. No recordings are stored.
-            </p>
-          </div>
+        <div>
+          <span className="verification-pill">Video Verification</span>
+          <h2>Quick identity check</h2>
+          <p className="card-subtitle">
+            A short, private call with our team. We never store recordings.
+          </p>
         </div>
-        <div className="form">
-          {!hasRequest ? (
-            <button onClick={submitRequest} disabled={status === "loading"}>
-              {status === "loading" ? "Submitting..." : "Request verification"}
-            </button>
-          ) : null}
-          {message ? <p className={`message ${status}`}>{message}</p> : null}
-          {isRequested ? (
-            <div className="card muted">
-              <p>Verification requested.</p>
-              <p className="card-subtitle">We’ll connect you within a few minutes. Please keep this page open.</p>
-            </div>
-          ) : null}
-          {isInProgress && !linkReady ? (
-            <div className="card muted">
-              <p>Your verifier is preparing the call.</p>
-              <p className="card-subtitle">We’ll unlock the join button as soon as the link is ready.</p>
-            </div>
-          ) : null}
-          {isInProgress && linkReady ? (
-            <div className="card muted">
-              <p>Your verifier is ready.</p>
-              <p className="card-subtitle">Click below to join the secure verification call.</p>
-              <button
-                onClick={() => window.open(request?.verificationLink ?? "#", "_blank", "noopener,noreferrer")}
-                type="button"
-              >
-                Join Google Meet
-              </button>
-            </div>
-          ) : null}
-          {isApproved ? (
-            <div className="card muted">
-              <p>Verification successful. You may continue.</p>
-              <button onClick={() => router.push("/onboarding/payment")} type="button">
-                Continue to payment
-              </button>
-            </div>
-          ) : null}
-          {isRejected ? (
-            <div className="card muted">
-              <p>Verification could not be completed at this time.</p>
-              <button onClick={submitRequest} type="button">
-                Request another review
-              </button>
-            </div>
-          ) : null}
-        </div>
+
+        <ul className="expectation-list">
+          <li>2–3 minute concierge call.</li>
+          <li>Have a government-issued ID nearby.</li>
+          <li>Approval unlocks the payment step.</li>
+        </ul>
+
+        {!hasRequest ? (
+          <button onClick={submitRequest} disabled={status === "loading"}>
+            {status === "loading" ? "Submitting..." : "Request verification"}
+          </button>
+        ) : null}
+        {message ? <p className={`message ${status}`}>{message}</p> : null}
       </section>
 
       <section className="card verification-card">
-        <h3>What to expect</h3>
-        <ul className="expectation-list">
-          <li>2–3 minute private video call.</li>
-          <li>Quick identity check with a concierge.</li>
-          <li>Fast approval once complete.</li>
-        </ul>
-        <div className="card muted">
-          <p>
+        <div className="status-card">
+          <h3>Live status</h3>
+          <p className="card-subtitle">We’ll update this as soon as your reviewer joins.</p>
+          <div className="status-pill">
             Status: <strong>{request?.status ?? (status === "success" ? "REQUESTED" : "NOT_STARTED")}</strong>
-          </p>
-          <p className="card-subtitle">We’ll keep this status updated while you wait.</p>
+          </div>
         </div>
+
+        {isRequested ? (
+          <div className="card muted">
+            <h4>Requested</h4>
+            <p className="card-subtitle">We’ll connect you within a few minutes. Please keep this page open.</p>
+          </div>
+        ) : null}
+        {isInProgress && !linkReady ? (
+          <div className="card muted">
+            <h4>Waiting for link</h4>
+            <p className="card-subtitle">Your verifier is preparing the call link.</p>
+          </div>
+        ) : null}
+        {isInProgress && linkReady ? (
+          <div className="card muted">
+            <h4>Ready to join</h4>
+            <p className="card-subtitle">Click below to join the secure verification call.</p>
+            <button
+              onClick={() => window.open(request?.verificationLink ?? "#", "_blank", "noopener,noreferrer")}
+              type="button"
+            >
+              Join Google Meet
+            </button>
+          </div>
+        ) : null}
+        {isApproved ? (
+          <div className="card muted">
+            <h4>Approved</h4>
+            <p className="card-subtitle">Verification successful. Continue to payment.</p>
+            <button onClick={() => router.push("/onboarding/payment")} type="button">
+              Continue to payment
+            </button>
+          </div>
+        ) : null}
+        {isRejected ? (
+          <div className="card muted">
+            <h4>Needs retry</h4>
+            <p className="card-subtitle">Verification could not be completed. Request another review.</p>
+            <button onClick={submitRequest} type="button">
+              Request another review
+            </button>
+          </div>
+        ) : null}
       </section>
     </div>
   );

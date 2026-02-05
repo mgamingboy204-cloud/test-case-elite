@@ -88,11 +88,19 @@ export default function OtpPage() {
   }
 
   return (
-    <div className="grid">
-      <section className="card">
+    <div className="auth-layout">
+      <section className="auth-visual">
+        <div className="auth-visual-panel">
+          <div className="auth-badge">One-time access</div>
+          <h1>Verify your phone in seconds.</h1>
+          <p>Secure your login with a code sent directly to your device.</p>
+        </div>
+      </section>
+
+      <section className="auth-card">
         <div>
-          <h2>Send OTP</h2>
-          <p className="card-subtitle">Request a one-time password to verify your phone.</p>
+          <h2>OTP Center</h2>
+          <p className="card-subtitle">Send a code, then verify to continue.</p>
         </div>
         <div className="form">
           <div className="field">
@@ -109,13 +117,7 @@ export default function OtpPage() {
           </button>
           {sendMessage ? <p className={`message ${sendStatus}`}>{sendMessage}</p> : null}
         </div>
-      </section>
-
-      <section className="card">
-        <div>
-          <h2>Verify OTP</h2>
-          <p className="card-subtitle">Enter the code sent to your phone.</p>
-        </div>
+        <div className="divider" />
         <div className="form">
           <div className="field">
             <label htmlFor="verify-phone">Phone</label>
@@ -143,11 +145,11 @@ export default function OtpPage() {
           </button>
           {verifyMessage ? (
             <p className={`message ${verifyStatus}`}>
-              {verifyMessage}{" "}
-              {verifyStatus === "success" ? <a href="/login">Go to login</a> : null}
+              {verifyMessage} {verifyStatus === "success" ? <a href="/login">Go to login</a> : null}
             </p>
           ) : null}
         </div>
+        <footer className="auth-footer">Need help? Reach out to concierge support.</footer>
       </section>
     </div>
   );

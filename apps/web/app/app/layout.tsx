@@ -1,15 +1,12 @@
 "use client";
 
 import RouteGuard from "../components/RouteGuard";
-import BottomNav from "../components/BottomNav";
+import AppShell from "../components/AppShell";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <RouteGuard requireActive>
-      <div className="app-shell">
-        {children}
-        <BottomNav />
-      </div>
+      <AppShell>{children}</AppShell>
     </RouteGuard>
   );
 }

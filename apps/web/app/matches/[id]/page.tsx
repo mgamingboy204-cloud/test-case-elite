@@ -1,23 +1,89 @@
 "use client";
 
-import { useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import { useParams } from "next/navigation";
+import { apiFetch } from "../../lib/api";
+import RouteGuard from "../../components/RouteGuard";
+import AppShell from "../../components/AppShell";
+
+type Status = "idle" | "loading" | "success" | "error";
 
 export default function MatchDetailPage() {
   const params = useParams();
   const matchId = params?.id as string;
-  const router = useRouter();
+  const [status, setStatus] = useState<Status>("idle");
+  const [message, setMessage] = useState("");
+  const [phones, setPhones] = useState<any>(null);
 
-  useEffect(() => {
-    if (matchId) {
-      router.replace(`/app/matches/${matchId}`);
+  async function respond(response: "YES" | "NO") {
+    setStatus("loading");
+    setMessage("Submitting your response...");
+    try {
+      await apiFetch("/consent/respond", {
+        method: "POST",
+        body: JSON.stringify({ matchId, response })
+      });
+      setStatus("success");
+      setMessage(response === "YES" ? "Consent recorded. Awaiting match." : "Consent declined.");
+    } catch (error) {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Unable to send consent.");
     }
-  }, [matchId, router]);
+  }
+
+  async function unlockPhones() {
+    setStatus("loading");
+    setMessage("Checking phone exchange status...");
+    try {
+      const data = await apiFetch(`/phone-unlock/${matchId}`);
+      setPhones(data);
+      setStatus("success");
+      setMessage("Phone numbers unlocked!");
+    } catch (error) {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Unable to unlock phone numbers.");
+    }
+  }
 
   return (
-    <div className="card">
-      <h2>Redirecting...</h2>
-      <p className="card-subtitle">Match details now live in /app.</p>
-    </div>
+    <RouteGuard requireActive>
+      <AppShell>
+        <div className="stack-page">
+          <div className="page-header">
+            <div>
+              <h2>Match Detail</h2>
+              <p className="card-subtitle">Match ID: {matchId}</p>
+            </div>
+          </div>
+          <div className="simple-card">
+            <div className="inline-actions">
+              <button onClick={() => respond("YES")} disabled={status === "loading"}>
+                Consent YES
+              </button>
+              <button className="secondary" onClick={() => respond("NO")} disabled={status === "loading"}>
+                Consent NO
+              </button>
+            </div>
+            <button onClick={unlockPhones} disabled={status === "loading"}>
+              {status === "loading" ? "Checking..." : "Unlock Phones"}
+            </button>
+            {message ? <p className={`message ${status}`}>{message}</p> : null}
+            {phones ? (
+              <div className="card muted">
+                <h3>Unlocked numbers</h3>
+                <ul className="list">
+                  {phones.users?.map((user: any) => (
+                    <li key={user.id} className="list-item">
+                      <span>Member {user.id.slice(0, 6)}</span>
+                      <strong>{user.phone}</strong>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </AppShell>
+    </RouteGuard>
   );
 }

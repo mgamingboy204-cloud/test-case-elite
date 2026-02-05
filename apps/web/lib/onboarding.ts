@@ -18,7 +18,7 @@ const onboardingRouteMap: Record<OnboardingStep, string> = {
   PAYMENT_PENDING: "/onboarding/payment",
   PAID: "/onboarding/profile",
   PROFILE_PENDING: "/onboarding/profile",
-  ACTIVE: "/app/discover"
+  ACTIVE: "/discover"
 };
 
 export function getOnboardingRoute(step?: string | null) {
@@ -32,6 +32,9 @@ export function getDefaultRoute(user: SessionUser | null) {
   if (!user?.onboardingStep) return "/login";
   if (user.onboardingStep === "ACTIVE" && !user.profileCompletedAt) {
     return "/onboarding/profile";
+  }
+  if (user.onboardingStep === "ACTIVE") {
+    return "/discover";
   }
   return getOnboardingRoute(user.onboardingStep);
 }

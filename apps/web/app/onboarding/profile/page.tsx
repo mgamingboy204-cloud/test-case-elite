@@ -665,7 +665,7 @@ export default function OnboardingProfilePage() {
         <div className="avatar-placeholder">✨</div>
         <h3>Profile ready</h3>
         <p className="card-subtitle">You’re all set to start discovering premium introductions.</p>
-        <button onClick={() => router.push("/app/discover")} type="button">
+        <button onClick={() => router.push("/discover")} type="button">
           Go to Discover
         </button>
       </div>

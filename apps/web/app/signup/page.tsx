@@ -118,27 +118,34 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="grid two-column">
-      <section className="card">
-        <h2>Sign Up</h2>
-        <p className="card-subtitle">Premium onboarding in two steps.</p>
-        <ol className="progress">
-          {steps.map((stepItem, index) => (
-            <li key={stepItem.title} className={index === step ? "active" : index < step ? "done" : ""}>
-              <span>{index + 1}</span>
-              <div>
-                <strong>{stepItem.title}</strong>
-                <p>{stepItem.description}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-        {message ? <p className={`message ${status}`}>{message}</p> : null}
+    <div className="auth-layout">
+      <section className="auth-visual">
+        <div className="auth-visual-panel">
+          <div className="auth-badge">Start here</div>
+          <h1>Join the concierge dating club.</h1>
+          <p>Two quick steps, then we guide you through verification and profile setup.</p>
+          <ol className="progress">
+            {steps.map((stepItem, index) => (
+              <li key={stepItem.title} className={index === step ? "active" : index < step ? "done" : ""}>
+                <span>{index + 1}</span>
+                <div>
+                  <strong>{stepItem.title}</strong>
+                  <p>{stepItem.description}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
       </section>
 
-      {step === 0 ? (
-        <section className="card">
-          <h3>Create your account</h3>
+      <section className="auth-card">
+        <div>
+          <h2>{step === 0 ? "Create your account" : "Verify OTP"}</h2>
+          <p className="card-subtitle">Premium onboarding in two steps.</p>
+        </div>
+        {message ? <p className={`message ${status}`}>{message}</p> : null}
+
+        {step === 0 ? (
           <div className="form">
             <div className="field">
               <label htmlFor="signup-phone">Phone</label>
@@ -172,20 +179,21 @@ export default function SignupPage() {
               {status === "loading" ? "Creating..." : "Create account"}
             </button>
           </div>
-        </section>
-      ) : null}
+        ) : null}
 
-      {step === 1 ? (
-        <section className="card">
-          <h3>Verify OTP</h3>
-          <p className="card-subtitle">We sent your code to {account.phone || "your phone"}.</p>
+        {step === 1 ? (
           <div className="form">
-            <button className="secondary" onClick={resendOtp} disabled={status === "loading"}>
-              Resend OTP
-            </button>
             <div className="field">
               <label htmlFor="signup-otp">OTP Code</label>
               <OtpInput value={otpCode} onChange={setOtpCode} disabled={status === "loading"} idPrefix="signup-otp" />
+            </div>
+            <div className="otp-actions">
+              <button className="secondary" onClick={resendOtp} disabled={status === "loading"}>
+                Resend OTP
+              </button>
+              <button onClick={verifyOtp} disabled={status === "loading"}>
+                Verify OTP
+              </button>
             </div>
             <label className="checkbox">
               <input
@@ -195,12 +203,17 @@ export default function SignupPage() {
               />
               Remember me on this device
             </label>
-            <button onClick={verifyOtp} disabled={status === "loading"}>
-              Verify OTP
-            </button>
           </div>
-        </section>
-      ) : null}
+        ) : null}
+
+        <div className="auth-switch">
+          <span>Already a member?</span>
+          <button className="text-button" type="button" onClick={() => router.push("/login")}>
+            Sign in
+          </button>
+        </div>
+        <footer className="auth-footer">We keep your phone private until consent is shared.</footer>
+      </section>
     </div>
   );
 }

@@ -125,11 +125,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grid">
-      <section className="card">
+    <div className="auth-layout">
+      <section className="auth-visual">
+        <div className="auth-visual-panel">
+          <div className="auth-badge">Elite Match</div>
+          <h1>Premium introductions, crafted for you.</h1>
+          <p>Secure, concierge-backed matchmaking with identity verification and curated discovery.</p>
+          <div className="auth-collage">
+            <div className="collage-card" />
+            <div className="collage-card" />
+            <div className="collage-card" />
+          </div>
+        </div>
+      </section>
+
+      <section className="auth-card">
         <div>
           <h2>Sign in</h2>
-          <p className="card-subtitle">Secure access with OTP-protected login.</p>
+          <p className="card-subtitle">Welcome back. Access your introductions.</p>
         </div>
         <div className="form">
           <div className="field">
@@ -188,13 +201,13 @@ export default function LoginPage() {
           ) : null}
           {message ? <p className={`message ${status}`}>{message}</p> : null}
         </div>
-      </section>
-      <section className="card muted">
-        <h3>Need an account?</h3>
-        <p className="card-subtitle">Start your premium onboarding in minutes.</p>
-        <button className="secondary" onClick={() => router.push("/signup")}>
-          Go to Sign Up
-        </button>
+        <div className="auth-switch">
+          <span>New here?</span>
+          <button className="text-button" type="button" onClick={() => router.push("/signup")}>
+            Create an account
+          </button>
+        </div>
+        <footer className="auth-footer">Secure login • OTP protected • Concierge support</footer>
       </section>
     </div>
   );
