@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { prisma } from "../db/prisma";
+import { verifyAccessToken } from "../utils/jwt";
 
 function getBearerToken(req: Request) {
   const header = req.get("authorization");
@@ -14,13 +15,17 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   if (token === null) {
     return res.status(401).json({ error: "Missing authorization header" });
   }
-  if (!token || token !== req.sessionID) {
+  if (!token) {
     return res.status(401).json({ error: "Invalid token" });
   }
-  if (!req.session.userId) {
+  let userId: string;
+  try {
+    userId = verifyAccessToken(token);
+  } catch (error) {
     return res.status(401).json({ error: "Invalid token" });
   }
-  const user = await prisma.user.findUnique({ where: { id: req.session.userId } });
+  req.userId = userId;
+  const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     return res.status(401).json({ error: "Invalid token" });
   }
@@ -58,7 +63,12 @@ export function requireAuthHeader(req: Request, res: Response, next: NextFunctio
   if (token === null) {
     return res.status(401).json({ error: "Missing authorization header" });
   }
-  if (!token || token !== req.sessionID) {
+  if (!token) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+  try {
+    req.userId = verifyAccessToken(token);
+  } catch (error) {
     return res.status(401).json({ error: "Invalid token" });
   }
   return next();

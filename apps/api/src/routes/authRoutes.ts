@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { LoginBodySchema, OtpSendSchema, OtpVerifySchema, RegisterBodySchema } from "../validators/authValidators";
-import { login, logout, register, sendOtp, verifyOtp } from "../controllers/authController";
+import { LoginBodySchema, OtpSendSchema, OtpVerifySchema, RefreshTokenSchema, RegisterBodySchema } from "../validators/authValidators";
+import { login, logout, refreshAccessToken, register, sendOtp, verifyOtp } from "../controllers/authController";
 import { loginLimiter, otpLimiterByIp, otpLimiterByPhone, otpVerifyLimiter, registerLimiter } from "../middlewares/rateLimiters";
 import { requireAuth, requireAuthHeader } from "../middlewares/auth";
 import { validateBody } from "../middlewares/validate";
@@ -32,6 +32,7 @@ router.post(
   asyncHandler(login)
 );
 
+router.post("/auth/token/refresh", validateBody(RefreshTokenSchema), asyncHandler(refreshAccessToken));
 router.post("/auth/logout", requireAuth, requireAuthHeader, asyncHandler(logout));
 
 export default router;

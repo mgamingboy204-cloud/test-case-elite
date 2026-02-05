@@ -8,6 +8,10 @@ const EnvSchema = z
     DEV_OTP_LOG: z.enum(["true", "false"]).optional().default("false"),
     DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
     SESSION_SECRET: z.string().min(1, "SESSION_SECRET is required").default("dev_secret"),
+    JWT_ACCESS_SECRET: z.string().min(1, "JWT_ACCESS_SECRET is required").default("dev_access_secret"),
+    JWT_REFRESH_SECRET: z.string().min(1, "JWT_REFRESH_SECRET is required").default("dev_refresh_secret"),
+    ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().default(15),
+    REFRESH_TOKEN_TTL_DAYS: z.coerce.number().default(30),
     WEB_ORIGIN: z.string().min(1, "WEB_ORIGIN is required").default("http://localhost:3000"),
     ADMIN_ORIGIN: z.string().optional(),
     AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().default(1000 * 60 * 15),
@@ -24,6 +28,20 @@ const EnvSchema = z
         code: z.ZodIssueCode.custom,
         path: ["SESSION_SECRET"],
         message: "SESSION_SECRET must be set in production."
+      });
+    }
+    if (value.NODE_ENV === "production" && value.JWT_ACCESS_SECRET === "dev_access_secret") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["JWT_ACCESS_SECRET"],
+        message: "JWT_ACCESS_SECRET must be set in production."
+      });
+    }
+    if (value.NODE_ENV === "production" && value.JWT_REFRESH_SECRET === "dev_refresh_secret") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["JWT_REFRESH_SECRET"],
+        message: "JWT_REFRESH_SECRET must be set in production."
       });
     }
     if (value.NODE_ENV === "production" && value.WEB_ORIGIN === "http://localhost:3000") {

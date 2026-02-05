@@ -9,7 +9,7 @@ import {
   useMemo,
   useState
 } from "react";
-import { API_URL } from "./api";
+import { apiFetch } from "./api";
 import { clearAuthToken, getAuthToken, setAuthToken } from "./authToken";
 
 export type SessionStatus = "loading" | "logged-in" | "logged-out";
@@ -52,19 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const authToken = getAuthToken();
-      const res = await fetch(`${API_URL}/me`, {
-        credentials: "include",
-        headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined
-      });
-      if (!res.ok) {
-        setStatus("logged-out");
-        setUser(null);
-        clearAuthToken();
-        setTokenState(null);
-        return null;
-      }
-      const data = (await res.json()) as SessionUser;
+      const data = await apiFetch<SessionUser>("/me");
       setStatus("logged-in");
       setUser(data);
       return data;
