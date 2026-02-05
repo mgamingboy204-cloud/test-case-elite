@@ -12,7 +12,6 @@ type Profile = {
   gender: string;
   age: number;
   city: string;
-  profession: string;
   bioShort: string;
   primaryPhotoUrl?: string | null;
   photos: string[];
@@ -31,9 +30,12 @@ export default function DiscoverPage() {
   const [emptySince, setEmptySince] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0, active: false });
   const [mode, setMode] = useState<"dating" | "friends">("dating");
+  const [detailStatus, setDetailStatus] = useState<Status>("idle");
+  const [detailProfile, setDetailProfile] = useState<any | null>(null);
   const seenUserIds = useRef(new Set<string>());
   const dragStart = useRef<{ x: number; y: number } | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const ignoreClickRef = useRef(false);
 
   const activeProfile = useMemo(() => profiles[0], [profiles]);
 
@@ -144,14 +146,38 @@ export default function DiscoverPage() {
     const { x } = dragOffsetRef.current;
     dragStart.current = null;
     if (x > SWIPE_THRESHOLD) {
+      ignoreClickRef.current = true;
       void sendLike(activeProfile, "LIKE");
       return;
     }
     if (x < -SWIPE_THRESHOLD) {
+      ignoreClickRef.current = true;
       void sendLike(activeProfile, "PASS");
       return;
     }
     setDragOffset({ x: 0, y: 0, active: false });
+  }
+
+  async function openDetail(profile: Profile) {
+    if (ignoreClickRef.current) {
+      ignoreClickRef.current = false;
+      return;
+    }
+    setDetailStatus("loading");
+    setDetailProfile(null);
+    try {
+      const data = await apiFetch<{ profile: any }>(`/profiles/${profile.userId}`);
+      setDetailProfile(data.profile);
+      setDetailStatus("success");
+    } catch (error) {
+      setDetailStatus("error");
+      setMessage(error instanceof Error ? error.message : "Unable to load profile details.");
+    }
+  }
+
+  function closeDetail() {
+    setDetailProfile(null);
+    setDetailStatus("idle");
   }
 
   const stackProfiles = profiles.slice(0, 3);
@@ -164,10 +190,12 @@ export default function DiscoverPage() {
 
   return (
     <RouteGuard>
-      <div className="grid two-column">
-        <section className="card">
-          <h2>Discover</h2>
-          <p className="card-subtitle">Swipe-style introductions, one at a time.</p>
+      <div className="discover-layout">
+        <section className="card discover-panel">
+          <div>
+            <h2>Discover</h2>
+            <p className="card-subtitle">Premium introductions, one profile at a time.</p>
+          </div>
           <div className="button-row">
             <button
               onClick={() => setMode("dating")}
@@ -181,16 +209,16 @@ export default function DiscoverPage() {
               className={mode === "friends" ? "secondary" : undefined}
               type="button"
             >
-              Find friends
+              Friends
             </button>
           </div>
           <button onClick={() => loadProfiles(true)} disabled={isFetching}>
-            {isFetching ? "Refreshing..." : "Load Profiles"}
+            {isFetching ? "Refreshing..." : "Refresh feed"}
           </button>
           {message ? <p className={`message ${status}`}>{message}</p> : null}
         </section>
 
-        <section className="card swipe-card">
+        <section className="card swipe-card premium">
           {activeProfile ? (
             <div className="swipe-stack">
               {stackProfiles.map((profile, index) => {
@@ -198,46 +226,55 @@ export default function DiscoverPage() {
                 const depth = Math.min(index, 2);
                 const photoUrlRaw = profile.primaryPhotoUrl ?? profile.photos?.[0];
                 const photoUrl = getAssetUrl(photoUrlRaw);
+                const genderLabel =
+                  profile.gender === "MALE"
+                    ? "Male"
+                    : profile.gender === "FEMALE"
+                      ? "Female"
+                      : profile.gender === "NON_BINARY"
+                        ? "Non-binary"
+                        : "Other";
                 return (
                   <article
                     key={profile.userId}
-                    className={`swipe-profile ${isTop ? "active" : ""}`}
+                    className={`swipe-profile premium ${isTop ? "active" : ""}`}
                     style={{
                       zIndex: stackProfiles.length - index,
                       transform: isTop
                         ? dragStyle?.transform
-                        : `translateY(${depth * 10}px) scale(${1 - depth * 0.03})`,
+                        : `translateY(${depth * 12}px) scale(${1 - depth * 0.04})`,
                       transition: isTop ? dragStyle?.transition : "transform 0.2s ease"
                     }}
                     onPointerDown={isTop ? handlePointerDown : undefined}
                     onPointerMove={isTop ? handlePointerMove : undefined}
                     onPointerUp={isTop ? handlePointerEnd : undefined}
                     onPointerCancel={isTop ? handlePointerEnd : undefined}
+                    onClick={isTop ? () => openDetail(profile) : undefined}
                   >
-                    <div className="swipe-photo">
+                    <div className="swipe-photo premium">
                       {photoUrl ? (
                         <img src={photoUrl} alt={`${profile.name}'s profile photo`} />
                       ) : (
                         <div className="swipe-photo-placeholder">{profile.name.slice(0, 1)}</div>
                       )}
+                      <div className="swipe-gradient" />
                     </div>
-                    <div className="swipe-details">
-                      <div className="swipe-header">
-                        <h3>{profile.name}</h3>
-                        <span className="badge">
-                          {profile.gender === "MALE" ? "Male" : profile.gender === "FEMALE" ? "Female" : "Other"}
-                        </span>
+                    <div className="swipe-details premium">
+                      <div>
+                        <h3>
+                          {profile.name}
+                          <span>{profile.age}</span>
+                        </h3>
+                        <p className="swipe-meta">
+                          {profile.city} {profile.gender ? `• ${genderLabel}` : ""}
+                        </p>
                       </div>
-                      <p className="swipe-meta">
-                        {profile.age} • {profile.city}
-                      </p>
-                      <p className="swipe-title">{profile.profession}</p>
                       <p className="swipe-bio">{profile.bioShort}</p>
                     </div>
                   </article>
                 );
               })}
-              <div className="swipe-actions">
+              <div className="swipe-actions premium">
                 <button onClick={() => activeProfile && sendLike(activeProfile, "PASS")} className="secondary">
                   Pass
                 </button>
@@ -252,6 +289,57 @@ export default function DiscoverPage() {
           )}
         </section>
       </div>
+
+      {detailStatus !== "idle" ? (
+        <div className="profile-modal" onClick={closeDetail} role="presentation">
+          <div className="profile-modal__backdrop" />
+          <div className="profile-modal__content" onClick={(event) => event.stopPropagation()}>
+            {detailStatus === "loading" ? (
+              <div className="modal-loading">
+                <div className="skeleton-block" />
+                <div className="skeleton-line" />
+                <div className="skeleton-line short" />
+              </div>
+            ) : detailStatus === "error" ? (
+              <div className="modal-body">
+                <button className="modal-close" onClick={closeDetail} type="button">
+                  Close
+                </button>
+                <p className="message error">Unable to load profile details.</p>
+              </div>
+            ) : detailProfile ? (
+              <div className="modal-body">
+                <button className="modal-close" onClick={closeDetail} type="button">
+                  Close
+                </button>
+                <div className="modal-photo">
+                  {detailProfile.primaryPhotoUrl ? (
+                    <img src={getAssetUrl(detailProfile.primaryPhotoUrl) ?? ""} alt={detailProfile.name} />
+                  ) : null}
+                </div>
+                <div className="modal-details">
+                  <h3>
+                    {detailProfile.name} <span>{detailProfile.age}</span>
+                  </h3>
+                  <p className="card-subtitle">
+                    {detailProfile.city} • {detailProfile.profession}
+                  </p>
+                  {detailProfile.videoVerificationStatus === "APPROVED" ? (
+                    <span className="badge verified">Verified</span>
+                  ) : null}
+                  <p>{detailProfile.bioShort}</p>
+                  {detailProfile.preferences && Object.keys(detailProfile.preferences).length ? (
+                    <div className="detail-preferences">
+                      <h4>Interests</h4>
+                      <p className="card-subtitle">{JSON.stringify(detailProfile.preferences)}</p>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </RouteGuard>
   );
 }

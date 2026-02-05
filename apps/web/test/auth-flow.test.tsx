@@ -49,7 +49,7 @@ describe("Login OTP flow", () => {
     await user.type(screen.getByLabelText("OTP Code"), "123456");
     await user.click(screen.getByRole("button", { name: "Verify OTP" }));
 
-    expect(setTokenMock).toHaveBeenCalledWith("session-token");
+    expect(setTokenMock).toHaveBeenCalledWith("session-token", true);
     expect(refreshMock).toHaveBeenCalled();
     expect(pushMock).toHaveBeenCalledWith("/onboarding/payment");
   });

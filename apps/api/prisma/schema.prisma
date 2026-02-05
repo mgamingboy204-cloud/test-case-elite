@@ -16,12 +16,14 @@ enum Role {
 enum Gender {
   MALE
   FEMALE
+  NON_BINARY
   OTHER
 }
 
 enum GenderPreference {
   MALE
   FEMALE
+  NON_BINARY
   OTHER
   ALL
 }
@@ -107,6 +109,10 @@ model User {
   phone        String   @unique
   email        String?  @unique
   passwordHash String
+  firstName    String?
+  lastName     String?
+  displayName  String?
+  gender       Gender?
   role         Role     @default(USER)
   isAdmin      Boolean  @default(false)
   status       UserStatus @default(PENDING)

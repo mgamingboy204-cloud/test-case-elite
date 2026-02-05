@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../../lib/api";
+import { useSession } from "../../../lib/session";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -20,6 +21,7 @@ const MAX_POLL_INTERVAL_MS = 60000;
 
 export default function VideoVerificationPage() {
   const router = useRouter();
+  const { refresh } = useSession();
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [request, setRequest] = useState<VerificationRequest | null>(null);
@@ -42,6 +44,17 @@ export default function VideoVerificationPage() {
       if (pollTimer.current) clearTimeout(pollTimer.current);
     };
   }, [request]);
+
+  useEffect(() => {
+    if (request?.status !== "COMPLETED") return;
+    const timer = setTimeout(async () => {
+      const user = await refresh();
+      if (user?.onboardingStep === "VIDEO_VERIFIED" || user?.paymentStatus === "NOT_STARTED") {
+        router.replace("/onboarding/payment");
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [request?.status, refresh, router]);
 
   function schedulePoll() {
     if (pollTimer.current) clearTimeout(pollTimer.current);

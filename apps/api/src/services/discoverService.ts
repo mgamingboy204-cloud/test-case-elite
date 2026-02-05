@@ -85,16 +85,15 @@ export async function getDiscoverProfiles(options: {
       gender: true,
       age: true,
       city: true,
-      profession: true,
       bioShort: true,
-      preferences: true,
       user: {
         select: {
           photos: {
             select: {
               url: true
             },
-            orderBy: { createdAt: "asc" }
+            orderBy: { createdAt: "desc" },
+            take: 1
           }
         }
       }
@@ -107,12 +106,43 @@ export async function getDiscoverProfiles(options: {
     gender: profile.gender,
     age: profile.age,
     city: profile.city,
+    bioShort: profile.bioShort,
+    primaryPhotoUrl: profile.user?.photos?.[0]?.url ?? null,
+    photos: []
+  }));
+
+  return { profiles: formatted };
+}
+
+export async function getDiscoverProfileDetail(options: { userId: string; targetUserId: string }) {
+  const profile = await prisma.profile.findUnique({
+    where: { userId: options.targetUserId },
+    include: {
+      user: {
+        select: {
+          status: true,
+          verifiedAt: true,
+          videoVerificationStatus: true,
+          photos: { select: { url: true }, orderBy: { createdAt: "desc" }, take: 1 }
+        }
+      }
+    }
+  });
+  if (!profile) {
+    return null;
+  }
+  return {
+    userId: profile.userId,
+    name: profile.name,
+    gender: profile.gender,
+    age: profile.age,
+    city: profile.city,
     profession: profile.profession,
     bioShort: profile.bioShort,
     preferences: profile.preferences,
     primaryPhotoUrl: profile.user?.photos?.[0]?.url ?? null,
-    photos: (profile.user?.photos ?? []).map((photo) => photo.url)
-  }));
-
-  return { profiles: formatted };
+    verifiedAt: profile.user?.verifiedAt ?? null,
+    videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,
+    status: profile.user?.status ?? null
+  };
 }

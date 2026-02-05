@@ -161,6 +161,19 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.discover-layout {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .discover-layout {
+    grid-template-columns: 1fr 1.2fr;
+    align-items: start;
+  }
+}
+
 .card {
   background: #ffffff;
   padding: 24px;
@@ -187,6 +200,17 @@ body {
   background: #f7f8fc;
   border-color: #e5e8f3;
   box-shadow: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 .hero {
@@ -398,6 +422,13 @@ button.secondary {
   overflow: hidden;
 }
 
+.swipe-card.premium {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
 .swipe-stack {
   position: relative;
   display: grid;
@@ -419,6 +450,12 @@ button.secondary {
   transition: box-shadow 0.2s ease;
 }
 
+.swipe-profile.premium {
+  inset: 0;
+  border: none;
+  box-shadow: 0 24px 50px rgba(27, 27, 51, 0.18);
+}
+
 .swipe-profile.active {
   cursor: grab;
 }
@@ -435,6 +472,10 @@ button.secondary {
   width: 100%;
   min-height: 240px;
   background: #f3f4fb;
+}
+
+.swipe-photo.premium {
+  min-height: 360px;
 }
 
 .swipe-photo img {
@@ -454,10 +495,34 @@ button.secondary {
   color: #1b1b33;
 }
 
+.swipe-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.6) 100%);
+}
+
 .swipe-details {
   padding: 16px;
   display: grid;
   gap: 8px;
+}
+
+.swipe-details.premium {
+  padding: 20px 24px 24px;
+  gap: 12px;
+}
+
+.swipe-details.premium h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 22px;
+}
+
+.swipe-details.premium h3 span {
+  font-size: 18px;
+  font-weight: 500;
+  color: #6e7288;
 }
 
 .swipe-header {
@@ -498,6 +563,14 @@ button.secondary {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   z-index: 5;
+}
+
+.swipe-actions.premium {
+  position: relative;
+  inset: unset;
+  padding: 20px 24px 24px;
+  background: #ffffff;
+  gap: 16px;
 }
 
 .swipe-card .empty-state {
@@ -669,6 +742,10 @@ button.secondary {
   gap: 12px;
 }
 
+.photo-grid.single {
+  grid-template-columns: minmax(160px, 1fr);
+}
+
 .photo-grid img {
   width: 100%;
   border-radius: 12px;
@@ -681,6 +758,118 @@ button.secondary {
 .photo-grid img:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 20px rgba(27, 27, 51, 0.12);
+}
+
+.otp-input {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(36px, 1fr));
+  gap: 8px;
+}
+
+.otp-input input {
+  text-align: center;
+  font-size: 18px;
+  padding: 12px 0;
+  border-radius: 12px;
+  border: 1px solid #d9dbe9;
+  background: #fff;
+}
+
+.profile-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.profile-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(12, 14, 25, 0.5);
+}
+
+.profile-modal__content {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  background: #ffffff;
+  border-radius: 24px 24px 0 0;
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  transform: translateY(0);
+  transition: transform 0.2s ease;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-photo img {
+  width: 100%;
+  border-radius: 18px;
+  object-fit: cover;
+  max-height: 420px;
+}
+
+.modal-close {
+  align-self: flex-end;
+  border: none;
+  background: #f0f1f8;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.detail-preferences {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #f7f8fc;
+  border: 1px solid #e5e8f3;
+}
+
+.badge.verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e7f6ef;
+  color: #1e855d;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.skeleton-block {
+  width: 100%;
+  height: 200px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #f0f1f8 0%, #e6e8f2 50%, #f0f1f8 100%);
+  animation: shimmer 1.4s infinite;
+}
+
+.skeleton-line {
+  width: 100%;
+  height: 14px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f0f1f8 0%, #e6e8f2 50%, #f0f1f8 100%);
+  animation: shimmer 1.4s infinite;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: 200px 0;
+  }
 }
 
 @media (min-width: 768px) {

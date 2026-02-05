@@ -7,5 +7,6 @@ declare module "express-session" {
     pendingUserId?: string;
     pendingPhone?: string;
     pendingRememberDevice?: boolean;
+    pendingRememberMe?: boolean;
   }
 }

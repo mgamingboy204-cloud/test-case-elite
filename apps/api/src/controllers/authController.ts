@@ -1,12 +1,13 @@
 import { Request, Response } from "express";
 import {
+  buildRefreshCookieOptions,
   deviceCookieName,
   deviceCookieOptions,
   refreshCookieName,
-  refreshCookieOptions,
   sessionCookieName,
   sessionCookieOptions
 } from "../config/auth";
+import { env } from "../config/env";
 import { parseCookies } from "../utils/cookies";
 import { prisma } from "../db/prisma";
 import { createDeviceToken, registerPendingUser, requestOtp, resolveOnboardingStep, validateLogin, verifyOtpAndGetUser } from "../services/authService";
@@ -25,7 +26,7 @@ export async function sendOtp(req: Request, res: Response) {
 }
 
 export async function verifyOtp(req: Request, res: Response) {
-  const { phone, code } = req.body as { phone: string; code: string };
+  const { phone, code, rememberMe } = req.body as { phone: string; code: string; rememberMe?: boolean };
   try {
     const user = await verifyOtpAndGetUser(phone, code);
 
@@ -34,15 +35,18 @@ export async function verifyOtp(req: Request, res: Response) {
     req.session.pendingUserId = undefined;
     req.session.pendingPhone = undefined;
 
-    const accessToken = signAccessToken(user.id);
-    const refreshToken = signRefreshToken(user.id);
-    res.cookie(refreshCookieName, refreshToken, refreshCookieOptions);
+    const resolvedRememberMe = rememberMe ?? req.session.pendingRememberMe ?? false;
+    const accessToken = signAccessToken(user.id, { rememberMe: resolvedRememberMe });
+    const refreshToken = signRefreshToken(user.id, { rememberMe: resolvedRememberMe });
+    const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
+    res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
 
     if (req.session.pendingRememberDevice) {
       const { token } = await createDeviceToken(user.id);
       res.cookie(deviceCookieName, token, deviceCookieOptions);
     }
     req.session.pendingRememberDevice = undefined;
+    req.session.pendingRememberMe = undefined;
 
     return res.json({
       ok: true,
@@ -74,10 +78,11 @@ export async function register(req: Request, res: Response) {
 }
 
 export async function login(req: Request, res: Response) {
-  const { phone, password, rememberDevice } = req.body as {
+  const { phone, password, rememberDevice, rememberMe } = req.body as {
     phone: string;
     password: string;
     rememberDevice?: boolean;
+    rememberMe?: boolean;
   };
   const cookies = parseCookies(req.headers.cookie);
   const deviceToken = cookies[deviceCookieName];
@@ -85,9 +90,11 @@ export async function login(req: Request, res: Response) {
   const result = await validateLogin({ phone, password, deviceToken });
   if (!result.otpRequired) {
     issueSession(req, result.user.id);
-    const accessToken = signAccessToken(result.user.id);
-    const refreshToken = signRefreshToken(result.user.id);
-    res.cookie(refreshCookieName, refreshToken, refreshCookieOptions);
+    const resolvedRememberMe = rememberMe ?? false;
+    const accessToken = signAccessToken(result.user.id, { rememberMe: resolvedRememberMe });
+    const refreshToken = signRefreshToken(result.user.id, { rememberMe: resolvedRememberMe });
+    const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
+    res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
     return res.json({
       id: result.user.id,
       phone: result.user.phone,
@@ -104,6 +111,7 @@ export async function login(req: Request, res: Response) {
   req.session.pendingUserId = result.user.id;
   req.session.pendingPhone = result.user.phone;
   req.session.pendingRememberDevice = rememberDevice ?? false;
+  req.session.pendingRememberMe = rememberMe ?? false;
   return res.json({ otpRequired: true, phone: result.user.phone });
 }
 
@@ -122,8 +130,11 @@ export async function refreshAccessToken(req: Request, res: Response) {
     return res.status(401).json({ error: "Missing refresh token" });
   }
   let userId: string;
+  let rememberMe = false;
   try {
-    userId = verifyRefreshToken(refreshToken);
+    const verification = verifyRefreshToken(refreshToken);
+    userId = verification.userId;
+    rememberMe = verification.rememberMe;
   } catch (error) {
     return res.status(401).json({ error: "Invalid refresh token" });
   }
@@ -140,9 +151,10 @@ export async function refreshAccessToken(req: Request, res: Response) {
   if (user.status === "BANNED") {
     return res.status(403).json({ error: "Banned" });
   }
-  const accessToken = signAccessToken(user.id);
-  const nextRefreshToken = signRefreshToken(user.id);
-  res.cookie(refreshCookieName, nextRefreshToken, refreshCookieOptions);
+  const accessToken = signAccessToken(user.id, { rememberMe });
+  const nextRefreshToken = signRefreshToken(user.id, { rememberMe });
+  const refreshTtlDays = rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
+  res.cookie(refreshCookieName, nextRefreshToken, buildRefreshCookieOptions(refreshTtlDays));
   return res.json({ accessToken });
 }
 
@@ -163,6 +175,10 @@ export async function whoAmI(req: Request, res: Response) {
     id: user.id,
     phone: user.phone,
     email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    displayName: user.displayName,
+    gender: user.gender,
     role: user.role,
     isAdmin: user.isAdmin,
     status: user.status,

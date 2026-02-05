@@ -61,10 +61,11 @@ export default function AdminUsersPage() {
         {users.map((user) => (
           <li key={user.id} className="list-item">
             <div>
-              <strong>{user.phone}</strong>
+              <strong>{user.displayName ?? user.profile?.name ?? user.phone}</strong>
               <p className="card-subtitle">
-                {user.status} • {user.onboardingStep} • {user.paymentStatus}
+                {user.phone} • {user.status} • {user.onboardingStep} • {user.paymentStatus}
               </p>
+              {user.gender ? <p className="card-subtitle">Gender: {user.gender}</p> : null}
               {user.deactivatedAt ? <p className="card-subtitle">Deactivated</p> : null}
             </div>
             <div className="grid two-column">

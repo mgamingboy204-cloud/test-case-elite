@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../lib/api";
 import { useSession } from "../../lib/session";
 import { getDefaultRoute } from "../../lib/onboarding";
+import OtpInput from "../components/OtpInput";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -28,6 +29,7 @@ export default function SignupPage() {
   const [step, setStep] = useState(0);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
 
   const [account, setAccount] = useState({ phone: "", email: "", password: "" });
   const [otpCode, setOtpCode] = useState("");
@@ -98,11 +100,11 @@ export default function SignupPage() {
       const response = await apiFetch<{ token?: string; accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         auth: "omit",
-        body: JSON.stringify({ phone: account.phone, code: otpCode })
+        body: JSON.stringify({ phone: account.phone, code: otpCode, rememberMe })
       });
       const nextToken = response.accessToken ?? response.token;
       if (nextToken) {
-        setToken(nextToken);
+        setToken(nextToken, rememberMe);
       }
       setStatus("success");
       setMessage("OTP verified. Redirecting to onboarding...");
@@ -183,13 +185,16 @@ export default function SignupPage() {
             </button>
             <div className="field">
               <label htmlFor="signup-otp">OTP Code</label>
-              <input
-                id="signup-otp"
-                placeholder="6-digit code"
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
-              />
+              <OtpInput value={otpCode} onChange={setOtpCode} disabled={status === "loading"} idPrefix="signup-otp" />
             </div>
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              Remember me on this device
+            </label>
             <button onClick={verifyOtp} disabled={status === "loading"}>
               Verify OTP
             </button>

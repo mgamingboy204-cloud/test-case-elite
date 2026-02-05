@@ -5,6 +5,7 @@ import { useState } from "react";
 import { apiFetch } from "../../lib/api";
 import { useSession } from "../../lib/session";
 import { getDefaultRoute } from "../../lib/onboarding";
+import OtpInput from "../components/OtpInput";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -22,6 +23,7 @@ export default function LoginPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [rememberDevice, setRememberDevice] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [otpRequired, setOtpRequired] = useState(false);
@@ -47,7 +49,7 @@ export default function LoginPage() {
         {
           method: "POST",
           auth: "omit",
-          body: JSON.stringify({ phone, password, rememberDevice })
+          body: JSON.stringify({ phone, password, rememberDevice, rememberMe })
         }
       );
       if (response.otpRequired) {
@@ -57,7 +59,7 @@ export default function LoginPage() {
       } else {
         const nextToken = response.accessToken ?? response.token;
         if (nextToken) {
-          setToken(nextToken);
+          setToken(nextToken, rememberMe);
         }
         setStatus("success");
         setMessage("Welcome back! Redirecting you now...");
@@ -105,11 +107,11 @@ export default function LoginPage() {
       const response = await apiFetch<{ token?: string; accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         auth: "omit",
-        body: JSON.stringify({ phone, code: otpCode })
+        body: JSON.stringify({ phone, code: otpCode, rememberMe })
       });
       const nextToken = response.accessToken ?? response.token;
       if (nextToken) {
-        setToken(nextToken);
+        setToken(nextToken, rememberMe);
       }
       setStatus("success");
       setMessage("OTP verified! Redirecting...");
@@ -157,6 +159,14 @@ export default function LoginPage() {
             />
             Remember this device for 30 days
           </label>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            Remember me on this device
+          </label>
           <button onClick={handleLogin} disabled={status === "loading"}>
             {status === "loading" ? "Signing in..." : "Login"}
           </button>
@@ -164,12 +174,7 @@ export default function LoginPage() {
             <div className="otp-panel">
               <div className="field">
                 <label htmlFor="otp-code">OTP Code</label>
-                <input
-                  id="otp-code"
-                  placeholder="6-digit code"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
-                />
+                <OtpInput value={otpCode} onChange={setOtpCode} disabled={status === "loading"} idPrefix="otp-code" />
               </div>
               <div className="otp-actions">
                 <button className="secondary" onClick={resendOtp} disabled={status === "loading"}>

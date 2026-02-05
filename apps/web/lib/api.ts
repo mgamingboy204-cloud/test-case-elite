@@ -1,4 +1,4 @@
-import { clearAuthToken, getAuthToken, setAuthToken } from "./authToken";
+import { clearAuthToken, getAuthToken, getAuthTokenStorage, setAuthToken } from "./authToken";
 
 const rawApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL;
 
@@ -51,7 +51,8 @@ async function refreshAccessToken() {
   }
   const data = (await res.json()) as { accessToken?: string };
   if (data?.accessToken) {
-    setAuthToken(data.accessToken);
+    const mode = getAuthTokenStorage();
+    setAuthToken(data.accessToken, mode !== "session");
     return data.accessToken;
   }
   return null;

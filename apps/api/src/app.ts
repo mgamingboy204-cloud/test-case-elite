@@ -22,8 +22,10 @@ if (env.NODE_ENV === "production") {
 }
 
 ensureUploadsDir();
-const uploadsDir = path.join(process.cwd(), "uploads");
-app.use("/uploads", express.static(uploadsDir));
+if (env.STORAGE_PROVIDER === "local") {
+  const uploadsDir = path.join(process.cwd(), "uploads");
+  app.use("/uploads", express.static(uploadsDir));
+}
 
 app.use(
   helmet({
@@ -37,7 +39,7 @@ app.use(
         : false
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: "7mb" }));
 const allowedOrigins = [env.WEB_ORIGIN, env.ADMIN_ORIGIN].filter(Boolean);
 app.use(
   cors({

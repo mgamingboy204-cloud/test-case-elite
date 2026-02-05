@@ -5,6 +5,7 @@ import { useState } from "react";
 import { apiFetch } from "../../lib/api";
 import { useSession } from "../../lib/session";
 import { getDefaultRoute } from "../../lib/onboarding";
+import OtpInput from "../components/OtpInput";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -27,6 +28,7 @@ export default function OtpPage() {
   const [otpCode, setOtpCode] = useState("");
   const [verifyStatus, setVerifyStatus] = useState<Status>("idle");
   const [verifyMessage, setVerifyMessage] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const { refresh, setToken } = useSession();
 
   async function handleSendOtp() {
@@ -68,11 +70,11 @@ export default function OtpPage() {
       const response = await apiFetch<{ token?: string; accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         auth: "omit",
-        body: JSON.stringify({ phone: verifyPhone, code: otpCode })
+        body: JSON.stringify({ phone: verifyPhone, code: otpCode, rememberMe })
       });
       const nextToken = response.accessToken ?? response.token;
       if (nextToken) {
-        setToken(nextToken);
+        setToken(nextToken, rememberMe);
       }
       setVerifyStatus("success");
       setVerifyMessage("OTP verified! Redirecting...");
@@ -126,13 +128,16 @@ export default function OtpPage() {
           </div>
           <div className="field">
             <label htmlFor="otp-code">OTP code</label>
-            <input
-              id="otp-code"
-              placeholder="6-digit code"
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value)}
-            />
+            <OtpInput value={otpCode} onChange={setOtpCode} disabled={verifyStatus === "loading"} idPrefix="otp-code" />
           </div>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            Remember me on this device
+          </label>
           <button onClick={handleVerifyOtp} disabled={verifyStatus === "loading"}>
             {verifyStatus === "loading" ? "Verifying..." : "Verify OTP"}
           </button>
