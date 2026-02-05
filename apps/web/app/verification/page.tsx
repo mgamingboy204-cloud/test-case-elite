@@ -11,9 +11,11 @@ export default function VerificationPage() {
   }, [router]);
 
   return (
-    <div className="card">
-      <h2>Redirecting...</h2>
-      <p className="card-subtitle">Verification has moved to onboarding.</p>
+    <div className="public-shell">
+      <div className="card">
+        <h2>Redirecting...</h2>
+        <p className="card-subtitle">Verification has moved to onboarding.</p>
+      </div>
     </div>
   );
 }

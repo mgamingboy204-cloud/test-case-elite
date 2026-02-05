@@ -65,18 +65,20 @@ export default function PaymentPage() {
         : null;
 
   return (
-    <div className="card payment-card">
-      <h2>Unlock Elite Match</h2>
-      <p className="card-subtitle">Complete your payment to begin profile setup and introductions.</p>
-      <ul className="expectation-list">
-        <li>Priority access to curated matches.</li>
-        <li>Concierge verification and support.</li>
-        <li>Exclusive weekly introductions.</li>
-      </ul>
-      <div className="form">
-        <p>
-          Current status: <strong>{resolvedStatus}</strong>
-        </p>
+    <div className="payment-shell">
+      <section className="card payment-card">
+        <span className="verification-pill">Membership payment</span>
+        <h2>Unlock Elite Match</h2>
+        <p className="card-subtitle">Complete your payment to begin profile setup and introductions.</p>
+        <ul className="expectation-list">
+          <li>Priority access to curated matches.</li>
+          <li>Concierge verification and support.</li>
+          <li>Exclusive weekly introductions.</li>
+        </ul>
+        <div className="payment-status">
+          <span>Current status</span>
+          <strong>{resolvedStatus}</strong>
+        </div>
         {primaryAction ? (
           <button onClick={primaryAction.onClick} disabled={status === "loading"}>
             {status === "loading" ? "Processing..." : primaryAction.label}
@@ -87,7 +89,7 @@ export default function PaymentPage() {
           </div>
         )}
         {message ? <p className={`message ${status}`}>{message}</p> : null}
-      </div>
+      </section>
     </div>
   );
 }

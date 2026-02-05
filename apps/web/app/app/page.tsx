@@ -7,7 +7,7 @@ export default function AppHome() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/app/discover");
+    router.replace("/discover");
   }, [router]);
 
   return (

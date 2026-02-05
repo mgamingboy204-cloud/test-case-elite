@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../lib/api";
 import { getAssetUrl } from "../../lib/assets";
 import RouteGuard from "../components/RouteGuard";
+import AppShell from "../components/AppShell";
 import { useSession } from "../../lib/session";
 import { buildDobString, getAgeFromDob, INTEREST_OPTIONS, parseDobString } from "../../lib/profileUtils";
 
@@ -239,7 +240,8 @@ export default function ProfilePage() {
 
   return (
     <RouteGuard requireActive>
-      <div className="profile-page">
+      <AppShell>
+        <div className="profile-page">
         <section className="card profile-hero">
           <div className="profile-hero-media">
             {photos.length ? (
@@ -572,7 +574,8 @@ export default function ProfilePage() {
             )}
           </section>
         </div>
-      </div>
+        </div>
+      </AppShell>
     </RouteGuard>
   );
 }

@@ -3,18 +3,18 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export default function BrowsePage() {
+export default function PaymentRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/discover");
+    router.replace("/onboarding/payment");
   }, [router]);
 
   return (
     <div className="public-shell">
       <div className="card">
         <h2>Redirecting...</h2>
-        <p className="card-subtitle">Discover is now available at /discover.</p>
+        <p className="card-subtitle">Payment is managed in onboarding.</p>
       </div>
     </div>
   );
