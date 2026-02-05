@@ -44,9 +44,9 @@ export default function RequestsPage() {
 
   return (
     <RouteGuard>
-      <div className="card">
+      <div className="card app-page">
         <div>
-          <h2>Requests</h2>
+          <h2>Likes</h2>
           <p className="card-subtitle">People who liked you. Approve to create a match.</p>
         </div>
         <button onClick={loadIncoming} disabled={status === "loading"}>

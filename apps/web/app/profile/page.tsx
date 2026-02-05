@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../lib/api";
 import { getAssetUrl } from "../../lib/assets";
 import RouteGuard from "../components/RouteGuard";
 import { useSession } from "../../lib/session";
+import { buildDobString, getAgeFromDob, INTEREST_OPTIONS, parseDobString } from "../../lib/profileUtils";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -28,6 +29,8 @@ export default function ProfilePage() {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [photos, setPhotos] = useState<any[]>([]);
+  const [interests, setInterests] = useState<string[]>([]);
+  const [dob, setDob] = useState({ year: "", month: "", day: "" });
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -43,10 +46,17 @@ export default function ProfilePage() {
     local: "Local",
     anywhere: "Anywhere"
   };
+  const dobString = useMemo(() => buildDobString(dob), [dob]);
+  const agePreview = useMemo(() => (dobString ? getAgeFromDob(dobString) : null), [dobString]);
 
   useEffect(() => {
     void loadProfile();
   }, []);
+
+  useEffect(() => {
+    if (!agePreview) return;
+    setForm((prev) => ({ ...prev, age: agePreview.toString() }));
+  }, [agePreview]);
 
   async function loadProfile() {
     try {
@@ -66,6 +76,9 @@ export default function ProfilePage() {
         if (!incomingPreferences.intent && !incomingPreferences.distance) {
           setHasPreferenceUpdates(true);
         }
+        const incomingDob = typeof incomingPreferences.dob === "string" ? incomingPreferences.dob : "";
+        setDob(parseDobString(incomingDob));
+        setInterests(Array.isArray(incomingPreferences.interests) ? incomingPreferences.interests : []);
         setForm({
           displayName: data.user?.displayName ?? data.profile?.name ?? "",
           firstName: data.user?.firstName ?? "",
@@ -91,6 +104,21 @@ export default function ProfilePage() {
 
   function updatePreference(key: "intent" | "distance", value: string) {
     setPreferences((prev) => ({ ...prev, [key]: value }));
+    setHasPreferenceUpdates(true);
+  }
+
+  function updateDobField(key: "year" | "month" | "day", value: string) {
+    setDob((prev) => ({ ...prev, [key]: value }));
+    setHasPreferenceUpdates(true);
+  }
+
+  function toggleInterest(value: string) {
+    setInterests((prev) => {
+      if (prev.includes(value)) {
+        return prev.filter((interest) => interest !== value);
+      }
+      return [...prev, value];
+    });
     setHasPreferenceUpdates(true);
   }
 
@@ -170,10 +198,16 @@ export default function ProfilePage() {
       const distance =
         preferences.distance || existingPreferences.distance || preferenceDefaults.distance;
       const nextPreferences = hasPreferenceUpdates
-        ? { ...existingPreferences, intent, distance }
+        ? {
+            ...existingPreferences,
+            intent,
+            distance,
+            interests,
+            dob: dobString || existingPreferences.dob
+          }
         : Object.keys(existingPreferences).length
           ? existingPreferences
-          : { intent, distance };
+          : { intent, distance, interests, dob: dobString };
       await apiFetch("/profile", {
         method: "PUT",
         body: JSON.stringify({
@@ -314,7 +348,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="grid two-column">
                   <div className="field">
-                    <label htmlFor="profile-age">Age</label>
+                    <label htmlFor="profile-age">Age (auto-calculated)</label>
                     <input
                       id="profile-age"
                       type="number"
@@ -322,7 +356,7 @@ export default function ProfilePage() {
                       inputMode="numeric"
                       placeholder="Age"
                       value={form.age}
-                      onChange={(e) => updateField("age", e.target.value)}
+                      readOnly
                     />
                   </div>
                   <div className="field">
@@ -334,6 +368,62 @@ export default function ProfilePage() {
                       onChange={(e) => updateField("city", e.target.value)}
                     />
                   </div>
+                </div>
+                <div className="field">
+                  <label>Date of birth</label>
+                  <div className="dob-picker">
+                    <div className="field">
+                      <label htmlFor="edit-dob-month">Month</label>
+                      <select
+                        id="edit-dob-month"
+                        value={dob.month}
+                        onChange={(e) => updateDobField("month", e.target.value)}
+                      >
+                        <option value="">MM</option>
+                        {Array.from({ length: 12 }).map((_, index) => (
+                          <option key={index + 1} value={`${index + 1}`}>
+                            {index + 1}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label htmlFor="edit-dob-day">Day</label>
+                      <select
+                        id="edit-dob-day"
+                        value={dob.day}
+                        onChange={(e) => updateDobField("day", e.target.value)}
+                      >
+                        <option value="">DD</option>
+                        {Array.from({ length: 31 }).map((_, index) => (
+                          <option key={index + 1} value={`${index + 1}`}>
+                            {index + 1}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label htmlFor="edit-dob-year">Year</label>
+                      <select
+                        id="edit-dob-year"
+                        value={dob.year}
+                        onChange={(e) => updateDobField("year", e.target.value)}
+                      >
+                        <option value="">YYYY</option>
+                        {Array.from({ length: 60 }).map((_, index) => {
+                          const year = new Date().getFullYear() - 18 - index;
+                          return (
+                            <option key={year} value={`${year}`}>
+                              {year}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  </div>
+                  <p className="helper-text">
+                    {agePreview ? `You’ll appear as ${agePreview} years old.` : "Select your DOB to preview your age."}
+                  </p>
                 </div>
                 <div className="field">
                   <label htmlFor="profile-profession">Profession</label>
@@ -404,6 +494,28 @@ export default function ProfilePage() {
                       Anywhere
                     </button>
                   </div>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <div className="section-header">
+                  <h3>Interests</h3>
+                  <p className="card-subtitle">Pick a few tags that describe you.</p>
+                </div>
+                <div className="chip-grid">
+                  {INTEREST_OPTIONS.map((interest) => {
+                    const isActive = interests.includes(interest);
+                    return (
+                      <button
+                        key={interest}
+                        type="button"
+                        className={isActive ? "chip active" : "chip"}
+                        onClick={() => toggleInterest(interest)}
+                      >
+                        {interest}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

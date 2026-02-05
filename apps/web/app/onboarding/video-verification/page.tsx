@@ -107,27 +107,34 @@ export default function VideoVerificationPage() {
   const linkReady = Boolean(request?.verificationLink);
 
   return (
-    <div className="grid two-column">
-      <section className="card">
-        <h2>Concierge Verification</h2>
-        <p className="card-subtitle">A dedicated verifier will join you on a secure Google Meet call.</p>
+    <div className="verification-layout">
+      <section className="card verification-card">
+        <div className="verification-header">
+          <div className="verification-badge">Secure</div>
+          <div>
+            <h2>Identity Verification Call</h2>
+            <p className="card-subtitle">
+              A short, private video call with our team. No recordings are stored.
+            </p>
+          </div>
+        </div>
         <div className="form">
           {!hasRequest ? (
             <button onClick={submitRequest} disabled={status === "loading"}>
-              {status === "loading" ? "Submitting..." : "Submit for Verification"}
+              {status === "loading" ? "Submitting..." : "Request verification"}
             </button>
           ) : null}
           {message ? <p className={`message ${status}`}>{message}</p> : null}
           {isRequested ? (
             <div className="card muted">
-              <p>Thank you for submitting your verification request.</p>
-              <p className="card-subtitle">Our verification team will reach out within 2–5 minutes. Please keep this page open.</p>
+              <p>Verification requested.</p>
+              <p className="card-subtitle">We’ll connect you within a few minutes. Please keep this page open.</p>
             </div>
           ) : null}
           {isInProgress && !linkReady ? (
             <div className="card muted">
               <p>Your verifier is preparing the call.</p>
-              <p className="card-subtitle">We will unlock the join button as soon as the secure link is ready.</p>
+              <p className="card-subtitle">We’ll unlock the join button as soon as the link is ready.</p>
             </div>
           ) : null}
           {isInProgress && linkReady ? (
@@ -160,21 +167,20 @@ export default function VideoVerificationPage() {
           ) : null}
         </div>
       </section>
-      <section className="card">
+
+      <section className="card verification-card">
         <h3>What to expect</h3>
+        <ul className="expectation-list">
+          <li>2–3 minute private video call.</li>
+          <li>Quick identity check with a concierge.</li>
+          <li>Fast approval once complete.</li>
+        </ul>
         <div className="card muted">
-          <p>Your verifier will confirm your identity and guide you through a short, professional call.</p>
-          <p className="card-subtitle">No recordings are stored. You can refresh this page at any time without losing progress.</p>
+          <p>
+            Status: <strong>{request?.status ?? (status === "success" ? "REQUESTED" : "NOT_STARTED")}</strong>
+          </p>
+          <p className="card-subtitle">We’ll keep this status updated while you wait.</p>
         </div>
-        {hasRequest ? (
-          <div className="card muted">
-            <p>Status: <strong>{request?.status}</strong></p>
-          </div>
-        ) : (
-          <div className="card muted">
-            <p>Submit your request to begin concierge verification.</p>
-          </div>
-        )}
       </section>
     </div>
   );

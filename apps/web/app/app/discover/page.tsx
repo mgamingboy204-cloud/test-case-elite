@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useRouter } from "next/navigation";
 import { apiFetch } from "../../../lib/api";
 import { getAssetUrl } from "../../../lib/assets";
 import RouteGuard from "../../components/RouteGuard";
+import { useSession } from "../../../lib/session";
 
 type Status = "idle" | "loading" | "success" | "error";
 type Profile = {
@@ -43,6 +45,8 @@ function formatPreference(preferences: Record<string, any> | null | undefined) {
 }
 
 export default function DiscoverPage() {
+  const router = useRouter();
+  const { user } = useSession();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
@@ -54,6 +58,7 @@ export default function DiscoverPage() {
   const [mode, setMode] = useState<"dating" | "friends">("dating");
   const [detailStatus, setDetailStatus] = useState<Status>("idle");
   const [detailProfile, setDetailProfile] = useState<any | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const seenUserIds = useRef(new Set<string>());
   const dragStart = useRef<{ x: number; y: number } | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
@@ -66,6 +71,10 @@ export default function DiscoverPage() {
       void loadProfiles();
     }
   }, [profiles.length, hasMore, isFetching, mode]);
+
+  useEffect(() => {
+    void loadAvatar();
+  }, []);
 
   useEffect(() => {
     seenUserIds.current.clear();
@@ -121,6 +130,16 @@ export default function DiscoverPage() {
       setMessage(error instanceof Error ? error.message : "Unable to load profiles.");
     } finally {
       setIsFetching(false);
+    }
+  }
+
+  async function loadAvatar() {
+    try {
+      const data = await apiFetch<{ photos?: any[] }>("/profile");
+      const photoUrlRaw = data.photos?.[0]?.url ?? null;
+      setAvatarUrl(photoUrlRaw ? getAssetUrl(photoUrlRaw) : null);
+    } catch (error) {
+      setAvatarUrl(null);
     }
   }
 
@@ -214,9 +233,27 @@ export default function DiscoverPage() {
     <RouteGuard>
       <div className="discover-layout">
         <section className="card discover-panel">
-          <div>
-            <h2>Discover</h2>
-            <p className="card-subtitle">Premium introductions, one profile at a time.</p>
+          <div className="discover-header">
+            <button
+              className="icon-button avatar-button"
+              type="button"
+              onClick={() => router.push("/profile")}
+              aria-label="Open profile"
+            >
+              {avatarUrl ? <img src={avatarUrl} alt="Profile avatar" /> : <span>{user?.displayName?.[0] ?? "E"}</span>}
+            </button>
+            <div>
+              <h2>Discover</h2>
+              <p className="card-subtitle">Premium introductions, one profile at a time.</p>
+            </div>
+            <button
+              className="icon-button"
+              type="button"
+              onClick={() => router.push("/profile")}
+              aria-label="Open settings"
+            >
+              ⚙
+            </button>
           </div>
           <div className="button-row">
             <button
@@ -280,9 +317,7 @@ export default function DiscoverPage() {
                         <div className="swipe-photo-placeholder">{profile.name.slice(0, 1)}</div>
                       )}
                       <div className="swipe-gradient" />
-                    </div>
-                    <div className="swipe-details premium">
-                      <div>
+                      <div className="swipe-overlay">
                         <h3>
                           {profile.name}
                           <span>{profile.age}</span>
@@ -291,6 +326,8 @@ export default function DiscoverPage() {
                           {profile.city} {profile.gender ? `• ${genderLabel}` : ""}
                         </p>
                       </div>
+                    </div>
+                    <div className="swipe-details premium">
                       <p className="swipe-bio">{profile.bioShort}</p>
                     </div>
                   </article>

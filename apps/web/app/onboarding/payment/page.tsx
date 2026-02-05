@@ -56,22 +56,36 @@ export default function PaymentPage() {
     }
   }
 
+  const resolvedStatus = paymentStatus ?? "NOT_STARTED";
+  const primaryAction =
+    resolvedStatus === "NOT_STARTED"
+      ? { label: "Start payment", onClick: startPayment }
+      : resolvedStatus === "STARTED"
+        ? { label: "Confirm payment", onClick: confirmPayment }
+        : null;
+
   return (
-    <div className="card">
-      <h2>Mock Payment</h2>
-      <p className="card-subtitle">Complete your payment to unlock profile setup.</p>
+    <div className="card payment-card">
+      <h2>Unlock Elite Match</h2>
+      <p className="card-subtitle">Complete your payment to begin profile setup and introductions.</p>
+      <ul className="expectation-list">
+        <li>Priority access to curated matches.</li>
+        <li>Concierge verification and support.</li>
+        <li>Exclusive weekly introductions.</li>
+      </ul>
       <div className="form">
         <p>
-          Current status: <strong>{paymentStatus ?? "NOT_STARTED"}</strong>
+          Current status: <strong>{resolvedStatus}</strong>
         </p>
-        <div className="inline-actions">
-          <button onClick={startPayment} disabled={status === "loading"}>
-            Start payment
+        {primaryAction ? (
+          <button onClick={primaryAction.onClick} disabled={status === "loading"}>
+            {status === "loading" ? "Processing..." : primaryAction.label}
           </button>
-          <button className="secondary" onClick={confirmPayment} disabled={status === "loading"}>
-            Confirm payment
-          </button>
-        </div>
+        ) : (
+          <div className="card muted">
+            <p>Payment complete. Continue to profile setup.</p>
+          </div>
+        )}
         {message ? <p className={`message ${status}`}>{message}</p> : null}
       </div>
     </div>

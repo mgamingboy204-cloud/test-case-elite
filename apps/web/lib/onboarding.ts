@@ -30,5 +30,8 @@ export function getOnboardingRoute(step?: string | null) {
 
 export function getDefaultRoute(user: SessionUser | null) {
   if (!user?.onboardingStep) return "/login";
+  if (user.onboardingStep === "ACTIVE" && !user.profileCompletedAt) {
+    return "/onboarding/profile";
+  }
   return getOnboardingRoute(user.onboardingStep);
 }
