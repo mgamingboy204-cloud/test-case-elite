@@ -42,18 +42,22 @@ export default function LoginPage() {
     setStatus("loading");
     setMessage("Checking your credentials...");
     try {
-      const response = await apiFetch<{ otpRequired?: boolean; token?: string }>("/auth/login", {
-        method: "POST",
-        auth: "omit",
-        body: JSON.stringify({ phone, password, rememberDevice })
-      });
+      const response = await apiFetch<{ otpRequired?: boolean; token?: string; accessToken?: string }>(
+        "/auth/login",
+        {
+          method: "POST",
+          auth: "omit",
+          body: JSON.stringify({ phone, password, rememberDevice })
+        }
+      );
       if (response.otpRequired) {
         setOtpRequired(true);
         setStatus("success");
         setMessage("OTP sent. Please enter the 6-digit code.");
       } else {
-        if (response.token) {
-          setToken(response.token);
+        const nextToken = response.accessToken ?? response.token;
+        if (nextToken) {
+          setToken(nextToken);
         }
         setStatus("success");
         setMessage("Welcome back! Redirecting you now...");
@@ -98,12 +102,15 @@ export default function LoginPage() {
     setStatus("loading");
     setMessage("Verifying OTP...");
     try {
-      const response = await apiFetch<{ token: string }>("/auth/otp/verify", {
+      const response = await apiFetch<{ token?: string; accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         auth: "omit",
         body: JSON.stringify({ phone, code: otpCode })
       });
-      setToken(response.token);
+      const nextToken = response.accessToken ?? response.token;
+      if (nextToken) {
+        setToken(nextToken);
+      }
       setStatus("success");
       setMessage("OTP verified! Redirecting...");
       const user = await refresh();

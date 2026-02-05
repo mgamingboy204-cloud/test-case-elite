@@ -12,3 +12,7 @@ export const OtpVerifySchema = z.object({
   phone: z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits."),
   code: z.string().regex(/^\d{6}$/, "OTP must be exactly 6 digits.")
 });
+
+export const RefreshTokenSchema = z.object({
+  refreshToken: z.string().optional()
+});

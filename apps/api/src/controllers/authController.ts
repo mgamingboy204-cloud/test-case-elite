@@ -1,9 +1,17 @@
 import { Request, Response } from "express";
-import { deviceCookieName, deviceCookieOptions, sessionCookieName, sessionCookieOptions } from "../config/auth";
+import {
+  deviceCookieName,
+  deviceCookieOptions,
+  refreshCookieName,
+  refreshCookieOptions,
+  sessionCookieName,
+  sessionCookieOptions
+} from "../config/auth";
 import { parseCookies } from "../utils/cookies";
 import { prisma } from "../db/prisma";
 import { createDeviceToken, registerPendingUser, requestOtp, resolveOnboardingStep, validateLogin, verifyOtpAndGetUser } from "../services/authService";
 import { HttpError } from "../utils/httpErrors";
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
 
 function issueSession(req: Request, userId: string) {
   req.session.userId = userId;
@@ -22,9 +30,13 @@ export async function verifyOtp(req: Request, res: Response) {
     const user = await verifyOtpAndGetUser(phone, code);
 
     req.session.otpVerifiedPhone = phone;
-    const token = issueSession(req, user.id);
+    issueSession(req, user.id);
     req.session.pendingUserId = undefined;
     req.session.pendingPhone = undefined;
+
+    const accessToken = signAccessToken(user.id);
+    const refreshToken = signRefreshToken(user.id);
+    res.cookie(refreshCookieName, refreshToken, refreshCookieOptions);
 
     if (req.session.pendingRememberDevice) {
       const { token } = await createDeviceToken(user.id);
@@ -34,7 +46,8 @@ export async function verifyOtp(req: Request, res: Response) {
 
     return res.json({
       ok: true,
-      token,
+      token: accessToken,
+      accessToken,
       user: {
         id: user.id,
         phone: user.phone,
@@ -71,7 +84,10 @@ export async function login(req: Request, res: Response) {
 
   const result = await validateLogin({ phone, password, deviceToken });
   if (!result.otpRequired) {
-    const token = issueSession(req, result.user.id);
+    issueSession(req, result.user.id);
+    const accessToken = signAccessToken(result.user.id);
+    const refreshToken = signRefreshToken(result.user.id);
+    res.cookie(refreshCookieName, refreshToken, refreshCookieOptions);
     return res.json({
       id: result.user.id,
       phone: result.user.phone,
@@ -79,7 +95,8 @@ export async function login(req: Request, res: Response) {
       role: result.user.role,
       isAdmin: result.user.isAdmin,
       onboardingStep: result.onboardingStep ?? resolveOnboardingStep(result.user),
-      token,
+      token: accessToken,
+      accessToken,
       otpRequired: false
     });
   }
@@ -93,11 +110,55 @@ export async function login(req: Request, res: Response) {
 export async function logout(req: Request, res: Response) {
   req.session.destroy(() => undefined);
   res.clearCookie(sessionCookieName, sessionCookieOptions);
+  res.clearCookie(refreshCookieName, refreshCookieOptions);
   return res.json({ ok: true });
 }
 
+export async function refreshAccessToken(req: Request, res: Response) {
+  const { refreshToken: refreshTokenFromBody } = (req.body ?? {}) as { refreshToken?: string };
+  const cookies = parseCookies(req.headers.cookie);
+  const refreshToken = refreshTokenFromBody ?? cookies[refreshCookieName];
+  if (!refreshToken) {
+    return res.status(401).json({ error: "Missing refresh token" });
+  }
+  let userId: string;
+  try {
+    userId = verifyRefreshToken(refreshToken);
+  } catch (error) {
+    return res.status(401).json({ error: "Invalid refresh token" });
+  }
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    return res.status(401).json({ error: "Invalid refresh token" });
+  }
+  if (user.deletedAt) {
+    return res.status(403).json({ error: "Account deleted" });
+  }
+  if (user.deactivatedAt) {
+    return res.status(403).json({ error: "Account deactivated" });
+  }
+  if (user.status === "BANNED") {
+    return res.status(403).json({ error: "Banned" });
+  }
+  const accessToken = signAccessToken(user.id);
+  const nextRefreshToken = signRefreshToken(user.id);
+  res.cookie(refreshCookieName, nextRefreshToken, refreshCookieOptions);
+  return res.json({ accessToken });
+}
+
 export async function whoAmI(req: Request, res: Response) {
-  const user = res.locals.user;
+  const userId = req.userId;
+  if (!userId) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+  const user =
+    res.locals.user ??
+    (await prisma.user.findUnique({
+      where: { id: userId }
+    }));
+  if (!user) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
   return res.json({
     id: user.id,
     phone: user.phone,

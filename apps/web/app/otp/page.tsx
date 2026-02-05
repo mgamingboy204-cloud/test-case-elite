@@ -65,12 +65,15 @@ export default function OtpPage() {
     setVerifyStatus("loading");
     setVerifyMessage("Verifying OTP...");
     try {
-      const response = await apiFetch<{ token: string }>("/auth/otp/verify", {
+      const response = await apiFetch<{ token?: string; accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         auth: "omit",
         body: JSON.stringify({ phone: verifyPhone, code: otpCode })
       });
-      setToken(response.token);
+      const nextToken = response.accessToken ?? response.token;
+      if (nextToken) {
+        setToken(nextToken);
+      }
       setVerifyStatus("success");
       setVerifyMessage("OTP verified! Redirecting...");
       const user = await refresh();
