@@ -2,11 +2,15 @@ import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 
 export async function getProfile(userId: string) {
-  const [profile, photos] = await Promise.all([
+  const [profile, photos, user] = await Promise.all([
     prisma.profile.findUnique({ where: { userId } }),
-    prisma.photo.findMany({ where: { userId }, orderBy: { createdAt: "asc" } })
+    prisma.photo.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, displayName: true, gender: true }
+    })
   ]);
-  return { profile, photos };
+  return { profile, photos, user };
 }
 
 export async function updateProfile(options: { userId: string; paymentStatus: string; onboardingStep: string; data: any }) {
@@ -20,12 +24,20 @@ export async function updateProfile(options: { userId: string; paymentStatus: st
   }
 
   const normalized = { ...options.data };
+  const displayName = (normalized.displayName ?? normalized.name ?? "").toString().trim();
+  if (displayName) {
+    normalized.name = displayName;
+  }
   if (typeof normalized.gender === "string") {
     normalized.gender = normalized.gender.toUpperCase();
   }
   if (typeof normalized.genderPreference === "string") {
     normalized.genderPreference = normalized.genderPreference.toUpperCase();
   }
+  const nameParts = displayName ? displayName.split(" ").filter(Boolean) : [];
+  const firstName = normalized.firstName?.toString().trim() || nameParts[0] || null;
+  const lastName =
+    normalized.lastName?.toString().trim() || (nameParts.length > 1 ? nameParts.slice(1).join(" ") : null);
 
   const profile = await prisma.profile.upsert({
     where: { userId: options.userId },
@@ -39,10 +51,18 @@ export async function updateProfile(options: { userId: string; paymentStatus: st
     throw new HttpError(404, { error: "User not found" });
   }
 
+  const baseUserUpdate = {
+    displayName: displayName || user.displayName,
+    firstName,
+    lastName,
+    gender: normalized.gender ?? user.gender
+  };
+
   if (photoCount > 0) {
     user = await prisma.user.update({
       where: { id: options.userId },
       data: {
+        ...baseUserUpdate,
         profileCompletedAt: user.profileCompletedAt ?? new Date(),
         onboardingStep: "ACTIVE",
         status: "APPROVED"
@@ -51,7 +71,15 @@ export async function updateProfile(options: { userId: string; paymentStatus: st
   } else if (user.onboardingStep !== "PROFILE_PENDING") {
     user = await prisma.user.update({
       where: { id: options.userId },
-      data: { onboardingStep: "PROFILE_PENDING" }
+      data: {
+        onboardingStep: "PROFILE_PENDING",
+        ...baseUserUpdate
+      }
+    });
+  } else {
+    user = await prisma.user.update({
+      where: { id: options.userId },
+      data: baseUserUpdate
     });
   }
 

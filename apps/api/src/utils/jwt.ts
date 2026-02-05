@@ -4,17 +4,21 @@ import { env } from "../config/env";
 type TokenPayload = JwtPayload & {
   sub: string;
   type: "access" | "refresh";
+  rememberMe?: boolean;
 };
 
-export function signAccessToken(userId: string) {
+export function signAccessToken(userId: string, options?: { rememberMe?: boolean }) {
+  const ttlMinutes = options?.rememberMe ? env.ACCESS_TOKEN_TTL_MINUTES : env.ACCESS_TOKEN_TTL_MINUTES_SHORT;
   return jwt.sign({ sub: userId, type: "access" }, env.JWT_ACCESS_SECRET, {
-    expiresIn: `${env.ACCESS_TOKEN_TTL_MINUTES}m`
+    expiresIn: `${ttlMinutes}m`
   });
 }
 
-export function signRefreshToken(userId: string) {
-  return jwt.sign({ sub: userId, type: "refresh" }, env.JWT_REFRESH_SECRET, {
-    expiresIn: `${env.REFRESH_TOKEN_TTL_DAYS}d`
+export function signRefreshToken(userId: string, options?: { rememberMe?: boolean }) {
+  const rememberMe = options?.rememberMe ?? false;
+  const ttlDays = rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
+  return jwt.sign({ sub: userId, type: "refresh", rememberMe }, env.JWT_REFRESH_SECRET, {
+    expiresIn: `${ttlDays}d`
   });
 }
 
@@ -31,5 +35,5 @@ export function verifyRefreshToken(token: string) {
   if (!payload?.sub || payload.type !== "refresh") {
     throw new Error("Invalid refresh token");
   }
-  return payload.sub;
+  return { userId: payload.sub, rememberMe: payload.rememberMe ?? false };
 }

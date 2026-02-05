@@ -2,8 +2,8 @@ import { Request, Response } from "express";
 import { completeProfile, getProfile, updateProfile } from "../services/profileService";
 
 export async function getProfileHandler(req: Request, res: Response) {
-  const { profile, photos } = await getProfile(res.locals.user.id);
-  return res.json({ profile, photos });
+  const { profile, photos, user } = await getProfile(res.locals.user.id);
+  return res.json({ profile, photos, user });
 }
 
 export async function updateProfileHandler(req: Request, res: Response) {

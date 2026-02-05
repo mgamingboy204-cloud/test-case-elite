@@ -23,6 +23,10 @@ export type SessionUser = {
   email?: string | null;
   verifiedAt?: string | null;
   phoneVerifiedAt?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  displayName?: string | null;
+  gender?: string | null;
   onboardingStep?: string | null;
   videoVerificationStatus?: string | null;
   paymentStatus?: string | null;
@@ -36,7 +40,7 @@ type AuthContextValue = {
   refresh: () => Promise<SessionUser | null>;
   setUser: (user: SessionUser | null) => void;
   setStatus: (status: SessionStatus) => void;
-  setToken: (token: string | null) => void;
+  setToken: (token: string | null, rememberMe?: boolean) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -69,9 +73,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refresh();
   }, [refresh]);
 
-  const setToken = useCallback((nextToken: string | null) => {
+  const setToken = useCallback((nextToken: string | null, rememberMe = true) => {
     if (nextToken) {
-      setAuthToken(nextToken);
+      setAuthToken(nextToken, rememberMe);
       setTokenState(nextToken);
     } else {
       clearAuthToken();

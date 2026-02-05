@@ -21,10 +21,12 @@ export const sessionCookieOptions = {
 
 export const refreshCookieName = "em_refresh";
 
-export const refreshCookieOptions = {
-  httpOnly: true,
-  sameSite: (env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
-  secure: env.NODE_ENV === "production",
-  path: "/",
-  maxAge: 1000 * 60 * 60 * 24 * env.REFRESH_TOKEN_TTL_DAYS
-};
+export function buildRefreshCookieOptions(ttlDays: number) {
+  return {
+    httpOnly: true,
+    sameSite: (env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
+    secure: env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 1000 * 60 * 60 * 24 * ttlDays
+  };
+}

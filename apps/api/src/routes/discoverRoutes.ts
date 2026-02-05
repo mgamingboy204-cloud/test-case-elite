@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { discoverProfiles } from "../controllers/discoverController";
+import { discoverProfileDetail, discoverProfiles } from "../controllers/discoverController";
 import { requireActive } from "../middlewares/onboarding";
 import { requireAuth } from "../middlewares/auth";
 import { validateQuery } from "../middlewares/validate";
@@ -25,5 +25,6 @@ const DiscoverQuerySchema = z.object({
 });
 
 router.get("/profiles", requireAuth, requireActive, validateQuery(DiscoverQuerySchema), asyncHandler(discoverProfiles));
+router.get("/profiles/:userId", requireAuth, requireActive, asyncHandler(discoverProfileDetail));
 
 export default router;

@@ -2,6 +2,9 @@ import { z } from "zod";
 
 const PhoneSchema = z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits.");
 
+const GenderSchema = z.enum(["MALE", "FEMALE", "NON_BINARY", "OTHER"]);
+const GenderPreferenceSchema = z.enum(["MALE", "FEMALE", "NON_BINARY", "OTHER", "ALL"]);
+
 export const RegisterSchema = z.object({
   phone: PhoneSchema,
   email: z.string().email().optional().nullable(),
@@ -12,18 +15,33 @@ export const RegisterSchema = z.object({
 export const LoginSchema = z.object({
   phone: PhoneSchema,
   password: z.string().min(8),
-  rememberDevice: z.boolean().optional()
+  rememberDevice: z.boolean().optional(),
+  rememberMe: z.boolean().optional()
 });
 
-export const ProfileSchema = z.object({
-  name: z.string().min(1),
-  gender: z.string().min(1),
-  age: z.number().int().min(18),
-  city: z.string().min(1),
-  profession: z.string().min(1),
-  bioShort: z.string().min(1),
-  preferences: z.record(z.any()).default({})
-});
+export const ProfileSchema = z
+  .object({
+    name: z.string().min(1).optional(),
+    displayName: z.string().min(1).optional(),
+    firstName: z.string().min(1).optional().nullable(),
+    lastName: z.string().min(1).optional().nullable(),
+    gender: GenderSchema,
+    genderPreference: GenderPreferenceSchema.optional().default("ALL"),
+    age: z.number().int().min(18),
+    city: z.string().min(1),
+    profession: z.string().min(1),
+    bioShort: z.string().min(1),
+    preferences: z.record(z.any()).default({})
+  })
+  .superRefine((value, ctx) => {
+    if (!value.displayName && !value.name) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["displayName"],
+        message: "Display name is required."
+      });
+    }
+  });
 
 export const LikeSchema = z.object({
   toUserId: z.string().uuid(),

@@ -41,6 +41,10 @@ export async function listUsers(status?: string) {
       id: true,
       phone: true,
       email: true,
+      firstName: true,
+      lastName: true,
+      displayName: true,
+      gender: true,
       role: true,
       isAdmin: true,
       status: true,
@@ -51,7 +55,8 @@ export async function listUsers(status?: string) {
       deactivatedAt: true,
       deletedAt: true,
       verifiedAt: true,
-      createdAt: true
+      createdAt: true,
+      profile: { select: { name: true } }
     },
     orderBy: { createdAt: "desc" }
   });

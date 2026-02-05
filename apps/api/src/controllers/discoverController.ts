@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getDiscoverProfiles } from "../services/discoverService";
+import { getDiscoverProfileDetail, getDiscoverProfiles } from "../services/discoverService";
 
 export async function discoverProfiles(req: Request, res: Response) {
   const { gender, city, minAge, maxAge, page, pageSize, mode } = req.query as Record<string, string | number | undefined>;
@@ -14,4 +14,16 @@ export async function discoverProfiles(req: Request, res: Response) {
     mode: typeof mode === "string" ? mode : undefined
   });
   return res.json(result);
+}
+
+export async function discoverProfileDetail(req: Request, res: Response) {
+  const targetUserId = req.params.userId;
+  const profile = await getDiscoverProfileDetail({
+    userId: res.locals.user.id,
+    targetUserId
+  });
+  if (!profile) {
+    return res.status(404).json({ error: "Profile not found" });
+  }
+  return res.json({ profile });
 }
