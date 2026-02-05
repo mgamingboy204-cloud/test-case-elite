@@ -41,6 +41,7 @@ export async function upsertOtpCode(phone: string) {
   if (env.DEV_OTP_LOG === "true") {
   logger.info(`[DEV OTP] ${phone}: ${otp}`);
 }
+}
 
 export async function verifyOtpAndGetUser(phone: string, code: string) {
   const record = await prisma.otpCode.findUnique({ where: { phone } });
