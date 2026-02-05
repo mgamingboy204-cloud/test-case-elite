@@ -66,7 +66,8 @@ app.use(
     name: sessionCookieName,
     store: new PgStore({
       conString: env.DATABASE_URL,
-      createTableIfMissing: env.NODE_ENV !== "production"
+      tableName: "session",
+      createTableIfMissing: true
     }),
     secret: env.SESSION_SECRET,
     resave: false,
