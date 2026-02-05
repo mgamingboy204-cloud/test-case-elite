@@ -5,6 +5,7 @@ const EnvSchema = z
   .object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     PORT: z.coerce.number().default(4000),
+    DEV_OTP_LOG: z.enum(["true", "false"]).optional().default("false"),
     DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
     SESSION_SECRET: z.string().min(1, "SESSION_SECRET is required").default("dev_secret"),
     WEB_ORIGIN: z.string().min(1, "WEB_ORIGIN is required").default("http://localhost:3000"),
