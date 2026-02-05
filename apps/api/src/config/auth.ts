@@ -13,7 +13,7 @@ export const sessionCookieName = "connect.sid";
 
 export const sessionCookieOptions = {
   httpOnly: true,
-  sameSite: "lax" as const,
+  sameSite: (env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
   secure: env.NODE_ENV === "production",
   path: "/",
   maxAge: 1000 * 60 * 60 * 24 * 7
