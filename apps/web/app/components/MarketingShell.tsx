@@ -34,7 +34,7 @@ export default function MarketingShell({ children }: MarketingShellProps) {
             <h4>Legal</h4>
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
-            <Link href="/privacy">Cookie Policy</Link>
+            <Link href="/cookie-policy">Cookie Policy</Link>
           </div>
           <div className="marketing-footer__col">
             <h4>Social</h4>
@@ -52,7 +52,7 @@ export default function MarketingShell({ children }: MarketingShellProps) {
             <h4>FAQ</h4>
             <Link href="/faq">FAQ</Link>
             <Link href="/learn">Destinations</Link>
-            <Link href="/support">Contact</Link>
+            <Link href="/contact">Contact</Link>
           </div>
         </div>
         <div className="marketing-footer__bottom">© ELITE MATCH. All rights reserved.</div>

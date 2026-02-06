@@ -8,10 +8,15 @@ export default function HomePage() {
     <MarketingShell>
       <section className="marketing-hero">
         <div className="marketing-hero__content">
-          <span className="marketing-hero__tag">Premium introductions</span>
-          <h1>Elite matches. Real intentions.</h1>
+          <span className="marketing-hero__tag">PREMIUM INTRODUCTIONS</span>
+          <h1>
+            Elite matches.
+            <br />
+            Real intentions.
+          </h1>
           <p>
-            A premium dating experience built for people who value privacy, verification, and meaningful connections.
+            A premium dating experience built for people who value privacy, verification, and meaningful
+            connections.
           </p>
           <div className="marketing-hero__actions">
             <Link className="btn" href="/signup">
