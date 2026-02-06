@@ -4,7 +4,12 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { apiFetch } from "../../lib/api";
 import { getAssetUrl } from "../../lib/assets";
 import RouteGuard from "../components/RouteGuard";
-import AppShell from "../components/AppShell";
+import AppShellLayout from "../components/ui/AppShellLayout";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import EmptyState from "../components/ui/EmptyState";
+import ErrorState from "../components/ui/ErrorState";
+import LoadingState from "../components/ui/LoadingState";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -26,15 +31,11 @@ export default function DiscoverPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
-  const [emptySince, setEmptySince] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0, active: false });
   const [mode, setMode] = useState<"dating" | "friends">("dating");
   const [detailStatus, setDetailStatus] = useState<Status>("idle");
   const [detailProfile, setDetailProfile] = useState<any | null>(null);
-  const seenUserIds = useRef(new Set<string>());
   const dragStart = useRef<{ x: number; y: number } | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const ignoreClickRef = useRef(false);
@@ -42,54 +43,22 @@ export default function DiscoverPage() {
   const activeProfile = useMemo(() => profiles[0], [profiles]);
 
   useEffect(() => {
-    if (profiles.length <= 3 && hasMore && !isFetching) {
-      void loadProfiles();
-    }
-  }, [profiles.length, hasMore, isFetching, mode]);
-
-  useEffect(() => {
-    seenUserIds.current.clear();
-    setProfiles([]);
-    setPage(1);
-    setHasMore(true);
-    setEmptySince(null);
     void loadProfiles(true);
-  }, [mode]);
-
-  useEffect(() => {
-    if (profiles.length || isFetching) {
-      setEmptySince(null);
-      return;
-    }
-    setEmptySince((prev) => prev ?? Date.now());
-  }, [profiles.length, isFetching]);
-
-  useEffect(() => {
-    if (!emptySince) return;
-    const timer = setTimeout(() => {
-      void loadProfiles(true);
-    }, 8000);
-    return () => clearTimeout(timer);
-  }, [emptySince, mode]);
+  }, []);
 
   async function loadProfiles(reset = false, nextMode: "dating" | "friends" = mode) {
     if (isFetching) return;
-    const nextPage = reset ? 1 : page;
     setIsFetching(true);
     setStatus("loading");
     setMessage(reset ? "Loading curated introductions..." : "Fetching more profiles...");
     try {
       const data = await apiFetch<{ profiles: Profile[] }>(
-        `/profiles?page=${nextPage}&pageSize=${PAGE_SIZE}&mode=${nextMode}`
+        `/profiles?page=1&pageSize=${PAGE_SIZE}&mode=${nextMode}`
       );
       const fetched = data.profiles ?? [];
-      const incoming = fetched.filter((profile) => !seenUserIds.current.has(profile.userId));
-      incoming.forEach((profile) => seenUserIds.current.add(profile.userId));
-      setProfiles((prev) => (reset ? incoming : [...prev, ...incoming]));
-      setPage(nextPage + 1);
-      setHasMore(fetched.length === PAGE_SIZE);
+      setProfiles(fetched);
       setStatus("success");
-      if (incoming.length) {
+      if (fetched.length) {
         setMessage("Here is your next introduction.");
       } else if (reset) {
         setMessage("No profiles yet. We’ll keep checking for new introductions.");
@@ -192,11 +161,62 @@ export default function DiscoverPage() {
 
   return (
     <RouteGuard requireActive>
-      <AppShell>
-        <div className="discover-screen">
-          <div className="discover-card">
-            {activeProfile ? (
-              <div className="swipe-stack">
+      <AppShellLayout
+        rightPanel={
+          <>
+            <Card>
+              <h3>Filters</h3>
+              <div className="form">
+                <div className="field">
+                  <label>Distance</label>
+                  <input placeholder="Within 25 miles" disabled />
+                </div>
+                <div className="field">
+                  <label>Intent</label>
+                  <div className="tabs">
+                    <button
+                      type="button"
+                      className={mode === "dating" ? "tab active" : "tab"}
+                      onClick={() => setMode("dating")}
+                    >
+                      Dating
+                    </button>
+                    <button
+                      type="button"
+                      className={mode === "friends" ? "tab active" : "tab"}
+                      onClick={() => setMode("friends")}
+                    >
+                      Friends
+                    </button>
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Age range</label>
+                  <input placeholder="26 - 38" disabled />
+                </div>
+              </div>
+            </Card>
+            <Card>
+              <h3>Quick actions</h3>
+              <Button
+                variant="secondary"
+                onClick={() => loadProfiles(true, mode)}
+                disabled={isFetching}
+              >
+                {isFetching ? "Refreshing..." : "Refresh feed"}
+              </Button>
+            </Card>
+          </>
+        }
+      >
+        <div className="discover-grid">
+          {status === "loading" && !profiles.length ? (
+            <LoadingState message="Loading curated introductions..." />
+          ) : status === "error" ? (
+            <ErrorState message={message || "Unable to load profiles."} onRetry={() => loadProfiles(true, mode)} />
+          ) : activeProfile ? (
+            <>
+              <div className="discover-stack">
                 {stackProfiles.map((profile, index) => {
                   const isTop = index === 0;
                   const depth = Math.min(index, 2);
@@ -205,13 +225,14 @@ export default function DiscoverPage() {
                   return (
                     <article
                       key={profile.userId}
-                      className={isTop ? "swipe-profile active" : "swipe-profile"}
+                      className="profile-card"
                       style={{
                         zIndex: stackProfiles.length - index,
                         transform: isTop
                           ? dragStyle?.transform
-                          : `translateY(${depth * 12}px) scale(${1 - depth * 0.04})`,
-                        transition: isTop ? dragStyle?.transition : "transform 0.2s ease"
+                          : `translateY(${depth * 12}px) scale(${1 - depth * 0.03})`,
+                        transition: isTop ? dragStyle?.transition : "transform 0.2s ease",
+                        pointerEvents: isTop ? "auto" : "none"
                       }}
                       onPointerDown={isTop ? handlePointerDown : undefined}
                       onPointerMove={isTop ? handlePointerMove : undefined}
@@ -219,67 +240,57 @@ export default function DiscoverPage() {
                       onPointerCancel={isTop ? handlePointerEnd : undefined}
                       onClick={isTop ? () => openDetail(profile) : undefined}
                     >
-                      <div className="discover-photo">
+                      <div className="profile-card__photo">
                         {photoUrl ? (
                           <img src={photoUrl} alt={`${profile.name}'s profile photo`} />
                         ) : (
-                          <div className="swipe-photo-placeholder">{profile.name.slice(0, 1)}</div>
+                          <span>{profile.name.slice(0, 1)}</span>
                         )}
-                        <div className="discover-gradient" />
-                        <div className="discover-overlay">
-                          <h3>
-                            {profile.name}
-                            <span>{profile.age}</span>
-                          </h3>
-                          <p>{profile.city}</p>
+                      </div>
+                      <div className="profile-card__content">
+                        <h3>
+                          {profile.name} <span className="text-muted">{profile.age}</span>
+                        </h3>
+                        <p className="text-muted">{profile.city}</p>
+                        <div className="chip-row">
+                          {["Serious", "Local", "Verified"].map((tag) => (
+                            <span key={tag} className="chip">
+                              {tag}
+                            </span>
+                          ))}
                         </div>
+                        <p>{profile.bioShort}</p>
                       </div>
                     </article>
                   );
                 })}
-                <div className="discover-actions">
-                  <button
-                    onClick={() => activeProfile && sendLike(activeProfile, "PASS")}
-                    className="action-button secondary"
-                  >
-                    Pass
-                  </button>
-                  <button onClick={() => activeProfile && sendLike(activeProfile, "LIKE")} className="action-button">
-                    Like
-                  </button>
-                </div>
               </div>
-            ) : (
-              <div className="empty-state">
-                <h3>No more profiles</h3>
-                <p>Check back soon or refresh to load new introductions.</p>
+              <div className="discover-actions">
+                <button
+                  className="circle-action"
+                  onClick={() => activeProfile && sendLike(activeProfile, "PASS")}
+                  aria-label="Pass"
+                >
+                  ✕
+                </button>
+                <button
+                  className="circle-action primary"
+                  onClick={() => activeProfile && sendLike(activeProfile, "LIKE")}
+                  aria-label="Like"
+                >
+                  ✔
+                </button>
               </div>
-            )}
-          </div>
-
-          <div className="discover-toolbar">
-            <div className="pill-toggle">
-              <button
-                onClick={() => setMode("dating")}
-                className={mode === "dating" ? "active" : ""}
-                type="button"
-              >
-                Dating
-              </button>
-              <button
-                onClick={() => setMode("friends")}
-                className={mode === "friends" ? "active" : ""}
-                type="button"
-              >
-                Friends
-              </button>
-            </div>
-            <button className="text-button" onClick={() => loadProfiles(true)} disabled={isFetching}>
-              {isFetching ? "Refreshing..." : "Refresh feed"}
-            </button>
-          </div>
-
-          {message ? <p className={`message ${status}`}>{message}</p> : null}
+            </>
+          ) : (
+            <EmptyState
+              title="No more profiles"
+              message="Check back soon or refresh to load new introductions."
+              actionLabel="Refresh feed"
+              onAction={() => loadProfiles(true, mode)}
+            />
+          )}
+          {message && status !== "error" ? <p className={`message ${status}`}>{message}</p> : null}
         </div>
 
         {detailStatus !== "idle" ? (
@@ -326,7 +337,7 @@ export default function DiscoverPage() {
             </div>
           </div>
         ) : null}
-      </AppShell>
+      </AppShellLayout>
     </RouteGuard>
   );
 }

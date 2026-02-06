@@ -6,13 +6,9 @@ import { apiFetch } from "../../lib/api";
 import { useSession } from "../../lib/session";
 import { getDefaultRoute } from "../../lib/onboarding";
 import OtpInput from "../components/OtpInput";
+import Button from "../components/ui/Button";
 
 type Status = "idle" | "loading" | "success" | "error";
-
-const steps = [
-  { title: "Create account", description: "Start with phone, email, and password." },
-  { title: "Verify OTP", description: "Confirm your phone number." }
-];
 
 const phoneRegex = /^\d{10}$/;
 const otpRegex = /^\d{6}$/;
@@ -121,98 +117,90 @@ export default function SignupPage() {
     <div className="auth-layout">
       <section className="auth-visual">
         <div className="auth-visual-panel">
-          <div className="auth-badge">Start here</div>
-          <h1>Join the concierge dating club.</h1>
-          <p>Two quick steps, then we guide you through verification and profile setup.</p>
-          <ol className="progress">
-            {steps.map((stepItem, index) => (
-              <li key={stepItem.title} className={index === step ? "active" : index < step ? "done" : ""}>
-                <span>{index + 1}</span>
-                <div>
-                  <strong>{stepItem.title}</strong>
-                  <p>{stepItem.description}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
+          <h1>ELITE MATCH</h1>
+          <p>Start with verification. Match with confidence and clarity.</p>
         </div>
       </section>
 
       <section className="auth-card">
-        <div>
-          <h2>{step === 0 ? "Create your account" : "Verify OTP"}</h2>
-          <p className="card-subtitle">Premium onboarding in two steps.</p>
-        </div>
-        {message ? <p className={`message ${status}`}>{message}</p> : null}
+        <div className="auth-card-inner">
+          <div>
+            <h2>{step === 0 ? "Create your account" : "Verify OTP"}</h2>
+            <p className="text-muted">Start with verification. Match with confidence.</p>
+          </div>
+          {message ? <p className={`message ${status}`}>{message}</p> : null}
 
-        {step === 0 ? (
-          <div className="form">
-            <div className="field">
-              <label htmlFor="signup-phone">Phone</label>
-              <input
-                id="signup-phone"
-                placeholder="10-digit phone number"
-                value={account.phone}
-                onChange={(e) => setAccount((prev) => ({ ...prev, phone: e.target.value }))}
-              />
+          {step === 0 ? (
+            <div className="form">
+              <div className="field">
+                <label htmlFor="signup-phone">Phone</label>
+                <input
+                  id="signup-phone"
+                  placeholder="10-digit phone number"
+                  value={account.phone}
+                  onChange={(e) => setAccount((prev) => ({ ...prev, phone: e.target.value }))}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="signup-email">Email (optional)</label>
+                <input
+                  id="signup-email"
+                  placeholder="you@example.com"
+                  value={account.email}
+                  onChange={(e) => setAccount((prev) => ({ ...prev, email: e.target.value }))}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="signup-password">Password</label>
+                <input
+                  id="signup-password"
+                  placeholder="Create a secure password"
+                  type="password"
+                  value={account.password}
+                  onChange={(e) => setAccount((prev) => ({ ...prev, password: e.target.value }))}
+                />
+              </div>
+              <Button onClick={createAccount} disabled={status === "loading"} fullWidth>
+                {status === "loading" ? "Creating..." : "Create account"}
+              </Button>
             </div>
-            <div className="field">
-              <label htmlFor="signup-email">Email (optional)</label>
-              <input
-                id="signup-email"
-                placeholder="you@example.com"
-                value={account.email}
-                onChange={(e) => setAccount((prev) => ({ ...prev, email: e.target.value }))}
-              />
+          ) : null}
+
+          {step === 1 ? (
+            <div className="form">
+              <div className="field">
+                <label htmlFor="signup-otp">OTP Code</label>
+                <OtpInput value={otpCode} onChange={setOtpCode} disabled={status === "loading"} idPrefix="signup-otp" />
+              </div>
+              <div className="otp-actions">
+                <Button variant="secondary" onClick={resendOtp} disabled={status === "loading"}>
+                  Resend OTP
+                </Button>
+                <Button onClick={verifyOtp} disabled={status === "loading"}>
+                  Verify OTP
+                </Button>
+              </div>
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                Remember me on this device
+              </label>
             </div>
-            <div className="field">
-              <label htmlFor="signup-password">Password</label>
-              <input
-                id="signup-password"
-                placeholder="Create a secure password"
-                type="password"
-                value={account.password}
-                onChange={(e) => setAccount((prev) => ({ ...prev, password: e.target.value }))}
-              />
-            </div>
-            <button onClick={createAccount} disabled={status === "loading"}>
-              {status === "loading" ? "Creating..." : "Create account"}
+          ) : null}
+
+          <div className="auth-switch">
+            <span>Already have an account?</span>
+            <button className="text-button" type="button" onClick={() => router.push("/login")}>
+              Log in
             </button>
           </div>
-        ) : null}
-
-        {step === 1 ? (
-          <div className="form">
-            <div className="field">
-              <label htmlFor="signup-otp">OTP Code</label>
-              <OtpInput value={otpCode} onChange={setOtpCode} disabled={status === "loading"} idPrefix="signup-otp" />
-            </div>
-            <div className="otp-actions">
-              <button className="secondary" onClick={resendOtp} disabled={status === "loading"}>
-                Resend OTP
-              </button>
-              <button onClick={verifyOtp} disabled={status === "loading"}>
-                Verify OTP
-              </button>
-            </div>
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-              />
-              Remember me on this device
-            </label>
-          </div>
-        ) : null}
-
-        <div className="auth-switch">
-          <span>Already a member?</span>
-          <button className="text-button" type="button" onClick={() => router.push("/login")}>
-            Sign in
-          </button>
+          <footer className="auth-footer">
+            By continuing, you agree to our Terms and Privacy Policy.
+          </footer>
         </div>
-        <footer className="auth-footer">We keep your phone private until consent is shared.</footer>
       </section>
     </div>
   );

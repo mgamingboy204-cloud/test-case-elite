@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../lib/api";
 import { getAssetUrl } from "../../lib/assets";
 import RouteGuard from "../components/RouteGuard";
-import AppShell from "../components/AppShell";
+import AppShellLayout from "../components/ui/AppShellLayout";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import ErrorState from "../components/ui/ErrorState";
+import LoadingState from "../components/ui/LoadingState";
+import PageHeader from "../components/ui/PageHeader";
+import Tabs from "../components/ui/Tabs";
 import { useSession } from "../../lib/session";
 import { buildDobString, getAgeFromDob, INTEREST_OPTIONS, parseDobString } from "../../lib/profileUtils";
 
@@ -28,25 +34,19 @@ export default function ProfilePage() {
   const [existingPreferences, setExistingPreferences] = useState<Record<string, any>>({});
   const [hasPreferenceUpdates, setHasPreferenceUpdates] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
+  const [loadStatus, setLoadStatus] = useState<Status>("loading");
   const [message, setMessage] = useState("");
   const [photos, setPhotos] = useState<any[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
   const [dob, setDob] = useState({ year: "", month: "", day: "" });
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [activeSection, setActiveSection] = useState<"about" | "photos">("about");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { setToken } = useSession();
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
   const maxBytes = 5 * 1024 * 1024;
   const preferenceDefaults = { intent: "serious", distance: "local" };
-  const intentLabel: Record<string, string> = {
-    serious: "Serious",
-    casual: "Casual"
-  };
-  const distanceLabel: Record<string, string> = {
-    local: "Local",
-    anywhere: "Anywhere"
-  };
   const dobString = useMemo(() => buildDobString(dob), [dob]);
   const agePreview = useMemo(() => (dobString ? getAgeFromDob(dobString) : null), [dobString]);
 
@@ -60,6 +60,7 @@ export default function ProfilePage() {
   }, [agePreview]);
 
   async function loadProfile() {
+    setLoadStatus("loading");
     try {
       const data = await apiFetch<{ profile?: any; photos?: any[]; user?: any }>("/profile");
       if (data?.profile || data?.user) {
@@ -93,9 +94,10 @@ export default function ProfilePage() {
         });
       }
       setPhotos(data.photos ?? []);
+      setLoadStatus("success");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to load profile.");
-      setStatus("error");
+      setLoadStatus("error");
     }
   }
 
@@ -240,342 +242,318 @@ export default function ProfilePage() {
 
   return (
     <RouteGuard requireActive>
-      <AppShell>
-        <div className="profile-page">
-        <section className="card profile-hero">
-          <div className="profile-hero-media">
-            {photos.length ? (
-              <img
-                key={photos[0].id}
-                src={getAssetUrl(photos[0].url) ?? ""}
-                alt="Profile"
-                className="profile-photo-large"
-              />
-            ) : (
-              <div className="profile-photo-placeholder">Add a photo</div>
-            )}
-          </div>
-          <div className="profile-hero-content">
-            <h2>
-              {form.displayName || "Your profile"}
-              {form.age ? <span className="profile-age"> {form.age}</span> : null}
-            </h2>
-            <p className="card-subtitle">
-              {form.city || "City"} {form.profession ? `• ${form.profession}` : ""}
-            </p>
-            <p className="profile-bio-preview">
-              {form.bioShort || "Share a short bio to help people get to know you."}
-            </p>
-            <div className="preference-list">
-              <span className="preference-chip">
-                Intent: {intentLabel[preferences.intent] ?? "Serious"}
-              </span>
-              <span className="preference-chip">
-                Distance: {distanceLabel[preferences.distance] ?? "Local"}
-              </span>
-            </div>
-          </div>
-        </section>
+      <AppShellLayout>
+        <div className="profile-sections">
+          <PageHeader title="Profile" subtitle="Curate your presence on ELITE MATCH." />
+          {loadStatus === "loading" ? (
+            <LoadingState message="Loading your profile..." />
+          ) : loadStatus === "error" ? (
+            <ErrorState message={message || "Unable to load profile."} onRetry={loadProfile} />
+          ) : (
+            <>
+              <Card>
+                <div className="profile-header">
+                  <div className="avatar-circle">
+                    {photos.length ? (
+                      <img src={getAssetUrl(photos[0].url) ?? ""} alt="Profile avatar" />
+                    ) : (
+                      <span>{form.displayName?.slice(0, 1) || "E"}</span>
+                    )}
+                  </div>
+                  <div>
+                    <h2>{form.displayName || "Your profile"}</h2>
+                    <p className="text-muted">{form.bioShort || "Add a short bio to introduce yourself."}</p>
+                    <div className="profile-stats">
+                      <div className="stat-item">
+                        <strong>Likes</strong>
+                        <span className="text-muted">—</span>
+                      </div>
+                      <div className="stat-item">
+                        <strong>Matches</strong>
+                        <span className="text-muted">—</span>
+                      </div>
+                      <div className="stat-item">
+                        <strong>Verified</strong>
+                        <span className="text-muted">{form.gender ? "Yes" : "Pending"}</span>
+                      </div>
+                    </div>
+                    <div className="page-header__actions">
+                      <Button variant="secondary" onClick={saveProfile} disabled={status === "loading"}>
+                        Edit profile
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                      >
+                        Upload photo
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
 
-        <div className="profile-grid">
-          <section className="card profile-form-card">
-            <div>
-              <h2>Edit profile</h2>
-              <p className="card-subtitle">Make it feel like you.</p>
-            </div>
-            <div className="form">
-              <div className="form-section">
-                <div className="section-header">
-                  <h3>Basic info</h3>
-                  <p className="card-subtitle">Your essentials for matching.</p>
-                </div>
-                <div className="field">
-                  <label htmlFor="profile-display-name">Display name</label>
-                  <input
-                    id="profile-display-name"
-                    placeholder="Your display name"
-                    value={form.displayName}
-                    onChange={(e) => updateField("displayName", e.target.value)}
-                  />
-                </div>
-                <div className="grid two-column">
-                  <div className="field">
-                    <label htmlFor="profile-first-name">First name</label>
-                    <input
-                      id="profile-first-name"
-                      placeholder="First name"
-                      value={form.firstName}
-                      onChange={(e) => updateField("firstName", e.target.value)}
-                    />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="profile-last-name">Last name</label>
-                    <input
-                      id="profile-last-name"
-                      placeholder="Last name"
-                      value={form.lastName}
-                      onChange={(e) => updateField("lastName", e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="grid two-column">
-                  <div className="field">
-                    <label htmlFor="profile-gender">Gender</label>
-                    <select
-                      id="profile-gender"
-                      value={form.gender}
-                      onChange={(e) => updateField("gender", e.target.value)}
-                    >
-                      <option value="">Select</option>
-                      <option value="MALE">Male</option>
-                      <option value="FEMALE">Female</option>
-                      <option value="NON_BINARY">Non-binary</option>
-                      <option value="OTHER">Other</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label htmlFor="profile-gender-preference">Interested in</label>
-                    <select
-                      id="profile-gender-preference"
-                      value={form.genderPreference}
-                      onChange={(e) => updateField("genderPreference", e.target.value)}
-                    >
-                      <option value="ALL">All</option>
-                      <option value="MALE">Male</option>
-                      <option value="FEMALE">Female</option>
-                      <option value="NON_BINARY">Non-binary</option>
-                      <option value="OTHER">Other</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="grid two-column">
-                  <div className="field">
-                    <label htmlFor="profile-age">Age (auto-calculated)</label>
-                    <input
-                      id="profile-age"
-                      type="number"
-                      min="18"
-                      inputMode="numeric"
-                      placeholder="Age"
-                      value={form.age}
-                      readOnly
-                    />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="profile-city">City</label>
-                    <input
-                      id="profile-city"
-                      placeholder="City"
-                      value={form.city}
-                      onChange={(e) => updateField("city", e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="field">
-                  <label>Date of birth</label>
-                  <div className="dob-picker">
+              <Tabs
+                tabs={[
+                  { id: "about", label: "About" },
+                  { id: "photos", label: "Photos" }
+                ]}
+                active={activeSection}
+                onChange={(value) => setActiveSection(value as "about" | "photos")}
+              />
+
+              {activeSection === "about" ? (
+                <Card>
+                  <h3>About</h3>
+                  <div className="form">
                     <div className="field">
-                      <label htmlFor="edit-dob-month">Month</label>
-                      <select
-                        id="edit-dob-month"
-                        value={dob.month}
-                        onChange={(e) => updateDobField("month", e.target.value)}
-                      >
-                        <option value="">MM</option>
-                        {Array.from({ length: 12 }).map((_, index) => (
-                          <option key={index + 1} value={`${index + 1}`}>
-                            {index + 1}
-                          </option>
-                        ))}
-                      </select>
+                      <label htmlFor="profile-display-name">Display name</label>
+                      <input
+                        id="profile-display-name"
+                        placeholder="Your display name"
+                        value={form.displayName}
+                        onChange={(e) => updateField("displayName", e.target.value)}
+                      />
                     </div>
-                    <div className="field">
-                      <label htmlFor="edit-dob-day">Day</label>
-                      <select
-                        id="edit-dob-day"
-                        value={dob.day}
-                        onChange={(e) => updateDobField("day", e.target.value)}
-                      >
-                        <option value="">DD</option>
-                        {Array.from({ length: 31 }).map((_, index) => (
-                          <option key={index + 1} value={`${index + 1}`}>
-                            {index + 1}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="dob-picker">
+                      <div className="field">
+                        <label htmlFor="profile-first-name">First name</label>
+                        <input
+                          id="profile-first-name"
+                          placeholder="First name"
+                          value={form.firstName}
+                          onChange={(e) => updateField("firstName", e.target.value)}
+                        />
+                      </div>
+                      <div className="field">
+                        <label htmlFor="profile-last-name">Last name</label>
+                        <input
+                          id="profile-last-name"
+                          placeholder="Last name"
+                          value={form.lastName}
+                          onChange={(e) => updateField("lastName", e.target.value)}
+                        />
+                      </div>
+                      <div className="field">
+                        <label htmlFor="profile-age">Age</label>
+                        <input
+                          id="profile-age"
+                          type="number"
+                          min="18"
+                          inputMode="numeric"
+                          placeholder="Age"
+                          value={form.age}
+                          readOnly
+                        />
+                      </div>
                     </div>
-                    <div className="field">
-                      <label htmlFor="edit-dob-year">Year</label>
-                      <select
-                        id="edit-dob-year"
-                        value={dob.year}
-                        onChange={(e) => updateDobField("year", e.target.value)}
-                      >
-                        <option value="">YYYY</option>
-                        {Array.from({ length: 60 }).map((_, index) => {
-                          const year = new Date().getFullYear() - 18 - index;
-                          return (
-                            <option key={year} value={`${year}`}>
-                              {year}
+                    <div className="dob-picker">
+                      <div className="field">
+                        <label htmlFor="profile-gender">Gender</label>
+                        <select
+                          id="profile-gender"
+                          value={form.gender}
+                          onChange={(e) => updateField("gender", e.target.value)}
+                        >
+                          <option value="">Select</option>
+                          <option value="MALE">Male</option>
+                          <option value="FEMALE">Female</option>
+                          <option value="NON_BINARY">Non-binary</option>
+                          <option value="OTHER">Other</option>
+                        </select>
+                      </div>
+                      <div className="field">
+                        <label htmlFor="profile-gender-preference">Interested in</label>
+                        <select
+                          id="profile-gender-preference"
+                          value={form.genderPreference}
+                          onChange={(e) => updateField("genderPreference", e.target.value)}
+                        >
+                          <option value="ALL">All</option>
+                          <option value="MALE">Male</option>
+                          <option value="FEMALE">Female</option>
+                          <option value="NON_BINARY">Non-binary</option>
+                          <option value="OTHER">Other</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="dob-picker">
+                      <div className="field">
+                        <label htmlFor="edit-dob-month">Month</label>
+                        <select
+                          id="edit-dob-month"
+                          value={dob.month}
+                          onChange={(e) => updateDobField("month", e.target.value)}
+                        >
+                          <option value="">MM</option>
+                          {Array.from({ length: 12 }).map((_, index) => (
+                            <option key={index + 1} value={`${index + 1}`}>
+                              {index + 1}
                             </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="field">
+                        <label htmlFor="edit-dob-day">Day</label>
+                        <select
+                          id="edit-dob-day"
+                          value={dob.day}
+                          onChange={(e) => updateDobField("day", e.target.value)}
+                        >
+                          <option value="">DD</option>
+                          {Array.from({ length: 31 }).map((_, index) => (
+                            <option key={index + 1} value={`${index + 1}`}>
+                              {index + 1}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="field">
+                        <label htmlFor="edit-dob-year">Year</label>
+                        <select
+                          id="edit-dob-year"
+                          value={dob.year}
+                          onChange={(e) => updateDobField("year", e.target.value)}
+                        >
+                          <option value="">YYYY</option>
+                          {Array.from({ length: 60 }).map((_, index) => {
+                            const year = new Date().getFullYear() - 18 - index;
+                            return (
+                              <option key={year} value={`${year}`}>
+                                {year}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    </div>
+                    <p className="text-muted">
+                      {agePreview ? `You’ll appear as ${agePreview} years old.` : "Select your DOB to preview your age."}
+                    </p>
+                    <div className="field">
+                      <label htmlFor="profile-city">City</label>
+                      <input
+                        id="profile-city"
+                        placeholder="City"
+                        value={form.city}
+                        onChange={(e) => updateField("city", e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="profile-profession">Profession</label>
+                      <input
+                        id="profile-profession"
+                        placeholder="Profession"
+                        value={form.profession}
+                        onChange={(e) => updateField("profession", e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="profile-bio">Short bio</label>
+                      <textarea
+                        id="profile-bio"
+                        placeholder="One or two sentences that highlight you."
+                        value={form.bioShort}
+                        onChange={(e) => updateField("bioShort", e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Intent</label>
+                      <div className="tabs">
+                        <button
+                          type="button"
+                          className={preferences.intent === "serious" ? "tab active" : "tab"}
+                          onClick={() => updatePreference("intent", "serious")}
+                        >
+                          Serious
+                        </button>
+                        <button
+                          type="button"
+                          className={preferences.intent === "casual" ? "tab active" : "tab"}
+                          onClick={() => updatePreference("intent", "casual")}
+                        >
+                          Casual
+                        </button>
+                      </div>
+                    </div>
+                    <div className="field">
+                      <label>Distance</label>
+                      <div className="tabs">
+                        <button
+                          type="button"
+                          className={preferences.distance === "local" ? "tab active" : "tab"}
+                          onClick={() => updatePreference("distance", "local")}
+                        >
+                          Local
+                        </button>
+                        <button
+                          type="button"
+                          className={preferences.distance === "anywhere" ? "tab active" : "tab"}
+                          onClick={() => updatePreference("distance", "anywhere")}
+                        >
+                          Anywhere
+                        </button>
+                      </div>
+                    </div>
+                    <div className="field">
+                      <label>Interests</label>
+                      <div className="chip-grid">
+                        {INTEREST_OPTIONS.map((interest) => {
+                          const isActive = interests.includes(interest);
+                          return (
+                            <button
+                              key={interest}
+                              type="button"
+                              className={isActive ? "chip active" : "chip"}
+                              onClick={() => toggleInterest(interest)}
+                            >
+                              {interest}
+                            </button>
                           );
                         })}
-                      </select>
+                      </div>
+                    </div>
+                    {message ? <p className={`message ${status}`}>{message}</p> : null}
+                    <div className="page-header__actions">
+                      <Button onClick={saveProfile} disabled={status === "loading"}>
+                        {status === "loading" ? "Saving..." : "Save Profile"}
+                      </Button>
+                      <Button variant="secondary" onClick={logout} disabled={status === "loading"}>
+                        Logout
+                      </Button>
                     </div>
                   </div>
-                  <p className="helper-text">
-                    {agePreview ? `You’ll appear as ${agePreview} years old.` : "Select your DOB to preview your age."}
-                  </p>
-                </div>
-                <div className="field">
-                  <label htmlFor="profile-profession">Profession</label>
+                </Card>
+              ) : (
+                <Card>
+                  <h3>Photos</h3>
                   <input
-                    id="profile-profession"
-                    placeholder="Profession"
-                    value={form.profession}
-                    onChange={(e) => updateField("profession", e.target.value)}
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="visually-hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        void handlePhotoUpload(file);
+                      }
+                    }}
                   />
-                </div>
-              </div>
-
-              <div className="form-section">
-                <div className="section-header">
-                  <h3>About you</h3>
-                  <p className="card-subtitle">A short intro goes a long way.</p>
-                </div>
-                <div className="field">
-                  <label htmlFor="profile-bio">Short bio</label>
-                  <textarea
-                    id="profile-bio"
-                    placeholder="One or two sentences that highlight you."
-                    value={form.bioShort}
-                    onChange={(e) => updateField("bioShort", e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="form-section">
-                <div className="section-header">
-                  <h3>Preferences</h3>
-                  <p className="card-subtitle">Set the vibe and distance.</p>
-                </div>
-                <div className="field">
-                  <label>Intent</label>
-                  <div className="segmented-control">
-                    <button
-                      type="button"
-                      className={preferences.intent === "serious" ? "active" : ""}
-                      onClick={() => updatePreference("intent", "serious")}
-                    >
-                      Serious
-                    </button>
-                    <button
-                      type="button"
-                      className={preferences.intent === "casual" ? "active" : ""}
-                      onClick={() => updatePreference("intent", "casual")}
-                    >
-                      Casual
-                    </button>
-                  </div>
-                </div>
-                <div className="field">
-                  <label>Distance</label>
-                  <div className="segmented-control">
-                    <button
-                      type="button"
-                      className={preferences.distance === "local" ? "active" : ""}
-                      onClick={() => updatePreference("distance", "local")}
-                    >
-                      Local
-                    </button>
-                    <button
-                      type="button"
-                      className={preferences.distance === "anywhere" ? "active" : ""}
-                      onClick={() => updatePreference("distance", "anywhere")}
-                    >
-                      Anywhere
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-section">
-                <div className="section-header">
-                  <h3>Interests</h3>
-                  <p className="card-subtitle">Pick a few tags that describe you.</p>
-                </div>
-                <div className="chip-grid">
-                  {INTEREST_OPTIONS.map((interest) => {
-                    const isActive = interests.includes(interest);
-                    return (
-                      <button
-                        key={interest}
-                        type="button"
-                        className={isActive ? "chip active" : "chip"}
-                        onClick={() => toggleInterest(interest)}
-                      >
-                        {interest}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {message ? <p className={`message ${status}`}>{message}</p> : null}
-              <div className="sticky-actions">
-                <button onClick={saveProfile} disabled={status === "loading"}>
-                  {status === "loading" ? "Saving..." : "Save Profile"}
-                </button>
-                <button className="secondary" onClick={logout} disabled={status === "loading"}>
-                  Logout
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <section className="card muted profile-photo-card">
-            <div className="section-header">
-              <h3>Profile photo</h3>
-              <p className="card-subtitle">Add one strong photo for your first impression.</p>
-            </div>
-            <div className="inline-actions">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="visually-hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    void handlePhotoUpload(file);
-                  }
-                }}
-              />
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-              >
-                {photos.length ? "Edit photo" : "Upload photo"}
-              </button>
-              {isUploading ? <span className="card-subtitle">Uploading… {uploadProgress}%</span> : null}
-            </div>
-            {photos.length ? (
-              <div className="photo-grid single">
-                <img
-                  key={photos[0].id}
-                  src={getAssetUrl(photos[0].url) ?? ""}
-                  alt="Profile"
-                />
-              </div>
-            ) : (
-              <p className="card-subtitle">No photo uploaded yet.</p>
-            )}
-          </section>
+                  <Button variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                    {photos.length ? "Edit photo" : "Upload photo"}
+                  </Button>
+                  {isUploading ? <span className="text-muted">Uploading… {uploadProgress}%</span> : null}
+                  {photos.length ? (
+                    <img src={getAssetUrl(photos[0].url) ?? ""} alt="Profile" />
+                  ) : (
+                    <p className="text-muted">No photo uploaded yet.</p>
+                  )}
+                </Card>
+              )}
+            </>
+          )}
         </div>
-        </div>
-      </AppShell>
+      </AppShellLayout>
     </RouteGuard>
   );
 }

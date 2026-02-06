@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { apiFetch } from "../../../lib/api";
 import RouteGuard from "../../components/RouteGuard";
-import AppShell from "../../components/AppShell";
+import AppShellLayout from "../../components/ui/AppShellLayout";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import PageHeader from "../../components/ui/PageHeader";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -47,43 +50,46 @@ export default function MatchDetailPage() {
 
   return (
     <RouteGuard requireActive>
-      <AppShell>
-        <div className="stack-page">
-          <div className="page-header">
-            <div>
-              <h2>Match Detail</h2>
-              <p className="card-subtitle">Match ID: {matchId}</p>
-            </div>
-          </div>
-          <div className="simple-card">
-            <div className="inline-actions">
-              <button onClick={() => respond("YES")} disabled={status === "loading"}>
+      <AppShellLayout>
+        <div className="list-grid">
+          <PageHeader title="Match Detail" subtitle={`Match ID: ${matchId}`} />
+          <Card>
+            <div className="page-header__actions">
+              <Button onClick={() => respond("YES")} disabled={status === "loading"}>
                 Consent YES
-              </button>
-              <button className="secondary" onClick={() => respond("NO")} disabled={status === "loading"}>
+              </Button>
+              <Button variant="secondary" onClick={() => respond("NO")} disabled={status === "loading"}>
                 Consent NO
-              </button>
+              </Button>
+              <Button variant="ghost" onClick={unlockPhones} disabled={status === "loading"}>
+                {status === "loading" ? "Checking..." : "Unlock Phones"}
+              </Button>
             </div>
-            <button onClick={unlockPhones} disabled={status === "loading"}>
-              {status === "loading" ? "Checking..." : "Unlock Phones"}
-            </button>
             {message ? <p className={`message ${status}`}>{message}</p> : null}
             {phones ? (
-              <div className="card muted">
+              <Card variant="muted">
                 <h3>Unlocked numbers</h3>
-                <ul className="list">
-                  {phones.users?.map((user: any) => (
-                    <li key={user.id} className="list-item">
-                      <span>Member {user.id.slice(0, 6)}</span>
-                      <strong>{user.phone}</strong>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Member</th>
+                      <th>Phone</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {phones.users?.map((user: any) => (
+                      <tr key={user.id}>
+                        <td>Member {user.id.slice(0, 6)}</td>
+                        <td>{user.phone}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
             ) : null}
-          </div>
+          </Card>
         </div>
-      </AppShell>
+      </AppShellLayout>
     </RouteGuard>
   );
 }
