@@ -26,6 +26,7 @@ type Profile = {
 
 const PAGE_SIZE = 8;
 const SWIPE_THRESHOLD = 120;
+const SWIPE_DETAIL_THRESHOLD = 80;
 
 export default function DiscoverPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -39,6 +40,7 @@ export default function DiscoverPage() {
   const dragStart = useRef<{ x: number; y: number } | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const ignoreClickRef = useRef(false);
+  const sheetDragStart = useRef<{ y: number } | null>(null);
 
   const activeProfile = useMemo(() => profiles[0], [profiles]);
 
@@ -136,19 +138,40 @@ export default function DiscoverPage() {
       setDragOffset({ x: 0, y: 0, active: false });
       return;
     }
-    const { x } = dragOffsetRef.current;
+    const { x, y } = dragOffsetRef.current;
+    const absX = Math.abs(x);
+    const absY = Math.abs(y);
     dragStart.current = null;
-    if (x > SWIPE_THRESHOLD) {
+    if (absY > absX && y < -SWIPE_DETAIL_THRESHOLD) {
+      ignoreClickRef.current = true;
+      void openDetail(activeProfile);
+      setDragOffset({ x: 0, y: 0, active: false });
+      return;
+    }
+    if (absX > absY && x > SWIPE_THRESHOLD) {
       ignoreClickRef.current = true;
       void sendLike(activeProfile, "LIKE");
       return;
     }
-    if (x < -SWIPE_THRESHOLD) {
+    if (absX > absY && x < -SWIPE_THRESHOLD) {
       ignoreClickRef.current = true;
       void sendLike(activeProfile, "PASS");
       return;
     }
     setDragOffset({ x: 0, y: 0, active: false });
+  }
+
+  function handleSheetPointerDown(event: PointerEvent<HTMLDivElement>) {
+    sheetDragStart.current = { y: event.clientY };
+  }
+
+  function handleSheetPointerUp(event: PointerEvent<HTMLDivElement>) {
+    if (!sheetDragStart.current) return;
+    const deltaY = event.clientY - sheetDragStart.current.y;
+    sheetDragStart.current = null;
+    if (deltaY > 80) {
+      closeDetail();
+    }
   }
 
   const stackProfiles = profiles.slice(0, 3);
@@ -157,7 +180,11 @@ export default function DiscoverPage() {
         transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${dragOffset.x / 14}deg)`,
         transition: dragOffset.active ? "none" : "transform 0.2s ease"
       }
-    : undefined;
+      : undefined;
+  const detailInterests = detailProfile?.preferences?.interests ?? detailProfile?.interests ?? [];
+  const detailPhotos = detailProfile?.photos ?? detailProfile?.photoUrls ?? [];
+  const detailIntent = detailProfile?.intent ?? detailProfile?.preferences?.intent;
+  const detailDistance = detailProfile?.distance ?? detailProfile?.preferences?.distance;
 
   return (
     <RouteGuard requireActive>
@@ -210,6 +237,17 @@ export default function DiscoverPage() {
         }
       >
         <div className="discover-grid">
+          <div className="discover-mobile-header">
+            <span className="text-muted">Curated introductions</span>
+            <button
+              className="text-button"
+              type="button"
+              onClick={() => loadProfiles(true, mode)}
+              disabled={isFetching}
+            >
+              {isFetching ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
           {status === "loading" && !profiles.length ? (
             <LoadingState message="Loading curated introductions..." />
           ) : status === "error" ? (
@@ -246,6 +284,14 @@ export default function DiscoverPage() {
                         ) : (
                           <span>{profile.name.slice(0, 1)}</span>
                         )}
+                        <div className="profile-card__overlay">
+                          <div>
+                            <h3>
+                              {profile.name} <span>{profile.age}</span>
+                            </h3>
+                            <p>{profile.city}</p>
+                          </div>
+                        </div>
                       </div>
                       <div className="profile-card__content">
                         <h3>
@@ -281,6 +327,32 @@ export default function DiscoverPage() {
                   ✔
                 </button>
               </div>
+              <div className="discover-actions discover-actions--mobile">
+                <button
+                  className="circle-action"
+                  onClick={() => activeProfile && sendLike(activeProfile, "PASS")}
+                  aria-label="Pass"
+                >
+                  ✕
+                </button>
+                <button
+                  className="circle-action super"
+                  onClick={() => {
+                    setStatus("success");
+                    setMessage("Super likes are coming soon.");
+                  }}
+                  aria-label="Super like"
+                >
+                  ★
+                </button>
+                <button
+                  className="circle-action primary"
+                  onClick={() => activeProfile && sendLike(activeProfile, "LIKE")}
+                  aria-label="Like"
+                >
+                  ❤
+                </button>
+              </div>
             </>
           ) : (
             <EmptyState
@@ -296,7 +368,15 @@ export default function DiscoverPage() {
         {detailStatus !== "idle" ? (
           <div className="profile-modal" onClick={closeDetail} role="presentation">
             <div className="profile-modal__backdrop" />
-            <div className="profile-modal__content" onClick={(event) => event.stopPropagation()}>
+            <div
+              className="profile-modal__content"
+              onClick={(event) => event.stopPropagation()}
+              onPointerDown={handleSheetPointerDown}
+              onPointerUp={handleSheetPointerUp}
+            >
+              <button className="profile-modal__handle" onClick={closeDetail} type="button" aria-label="Close">
+                ⌄
+              </button>
               {detailStatus === "loading" ? (
                 <div className="modal-loading">
                   <div className="skeleton-block" />
@@ -312,9 +392,6 @@ export default function DiscoverPage() {
                 </div>
               ) : detailProfile ? (
                 <div className="modal-body">
-                  <button className="modal-close" onClick={closeDetail} type="button">
-                    Close
-                  </button>
                   <div className="modal-photo">
                     {detailProfile.primaryPhotoUrl ? (
                       <img src={getAssetUrl(detailProfile.primaryPhotoUrl) ?? ""} alt={detailProfile.name} />
@@ -325,12 +402,40 @@ export default function DiscoverPage() {
                       {detailProfile.name} <span>{detailProfile.age}</span>
                     </h3>
                     <p className="card-subtitle">
-                      {detailProfile.city} • {detailProfile.profession}
+                      {detailProfile.city} {detailProfile.profession ? `• ${detailProfile.profession}` : ""}
                     </p>
                     {detailProfile.videoVerificationStatus === "APPROVED" ? (
                       <span className="badge verified">Verified</span>
                     ) : null}
                     <p>{detailProfile.bioShort}</p>
+                    <div className="detail-meta">
+                      <span>{detailProfile.city ?? "Unknown city"}</span>
+                      {detailDistance ? <span>{detailDistance} miles away</span> : null}
+                      {detailIntent ? <span>{detailIntent}</span> : null}
+                    </div>
+                    {detailInterests.length ? (
+                      <div className="chip-row">
+                        {detailInterests.map((interest: string) => (
+                          <span key={interest} className="chip">
+                            {interest}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    {detailPhotos.length ? (
+                      <div className="detail-photo-grid">
+                        {detailPhotos.map((photo: any) => {
+                          const url = typeof photo === "string" ? photo : photo.url;
+                          return (
+                            <img
+                              key={photo.id ?? url}
+                              src={getAssetUrl(url) ?? ""}
+                              alt="Profile detail"
+                            />
+                          );
+                        })}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ) : null}

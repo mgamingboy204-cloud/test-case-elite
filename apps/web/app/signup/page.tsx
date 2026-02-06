@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../lib/api";
 import { useSession } from "../../lib/session";
@@ -26,9 +26,16 @@ export default function SignupPage() {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
+  const [otpCountdown, setOtpCountdown] = useState(0);
 
   const [account, setAccount] = useState({ phone: "", email: "", password: "" });
   const [otpCode, setOtpCode] = useState("");
+
+  useEffect(() => {
+    if (otpCountdown <= 0) return;
+    const timer = setTimeout(() => setOtpCountdown((prev) => Math.max(prev - 1, 0)), 1000);
+    return () => clearTimeout(timer);
+  }, [otpCountdown]);
 
   async function createAccount() {
     if (!phoneRegex.test(account.phone)) {
@@ -55,6 +62,7 @@ export default function SignupPage() {
       });
       setStatus("success");
       setMessage("Account created! OTP sent to your phone.");
+      setOtpCountdown(30);
       setStep(1);
     } catch (error) {
       setStatus("error");
@@ -76,6 +84,7 @@ export default function SignupPage() {
         auth: "omit",
         body: JSON.stringify({ phone: account.phone })
       });
+      setOtpCountdown(30);
       setStatus("success");
       setMessage("OTP sent. Check your device or dev logs.");
     } catch (error) {
@@ -173,8 +182,8 @@ export default function SignupPage() {
                 <OtpInput value={otpCode} onChange={setOtpCode} disabled={status === "loading"} idPrefix="signup-otp" />
               </div>
               <div className="otp-actions">
-                <Button variant="secondary" onClick={resendOtp} disabled={status === "loading"}>
-                  Resend OTP
+                <Button variant="secondary" onClick={resendOtp} disabled={status === "loading" || otpCountdown > 0}>
+                  {otpCountdown > 0 ? `Resend in ${otpCountdown}s` : "Resend OTP"}
                 </Button>
                 <Button onClick={verifyOtp} disabled={status === "loading"}>
                   Verify OTP

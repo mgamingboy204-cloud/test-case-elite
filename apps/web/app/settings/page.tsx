@@ -1,5 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { apiFetch } from "../../lib/api";
+import { useSession } from "../../lib/session";
 import RouteGuard from "../components/RouteGuard";
 import AppShellLayout from "../components/ui/AppShellLayout";
 import Button from "../components/ui/Button";
@@ -8,6 +12,21 @@ import PageHeader from "../components/ui/PageHeader";
 import ThemeToggle from "../components/ThemeToggle";
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const { setToken } = useSession();
+  const [logoutStatus, setLogoutStatus] = useState<"idle" | "loading">("idle");
+
+  async function handleLogout() {
+    setLogoutStatus("loading");
+    try {
+      await apiFetch("/auth/logout", { method: "POST" });
+      setToken(null);
+      router.push("/");
+    } finally {
+      setLogoutStatus("idle");
+    }
+  }
+
   return (
     <RouteGuard requireActive>
       <AppShellLayout>
@@ -38,6 +57,18 @@ export default function SettingsPage() {
               <a className="text-button" href="/payment">
                 Payment status
               </a>
+            </div>
+          </Card>
+          <Card>
+            <h3>Account access</h3>
+            <p className="text-muted">Manage sessions and account lifecycle.</p>
+            <div className="page-header__actions">
+              <Button variant="secondary" type="button" onClick={handleLogout} disabled={logoutStatus === "loading"}>
+                {logoutStatus === "loading" ? "Logging out..." : "Log out"}
+              </Button>
+              <Button variant="ghost" type="button" disabled>
+                Delete account (contact support)
+              </Button>
             </div>
           </Card>
         </div>

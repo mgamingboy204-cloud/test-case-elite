@@ -11,9 +11,18 @@ export default function PaymentPage() {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     void loadPayment();
+  }, []);
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth <= 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
 
   async function loadPayment() {
@@ -38,6 +47,8 @@ export default function PaymentPage() {
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to start payment.");
+    } finally {
+      setConfirming(false);
     }
   }
 
@@ -59,13 +70,23 @@ export default function PaymentPage() {
   const resolvedStatus = paymentStatus ?? "NOT_STARTED";
   const primaryAction =
     resolvedStatus === "NOT_STARTED"
-      ? { label: "Start payment", onClick: startPayment }
+      ? isMobile
+        ? {
+            label: "Proceed to payment",
+            onClick: () => setConfirming(true)
+          }
+        : { label: "Start payment", onClick: startPayment }
       : resolvedStatus === "STARTED"
         ? { label: "Confirm payment", onClick: confirmPayment }
         : null;
 
   return (
     <div className="payment-shell">
+      <div className="mobile-gate-header">
+        <span className="mobile-gate-step">Step 3 of 3</span>
+        <h2>Membership payment</h2>
+        <p className="text-muted">Confirm to unlock profile setup and introductions.</p>
+      </div>
       <section className="card payment-card">
         <span className="verification-pill">Membership payment</span>
         <h2>Unlock Elite Match</h2>
@@ -80,9 +101,16 @@ export default function PaymentPage() {
           <strong>{resolvedStatus}</strong>
         </div>
         {primaryAction ? (
-          <button onClick={primaryAction.onClick} disabled={status === "loading"}>
-            {status === "loading" ? "Processing..." : primaryAction.label}
-          </button>
+          <>
+            <button onClick={primaryAction.onClick} disabled={status === "loading"}>
+              {status === "loading" ? "Processing..." : primaryAction.label}
+            </button>
+            {isMobile && confirming && resolvedStatus === "NOT_STARTED" ? (
+              <button onClick={startPayment} disabled={status === "loading"} className="primary-confirm">
+                Confirm &amp; proceed
+              </button>
+            ) : null}
+          </>
         ) : (
           <div className="card muted">
             <p>Payment complete. Continue to profile setup.</p>
