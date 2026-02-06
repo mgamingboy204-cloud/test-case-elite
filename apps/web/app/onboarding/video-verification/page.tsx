@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../../lib/api";
 import { useSession } from "../../../lib/session";
@@ -16,34 +16,16 @@ type VerificationRequest = {
   completedAt?: string | null;
 };
 
-const BASE_POLL_INTERVAL_MS = 7000;
-const MAX_POLL_INTERVAL_MS = 60000;
-
 export default function VideoVerificationPage() {
   const router = useRouter();
   const { refresh } = useSession();
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [request, setRequest] = useState<VerificationRequest | null>(null);
-  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pollDelay = useRef(BASE_POLL_INTERVAL_MS);
 
   useEffect(() => {
     void loadStatus();
-    return () => {
-      if (pollTimer.current) clearTimeout(pollTimer.current);
-    };
   }, []);
-
-  useEffect(() => {
-    if (!request || ["COMPLETED", "REJECTED"].includes(request.status)) {
-      return;
-    }
-    schedulePoll();
-    return () => {
-      if (pollTimer.current) clearTimeout(pollTimer.current);
-    };
-  }, [request]);
 
   useEffect(() => {
     if (request?.status !== "COMPLETED") return;
@@ -56,33 +38,16 @@ export default function VideoVerificationPage() {
     return () => clearTimeout(timer);
   }, [request?.status, refresh, router]);
 
-  function schedulePoll() {
-    if (pollTimer.current) clearTimeout(pollTimer.current);
-    pollTimer.current = setTimeout(() => {
-      void loadStatus(true);
-    }, pollDelay.current);
-  }
-
-  async function loadStatus(silent = false) {
-    if (!silent) {
-      setStatus("loading");
-      setMessage("");
-    }
+  async function loadStatus() {
+    setStatus("loading");
+    setMessage("");
     try {
       const data = await apiFetch<{ request: VerificationRequest | null }>("/verification/status");
       setRequest(data.request ?? null);
-      pollDelay.current = BASE_POLL_INTERVAL_MS;
-      if (!silent) {
-        setStatus("success");
-      }
-      if (data.request && !["COMPLETED", "REJECTED"].includes(data.request.status)) {
-        schedulePoll();
-      }
+      setStatus("success");
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to load verification status.");
-      pollDelay.current = Math.min(pollDelay.current * 2, MAX_POLL_INTERVAL_MS);
-      schedulePoll();
     }
   }
 
@@ -105,9 +70,20 @@ export default function VideoVerificationPage() {
   const isApproved = request?.status === "COMPLETED";
   const isRejected = request?.status === "REJECTED";
   const linkReady = Boolean(request?.verificationLink);
+  const statusLabel = request?.status ?? "NOT_STARTED";
+  const primaryAction = !hasRequest
+    ? { label: "Start verification", onClick: submitRequest }
+    : isApproved
+      ? { label: "Continue", onClick: () => router.push("/onboarding/payment") }
+      : { label: "Refresh status", onClick: loadStatus };
 
   return (
     <div className="verification-shell">
+      <div className="mobile-gate-header">
+        <span className="mobile-gate-step">Step 2 of 3</span>
+        <h2>Video verification</h2>
+        <p className="text-muted">We’re reviewing in the order requests are received.</p>
+      </div>
       <section className="card verification-card">
         <div>
           <span className="verification-pill">Video Verification</span>
@@ -123,11 +99,9 @@ export default function VideoVerificationPage() {
           <li>Approval unlocks the payment step.</li>
         </ul>
 
-        {!hasRequest ? (
-          <button onClick={submitRequest} disabled={status === "loading"}>
-            {status === "loading" ? "Submitting..." : "Request verification"}
-          </button>
-        ) : null}
+        <button onClick={primaryAction.onClick} disabled={status === "loading"}>
+          {status === "loading" ? "Updating..." : primaryAction.label}
+        </button>
         {message ? <p className={`message ${status}`}>{message}</p> : null}
       </section>
 
@@ -136,20 +110,20 @@ export default function VideoVerificationPage() {
           <h3>Live status</h3>
           <p className="card-subtitle">We’ll update this as soon as your reviewer joins.</p>
           <div className="status-pill">
-            Status: <strong>{request?.status ?? (status === "success" ? "REQUESTED" : "NOT_STARTED")}</strong>
+            Status: <strong>{statusLabel}</strong>
           </div>
         </div>
 
         {isRequested ? (
           <div className="card muted">
             <h4>Requested</h4>
-            <p className="card-subtitle">We’ll connect you within a few minutes. Please keep this page open.</p>
+            <p className="card-subtitle">We’re reviewing. Refresh here to see updates.</p>
           </div>
         ) : null}
         {isInProgress && !linkReady ? (
           <div className="card muted">
             <h4>Waiting for link</h4>
-            <p className="card-subtitle">Your verifier is preparing the call link.</p>
+            <p className="card-subtitle">We’re reviewing and preparing your call link.</p>
           </div>
         ) : null}
         {isInProgress && linkReady ? (

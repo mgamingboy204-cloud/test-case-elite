@@ -44,6 +44,8 @@ const steps: Step[] = [
   { id: "done", label: "Done", description: "You are ready to discover." }
 ];
 
+const mobileStepTitles = ["Name", "DOB", "City", "Intent", "Interests", "Photo"];
+
 const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 const maxBytes = 5 * 1024 * 1024;
 const preferenceDefaults = { intent: "serious", distance: "local" };
@@ -681,8 +683,15 @@ export default function OnboardingProfilePage() {
     );
   }
 
+  const mobileStepIndex = Math.min(stepIndex, mobileStepTitles.length - 1);
+
   return (
     <div className="wizard-layout">
+      <div className="mobile-gate-header">
+        <span className="mobile-gate-step">Step {mobileStepIndex + 1} of {mobileStepTitles.length}</span>
+        <h2>{mobileStepTitles[mobileStepIndex]}</h2>
+        <p className="text-muted">Complete each step to unlock introductions.</p>
+      </div>
       <section className="card wizard-card">
         <div className="wizard-header">
           <div>

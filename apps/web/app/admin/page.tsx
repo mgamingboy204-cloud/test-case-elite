@@ -97,10 +97,10 @@ export default function AdminPage() {
               <tbody>
                 {users.map((user) => (
                   <tr key={user.id}>
-                    <td>{user.displayName ?? user.profile?.name ?? user.phone}</td>
-                    <td>{user.status ?? "PENDING"}</td>
-                    <td>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—"}</td>
-                    <td>
+                    <td data-label="User">{user.displayName ?? user.profile?.name ?? user.phone}</td>
+                    <td data-label="Status">{user.status ?? "PENDING"}</td>
+                    <td data-label="Created">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—"}</td>
+                    <td data-label="Actions">
                       <div className="page-header__actions">
                         <Button variant="secondary" onClick={() => updateUser(user.id, "approve")}>
                           Approve

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import { useSession } from "../../lib/session";
 import { getDefaultRoute } from "../../lib/onboarding";
@@ -29,7 +29,22 @@ export default function LoginPage() {
   const [message, setMessage] = useState("");
   const [otpRequired, setOtpRequired] = useState(false);
   const [otpCode, setOtpCode] = useState("");
+  const [otpCountdown, setOtpCountdown] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   const { refresh, setToken } = useSession();
+
+  useEffect(() => {
+    if (otpCountdown <= 0) return;
+    const timer = setTimeout(() => setOtpCountdown((prev) => Math.max(prev - 1, 0)), 1000);
+    return () => clearTimeout(timer);
+  }, [otpCountdown]);
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth <= 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   async function handleLogin() {
     if (!phoneRegex.test(phone)) {
@@ -55,6 +70,7 @@ export default function LoginPage() {
       );
       if (response.otpRequired) {
         setOtpRequired(true);
+        setOtpCountdown(30);
         setStatus("success");
         setMessage("OTP sent. Please enter the 6-digit code.");
       } else {
@@ -88,6 +104,7 @@ export default function LoginPage() {
         auth: "omit",
         body: JSON.stringify({ phone })
       });
+      setOtpCountdown(30);
       setStatus("success");
       setMessage("New OTP sent. Check your device or dev logs.");
     } catch (error) {
@@ -177,7 +194,7 @@ export default function LoginPage() {
               Remember me on this device
             </label>
             <Button onClick={handleLogin} disabled={status === "loading"} fullWidth>
-              {status === "loading" ? "Signing in..." : "Log in"}
+              {status === "loading" ? "Signing in..." : isMobile ? "Continue" : "Log in"}
             </Button>
             {otpRequired ? (
               <div className="otp-panel">
@@ -186,8 +203,8 @@ export default function LoginPage() {
                   <OtpInput value={otpCode} onChange={setOtpCode} disabled={status === "loading"} idPrefix="otp-code" />
                 </div>
                 <div className="otp-actions">
-                  <Button variant="secondary" onClick={resendOtp} disabled={status === "loading"}>
-                    Resend OTP
+                  <Button variant="secondary" onClick={resendOtp} disabled={status === "loading" || otpCountdown > 0}>
+                    {otpCountdown > 0 ? `Resend in ${otpCountdown}s` : "Resend OTP"}
                   </Button>
                   <Button onClick={verifyOtp} disabled={status === "loading"}>
                     Verify OTP

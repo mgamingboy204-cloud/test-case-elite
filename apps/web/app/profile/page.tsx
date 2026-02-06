@@ -42,6 +42,7 @@ export default function ProfilePage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [activeSection, setActiveSection] = useState<"about" | "photos">("about");
+  const [isMobile, setIsMobile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { setToken } = useSession();
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
@@ -52,6 +53,13 @@ export default function ProfilePage() {
 
   useEffect(() => {
     void loadProfile();
+  }, []);
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth <= 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
 
   useEffect(() => {
@@ -278,7 +286,11 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     <div className="page-header__actions">
-                      <Button variant="secondary" onClick={saveProfile} disabled={status === "loading"}>
+                      <Button
+                        variant="secondary"
+                        onClick={() => (isMobile ? router.push("/onboarding/profile") : saveProfile())}
+                        disabled={status === "loading"}
+                      >
                         Edit profile
                       </Button>
                       <Button
@@ -544,7 +556,14 @@ export default function ProfilePage() {
                   </Button>
                   {isUploading ? <span className="text-muted">Uploading… {uploadProgress}%</span> : null}
                   {photos.length ? (
-                    <img src={getAssetUrl(photos[0].url) ?? ""} alt="Profile" />
+                    <>
+                      <div className="photo-grid">
+                        {photos.map((photo) => (
+                          <img key={photo.id ?? photo.url} src={getAssetUrl(photo.url) ?? ""} alt="Profile" />
+                        ))}
+                      </div>
+                      <img className="photo-single" src={getAssetUrl(photos[0].url) ?? ""} alt="Profile" />
+                    </>
                   ) : (
                     <p className="text-muted">No photo uploaded yet.</p>
                   )}

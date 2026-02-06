@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import { useSession } from "../../lib/session";
 import { getDefaultRoute } from "../../lib/onboarding";
@@ -23,6 +23,7 @@ export default function OtpPage() {
   const [sendPhone, setSendPhone] = useState("");
   const [sendStatus, setSendStatus] = useState<Status>("idle");
   const [sendMessage, setSendMessage] = useState("");
+  const [otpCountdown, setOtpCountdown] = useState(0);
 
   const [verifyPhone, setVerifyPhone] = useState("");
   const [otpCode, setOtpCode] = useState("");
@@ -30,6 +31,12 @@ export default function OtpPage() {
   const [verifyMessage, setVerifyMessage] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
   const { refresh, setToken } = useSession();
+
+  useEffect(() => {
+    if (otpCountdown <= 0) return;
+    const timer = setTimeout(() => setOtpCountdown((prev) => Math.max(prev - 1, 0)), 1000);
+    return () => clearTimeout(timer);
+  }, [otpCountdown]);
 
   async function handleSendOtp() {
     if (!phoneRegex.test(sendPhone)) {
@@ -46,6 +53,7 @@ export default function OtpPage() {
         body: JSON.stringify({ phone: sendPhone })
       });
       setSendStatus("success");
+      setOtpCountdown(30);
       setSendMessage("OTP sent! Check your device or dev logs.");
     } catch (error) {
       setSendStatus("error");
@@ -104,19 +112,23 @@ export default function OtpPage() {
         </div>
         <div className="form">
           <div className="field">
-            <label htmlFor="send-phone">Phone</label>
-            <input
-              id="send-phone"
-              placeholder="10-digit phone number"
-              value={sendPhone}
-              onChange={(e) => setSendPhone(e.target.value)}
-            />
-          </div>
-          <button onClick={handleSendOtp} disabled={sendStatus === "loading"}>
-            {sendStatus === "loading" ? "Sending..." : "Send OTP"}
-          </button>
-          {sendMessage ? <p className={`message ${sendStatus}`}>{sendMessage}</p> : null}
+          <label htmlFor="send-phone">Phone</label>
+          <input
+            id="send-phone"
+            placeholder="10-digit phone number"
+            value={sendPhone}
+            onChange={(e) => setSendPhone(e.target.value)}
+          />
         </div>
+        <button onClick={handleSendOtp} disabled={sendStatus === "loading" || otpCountdown > 0}>
+          {sendStatus === "loading"
+            ? "Sending..."
+            : otpCountdown > 0
+              ? `Resend in ${otpCountdown}s`
+              : "Send OTP"}
+        </button>
+        {sendMessage ? <p className={`message ${sendStatus}`}>{sendMessage}</p> : null}
+      </div>
         <div className="divider" />
         <div className="form">
           <div className="field">

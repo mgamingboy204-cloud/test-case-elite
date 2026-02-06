@@ -32,6 +32,14 @@ export default function HomePage() {
               Already a member? Log in
             </Link>
           </div>
+          <div className="hero-actions-mobile">
+            <Link className="btn btn-block" href="/signup">
+              Get started
+            </Link>
+            <Link className="btn btn-secondary btn-block" href="/login">
+              Log in
+            </Link>
+          </div>
         </div>
         <div className="hero-media" aria-hidden="true" />
       </section>

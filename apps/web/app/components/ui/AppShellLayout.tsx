@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useSession } from "../../../lib/session";
+import MobileShell from "../MobileShell";
 import ThemeToggle from "../ThemeToggle";
 import SidebarNavItem from "./SidebarNavItem";
 
@@ -105,6 +106,7 @@ export default function AppShellLayout({ children, rightPanel }: AppShellLayoutP
 
   return (
     <div className="app-shell-layout">
+      <MobileShell title={title} />
       <aside className="app-rail" aria-label="Primary">
         <Link className="rail-brand" href="/discover">
           ELITE MATCH
@@ -147,7 +149,9 @@ export default function AppShellLayout({ children, rightPanel }: AppShellLayoutP
         </header>
 
         <div className={rightPanel ? "app-content app-content--split" : "app-content"}>
-          <div className="app-center">{children}</div>
+          <div className="app-center">
+            <div className="mobile-shell__content">{children}</div>
+          </div>
           {rightPanel ? <aside className="app-right">{rightPanel}</aside> : null}
         </div>
       </div>
