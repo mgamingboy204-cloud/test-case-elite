@@ -1,88 +1,55 @@
 "use client";
 
 import Link from "next/link";
+import MarketingShell from "./components/MarketingShell";
 
 export default function HomePage() {
   return (
-    <div className="public-shell">
-      <nav className="landing-nav">
-        <Link href="/" className="rail-brand">
-          ELITE MATCH
-        </Link>
-        <div className="landing-links">
-          <Link href="/safety">Safety</Link>
-          <Link href="/support">Support</Link>
-        </div>
-        <Link className="btn btn-secondary" href="/login">
-          Log in
-        </Link>
-      </nav>
-
-      <section className="landing-hero">
-        <div className="hero-content">
+    <MarketingShell>
+      <section className="marketing-hero">
+        <div className="marketing-hero__content">
+          <span className="marketing-hero__tag">Premium introductions</span>
           <h1>Elite matches. Real intentions.</h1>
           <p>
             A premium dating experience built for people who value privacy, verification, and meaningful connections.
           </p>
-          <div className="hero-actions">
+          <div className="marketing-hero__actions">
             <Link className="btn" href="/signup">
               Create account
             </Link>
-            <Link className="hero-link" href="/login">
-              Already a member? Log in
-            </Link>
-          </div>
-          <div className="hero-actions-mobile">
-            <Link className="btn btn-block" href="/signup">
-              Get started
-            </Link>
-            <Link className="btn btn-secondary btn-block" href="/login">
-              Log in
+            <Link className="btn btn-ghost" href="/learn">
+              Learn more
             </Link>
           </div>
         </div>
-        <div className="hero-media" aria-hidden="true" />
+        <div className="marketing-hero__media" aria-hidden="true" />
       </section>
 
-      <section className="feature-grid">
+      <section className="marketing-features">
         {[
           {
             title: "Verified community",
-            body: "Profiles go through verification to reduce fake accounts and build trust."
+            body: "Profiles go through concierge verification to reduce fake accounts and build trust."
           },
           {
-            title: "Serious & friends modes",
-            body: "Choose what you’re here for — dating or genuine friendships — and match with clarity."
+            title: "Intent-first matching",
+            body: "Choose dating or friends mode and connect with people who share your goals."
           },
           {
-            title: "Privacy-first",
-            body: "Your data stays protected. Control what you share and when."
+            title: "Privacy & control",
+            body: "Manage visibility, data sharing, and notifications with confidence."
           },
           {
             title: "Premium experience",
-            body: "Clean design, fast experience, no clutter."
-          },
-          {
-            title: "Real-time updates",
-            body: "Likes, matches, and verification updates stay in sync."
+            body: "Thoughtful design, curated introductions, and zero clutter."
           }
         ].map((item) => (
-          <div key={item.title} className="ui-card ui-card--outline">
+          <div key={item.title} className="ui-card ui-card--outline marketing-feature-card">
             <h3>{item.title}</h3>
             <p className="text-muted">{item.body}</p>
           </div>
         ))}
       </section>
-
-      <footer className="site-footer">
-        <div className="landing-links">
-          <Link href="/safety">Safety</Link>
-          <Link href="/support">Support</Link>
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/terms">Terms</Link>
-        </div>
-        <span>© ELITE MATCH. All rights reserved.</span>
-      </footer>
-    </div>
+    </MarketingShell>
   );
 }
