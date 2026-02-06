@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useState } from "react";
 import ThemeToggle from "./ThemeToggle";
 
 type MarketingShellProps = {
@@ -9,6 +10,8 @@ type MarketingShellProps = {
 };
 
 export default function MarketingShell({ children }: MarketingShellProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <div className="marketing-shell">
       <nav className="marketing-nav">
@@ -26,7 +29,39 @@ export default function MarketingShell({ children }: MarketingShellProps) {
             Log in
           </Link>
         </div>
+        <button
+          className="marketing-nav__menu-toggle"
+          type="button"
+          onClick={() => setMenuOpen((open) => !open)}
+          aria-expanded={menuOpen}
+          aria-controls="marketing-mobile-menu"
+          aria-label="Open menu"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
       </nav>
+      <div
+        id="marketing-mobile-menu"
+        className={`marketing-mobile-menu ${menuOpen ? "is-open" : ""}`}
+      >
+        <div className="marketing-mobile-menu__panel">
+          <Link href="/learn" onClick={() => setMenuOpen(false)}>
+            Learn
+          </Link>
+          <Link href="/safety" onClick={() => setMenuOpen(false)}>
+            Safety
+          </Link>
+          <Link href="/support" onClick={() => setMenuOpen(false)}>
+            Support
+          </Link>
+          <Link href="/login" onClick={() => setMenuOpen(false)}>
+            Log in
+          </Link>
+          <ThemeToggle variant="switch" label="Toggle dark mode" />
+        </div>
+      </div>
       <main className="marketing-main">{children}</main>
       <footer className="marketing-footer">
         <div className="marketing-footer__grid">

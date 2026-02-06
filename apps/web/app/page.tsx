@@ -7,6 +7,17 @@ export default function HomePage() {
   return (
     <MarketingShell>
       <section className="marketing-hero">
+        <div className="marketing-hero__mobile">
+          <h1>Start something epic.</h1>
+          <div className="marketing-hero__cta">
+            <Link className="btn-hero btn-hero--primary" href="/signup">
+              Create account
+            </Link>
+            <Link className="btn-hero btn-hero--secondary" href="/login">
+              Log in
+            </Link>
+          </div>
+        </div>
         <div className="marketing-hero__content">
           <span className="marketing-hero__tag">PREMIUM INTRODUCTIONS</span>
           <h1>
