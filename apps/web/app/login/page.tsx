@@ -6,6 +6,7 @@ import { apiFetch } from "../../lib/api";
 import { useSession } from "../../lib/session";
 import { getDefaultRoute } from "../../lib/onboarding";
 import OtpInput from "../components/OtpInput";
+import Button from "../components/ui/Button";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -128,86 +129,84 @@ export default function LoginPage() {
     <div className="auth-layout">
       <section className="auth-visual">
         <div className="auth-visual-panel">
-          <div className="auth-badge">Elite Match</div>
-          <h1>Premium introductions, crafted for you.</h1>
-          <p>Secure, concierge-backed matchmaking with identity verification and curated discovery.</p>
-          <div className="auth-collage">
-            <div className="collage-card" />
-            <div className="collage-card" />
-            <div className="collage-card" />
-          </div>
+          <h1>ELITE MATCH</h1>
+          <p>Confidence-first matchmaking with verification, privacy, and curated introductions.</p>
         </div>
       </section>
 
       <section className="auth-card">
-        <div>
-          <h2>Sign in</h2>
-          <p className="card-subtitle">Welcome back. Access your introductions.</p>
-        </div>
-        <div className="form">
-          <div className="field">
-            <label htmlFor="login-phone">Phone</label>
-            <input
-              id="login-phone"
-              placeholder="10-digit phone number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
+        <div className="auth-card-inner">
+          <div>
+            <h2>Welcome back</h2>
+            <p className="text-muted">Log in to continue to ELITE MATCH.</p>
           </div>
-          <div className="field">
-            <label htmlFor="login-password">Password</label>
-            <input
-              id="login-password"
-              placeholder="••••••••"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          <label className="checkbox">
-            <input
-              type="checkbox"
-              checked={rememberDevice}
-              onChange={(e) => setRememberDevice(e.target.checked)}
-            />
-            Remember this device for 30 days
-          </label>
-          <label className="checkbox">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-            />
-            Remember me on this device
-          </label>
-          <button onClick={handleLogin} disabled={status === "loading"}>
-            {status === "loading" ? "Signing in..." : "Login"}
-          </button>
-          {otpRequired ? (
-            <div className="otp-panel">
-              <div className="field">
-                <label htmlFor="otp-code">OTP Code</label>
-                <OtpInput value={otpCode} onChange={setOtpCode} disabled={status === "loading"} idPrefix="otp-code" />
-              </div>
-              <div className="otp-actions">
-                <button className="secondary" onClick={resendOtp} disabled={status === "loading"}>
-                  Resend OTP
-                </button>
-                <button onClick={verifyOtp} disabled={status === "loading"}>
-                  Verify OTP
-                </button>
-              </div>
+          <div className="form">
+            <div className="field">
+              <label htmlFor="login-phone">Phone</label>
+              <input
+                id="login-phone"
+                placeholder="10-digit phone number"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
             </div>
-          ) : null}
-          {message ? <p className={`message ${status}`}>{message}</p> : null}
+            <div className="field">
+              <label htmlFor="login-password">Password</label>
+              <input
+                id="login-password"
+                placeholder="••••••••"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                checked={rememberDevice}
+                onChange={(e) => setRememberDevice(e.target.checked)}
+              />
+              Remember this device for 30 days
+            </label>
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              Remember me on this device
+            </label>
+            <Button onClick={handleLogin} disabled={status === "loading"} fullWidth>
+              {status === "loading" ? "Signing in..." : "Log in"}
+            </Button>
+            {otpRequired ? (
+              <div className="otp-panel">
+                <div className="field">
+                  <label htmlFor="otp-code">OTP Code</label>
+                  <OtpInput value={otpCode} onChange={setOtpCode} disabled={status === "loading"} idPrefix="otp-code" />
+                </div>
+                <div className="otp-actions">
+                  <Button variant="secondary" onClick={resendOtp} disabled={status === "loading"}>
+                    Resend OTP
+                  </Button>
+                  <Button onClick={verifyOtp} disabled={status === "loading"}>
+                    Verify OTP
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            {message ? <p className={`message ${status}`}>{message}</p> : null}
+          </div>
+          <div className="auth-switch">
+            <span>Don’t have an account?</span>
+            <button className="text-button" type="button" onClick={() => router.push("/signup")}>
+              Create one
+            </button>
+          </div>
+          <footer className="auth-footer">
+            By continuing, you agree to our Terms and Privacy Policy.
+          </footer>
         </div>
-        <div className="auth-switch">
-          <span>New here?</span>
-          <button className="text-button" type="button" onClick={() => router.push("/signup")}>
-            Create an account
-          </button>
-        </div>
-        <footer className="auth-footer">Secure login • OTP protected • Concierge support</footer>
       </section>
     </div>
   );
