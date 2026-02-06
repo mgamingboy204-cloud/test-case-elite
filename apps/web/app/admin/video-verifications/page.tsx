@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../../../lib/api";
 
 type Status = "idle" | "loading" | "success" | "error";
@@ -14,35 +14,16 @@ type VerificationRequest = {
   user?: { phone?: string; email?: string | null };
 };
 
-const BASE_POLL_INTERVAL_MS = 7000;
-const MAX_POLL_INTERVAL_MS = 60000;
-
 export default function AdminVideoVerificationsPage() {
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [filter, setFilter] = useState("ALL");
   const [links, setLinks] = useState<Record<string, string>>({});
-  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pollDelay = useRef(BASE_POLL_INTERVAL_MS);
 
   useEffect(() => {
     void loadRequests(filter);
   }, [filter]);
-
-  useEffect(() => {
-    schedulePoll(filter);
-    return () => {
-      if (pollTimer.current) clearTimeout(pollTimer.current);
-    };
-  }, [filter]);
-
-  function schedulePoll(currentFilter: string) {
-    if (pollTimer.current) clearTimeout(pollTimer.current);
-    pollTimer.current = setTimeout(() => {
-      void loadRequests(currentFilter, true);
-    }, pollDelay.current);
-  }
 
   async function loadRequests(statusFilter?: string, silent = false) {
     if (!silent) {
@@ -53,17 +34,13 @@ export default function AdminVideoVerificationsPage() {
       const query = statusFilter && statusFilter !== "ALL" ? `?status=${statusFilter}` : "";
       const data = await apiFetch<{ requests: VerificationRequest[] }>(`/admin/verification-requests${query}`);
       setRequests(data.requests ?? []);
-      pollDelay.current = BASE_POLL_INTERVAL_MS;
       if (!silent) {
         setStatus("success");
         setMessage("");
       }
-      schedulePoll(statusFilter ?? "ALL");
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to load verification requests.");
-      pollDelay.current = Math.min(pollDelay.current * 2, MAX_POLL_INTERVAL_MS);
-      schedulePoll(statusFilter ?? "ALL");
     }
   }
 
