@@ -15,6 +15,7 @@ export const RegisterSchema = z.object({
 export const LoginSchema = z.object({
   phone: PhoneSchema,
   password: z.string().min(8),
+  rememberDevice30Days: z.boolean().optional(),
   rememberDevice: z.boolean().optional(),
   rememberMe: z.boolean().optional()
 });

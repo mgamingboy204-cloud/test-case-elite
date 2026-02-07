@@ -19,6 +19,23 @@ function issueSession(req: Request, userId: string) {
   return req.sessionID;
 }
 
+const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
+const SIXTY_DAYS_MS = 1000 * 60 * 60 * 24 * 60;
+
+function applySessionLifetime(
+  req: Request,
+  options: { rememberDevice30Days?: boolean; rememberMe?: boolean }
+) {
+  if (options.rememberDevice30Days) {
+    req.session.cookie.maxAge = THIRTY_DAYS_MS;
+  } else if (options.rememberMe) {
+    req.session.cookie.maxAge = SIXTY_DAYS_MS;
+  } else {
+    req.session.cookie.maxAge = undefined;
+    req.session.cookie.expires = undefined;
+  }
+}
+
 export async function sendOtp(req: Request, res: Response) {
   const { phone } = req.body as { phone: string };
   await requestOtp(phone);
@@ -31,6 +48,10 @@ export async function verifyOtp(req: Request, res: Response) {
     const user = await verifyOtpAndGetUser(phone, code);
 
     req.session.otpVerifiedPhone = phone;
+    applySessionLifetime(req, {
+      rememberDevice30Days: req.session.pendingRememberDevice30Days ?? false,
+      rememberMe: rememberMe ?? req.session.pendingRememberMe ?? false
+    });
     issueSession(req, user.id);
     req.session.pendingUserId = undefined;
     req.session.pendingPhone = undefined;
@@ -41,11 +62,11 @@ export async function verifyOtp(req: Request, res: Response) {
     const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
     res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
 
-    if (req.session.pendingRememberDevice) {
+    if (req.session.pendingRememberDevice30Days) {
       const { token } = await createDeviceToken(user.id);
       res.cookie(deviceCookieName, token, deviceCookieOptions);
     }
-    req.session.pendingRememberDevice = undefined;
+    req.session.pendingRememberDevice30Days = undefined;
     req.session.pendingRememberMe = undefined;
 
     return res.json({
@@ -78,41 +99,38 @@ export async function register(req: Request, res: Response) {
 }
 
 export async function login(req: Request, res: Response) {
-  const { phone, password, rememberDevice, rememberMe } = req.body as {
+  const { phone, password, rememberDevice30Days, rememberDevice, rememberMe } = req.body as {
     phone: string;
     password: string;
+    rememberDevice30Days?: boolean;
     rememberDevice?: boolean;
     rememberMe?: boolean;
   };
-  const cookies = parseCookies(req.headers.cookie);
-  const deviceToken = cookies[deviceCookieName];
 
-  const result = await validateLogin({ phone, password, deviceToken });
-  if (!result.otpRequired) {
-    issueSession(req, result.user.id);
-    const resolvedRememberMe = rememberMe ?? false;
-    const accessToken = signAccessToken(result.user.id, { rememberMe: resolvedRememberMe });
-    const refreshToken = signRefreshToken(result.user.id, { rememberMe: resolvedRememberMe });
-    const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
-    res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
-    return res.json({
-      id: result.user.id,
-      phone: result.user.phone,
-      status: result.user.status,
-      role: result.user.role,
-      isAdmin: result.user.isAdmin,
-      onboardingStep: result.onboardingStep ?? resolveOnboardingStep(result.user),
-      token: accessToken,
-      accessToken,
-      otpRequired: false
-    });
-  }
+  const rememberDevice30DaysValue = rememberDevice30Days ?? rememberDevice ?? false;
 
-  req.session.pendingUserId = result.user.id;
-  req.session.pendingPhone = result.user.phone;
-  req.session.pendingRememberDevice = rememberDevice ?? false;
-  req.session.pendingRememberMe = rememberMe ?? false;
-  return res.json({ otpRequired: true, phone: result.user.phone });
+  const result = await validateLogin({ phone, password });
+  issueSession(req, result.user.id);
+  applySessionLifetime(req, {
+    rememberDevice30Days: rememberDevice30DaysValue,
+    rememberMe: rememberMe ?? false
+  });
+  const resolvedRememberMe = rememberMe ?? false;
+  const accessToken = signAccessToken(result.user.id, { rememberMe: resolvedRememberMe });
+  const refreshToken = signRefreshToken(result.user.id, { rememberMe: resolvedRememberMe });
+  const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
+  res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
+  return res.json({
+    id: result.user.id,
+    phone: result.user.phone,
+    status: result.user.status,
+    role: result.user.role,
+    isAdmin: result.user.isAdmin,
+    onboardingStep: result.onboardingStep ?? resolveOnboardingStep(result.user),
+    token: accessToken,
+    accessToken,
+    otpRequired: false
+  });
 }
 
 export async function logout(req: Request, res: Response) {

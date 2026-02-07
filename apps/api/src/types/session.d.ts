@@ -6,7 +6,7 @@ declare module "express-session" {
     otpVerifiedPhone?: string;
     pendingUserId?: string;
     pendingPhone?: string;
-    pendingRememberDevice?: boolean;
+    pendingRememberDevice30Days?: boolean;
     pendingRememberMe?: boolean;
   }
 }

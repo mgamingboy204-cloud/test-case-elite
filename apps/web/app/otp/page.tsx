@@ -30,7 +30,7 @@ export default function OtpPage() {
   const [verifyStatus, setVerifyStatus] = useState<Status>("idle");
   const [verifyMessage, setVerifyMessage] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
-  const { refresh, setToken } = useSession();
+  const { refresh } = useSession();
 
   useEffect(() => {
     if (otpCountdown <= 0) return;
@@ -75,15 +75,11 @@ export default function OtpPage() {
     setVerifyStatus("loading");
     setVerifyMessage("Verifying OTP...");
     try {
-      const response = await apiFetch<{ token?: string; accessToken?: string }>("/auth/otp/verify", {
+      await apiFetch("/auth/otp/verify", {
         method: "POST",
         auth: "omit",
         body: JSON.stringify({ phone: verifyPhone, code: otpCode, rememberMe })
       });
-      const nextToken = response.accessToken ?? response.token;
-      if (nextToken) {
-        setToken(nextToken, rememberMe);
-      }
       setVerifyStatus("success");
       setVerifyMessage("OTP verified! Redirecting...");
       const user = await refresh();

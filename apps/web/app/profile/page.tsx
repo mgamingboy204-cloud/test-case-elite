@@ -44,7 +44,7 @@ export default function ProfilePage() {
   const [activeSection, setActiveSection] = useState<"about" | "photos">("about");
   const [isMobile, setIsMobile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const { setToken } = useSession();
+  const { refresh } = useSession();
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
   const maxBytes = 5 * 1024 * 1024;
   const preferenceDefaults = { intent: "serious", distance: "local" };
@@ -244,7 +244,7 @@ export default function ProfilePage() {
 
   async function logout() {
     await apiFetch("/auth/logout", { method: "POST" });
-    setToken(null);
+    await refresh();
     router.push("/");
   }
 

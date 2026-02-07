@@ -13,14 +13,14 @@ import ThemeToggle from "../components/ThemeToggle";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { setToken } = useSession();
+  const { refresh } = useSession();
   const [logoutStatus, setLogoutStatus] = useState<"idle" | "loading">("idle");
 
   async function handleLogout() {
     setLogoutStatus("loading");
     try {
       await apiFetch("/auth/logout", { method: "POST" });
-      setToken(null);
+      await refresh();
       router.push("/");
     } finally {
       setLogoutStatus("idle");
