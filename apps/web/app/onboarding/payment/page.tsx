@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../../lib/api";
 import { useSession } from "../../../lib/session";
@@ -30,6 +30,238 @@ type CouponValidationResponse = {
   message?: string;
 };
 
+type StatusDetails = { label: string; message: string; tone: string };
+
+type MembershipPlanCardProps = {
+  subtotalAmount: number;
+  formatCurrency: (value: number) => string;
+  isMobile: boolean;
+  showBenefits: boolean;
+  onToggleBenefits: () => void;
+};
+
+function MembershipPlanCard({
+  subtotalAmount,
+  formatCurrency,
+  isMobile,
+  showBenefits,
+  onToggleBenefits
+}: MembershipPlanCardProps) {
+  return (
+    <section className="card payment-plan">
+      <div className="plan-header">
+        <div>
+          <p className="plan-name">Elite Match Annual</p>
+          <p className="plan-price">
+            {formatCurrency(subtotalAmount)}
+            <span className="plan-cycle">/year</span>
+          </p>
+          <p className="text-muted">One membership covers personalized matching and ongoing concierge care.</p>
+        </div>
+      </div>
+      <div className="plan-section-header">
+        <h3>What you get</h3>
+        {isMobile ? (
+          <button
+            type="button"
+            className="text-button benefits-toggle"
+            aria-expanded={showBenefits}
+            onClick={onToggleBenefits}
+          >
+            {showBenefits ? "Hide" : "Show"}
+          </button>
+        ) : null}
+      </div>
+      {showBenefits ? (
+        <ul className="plan-benefits" id="plan-benefits">
+          <li>
+            <span className="benefit-icon">◆</span>
+            Priority access to curated, compatible matches.
+          </li>
+          <li>
+            <span className="benefit-icon">◆</span>
+            Dedicated concierge verification and availability support.
+          </li>
+          <li>
+            <span className="benefit-icon">◆</span>
+            Exclusive weekly introductions with feedback loops.
+          </li>
+          <li>
+            <span className="benefit-icon">◆</span>
+            Private profile placement and matchmaking insights.
+          </li>
+          <li>
+            <span className="benefit-icon">◆</span>
+            Personal strategy sessions with your concierge.
+          </li>
+        </ul>
+      ) : null}
+      <div className="trust-row">
+        <span>Secure checkout</span>
+        <span>Encrypted payments</span>
+        <span>Concierge support</span>
+      </div>
+    </section>
+  );
+}
+
+type CheckoutCardProps = {
+  statusDetails: StatusDetails;
+  couponState: CouponState;
+  couponMessage: string;
+  couponCode: string;
+  maxCouponLength: number;
+  appliedCoupon: CouponDetails | null;
+  onCouponChange: (value: string) => void;
+  onApplyCoupon: () => void;
+  onRemoveCoupon: () => void;
+  isActionLoading: boolean;
+  isCouponOpen: boolean;
+  onToggleCoupon: () => void;
+  discountAmount: number;
+  totalAmount: number;
+  subtotalAmount: number;
+  formatCurrency: (value: number) => string;
+  children: ReactNode;
+  message: string;
+  status: Status;
+  isMobile: boolean;
+};
+
+function CheckoutCard({
+  statusDetails,
+  couponState,
+  couponMessage,
+  couponCode,
+  maxCouponLength,
+  appliedCoupon,
+  onCouponChange,
+  onApplyCoupon,
+  onRemoveCoupon,
+  isActionLoading,
+  isCouponOpen,
+  onToggleCoupon,
+  discountAmount,
+  totalAmount,
+  subtotalAmount,
+  formatCurrency,
+  children,
+  message,
+  status,
+  isMobile
+}: CheckoutCardProps) {
+  return (
+    <section className="card payment-checkout">
+      <div className="status-banner">
+        <div>
+          <p className="status-label">Payment status</p>
+          <p className="status-message">{statusDetails.message}</p>
+        </div>
+        <span className={`status-pill status-${statusDetails.tone}`}>{statusDetails.label}</span>
+      </div>
+
+      <div className="coupon-section">
+        <div className="coupon-header">
+          <div>
+            <h3>Coupon</h3>
+            {couponState === "applied" && appliedCoupon ? (
+              <span className="coupon-applied">Applied: {appliedCoupon.code}</span>
+            ) : null}
+          </div>
+          {!isMobile ? (
+            <button type="button" className="text-button" onClick={onToggleCoupon} aria-expanded={isCouponOpen}>
+              {isCouponOpen ? "Hide" : "Add"}
+            </button>
+          ) : null}
+        </div>
+        {isCouponOpen ? (
+          <>
+            <label className="input-label" htmlFor="coupon-code">
+              Enter coupon code
+            </label>
+            <div className="coupon-row">
+              <input
+                id="coupon-code"
+                type="text"
+                name="coupon"
+                placeholder="Enter code"
+                value={couponCode}
+                maxLength={maxCouponLength}
+                onChange={(event) => onCouponChange(event.target.value)}
+                disabled={couponState === "validating" || isActionLoading}
+              />
+              {couponState === "applied" ? (
+                <button type="button" className="secondary" onClick={onRemoveCoupon} disabled={isActionLoading}>
+                  Remove
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={onApplyCoupon}
+                  disabled={couponState === "validating" || isActionLoading}
+                >
+                  {couponState === "validating" ? "Applying..." : "Apply"}
+                </button>
+              )}
+            </div>
+            {couponMessage ? <p className={`coupon-message ${couponState}`}>{couponMessage}</p> : null}
+          </>
+        ) : null}
+      </div>
+
+      <div className="price-breakdown">
+        <div className="price-row">
+          <span>Subtotal</span>
+          <strong>{formatCurrency(subtotalAmount)}</strong>
+        </div>
+        {appliedCoupon ? (
+          <div className="price-row discount">
+            <span>Discount {appliedCoupon.discountType === "PERCENT" ? `(${appliedCoupon.discountValue}%)` : ""}</span>
+            <strong>-{formatCurrency(discountAmount)}</strong>
+          </div>
+        ) : null}
+        <div className="price-row total">
+          <span>Total</span>
+          <strong>{formatCurrency(totalAmount)}</strong>
+        </div>
+      </div>
+
+      <div className="checkout-actions">{children}</div>
+
+      {message ? <p className={`message ${status}`}>{message}</p> : null}
+    </section>
+  );
+}
+
+type MobileStickyCheckoutBarProps = {
+  totalAmount: number;
+  formatCurrency: (value: number) => string;
+  primaryLabel: string;
+  onPrimaryAction: () => void;
+  isActionLoading: boolean;
+};
+
+function MobileStickyCheckoutBar({
+  totalAmount,
+  formatCurrency,
+  primaryLabel,
+  onPrimaryAction,
+  isActionLoading
+}: MobileStickyCheckoutBarProps) {
+  return (
+    <div className="mobile-sticky-bar">
+      <div>
+        <p className="sticky-label">Total</p>
+        <strong className="sticky-amount">{formatCurrency(totalAmount)}</strong>
+      </div>
+      <button className="primary-cta" onClick={onPrimaryAction} disabled={isActionLoading}>
+        {isActionLoading ? "Processing..." : primaryLabel}
+      </button>
+    </div>
+  );
+}
+
 export default function PaymentPage() {
   const { refresh } = useSession();
   const router = useRouter();
@@ -42,6 +274,8 @@ export default function PaymentPage() {
   const [couponState, setCouponState] = useState<CouponState>("idle");
   const [couponMessage, setCouponMessage] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<CouponDetails | null>(null);
+  const [showBenefits, setShowBenefits] = useState(true);
+  const [showCoupon, setShowCoupon] = useState(false);
 
   const currencyFormatter = useMemo(
     () =>
@@ -63,6 +297,16 @@ export default function PaymentPage() {
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
+
+  useEffect(() => {
+    if (isMobile) {
+      setShowBenefits(true);
+      setShowCoupon(true);
+    } else {
+      setShowBenefits(true);
+      setShowCoupon(false);
+    }
+  }, [isMobile]);
 
   function formatCurrency(value: number) {
     return currencyFormatter.format(value);
@@ -185,7 +429,7 @@ export default function PaymentPage() {
   }
 
   const normalizedStatus = paymentStatus === "COMPLETED" ? "PAID" : paymentStatus ?? "NOT_STARTED";
-  const statusConfig: Record<string, { label: string; message: string; tone: string }> = {
+  const statusConfig: Record<string, StatusDetails> = {
     NOT_STARTED: {
       label: "Not started",
       message: "Start your payment to secure Elite Match access.",
@@ -223,134 +467,92 @@ export default function PaymentPage() {
   const totalAmount = Math.max(SUBTOTAL_AMOUNT - discountAmount, 0);
   const isActionLoading = status === "loading";
   const showMobileConfirm = isMobile && confirming && normalizedStatus === "NOT_STARTED";
+  const isNotStarted = normalizedStatus === "NOT_STARTED";
+  const isPending = normalizedStatus === "PENDING";
+  const isPaid = normalizedStatus === "PAID";
+  const isFailed = normalizedStatus === "FAILED";
+  const benefitsExpanded = isMobile ? showBenefits : true;
+  const couponExpanded = isMobile ? true : showCoupon;
+
+  const primaryCtaLabel = showMobileConfirm
+    ? "Confirm & proceed"
+    : isNotStarted
+      ? "Start payment"
+      : isPending
+        ? "Confirm payment"
+        : isPaid
+          ? "Continue to profile setup"
+          : "Retry payment";
+  const primaryCtaAction = showMobileConfirm
+    ? startPayment
+    : isNotStarted
+      ? () => setConfirming(true)
+      : isPending
+        ? confirmPayment
+        : isPaid
+          ? () => router.push("/onboarding/profile")
+          : startPayment;
 
   return (
     <div className="payment-shell premium-payment">
-      <div className="payment-hero">
-        <div>
-          <span className="verification-pill">Membership payment</span>
-          <h1>Elite Match Membership</h1>
-          <p className="text-muted">
-            A concierge-grade membership designed for intentional matchmaking, private introductions, and priority
-            support.
-          </p>
+      <div className="payment-container">
+        <div className="payment-hero">
+          <div>
+            <span className="verification-pill">Membership payment</span>
+            <h1>Elite Match Membership</h1>
+            <p className="text-muted">
+              A concierge-grade membership designed for intentional matchmaking, private introductions, and priority
+              support.
+            </p>
+          </div>
+          <span className={`status-chip status-${statusDetails.tone}`}>{statusDetails.label}</span>
         </div>
-        <span className={`status-chip status-${statusDetails.tone}`}>{statusDetails.label}</span>
-      </div>
 
-      <div className="payment-grid">
-        <section className="card payment-plan">
-          <div className="plan-header">
-            <div>
-              <p className="plan-name">Elite Match Annual</p>
-              <p className="plan-price">
-                {formatCurrency(SUBTOTAL_AMOUNT)}
-                <span className="plan-cycle">/year</span>
-              </p>
-              <p className="text-muted">One membership covers personalized matching and ongoing concierge care.</p>
-            </div>
-          </div>
-          <ul className="plan-benefits">
-            <li>
-              <span className="benefit-icon">◆</span>
-              Priority access to curated, compatible matches.
-            </li>
-            <li>
-              <span className="benefit-icon">◆</span>
-              Dedicated concierge verification and availability support.
-            </li>
-            <li>
-              <span className="benefit-icon">◆</span>
-              Exclusive weekly introductions with feedback loops.
-            </li>
-            <li>
-              <span className="benefit-icon">◆</span>
-              Private profile placement and matchmaking insights.
-            </li>
-          </ul>
-          <div className="trust-row">
-            <span>Secure checkout</span>
-            <span>Encrypted payments</span>
-            <span>24/7 concierge support</span>
-          </div>
-        </section>
+        <div className="payment-grid">
+          <MembershipPlanCard
+            subtotalAmount={SUBTOTAL_AMOUNT}
+            formatCurrency={formatCurrency}
+            isMobile={isMobile}
+            showBenefits={benefitsExpanded}
+            onToggleBenefits={() => setShowBenefits((prev) => !prev)}
+          />
 
-        <section className="card payment-checkout">
-          <div className="status-banner">
-            <div>
-              <p className="status-label">Payment status</p>
-              <p className="status-message">{statusDetails.message}</p>
-            </div>
-            <span className={`status-pill status-${statusDetails.tone}`}>{statusDetails.label}</span>
-          </div>
-
-          <div className="coupon-section">
-            <div className="coupon-header">
-              <h3>Apply coupon</h3>
-              {couponState === "applied" && appliedCoupon ? (
-                <span className="coupon-applied">Applied: {appliedCoupon.code}</span>
-              ) : null}
-            </div>
-            <div className="coupon-row">
-              <input
-                type="text"
-                name="coupon"
-                placeholder="Enter code"
-                value={couponCode}
-                maxLength={MAX_COUPON_LENGTH}
-                onChange={(event) => {
-                  const nextValue = event.target.value.toUpperCase();
-                  setCouponCode(nextValue);
-                  if (couponState === "applied") {
-                    setCouponState("idle");
-                    setAppliedCoupon(null);
-                    setCouponMessage("");
-                  }
-                }}
-                disabled={couponState === "validating" || isActionLoading}
-              />
-              {couponState === "applied" ? (
-                <button type="button" className="secondary" onClick={removeCoupon} disabled={isActionLoading}>
-                  Remove
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={applyCoupon}
-                  disabled={couponState === "validating" || isActionLoading}
-                >
-                  {couponState === "validating" ? "Applying..." : "Apply"}
-                </button>
-              )}
-            </div>
-            {couponMessage ? <p className={`coupon-message ${couponState}`}>{couponMessage}</p> : null}
-          </div>
-
-          <div className="price-breakdown">
-            <div className="price-row">
-              <span>Subtotal</span>
-              <strong>{formatCurrency(SUBTOTAL_AMOUNT)}</strong>
-            </div>
-            {appliedCoupon ? (
-              <div className="price-row discount">
-                <span>
-                  Discount{" "}
-                  {appliedCoupon.discountType === "PERCENT" ? `(${appliedCoupon.discountValue}%)` : ""}
-                </span>
-                <strong>-{formatCurrency(discountAmount)}</strong>
-              </div>
-            ) : null}
-            <div className="price-row total">
-              <span>Total</span>
-              <strong>{formatCurrency(totalAmount)}</strong>
-            </div>
-          </div>
-
-          <div className="checkout-actions">
-            {normalizedStatus === "NOT_STARTED" ? (
+          <CheckoutCard
+            statusDetails={statusDetails}
+            couponState={couponState}
+            couponMessage={couponMessage}
+            couponCode={couponCode}
+            maxCouponLength={MAX_COUPON_LENGTH}
+            appliedCoupon={appliedCoupon}
+            onCouponChange={(value) => {
+              const nextValue = value.toUpperCase();
+              setCouponCode(nextValue);
+              if (couponState === "applied") {
+                setCouponState("idle");
+                setAppliedCoupon(null);
+                setCouponMessage("");
+              }
+            }}
+            onApplyCoupon={applyCoupon}
+            onRemoveCoupon={removeCoupon}
+            isActionLoading={isActionLoading}
+            isCouponOpen={couponExpanded}
+            onToggleCoupon={() => setShowCoupon((prev) => !prev)}
+            discountAmount={discountAmount}
+            totalAmount={totalAmount}
+            subtotalAmount={SUBTOTAL_AMOUNT}
+            formatCurrency={formatCurrency}
+            message={message}
+            status={status}
+            isMobile={isMobile}
+          >
+            {isNotStarted ? (
               <>
-                <button onClick={isMobile ? () => setConfirming(true) : startPayment} disabled={isActionLoading}>
+                <button
+                  className="primary-cta"
+                  onClick={isMobile ? () => setConfirming(true) : startPayment}
+                  disabled={isActionLoading}
+                >
                   {isActionLoading ? "Processing..." : "Start payment"}
                 </button>
                 {showMobileConfirm ? (
@@ -359,30 +561,37 @@ export default function PaymentPage() {
                   </button>
                 ) : null}
               </>
-            ) : normalizedStatus === "PENDING" ? (
-              <button onClick={confirmPayment} disabled={isActionLoading}>
+            ) : isPending ? (
+              <button className="primary-cta" onClick={confirmPayment} disabled={isActionLoading}>
                 {isActionLoading ? "Confirming..." : "Confirm payment"}
               </button>
-            ) : normalizedStatus === "PAID" ? (
-              <button onClick={() => router.push("/onboarding/profile")} disabled={isActionLoading}>
+            ) : isPaid ? (
+              <button className="primary-cta" onClick={() => router.push("/onboarding/profile")} disabled={isActionLoading}>
                 Continue to profile setup
               </button>
-            ) : normalizedStatus === "FAILED" ? (
-              <button onClick={startPayment} disabled={isActionLoading}>
+            ) : isFailed ? (
+              <button className="primary-cta" onClick={startPayment} disabled={isActionLoading}>
                 Retry payment
               </button>
             ) : null}
-          </div>
 
-          {ENABLE_MOCK_PROCEED ? (
-            <button type="button" className="mock-proceed" onClick={handleMockProceed} disabled={isActionLoading}>
-              Mock Proceed (temp)
-            </button>
-          ) : null}
-
-          {message ? <p className={`message ${status}`}>{message}</p> : null}
-        </section>
+            {ENABLE_MOCK_PROCEED ? (
+              <button type="button" className="mock-proceed" onClick={handleMockProceed} disabled={isActionLoading}>
+                Mock Proceed (temp)
+              </button>
+            ) : null}
+          </CheckoutCard>
+        </div>
       </div>
+      {isMobile ? (
+        <MobileStickyCheckoutBar
+          totalAmount={totalAmount}
+          formatCurrency={formatCurrency}
+          primaryLabel={primaryCtaLabel}
+          onPrimaryAction={primaryCtaAction}
+          isActionLoading={isActionLoading}
+        />
+      ) : null}
     </div>
   );
 }
