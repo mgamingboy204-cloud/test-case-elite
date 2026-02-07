@@ -138,7 +138,7 @@ router.post(
   requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ userId: z.string() })),
-  validateBody(z.object({ reason: z.string().optional() })),
+  validateBody(z.object({ reason: z.string().min(1).nullish() })),
   asyncHandler(approveVerificationForUserHandler)
 );
 router.post(
