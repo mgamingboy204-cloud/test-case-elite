@@ -1,7 +1,7 @@
 import express from "express";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import cors from "cors";
+import cors, { CorsOptions } from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import path from "path";
@@ -41,22 +41,22 @@ app.use(
 );
 app.use(express.json({ limit: "20mb" }));
 const allowedOrigins = [env.WEB_ORIGIN, env.ADMIN_ORIGIN, "http://localhost:3000"].filter(Boolean);
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true
-  })
-);
+const corsOptions: CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true
+};
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(morgan("dev"));
 app.use((req, res, next) => {
   res.setHeader("Cache-Control", "no-store");

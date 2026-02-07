@@ -46,7 +46,7 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { refresh } = useSession();
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-  const maxBytes = 5 * 1024 * 1024;
+  const maxBytes = 10 * 1024 * 1024;
   const preferenceDefaults = { intent: "serious", distance: "local" };
   const dobString = useMemo(() => buildDobString(dob), [dob]);
   const agePreview = useMemo(() => (dobString ? getAgeFromDob(dobString) : null), [dobString]);
@@ -141,7 +141,7 @@ export default function ProfilePage() {
     }
     if (file.size > maxBytes) {
       setStatus("error");
-      setMessage("Image must be 5MB or smaller.");
+      setMessage("Image must be 10MB or smaller.");
       return false;
     }
     return true;
