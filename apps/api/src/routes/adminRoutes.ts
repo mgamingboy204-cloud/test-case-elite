@@ -28,9 +28,10 @@ import { asyncHandler } from "../utils/asyncHandler";
 const router = Router();
 const meetUrlSchema = z
   .string()
+  .trim()
   .url()
-  .refine((url) => url.startsWith("https://meet.google.com/"), {
-    message: "Meet link must start with https://meet.google.com/"
+  .refine((url) => /^https:\/\/meet\.google\.com\/.+/.test(url), {
+    message: "Meet link must start with https://meet.google.com/ and include a meeting path."
   });
 
 router.post(
