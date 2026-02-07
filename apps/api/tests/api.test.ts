@@ -403,13 +403,13 @@ describe("Verification concierge flow", () => {
     const requestId = createRequest.body.request.id;
 
     const start = await withAuth(agent.post(`/admin/verification-requests/${requestId}/start`), adminToken)
-      .send({ verificationLink: "https://meet.google.com/abc-defg-hij" });
+      .send({ meetUrl: "https://meet.google.com/abc-defg-hij" });
     expect(start.status).toBe(200);
 
-    const statusResponse = await withAuth(userAgent.get("/verification/status"), userToken);
+    const statusResponse = await withAuth(userAgent.get("/me/verification-status"), userToken);
     expect(statusResponse.status).toBe(200);
-    expect(statusResponse.body.request.status).toBe("IN_PROGRESS");
-    expect(statusResponse.body.request.verificationLink).toBe("https://meet.google.com/abc-defg-hij");
+    expect(statusResponse.body.status).toBe("IN_PROGRESS");
+    expect(statusResponse.body.meetUrl).toBe("https://meet.google.com/abc-defg-hij");
 
     const approve = await withAuth(agent.post(`/admin/verification-requests/${requestId}/approve`), adminToken);
     expect(approve.status).toBe(200);
@@ -433,15 +433,15 @@ describe("Verification concierge flow", () => {
         userId: user.id,
         status: "IN_PROGRESS",
         verificationLink: "https://meet.google.com/expired-link",
+        meetUrl: "https://meet.google.com/expired-link",
         linkExpiresAt: new Date(Date.now() - 5 * 60 * 1000)
       }
     });
 
-    const response = await withAuth(agent.get("/verification/status"), token);
+    const response = await withAuth(agent.get("/me/verification-status"), token);
     expect(response.status).toBe(200);
-    expect(response.body.request.id).toBe(requestRecord.id);
-    expect(response.body.request.verificationLink).toBeNull();
-    expect(response.body.request.status).toBe("REQUESTED");
+    expect(response.body.status).toBe("REQUESTED");
+    expect(response.body.meetUrl).toBeNull();
   });
 
   it("allows admin to reject a verification request", async () => {
@@ -490,15 +490,100 @@ describe("Verification concierge flow", () => {
     const requestId = createRequest.body.request.id;
 
     await withAuth(adminAgent.post(`/admin/verification-requests/${requestId}/start`), adminToken)
-      .send({ verificationLink: "https://meet.google.com/reject-link" });
+      .send({ meetUrl: "https://meet.google.com/reject-link" });
 
-    const reject = await withAuth(adminAgent.post(`/admin/verification-requests/${requestId}/reject`), adminToken);
+    const reject = await withAuth(adminAgent.post(`/admin/verification-requests/${requestId}/reject`), adminToken).send({
+      reason: "No-show"
+    });
     expect(reject.status).toBe(200);
 
     const updatedUser = await prisma.user.findUnique({ where: { phone: userPhone } });
     const updatedRequest = await prisma.verificationRequest.findUnique({ where: { id: requestId } });
     expect(updatedUser?.status).toBe("REJECTED");
     expect(updatedRequest?.status).toBe("REJECTED");
+  });
+
+  it("sets meet link and approves verification via user endpoints", async () => {
+    const adminPhone = "5559002222";
+    await prisma.user.create({
+      data: {
+        phone: adminPhone,
+        email: "admin4@example.com",
+        passwordHash: await bcrypt.hash("Admin@123", 10),
+        role: "ADMIN",
+        isAdmin: true,
+        status: "APPROVED",
+        verifiedAt: new Date(),
+        phoneVerifiedAt: new Date()
+      }
+    });
+
+    const userAgent = request.agent(app);
+    const userToken = await registerAndLogin(userAgent, "5559002223", "Password@1");
+    const user = await prisma.user.findUnique({ where: { phone: "5559002223" } });
+    if (!user) throw new Error("User not found");
+
+    const adminAgent = request.agent(app);
+    await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
+    await createOtp(adminPhone);
+    const adminVerify = await adminAgent.post("/auth/otp/verify").send({ phone: adminPhone, code: "123456" });
+    const adminToken = adminVerify.body.token as string;
+
+    const meetLink = await withAuth(adminAgent.post(`/admin/verifications/${user.id}/meet-link`), adminToken).send({
+      meetUrl: "https://meet.google.com/meet-link-123"
+    });
+    expect(meetLink.status).toBe(200);
+
+    const statusResponse = await withAuth(userAgent.get("/me/verification-status"), userToken);
+    expect(statusResponse.status).toBe(200);
+    expect(statusResponse.body.status).toBe("IN_PROGRESS");
+    expect(statusResponse.body.meetUrl).toBe("https://meet.google.com/meet-link-123");
+
+    const notification = await prisma.notification.findFirst({
+      where: { userId: user.id, type: "VIDEO_VERIFICATION_UPDATE" }
+    });
+    expect(notification).toBeTruthy();
+
+    const approve = await withAuth(adminAgent.post(`/admin/verifications/${user.id}/approve`), adminToken).send({
+      reason: "Verified"
+    });
+    expect(approve.status).toBe(200);
+
+    const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
+    const updatedRequest = await prisma.verificationRequest.findFirst({ where: { userId: user.id }, orderBy: { createdAt: "desc" } });
+    expect(updatedUser?.status).toBe("APPROVED");
+    expect(updatedUser?.videoVerificationStatus).toBe("APPROVED");
+    expect(updatedRequest?.status).toBe("COMPLETED");
+  });
+
+  it("requires a rejection reason for admin verification rejection", async () => {
+    const adminPhone = "5559003333";
+    await prisma.user.create({
+      data: {
+        phone: adminPhone,
+        email: "admin5@example.com",
+        passwordHash: await bcrypt.hash("Admin@123", 10),
+        role: "ADMIN",
+        isAdmin: true,
+        status: "APPROVED",
+        verifiedAt: new Date(),
+        phoneVerifiedAt: new Date()
+      }
+    });
+
+    const userAgent = request.agent(app);
+    await registerAndLogin(userAgent, "5559003334", "Password@1");
+    const user = await prisma.user.findUnique({ where: { phone: "5559003334" } });
+    if (!user) throw new Error("User not found");
+
+    const adminAgent = request.agent(app);
+    await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
+    await createOtp(adminPhone);
+    const adminVerify = await adminAgent.post("/auth/otp/verify").send({ phone: adminPhone, code: "123456" });
+    const adminToken = adminVerify.body.token as string;
+
+    const response = await withAuth(adminAgent.post(`/admin/verifications/${user.id}/reject`), adminToken).send({ reason: "" });
+    expect(response.status).toBe(400);
   });
 });
 
