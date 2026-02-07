@@ -8,7 +8,7 @@ export const queryKeys = {
   adminReports: ["adminReports"] as const,
   adminUsers: ["adminUsers"] as const,
   notificationsCount: ["notificationsCount"] as const,
-  discoverFeed: (mode: string) => ["discoverFeed", mode] as const,
+  discoverFeed: (filters?: Record<string, unknown>) => ["discoverFeed", filters ?? "all"] as const,
   matches: ["matches"] as const,
   likes: ["likes"] as const,
   inbox: ["inbox"] as const,

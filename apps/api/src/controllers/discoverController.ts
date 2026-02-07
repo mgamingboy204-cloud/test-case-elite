@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getDiscoverProfileDetail, getDiscoverProfiles } from "../services/discoverService";
+import { getDiscoverFeed, getDiscoverProfileDetail, getDiscoverProfiles } from "../services/discoverService";
 
 export async function discoverProfiles(req: Request, res: Response) {
   const { gender, city, minAge, maxAge, page, pageSize, mode } = req.query as Record<string, string | number | undefined>;
@@ -12,6 +12,25 @@ export async function discoverProfiles(req: Request, res: Response) {
     page: typeof page === "number" ? page : undefined,
     pageSize: typeof pageSize === "number" ? pageSize : undefined,
     mode: typeof mode === "string" ? mode : undefined
+  });
+  return res.json(result);
+}
+
+export async function discoverFeed(req: Request, res: Response) {
+  const { gender, city, minAge, maxAge, cursor, limit, mode, intent } = req.query as Record<
+    string,
+    string | number | undefined
+  >;
+  const result = await getDiscoverFeed({
+    userId: res.locals.user.id,
+    gender: typeof gender === "string" ? gender : undefined,
+    city: typeof city === "string" ? city : undefined,
+    minAge: typeof minAge === "number" ? minAge : undefined,
+    maxAge: typeof maxAge === "number" ? maxAge : undefined,
+    cursor: typeof cursor === "number" ? cursor : undefined,
+    limit: typeof limit === "number" ? limit : undefined,
+    mode: typeof mode === "string" ? mode : undefined,
+    intent: typeof intent === "string" ? intent : undefined
   });
   return res.json(result);
 }
