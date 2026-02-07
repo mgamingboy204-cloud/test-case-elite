@@ -13,6 +13,10 @@ type ErrorBody =
   | string
   | {
       message?: string;
+      error?: {
+        message?: string;
+        fieldErrors?: Record<string, string[]>;
+      } | string;
       fieldErrors?: Record<string, string[]>;
     };
 
@@ -31,11 +35,26 @@ export function errorHandler(
   }
 
   // custom HttpError
-  if (err instanceof HttpError) {
-    const body = err.body as ErrorBody | undefined;
-
+    if (err instanceof HttpError) {
+    const body = err.body as
+      | string
+      | { message?: string; fieldErrors?: Record<string, string[]> }
+      | undefined;
+  
+    // body is a plain string
     if (typeof body === "string") {
       return res.status(err.status).json({ message: body });
+    }
+
+    if (body?.error?.message) {
+      return res.status(err.status).json({
+        message: body.error.message,
+        fieldErrors: body.error.fieldErrors,
+      });
+    }
+
+    if (typeof body?.error === "string") {
+      return res.status(err.status).json({ message: body.error, fieldErrors: body.fieldErrors });
     }
 
     if (typeof body?.message === "string") {
@@ -44,6 +63,7 @@ export function errorHandler(
 
     return res.status(err.status).json({ message: "Request failed" });
   }
+
 
   // prisma known errors
   if (err instanceof Prisma.PrismaClientKnownRequestError) {

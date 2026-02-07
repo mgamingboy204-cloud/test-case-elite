@@ -32,6 +32,24 @@ function logSessionEvent(event: string, details: Record<string, unknown>) {
   }
 }
 
+async function saveSession(req: Request) {
+  await new Promise<void>((resolve, reject) => {
+    req.session.save((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+function logSessionEvent(event: string, details: Record<string, unknown>) {
+  if (env.NODE_ENV !== "production") {
+    console.debug(`[auth] ${event}`, details);
+  }
+}
+
 const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
 const SIXTY_DAYS_MS = 1000 * 60 * 60 * 24 * 60;
 
@@ -65,7 +83,6 @@ export async function verifyOtp(req: Request, res: Response) {
       rememberDevice30Days: req.session.pendingRememberDevice30Days ?? false,
       rememberMe: rememberMe ?? req.session.pendingRememberMe ?? false
     });
-    req.session.userId = user.id;
     req.session.pendingUserId = undefined;
     req.session.pendingPhone = undefined;
 
@@ -137,7 +154,6 @@ export async function login(req: Request, res: Response) {
   const refreshToken = signRefreshToken(result.user.id, { rememberMe: resolvedRememberMe });
   const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
   res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
-  await saveSession(req);
   logSessionEvent("login", { userId: result.user.id });
   return res.json({
     id: result.user.id,
