@@ -543,6 +543,72 @@ export default function OnboardingProfilePage() {
     return true;
   }
 
+  function scheduleAutoSave() {
+    persistDraft();
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    setSaveState("saving");
+    saveTimeoutRef.current = setTimeout(() => {
+      void saveProfileData({ auto: true });
+    }, 600);
+  }
+
+  function validateStep(step: StepKey) {
+    setErrorMessage("");
+    if (step === "displayName" && !form.displayName.trim()) {
+      setErrorMessage("Please enter the name you want displayed.");
+      return false;
+    }
+    if (step === "dob") {
+      if (!dobString || !agePreview) {
+        setErrorMessage("Please choose your date of birth.");
+        return false;
+      }
+      if (agePreview < 18) {
+        setErrorMessage("You must be 18 or older to join.");
+        return false;
+      }
+    }
+    if (step === "gender" && !form.gender) {
+      setErrorMessage("Please select your gender.");
+      return false;
+    }
+    if (step === "genderPreference" && !form.genderPreference) {
+      setErrorMessage("Please choose who you want to meet.");
+      return false;
+    }
+    if (step === "city" && !form.city.trim()) {
+      setErrorMessage("Please enter your city.");
+      return false;
+    }
+    if (step === "profession" && !form.profession.trim()) {
+      setErrorMessage("Please enter your profession.");
+      return false;
+    }
+    if (step === "bioShort" && !form.bioShort.trim()) {
+      setErrorMessage("Please add a short intro.");
+      return false;
+    }
+    if (step === "intent" && !preferences.intent) {
+      setErrorMessage("Please select your dating intent.");
+      return false;
+    }
+    if (step === "distance" && !preferences.distance) {
+      setErrorMessage("Please select a distance preference.");
+      return false;
+    }
+    if (step === "interests" && !interests.length) {
+      setErrorMessage("Pick at least one interest.");
+      return false;
+    }
+    if (step === "photo" && !photos.length) {
+      setErrorMessage("Add your profile photo to continue.");
+      return false;
+    }
+    return true;
+  }
+
   async function handleNext() {
     setErrorMessage("");
     if (currentStep.key === "done") {
