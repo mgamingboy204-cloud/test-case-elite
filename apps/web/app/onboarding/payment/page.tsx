@@ -24,6 +24,9 @@ type PaymentInitiationResponse = {
   paymentLink?: string;
   orderId?: string;
 };
+type PaymentStatusResponse = {
+  paymentStatus?: "NOT_STARTED" | "PENDING" | "COMPLETED" | "FAILED" | null;
+};
 type CouponValidationResponse = {
   valid: boolean;
   code?: string;
@@ -233,11 +236,6 @@ function CheckoutCard({
   );
 }
 
-type PaymentStatusResponse = {
-  paymentStatus?: "NOT_STARTED" | "PENDING" | "COMPLETED" | "FAILED" | null;
-};
-
-
 export default function PaymentPage() {
   const router = useRouter();
   const { refresh } = useSession();
@@ -255,19 +253,17 @@ export default function PaymentPage() {
   const [confirming, setConfirming] = useState(false);
 
   const paymentQuery = useQuery<PaymentStatusResponse>({
-  queryKey: queryKeys.paymentStatus,
-  queryFn: () => apiFetch<PaymentStatusResponse>("/payments/me"),
-  staleTime: 5000,
-  refetchInterval: (data) => {
-    const statusValue = data?.paymentStatus ?? null;
-
-    if (!statusValue || statusValue === "NOT_STARTED" || statusValue === "PENDING") {
-      return 8000;
+    queryKey: queryKeys.paymentStatus,
+    queryFn: () => apiFetch<PaymentStatusResponse>("/payments/me"),
+    staleTime: 5000,
+    refetchInterval: (result) => {
+      const statusValue = result.data?.paymentStatus ?? null;
+      if (!statusValue || statusValue === "NOT_STARTED" || statusValue === "PENDING") {
+        return 8000;
+      }
+      return false;
     }
-    return false;
-  },
-});
-
+  });
 
   const startMutation = useMutation({
     mutationFn: (payload: { couponCode?: string }) =>

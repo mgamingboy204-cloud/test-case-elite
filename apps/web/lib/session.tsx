@@ -38,13 +38,11 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const logoutTriggeredRef = useRef(false);
-
-  // ✅ type the query result explicitly so TS knows what `data` is everywhere
-  const meQuery = useQuery<SessionUser | null>({
+  const meQuery = useQuery({
     queryKey: queryKeys.me,
     queryFn: () => apiFetch<SessionUser>("/me", { retryOnUnauthorized: true }),
     staleTime: 15000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: true
   });
 
   useEffect(() => {
@@ -53,10 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (logoutTriggeredRef.current) return;
-
     logoutTriggeredRef.current = true;
-
-    // best-effort logout cleanup
     void apiFetch("/auth/logout", { method: "POST", auth: "omit" }).catch(() => undefined);
     clearAccessToken();
   }, [meQuery.isError]);
@@ -66,14 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     : meQuery.data
       ? "logged-in"
       : "logged-out";
-
   const user = meQuery.data ?? null;
 
-  const refresh = async (): Promise<SessionUser | null> => {
+  const refresh = async () => {
     try {
-      const result = await queryClient.fetchQuery<SessionUser | null>({
+      const result = await queryClient.fetchQuery({
         queryKey: queryKeys.me,
-        queryFn: () => apiFetch<SessionUser>("/me", { retryOnUnauthorized: true }),
+        queryFn: () => apiFetch<SessionUser>("/me", { retryOnUnauthorized: true })
       });
       return result ?? null;
     } catch {
