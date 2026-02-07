@@ -1,5 +1,10 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
+
+type VerificationRequestListItem = Prisma.VerificationRequestGetPayload<{
+  include: { user: { select: { id: true; phone: true; email: true } } };
+}>;
 
 export async function approveUser(userId: string, actorUserId: string) {
   const user = await prisma.user.update({
@@ -162,8 +167,8 @@ export async function denyRefund(refundId: string, actorUserId: string) {
   return { refund };
 }
 
-export async function listVerificationRequests(statusFilter?: string) {
-  const requests = await prisma.verificationRequest.findMany({
+export async function listVerificationRequests(statusFilter?: string): Promise<{ requests: VerificationRequestListItem[] }> {
+  const requests: VerificationRequestListItem[] = await prisma.verificationRequest.findMany({
     where: statusFilter && statusFilter !== "ALL" ? { status: statusFilter as any } : {},
     include: { user: { select: { id: true, phone: true, email: true } } },
     orderBy: { createdAt: "desc" }
