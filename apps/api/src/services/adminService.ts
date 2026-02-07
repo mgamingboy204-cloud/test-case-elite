@@ -257,15 +257,16 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
   const now = new Date();
   const request = await prisma.verificationRequest.update({
     where: { id: requestId },
-    data: {
+     data: {
       status: "COMPLETED",
       completedAt: now,
-      verificationLink: null,
-      meetUrl: null,
-      linkExpiresAt: null,
+      verificationLink: undefined,
+      meetUrl: undefined,
+      linkExpiresAt: undefined,
       decidedAt: now,
       decidedBy: actorUserId
     }
+
   });
   await prisma.user.update({
     where: { id: request.userId },
@@ -295,13 +296,14 @@ export async function rejectVerificationRequest(requestId: string, actorUserId: 
     data: {
       status: "REJECTED",
       completedAt: now,
-      verificationLink: null,
-      meetUrl: null,
-      linkExpiresAt: null,
+      verificationLink: undefined,
+      meetUrl: undefined,
+      linkExpiresAt: undefined,
       decidedAt: now,
       decidedBy: actorUserId,
       reason: reason.trim()
     }
+
   });
   await prisma.user.update({
     where: { id: request.userId },
@@ -391,13 +393,14 @@ export async function approveVerificationForUser(userId: string, actorUserId: st
     data: {
       status: "COMPLETED",
       completedAt: now,
-      meetUrl: null,
-      verificationLink: null,
-      linkExpiresAt: null,
+      meetUrl: undefined,
+      verificationLink: undefined,
+      linkExpiresAt: undefined,
       decidedAt: now,
       decidedBy: actorUserId,
-      reason: reason?.trim() || null
+      reason: reason?.trim() || undefined
     }
+
   });
   await prisma.user.update({
     where: { id: userId },
@@ -414,7 +417,8 @@ export async function approveVerificationForUser(userId: string, actorUserId: st
       action: "verification_approved",
       targetType: "VerificationRequest",
       targetId: updated.id,
-      metadata: { reason: reason?.trim() || null }
+      metadata: { reason: reason?.trim() || undefined }
+
     }
   });
   return { request: updated };
@@ -425,16 +429,17 @@ export async function rejectVerificationForUser(userId: string, actorUserId: str
   const now = new Date();
   const updated = await prisma.verificationRequest.update({
     where: { id: request.id },
-    data: {
+   data: {
       status: "REJECTED",
       completedAt: now,
-      meetUrl: null,
-      verificationLink: null,
-      linkExpiresAt: null,
+      meetUrl: undefined,
+      verificationLink: undefined,
+      linkExpiresAt: undefined,
       decidedAt: now,
       decidedBy: actorUserId,
       reason: reason.trim()
     }
+
   });
   await prisma.user.update({
     where: { id: userId },
