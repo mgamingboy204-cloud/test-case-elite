@@ -138,13 +138,15 @@ export default function DiscoverPage() {
   }, [shouldCycle, feedItems, activeIndex, cycleOrder.length, lastSwipedId]);
 
   useEffect(() => {
-    if (!shouldCycle) return;
-    if (cycleIndex < cycleOrder.length) return;
-    if (!cycleOrder.length) return;
-    const nextOrder = shuffleIds(cycleOrder, lastSwipeds
-    setCycleOrder(nextOrder);
-    setCycleIndex(0);
+  if (!shouldCycle) return;
+  if (cycleIndex < cycleOrder.length) return;
+  if (!cycleOrder.length) return;
+
+  const nextOrder = shuffleIds(cycleOrder, lastSwipedId);
+  setCycleOrder(nextOrder);
+  setCycleIndex(0);
   }, [cycleIndex, cycleOrder, shouldCycle, lastSwipedId]);
+
 
   const activeProfile = useMemo(() => {
     if (activeIndex < feedItems.length) return feedItems[activeIndex];
