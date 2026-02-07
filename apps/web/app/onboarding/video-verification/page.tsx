@@ -28,6 +28,13 @@ export default function VideoVerificationPage() {
   const [message, setMessage] = useState("");
   const [hasJoinedCall, setHasJoinedCall] = useState(false);
 
+  const statusQuery = useQuery<VerificationStatusResponse>({
+    queryKey: queryKeys.userVerificationStatus,
+    queryFn: () => apiFetch<VerificationStatusResponse>("/me/verification-status"),
+    staleTime: 5000,
+    refetchInterval: (result) => {
+      if (!result || typeof result !== "object" || !("data" in result)) return false;
+      const data = (result as { data?: VerificationStatusResponse }).data;
   const statusQuery = useQuery({
     queryKey: queryKeys.userVerificationStatus,
     queryFn: () => apiFetch<VerificationStatusResponse>("/me/verification-status"),

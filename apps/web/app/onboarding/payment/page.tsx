@@ -257,6 +257,9 @@ export default function PaymentPage() {
     queryFn: () => apiFetch<PaymentStatusResponse>("/payments/me"),
     staleTime: 5000,
     refetchInterval: (result) => {
+      if (!result || typeof result !== "object" || !("data" in result)) return false;
+      const data = (result as { data?: PaymentStatusResponse }).data;
+      const statusValue = data?.paymentStatus ?? null;
       const statusValue = result.data?.paymentStatus ?? null;
       if (!statusValue || statusValue === "NOT_STARTED" || statusValue === "PENDING") {
         return 8000;
