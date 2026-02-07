@@ -1002,6 +1002,12 @@ textarea:focus {
   color: #1d6b4e;
 }
 
+.field-error {
+  margin-top: 8px;
+  color: var(--danger);
+  font-size: 13px;
+}
+
 .verification-shell {
   max-width: 860px;
   margin: 0 auto;

@@ -21,7 +21,7 @@ function getErrorMessage(error: unknown) {
 
 export default function SignupPage() {
   const router = useRouter();
-  const { refresh, setToken } = useSession();
+  const { refresh } = useSession();
   const [step, setStep] = useState(0);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
@@ -102,15 +102,11 @@ export default function SignupPage() {
     setStatus("loading");
     setMessage("Verifying OTP...");
     try {
-      const response = await apiFetch<{ token?: string; accessToken?: string }>("/auth/otp/verify", {
+      await apiFetch("/auth/otp/verify", {
         method: "POST",
         auth: "omit",
         body: JSON.stringify({ phone: account.phone, code: otpCode, rememberMe })
       });
-      const nextToken = response.accessToken ?? response.token;
-      if (nextToken) {
-        setToken(nextToken, rememberMe);
-      }
       setStatus("success");
       setMessage("OTP verified. Redirecting to onboarding...");
       const user = await refresh();

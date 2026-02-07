@@ -1,5 +1,3 @@
-import { clearAuthToken, getAuthToken, getAuthTokenStorage, setAuthToken } from "./authToken";
-
 const rawApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL;
 
 if (!rawApiUrl && process.env.NODE_ENV === "production") {
@@ -32,42 +30,26 @@ function extractErrorMessage(payload: any, fallback: string) {
   return fallback;
 }
 
+export class ApiError extends Error {
+  fieldErrors?: Record<string, string[]>;
+  status?: number;
+
+  constructor(message: string, options?: { fieldErrors?: Record<string, string[]>; status?: number }) {
+    super(message);
+    this.name = "ApiError";
+    this.fieldErrors = options?.fieldErrors;
+    this.status = options?.status;
+  }
+}
+
 export async function apiFetch<T = any>(path: string, options: ApiFetchOptions = {}) {
-  return apiFetchWithRetry<T>(path, options, true);
+  return apiFetchWithRetry<T>(path, options);
 }
 
-async function refreshAccessToken() {
-  const res = await fetch(`${API_URL}/auth/token/refresh`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    credentials: "include",
-    body: JSON.stringify({})
-  });
-  if (!res.ok) {
-    clearAuthToken();
-    return null;
-  }
-  const data = (await res.json()) as { accessToken?: string };
-  if (data?.accessToken) {
-    const mode = getAuthTokenStorage();
-    setAuthToken(data.accessToken, mode !== "session");
-    return data.accessToken;
-  }
-  return null;
-}
-
-async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, allowRetry: boolean) {
+async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions) {
   const headers = new Headers(options.headers);
   if (options.method && options.method !== "GET" && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
-  }
-  if (options.auth !== "omit" && !headers.has("Authorization")) {
-    const token = getAuthToken()?.trim();
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
   }
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -75,22 +57,15 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, allo
     credentials: "include",
     cache: "no-store"
   });
-  if (res.status === 401 && options.auth !== "omit" && allowRetry) {
-    const refreshed = await refreshAccessToken();
-    if (refreshed) {
-      const retryHeaders = new Headers(options.headers);
-      if (options.method && options.method !== "GET" && !retryHeaders.has("Content-Type")) {
-        retryHeaders.set("Content-Type", "application/json");
-      }
-      retryHeaders.set("Authorization", `Bearer ${refreshed}`);
-      return apiFetchWithRetry<T>(path, { ...options, headers: retryHeaders }, false);
-    }
-  }
   const contentType = res.headers.get("content-type") ?? "";
   const payload = contentType.includes("application/json") ? await res.json() : await res.text();
   if (!res.ok) {
     const message = extractErrorMessage(payload, "Request failed. Please try again.");
-    throw new Error(message);
+    const fieldErrors =
+      payload?.fieldErrors ??
+      payload?.error?.fieldErrors ??
+      undefined;
+    throw new ApiError(message, { fieldErrors, status: res.status });
   }
   return payload as T;
 }

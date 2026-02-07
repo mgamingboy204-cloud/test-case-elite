@@ -7,7 +7,7 @@ import { HttpError } from "../utils/httpErrors";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 const PROFILE_BUCKET = "profile-photos";
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const allowedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const extensionMap: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -107,7 +107,7 @@ export async function uploadPhoto(options: { userId: string; filename: string; d
   const extension = extensionMap[mimeType] ?? "jpg";
   const size = calculateBase64Size(base64Data);
   if (size > MAX_FILE_SIZE_BYTES) {
-    throw new HttpError(413, { error: "Image must be 5MB or smaller." });
+    throw new HttpError(413, { error: "Image must be 10MB or smaller." });
   }
   await removeExistingPhoto(options.userId);
 
