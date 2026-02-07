@@ -233,6 +233,11 @@ function CheckoutCard({
   );
 }
 
+type PaymentStatusResponse = {
+  paymentStatus?: "NOT_STARTED" | "PENDING" | "COMPLETED" | "FAILED" | null;
+};
+
+
 export default function PaymentPage() {
   const router = useRouter();
   const { refresh } = useSession();
@@ -249,18 +254,20 @@ export default function PaymentPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<CouponDetails | null>(null);
   const [confirming, setConfirming] = useState(false);
 
-  const paymentQuery = useQuery({
-    queryKey: queryKeys.paymentStatus,
-    queryFn: () => apiFetch<{ paymentStatus?: string }>("/payments/me"),
-    staleTime: 5000,
-    refetchInterval: (data) => {
-      const statusValue = data?.paymentStatus ?? null;
-      if (!statusValue || statusValue === "NOT_STARTED" || statusValue === "PENDING") {
-        return 8000;
-      }
-      return false;
+  const paymentQuery = useQuery<PaymentStatusResponse>({
+  queryKey: queryKeys.paymentStatus,
+  queryFn: () => apiFetch<PaymentStatusResponse>("/payments/me"),
+  staleTime: 5000,
+  refetchInterval: (data) => {
+    const statusValue = data?.paymentStatus ?? null;
+
+    if (!statusValue || statusValue === "NOT_STARTED" || statusValue === "PENDING") {
+      return 8000;
     }
-  });
+    return false;
+  },
+});
+
 
   const startMutation = useMutation({
     mutationFn: (payload: { couponCode?: string }) =>
