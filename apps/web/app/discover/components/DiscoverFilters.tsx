@@ -3,12 +3,6 @@
 import type { DiscoverFilters } from "../useDiscoverFeed";
 import styles from "../discover.module.css";
 
-const genderOptions: Array<{ label: string; value: DiscoverFilters["gender"] }> = [
-  { label: "All", value: "all" },
-  { label: "Male", value: "male" },
-  { label: "Female", value: "female" }
-];
-
 const intentOptions: Array<{ label: string; value: DiscoverFilters["intent"] }> = [
   { label: "All", value: "all" },
   { label: "Dating", value: "dating" },
@@ -20,9 +14,21 @@ type DiscoverFiltersProps = {
   onChange: (filters: DiscoverFilters) => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  variant?: "panel" | "sheet";
+  isOpen?: boolean;
+  onClose?: () => void;
+  onApply?: () => void;
+  onReset?: () => void;
+  showRefresh?: boolean;
 };
 
-export default function DiscoverFilters({ filters, onChange, onRefresh, isRefreshing }: DiscoverFiltersProps) {
+function FiltersBody({
+  filters,
+  onChange
+}: {
+  filters: DiscoverFilters;
+  onChange: (filters: DiscoverFilters) => void;
+}) {
   const minAge = Math.max(18, Number.isFinite(filters.ageMin) ? filters.ageMin : 18);
   const maxAge = Math.max(18, Number.isFinite(filters.ageMax) ? filters.ageMax : 18);
 
@@ -40,25 +46,6 @@ export default function DiscoverFilters({ filters, onChange, onRefresh, isRefres
 
   return (
     <div className={styles.filters}>
-      <div className={styles.filterGroup}>
-        <span className={styles.filterLabel}>Gender</span>
-        <div className={styles.segmented} role="group" aria-label="Gender">
-          {genderOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={`${styles.segmentButton} ${
-                filters.gender === option.value ? styles.segmentButtonActive : ""
-              }`}
-              onClick={() => onChange({ ...filters, gender: option.value })}
-              aria-pressed={filters.gender === option.value}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div className={styles.filterGroup}>
         <span className={styles.filterLabel}>Intent</span>
         <div className={styles.segmented} role="group" aria-label="Intent">
@@ -131,8 +118,68 @@ export default function DiscoverFilters({ filters, onChange, onRefresh, isRefres
         />
         <span className={styles.filterRange}>Within {filters.distance} miles</span>
       </div>
+    </div>
+  );
+}
 
-      {onRefresh ? (
+export default function DiscoverFilters({
+  filters,
+  onChange,
+  onRefresh,
+  isRefreshing,
+  variant = "panel",
+  isOpen,
+  onClose = () => undefined,
+  onApply = () => undefined,
+  onReset = () => undefined,
+  showRefresh = false
+}: DiscoverFiltersProps) {
+  if (variant === "sheet") {
+    return (
+      <div className={`${styles.filterSheet} ${isOpen ? styles.filterSheetOpen : ""}`}>
+        <button
+          type="button"
+          className={styles.filterSheetBackdrop}
+          aria-label="Close filters"
+          onClick={onClose}
+        />
+        <div className={styles.filterSheetPanel} role="dialog" aria-modal="true">
+          <div className={styles.filterSheetHeader}>
+            <h3>Filters</h3>
+            <button type="button" onClick={onClose} className={styles.filterSheetClose}>
+              Close
+            </button>
+          </div>
+          <FiltersBody filters={filters} onChange={onChange} />
+          <div className={styles.filterSheetFooter}>
+            {showRefresh && onRefresh ? (
+              <button
+                type="button"
+                className={styles.filterRefreshSecondary}
+                onClick={onRefresh}
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? "Refreshing..." : "Refresh feed"}
+              </button>
+            ) : null}
+            <div className={styles.filterSheetActions}>
+              <button type="button" className={styles.filterReset} onClick={onReset}>
+                Reset
+              </button>
+              <button type="button" className={styles.filterApply} onClick={onApply}>
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <FiltersBody filters={filters} onChange={onChange} />
+      {showRefresh && onRefresh ? (
         <button
           type="button"
           className={styles.filterRefresh}
@@ -142,6 +189,6 @@ export default function DiscoverFilters({ filters, onChange, onRefresh, isRefres
           {isRefreshing ? "Refreshing..." : "Refresh feed"}
         </button>
       ) : null}
-    </div>
+    </>
   );
 }

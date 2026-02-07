@@ -68,6 +68,14 @@ export default function DiscoverCard({
         ) : (
           <div className={styles.mediaFallback}>{profile?.name?.slice(0, 1) ?? "?"}</div>
         )}
+        {!isPlaceholder && profile ? (
+          <div className={styles.cardOverlay}>
+            <h2>
+              {profile.name} <span>{profile.age}</span>
+            </h2>
+            <p>{profile.bioShort || profile.city || ""}</p>
+          </div>
+        ) : null}
       </div>
       <div className={styles.cardDetails}>
         {isPlaceholder ? (
