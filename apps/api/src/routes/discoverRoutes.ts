@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { discoverProfileDetail, discoverProfiles } from "../controllers/discoverController";
+import { discoverFeed, discoverProfileDetail, discoverProfiles } from "../controllers/discoverController";
 import { requireActive } from "../middlewares/onboarding";
 import { requireAuth } from "../middlewares/auth";
 import { validateQuery } from "../middlewares/validate";
@@ -24,7 +24,20 @@ const DiscoverQuerySchema = z.object({
   mode: z.string().optional()
 });
 
+const DiscoverFeedQuerySchema = z.object({
+  gender: z.string().optional(),
+  intent: z.string().optional(),
+  city: z.string().optional(),
+  minAge: toOptionalNumber,
+  maxAge: toOptionalNumber,
+  distance: toOptionalNumber,
+  cursor: toOptionalNumber,
+  limit: toOptionalNumber,
+  mode: z.string().optional()
+});
+
 router.get("/profiles", requireAuth, requireActive, validateQuery(DiscoverQuerySchema), asyncHandler(discoverProfiles));
+router.get("/discover", requireAuth, requireActive, validateQuery(DiscoverFeedQuerySchema), asyncHandler(discoverFeed));
 router.get("/profiles/:userId", requireAuth, requireActive, asyncHandler(discoverProfileDetail));
 
 export default router;

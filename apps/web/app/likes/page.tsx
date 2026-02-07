@@ -42,8 +42,7 @@ export default function LikesPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.likes });
       queryClient.invalidateQueries({ queryKey: queryKeys.matches });
       queryClient.invalidateQueries({ queryKey: queryKeys.notificationsCount });
-      queryClient.invalidateQueries({ queryKey: queryKeys.discoverFeed("dating") });
-      queryClient.invalidateQueries({ queryKey: queryKeys.discoverFeed("friends") });
+      queryClient.invalidateQueries({ queryKey: ["discoverFeed"] });
     },
     onError: (error) => {
       setStatus("error");
