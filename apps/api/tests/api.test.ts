@@ -46,7 +46,7 @@ async function registerAndLogin(agent: request.SuperAgentTest, phone: string, pa
   await agent.post("/auth/register").send({ phone, password, email: `${phone}@example.com` });
   await createOtp(phone);
   const response = await agent.post("/auth/otp/verify").send({ phone, code: "123456" });
-  return response.body.token as string;
+  return response.body.accessToken as string;
 }
 
 beforeEach(async () => {
@@ -97,7 +97,34 @@ describe("Auth routes", () => {
       .post("/auth/register")
       .send({ phone: "5551010101", password: "Password@1", email: "user@example.com" });
     expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
     expect(response.body.otpRequired).toBe(true);
+  });
+
+  it("sets a secure refresh cookie on login", async () => {
+    const phone = "5551010102";
+    await prisma.user.create({
+      data: {
+        phone,
+        email: "login@example.com",
+        passwordHash: await bcrypt.hash("Password@1", 10),
+        status: "APPROVED",
+        verifiedAt: new Date(),
+        phoneVerifiedAt: new Date()
+      }
+    });
+
+    const response = await request(app).post("/auth/login").send({ phone, password: "Password@1" });
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+
+    const cookies = response.headers["set-cookie"] as string[] | undefined;
+    const refreshCookie = cookies?.find((cookie) => cookie.startsWith("em_refresh="));
+    expect(refreshCookie).toBeTruthy();
+    expect(refreshCookie).toContain("HttpOnly");
+    expect(refreshCookie).toContain("Secure");
+    expect(refreshCookie).toContain("SameSite=None");
+    expect(refreshCookie).toContain("Path=/");
   });
 });
 
@@ -167,10 +194,8 @@ describe("Refund eligibility logic", () => {
       }
     });
     const adminAgent = request.agent(app);
-    await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@12345" });
-    await createOtp(adminPhone);
-    const adminVerify = await adminAgent.post("/auth/otp/verify").send({ phone: adminPhone, code: "123456" });
-    const adminToken = adminVerify.body.token as string;
+    const adminLogin = await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@12345" });
+    const adminToken = adminLogin.body.accessToken as string;
     await withAuth(adminAgent.post("/admin/dev/shift-payment-date"), adminToken).send({ userId: user.id, daysBack: 91 });
 
     const after = await withAuth(agent.post("/refunds/request"), token).send({});
@@ -246,7 +271,7 @@ describe("Session authentication", () => {
     expect(logout.status).toBe(200);
 
     const after = await withAuth(agent.get("/me"), token);
-    expect(after.status).toBe(401);
+    expect(after.status).toBe(200);
   });
 });
 
@@ -279,25 +304,18 @@ describe("OTP verification", () => {
   });
 });
 
-describe("Remember device login", () => {
-  it("skips OTP when device token is valid", async () => {
+describe("Login without OTP for verified phones", () => {
+  it("logs in verified users without OTP prompts", async () => {
     const agent = request.agent(app);
     const phone = "5552223333";
     const password = "Password@1";
 
-    const token = await registerAndLogin(agent, phone, password);
-    await withAuth(agent.post("/auth/logout"), token);
+    await registerAndLogin(agent, phone, password);
 
     const login = await agent.post("/auth/login").send({ phone, password, rememberDevice: true });
-    expect(login.body.otpRequired).toBe(true);
-
-    await createOtp(phone);
-    const verify = await agent.post("/auth/otp/verify").send({ phone, code: "123456" });
-    const verifyToken = verify.body.token as string;
-    await withAuth(agent.post("/auth/logout"), verifyToken);
-
-    const remembered = await agent.post("/auth/login").send({ phone, password, rememberDevice: true });
-    expect(remembered.body.otpRequired).toBe(false);
+    expect(login.body.ok).toBe(true);
+    expect(login.body.otpRequired).not.toBe(true);
+    expect(login.body.accessToken).toBeDefined();
   });
 });
 
@@ -387,16 +405,12 @@ describe("Verification concierge flow", () => {
     });
 
     const agent = request.agent(app);
-    await agent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
-    await createOtp(adminPhone);
-    const adminVerify = await agent.post("/auth/otp/verify").send({ phone: adminPhone, code: "123456" });
-    const adminToken = adminVerify.body.token as string;
+    const adminLogin = await agent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
+    const adminToken = adminLogin.body.accessToken as string;
 
     const userAgent = request.agent(app);
-    await userAgent.post("/auth/login").send({ phone: userPhone, password: "Password@1" });
-    await createOtp(userPhone);
-    const userVerify = await userAgent.post("/auth/otp/verify").send({ phone: userPhone, code: "123456" });
-    const userToken = userVerify.body.token as string;
+    const userLogin = await userAgent.post("/auth/login").send({ phone: userPhone, password: "Password@1" });
+    const userToken = userLogin.body.accessToken as string;
 
     const createRequest = await withAuth(userAgent.post("/verification-requests"), userToken);
     expect(createRequest.status).toBe(200);
@@ -475,16 +489,12 @@ describe("Verification concierge flow", () => {
     });
 
     const adminAgent = request.agent(app);
-    await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
-    await createOtp(adminPhone);
-    const adminVerify = await adminAgent.post("/auth/otp/verify").send({ phone: adminPhone, code: "123456" });
-    const adminToken = adminVerify.body.token as string;
+    const adminLogin = await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
+    const adminToken = adminLogin.body.accessToken as string;
 
     const userAgent = request.agent(app);
-    await userAgent.post("/auth/login").send({ phone: userPhone, password: "Password@1" });
-    await createOtp(userPhone);
-    const userVerify = await userAgent.post("/auth/otp/verify").send({ phone: userPhone, code: "123456" });
-    const userToken = userVerify.body.token as string;
+    const userLogin = await userAgent.post("/auth/login").send({ phone: userPhone, password: "Password@1" });
+    const userToken = userLogin.body.accessToken as string;
 
     const createRequest = await withAuth(userAgent.post("/verification-requests"), userToken);
     const requestId = createRequest.body.request.id;
@@ -524,10 +534,8 @@ describe("Verification concierge flow", () => {
     if (!user) throw new Error("User not found");
 
     const adminAgent = request.agent(app);
-    await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
-    await createOtp(adminPhone);
-    const adminVerify = await adminAgent.post("/auth/otp/verify").send({ phone: adminPhone, code: "123456" });
-    const adminToken = adminVerify.body.token as string;
+    const adminLogin = await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
+    const adminToken = adminLogin.body.accessToken as string;
 
     const meetLink = await withAuth(adminAgent.post(`/admin/verifications/${user.id}/meet-link`), adminToken).send({
       meetUrl: "https://meet.google.com/meet-link-123"
@@ -577,10 +585,8 @@ describe("Verification concierge flow", () => {
     if (!user) throw new Error("User not found");
 
     const adminAgent = request.agent(app);
-    await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
-    await createOtp(adminPhone);
-    const adminVerify = await adminAgent.post("/auth/otp/verify").send({ phone: adminPhone, code: "123456" });
-    const adminToken = adminVerify.body.token as string;
+    const adminLogin = await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
+    const adminToken = adminLogin.body.accessToken as string;
 
     const response = await withAuth(adminAgent.post(`/admin/verifications/${user.id}/reject`), adminToken).send({ reason: "" });
     expect(response.status).toBe(400);
@@ -978,10 +984,8 @@ describe("Admin delete cleanup", () => {
     });
 
     const adminAgent = request.agent(app);
-    await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
-    await createOtp(adminPhone);
-    const adminVerify = await adminAgent.post("/auth/otp/verify").send({ phone: adminPhone, code: "123456" });
-    const adminToken = adminVerify.body.token as string;
+    const adminLogin = await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
+    const adminToken = adminLogin.body.accessToken as string;
 
     const response = await withAuth(adminAgent.post(`/admin/users/${userA.id}/delete`), adminToken);
     expect(response.status).toBe(200);

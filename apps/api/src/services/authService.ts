@@ -193,14 +193,10 @@ export async function validateLogin(options: {
     throw new HttpError(401, { error: "Invalid credentials" });
   }
 
-  if (!user.phoneVerifiedAt) {
-    throw new HttpError(403, { error: "Phone not verified. Please verify your phone to continue." });
-  }
-
   const onboardingStep = resolveOnboardingStep(user);
   if (user.onboardingStep !== onboardingStep) {
     await prisma.user.update({ where: { id: user.id }, data: { onboardingStep } });
   }
 
-  return { user, onboardingStep };
+  return { user, onboardingStep, otpRequired: !user.phoneVerifiedAt };
 }

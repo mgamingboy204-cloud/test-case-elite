@@ -54,7 +54,7 @@ if (env.NODE_ENV === "production") {
   });
 }
 app.use(express.json({ limit: "20mb" }));
-const allowedOrigins = [env.WEB_ORIGIN, env.ADMIN_ORIGIN, "http://localhost:3000"].filter(Boolean);
+const allowedOrigins = [env.WEB_ORIGIN, env.ADMIN_ORIGIN].filter(Boolean);
 const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
     if (!origin) {

@@ -61,7 +61,7 @@ export default function LoginPage() {
     setStatus("loading");
     setMessage("Checking your credentials...");
     try {
-      const response = await apiFetch<{ otpRequired?: boolean; accessToken?: string }>(
+      const response = await apiFetch<{ ok: boolean; otpRequired?: boolean; accessToken?: string }>(
         "/auth/login",
         {
           method: "POST",
@@ -122,7 +122,7 @@ export default function LoginPage() {
     setStatus("loading");
     setMessage("Verifying OTP...");
     try {
-      const response = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", {
+      const response = await apiFetch<{ ok: boolean; accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         auth: "omit",
         body: JSON.stringify({ phone, code: otpCode, rememberMe })

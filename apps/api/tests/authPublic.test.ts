@@ -21,4 +21,10 @@ describe("Public auth access", () => {
     expect(response.status).toBe(401);
     expect(response.body.error).toBe("Missing authorization header");
   });
+
+  it("allows logout without Authorization header", async () => {
+    const response = await request(app).post("/auth/logout");
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+  });
 });

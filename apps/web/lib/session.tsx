@@ -9,8 +9,8 @@ import {
   useMemo,
   useState
 } from "react";
-import { apiFetch, refreshAccessToken } from "./api";
-import { clearAccessToken, setAccessToken } from "./authToken";
+import { apiFetch } from "./api";
+import { clearAccessToken } from "./authToken";
 
 export type SessionStatus = "loading" | "logged-in" | "logged-out";
 
@@ -49,19 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const token = await refreshAccessToken();
-      if (!token) {
-        clearAccessToken();
-        setStatus("logged-out");
-        setUser(null);
-        return null;
-      }
-      setAccessToken(token);
-      const data = await apiFetch<SessionUser>("/me");
+      const data = await apiFetch<SessionUser>("/me", { retryOnUnauthorized: true });
       setStatus("logged-in");
       setUser(data);
       return data;
     } catch (error) {
+      await apiFetch("/auth/logout", { method: "POST", auth: "omit" }).catch(() => undefined);
       clearAccessToken();
       setStatus("logged-out");
       setUser(null);
