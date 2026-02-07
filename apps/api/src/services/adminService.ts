@@ -235,7 +235,8 @@ export async function startVerificationRequest(requestId: string, meetUrl: strin
         userId: request.userId,
         type: "VIDEO_VERIFICATION_UPDATE",
         actorUserId,
-        matchId: null
+        matchId: undefined as any
+
       }
     },
     update: {
@@ -367,7 +368,8 @@ export async function setVerificationMeetLink(userId: string, meetUrl: string, a
         userId,
         type: "VIDEO_VERIFICATION_UPDATE",
         actorUserId,
-        matchId: null
+        matchId: undefined as any
+
       }
     },
     update: {
