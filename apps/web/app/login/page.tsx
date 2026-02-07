@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api";
 import { setAccessToken } from "../../lib/authToken";
 import { useSession } from "../../lib/session";
@@ -10,6 +11,10 @@ import OtpInput from "../components/OtpInput";
 import Button from "../components/ui/Button";
 
 type Status = "idle" | "loading" | "success" | "error";
+
+type LoginResponse = { ok: boolean; otpRequired?: boolean; accessToken?: string };
+
+type OtpVerifyResponse = { ok: boolean; accessToken?: string };
 
 const phoneRegex = /^\d{10}$/;
 const otpRegex = /^\d{6}$/;
@@ -33,6 +38,50 @@ export default function LoginPage() {
   const [otpCountdown, setOtpCountdown] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const { refresh } = useSession();
+
+  const loginMutation = useMutation({
+    mutationFn: (payload: {
+      phone: string;
+      password: string;
+      rememberDevice30Days: boolean;
+      rememberMe: boolean;
+    }) =>
+      apiFetch<LoginResponse>("/auth/login", {
+        method: "POST",
+        auth: "omit",
+        body: JSON.stringify(payload)
+      }),
+    onError: (error) => {
+      setStatus("error");
+      setMessage(getErrorMessage(error));
+    }
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: (payload: { phone: string }) =>
+      apiFetch("/auth/otp/send", {
+        method: "POST",
+        auth: "omit",
+        body: JSON.stringify(payload)
+      }),
+    onError: (error) => {
+      setStatus("error");
+      setMessage(getErrorMessage(error));
+    }
+  });
+
+  const verifyMutation = useMutation({
+    mutationFn: (payload: { phone: string; code: string; rememberMe: boolean }) =>
+      apiFetch<OtpVerifyResponse>("/auth/otp/verify", {
+        method: "POST",
+        auth: "omit",
+        body: JSON.stringify(payload)
+      }),
+    onError: (error) => {
+      setStatus("error");
+      setMessage(getErrorMessage(error));
+    }
+  });
 
   useEffect(() => {
     if (otpCountdown <= 0) return;
@@ -60,34 +109,27 @@ export default function LoginPage() {
     }
     setStatus("loading");
     setMessage("Checking your credentials...");
-    try {
-      const response = await apiFetch<{ ok: boolean; otpRequired?: boolean; accessToken?: string }>(
-        "/auth/login",
-        {
-          method: "POST",
-          auth: "omit",
-          body: JSON.stringify({ phone, password, rememberDevice30Days, rememberMe })
-        }
-      );
-      if (response.otpRequired) {
-        setOtpRequired(true);
-        setOtpCountdown(30);
-        setStatus("success");
-        setMessage("OTP sent. Please enter the 6-digit code.");
-      } else {
-        setStatus("success");
-        setMessage("Welcome back! Redirecting you now...");
-        if (response.accessToken) {
-          setAccessToken(response.accessToken);
-        }
-        const user = await refresh();
-        const destination = getDefaultRoute(user);
-        setTimeout(() => router.push(destination), 200);
-      }
-    } catch (error) {
-      setStatus("error");
-      setMessage(getErrorMessage(error));
+    const response = await loginMutation.mutateAsync({
+      phone,
+      password,
+      rememberDevice30Days,
+      rememberMe
+    });
+    if (response.otpRequired) {
+      setOtpRequired(true);
+      setOtpCountdown(30);
+      setStatus("success");
+      setMessage("OTP sent. Please enter the 6-digit code.");
+      return;
     }
+    setStatus("success");
+    setMessage("Welcome back! Redirecting you now...");
+    if (response.accessToken) {
+      setAccessToken(response.accessToken);
+    }
+    const user = await refresh();
+    const destination = getDefaultRoute(user);
+    setTimeout(() => router.push(destination), 200);
   }
 
   async function resendOtp() {
@@ -98,19 +140,10 @@ export default function LoginPage() {
     }
     setStatus("loading");
     setMessage("Sending a new OTP...");
-    try {
-      await apiFetch("/auth/otp/send", {
-        method: "POST",
-        auth: "omit",
-        body: JSON.stringify({ phone })
-      });
-      setOtpCountdown(30);
-      setStatus("success");
-      setMessage("New OTP sent. Check your device or dev logs.");
-    } catch (error) {
-      setStatus("error");
-      setMessage(getErrorMessage(error));
-    }
+    await resendMutation.mutateAsync({ phone });
+    setOtpCountdown(30);
+    setStatus("success");
+    setMessage("New OTP sent. Check your device or dev logs.");
   }
 
   async function verifyOtp() {
@@ -121,24 +154,15 @@ export default function LoginPage() {
     }
     setStatus("loading");
     setMessage("Verifying OTP...");
-    try {
-      const response = await apiFetch<{ ok: boolean; accessToken?: string }>("/auth/otp/verify", {
-        method: "POST",
-        auth: "omit",
-        body: JSON.stringify({ phone, code: otpCode, rememberMe })
-      });
-      setStatus("success");
-      setMessage("OTP verified! Redirecting...");
-      if (response.accessToken) {
-        setAccessToken(response.accessToken);
-      }
-      const user = await refresh();
-      const destination = getDefaultRoute(user);
-      setTimeout(() => router.push(destination), 200);
-    } catch (error) {
-      setStatus("error");
-      setMessage(getErrorMessage(error));
+    const response = await verifyMutation.mutateAsync({ phone, code: otpCode, rememberMe });
+    setStatus("success");
+    setMessage("OTP verified! Redirecting...");
+    if (response.accessToken) {
+      setAccessToken(response.accessToken);
     }
+    const user = await refresh();
+    const destination = getDefaultRoute(user);
+    setTimeout(() => router.push(destination), 200);
   }
 
   return (
@@ -185,11 +209,7 @@ export default function LoginPage() {
               Remember this device for 30 days
             </label>
             <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-              />
+              <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
               Remember me on this device
             </label>
             <Button onClick={handleLogin} disabled={status === "loading"} fullWidth>
@@ -219,9 +239,7 @@ export default function LoginPage() {
               Create one
             </button>
           </div>
-          <footer className="auth-footer">
-            By continuing, you agree to our Terms and Privacy Policy.
-          </footer>
+          <footer className="auth-footer">By continuing, you agree to our Terms and Privacy Policy.</footer>
         </div>
       </section>
     </div>

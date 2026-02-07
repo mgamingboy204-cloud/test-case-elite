@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../../lib/api";
+import { queryKeys } from "../../../lib/queryKeys";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -14,83 +16,94 @@ type VerificationRequest = {
   user?: { phone?: string; email?: string | null };
 };
 
+type VerificationResponse = { requests: VerificationRequest[] };
+
 export default function AdminVideoVerificationsPage() {
-  const [requests, setRequests] = useState<VerificationRequest[]>([]);
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [filter, setFilter] = useState("ALL");
   const [links, setLinks] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    void loadRequests(filter);
-  }, [filter]);
+  const requestsQuery = useQuery({
+    queryKey: queryKeys.adminVideoQueue(filter),
+    queryFn: () => {
+      const query = filter && filter !== "ALL" ? `?status=${filter}` : "";
+      return apiFetch<VerificationResponse>(`/admin/verification-requests${query}`);
+    },
+    staleTime: 5000,
+    refetchInterval: 4000
+  });
 
-  async function loadRequests(statusFilter?: string, silent = false) {
-    if (!silent) {
-      setStatus("loading");
-      setMessage("Loading verification requests...");
-    }
-    try {
-      const query = statusFilter && statusFilter !== "ALL" ? `?status=${statusFilter}` : "";
-      const data = await apiFetch<{ requests: VerificationRequest[] }>(`/admin/verification-requests${query}`);
-      setRequests(data.requests ?? []);
-      if (!silent) {
-        setStatus("success");
-        setMessage("");
-      }
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to load verification requests.");
-    }
-  }
-
-  async function startRequest(id: string) {
-    setStatus("loading");
-    setMessage("Sending link to applicant...");
-    try {
-      await apiFetch(`/admin/verification-requests/${id}/start`, {
+  const startMutation = useMutation({
+    mutationFn: ({ id, meetUrl }: { id: string; meetUrl: string }) =>
+      apiFetch(`/admin/verification-requests/${id}/start`, {
         method: "POST",
-        body: JSON.stringify({ meetUrl: (links[id] ?? "").trim() })
-      });
-      await loadRequests(filter);
+        body: JSON.stringify({ meetUrl })
+      }),
+    onSuccess: () => {
       setStatus("success");
       setMessage("Verification link sent.");
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminVideoQueue(filter) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminQueues });
+    },
+    onError: (error) => {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to send verification link.");
     }
-  }
+  });
 
-  async function updateRequest(id: string, action: "approve" | "reject") {
-    setStatus("loading");
-    setMessage(`${action === "approve" ? "Approving" : "Rejecting"} request...`);
-    try {
-      const payload =
-        action === "reject"
-          ? { reason: window.prompt("Reason for rejection?")?.trim() || "" }
-          : {};
-      if (action === "reject" && !payload.reason) {
-        setStatus("error");
-        setMessage("Rejection reason is required.");
-        return;
-      }
-      await apiFetch(`/admin/verification-requests/${id}/${action}`, {
+  const updateMutation = useMutation({
+    mutationFn: ({ id, action, reason }: { id: string; action: "approve" | "reject"; reason?: string }) =>
+      apiFetch(`/admin/verification-requests/${id}/${action}`, {
         method: "POST",
-        body: JSON.stringify(payload)
-      });
-      await loadRequests(filter);
+        body: JSON.stringify(reason ? { reason } : {})
+      }),
+    onSuccess: (_data, variables) => {
       setStatus("success");
-      setMessage(`Request ${action}d.`);
-    } catch (error) {
+      setMessage(`Request ${variables.action}d.`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminVideoQueue(filter) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userVerificationStatus });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+    },
+    onError: (error) => {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to update request.");
     }
+  });
+
+  function loadRequests() {
+    setStatus("loading");
+    setMessage("Loading verification requests...");
+    void requestsQuery.refetch();
+  }
+
+  function startRequest(id: string) {
+    setStatus("loading");
+    setMessage("Sending link to applicant...");
+    startMutation.mutate({ id, meetUrl: (links[id] ?? "").trim() });
+  }
+
+  function updateRequest(id: string, action: "approve" | "reject") {
+    setStatus("loading");
+    setMessage(`${action === "approve" ? "Approving" : "Rejecting"} request...`);
+    const payload =
+      action === "reject"
+        ? { reason: window.prompt("Reason for rejection?")?.trim() || "" }
+        : { reason: undefined };
+    if (action === "reject" && !payload.reason) {
+      setStatus("error");
+      setMessage("Rejection reason is required.");
+      return;
+    }
+    updateMutation.mutate({ id, action, reason: payload.reason });
   }
 
   const filteredRequests = useMemo(() => {
+    const requests = requestsQuery.data?.requests ?? [];
     if (filter === "ALL") return requests;
     return requests.filter((request) => request.status === filter);
-  }, [filter, requests]);
+  }, [filter, requestsQuery.data?.requests]);
 
   return (
     <div className="card">
@@ -107,7 +120,7 @@ export default function AdminVideoVerificationsPage() {
             <option value="REJECTED">Rejected</option>
           </select>
         </label>
-        <button onClick={() => loadRequests(filter)} disabled={status === "loading"}>
+        <button onClick={loadRequests} disabled={status === "loading"}>
           {status === "loading" ? "Loading..." : "Refresh"}
         </button>
       </div>
@@ -136,7 +149,10 @@ export default function AdminVideoVerificationsPage() {
                           onChange={(event) => setLinks((prev) => ({ ...prev, [request.id]: event.target.value }))}
                         />
                       </label>
-                      <button onClick={() => startRequest(request.id)} disabled={status === "loading" || !(links[request.id] ?? "").trim()}>
+                      <button
+                        onClick={() => startRequest(request.id)}
+                        disabled={status === "loading" || !(links[request.id] ?? "").trim()}
+                      >
                         Send link
                       </button>
                     </>
@@ -153,10 +169,18 @@ export default function AdminVideoVerificationsPage() {
                   ) : null}
                   {isInProgress ? (
                     <div className="grid two-column">
-                      <button className="secondary" onClick={() => updateRequest(request.id, "approve")} disabled={status === "loading"}>
+                      <button
+                        className="secondary"
+                        onClick={() => updateRequest(request.id, "approve")}
+                        disabled={status === "loading"}
+                      >
                         Approve
                       </button>
-                      <button className="secondary" onClick={() => updateRequest(request.id, "reject")} disabled={status === "loading"}>
+                      <button
+                        className="secondary"
+                        onClick={() => updateRequest(request.id, "reject")}
+                        disabled={status === "loading"}
+                      >
                         Reject
                       </button>
                     </div>

@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api";
 import { clearAccessToken } from "../../lib/authToken";
 import { getAssetUrl } from "../../lib/assets";
+import { queryKeys } from "../../lib/queryKeys";
 import RouteGuard from "../components/RouteGuard";
 import AppShellLayout from "../components/ui/AppShellLayout";
 import Button from "../components/ui/Button";
@@ -18,8 +20,11 @@ import { buildDobString, getAgeFromDob, INTEREST_OPTIONS, parseDobString } from 
 
 type Status = "idle" | "loading" | "success" | "error";
 
+type ProfileResponse = { profile?: any; photos?: any[]; user?: any };
+
 export default function ProfilePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState({
     displayName: "",
     firstName: "",
@@ -35,9 +40,7 @@ export default function ProfilePage() {
   const [existingPreferences, setExistingPreferences] = useState<Record<string, any>>({});
   const [hasPreferenceUpdates, setHasPreferenceUpdates] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
-  const [loadStatus, setLoadStatus] = useState<Status>("loading");
   const [message, setMessage] = useState("");
-  const [photos, setPhotos] = useState<any[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
   const [dob, setDob] = useState({ year: "", month: "", day: "" });
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -52,9 +55,13 @@ export default function ProfilePage() {
   const dobString = useMemo(() => buildDobString(dob), [dob]);
   const agePreview = useMemo(() => (dobString ? getAgeFromDob(dobString) : null), [dobString]);
 
-  useEffect(() => {
-    void loadProfile();
-  }, []);
+  const profileQuery = useQuery({
+    queryKey: queryKeys.profile("me"),
+    queryFn: () => apiFetch<ProfileResponse>("/profile"),
+    staleTime: 15000
+  });
+
+  const photos = profileQuery.data?.photos ?? [];
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth <= 768);
@@ -68,47 +75,106 @@ export default function ProfilePage() {
     setForm((prev) => ({ ...prev, age: agePreview.toString() }));
   }, [agePreview]);
 
-  async function loadProfile() {
-    setLoadStatus("loading");
-    try {
-      const data = await apiFetch<{ profile?: any; photos?: any[]; user?: any }>("/profile");
-      if (data?.profile || data?.user) {
-        const incomingPreferences = data.profile?.preferences ?? {};
-        setExistingPreferences(incomingPreferences);
-        const resolvedIntent =
-          typeof incomingPreferences.intent === "string"
-            ? incomingPreferences.intent
-            : preferenceDefaults.intent;
-        const resolvedDistance =
-          typeof incomingPreferences.distance === "string"
-            ? incomingPreferences.distance
-            : preferenceDefaults.distance;
-        setPreferences({ intent: resolvedIntent, distance: resolvedDistance });
-        if (!incomingPreferences.intent && !incomingPreferences.distance) {
-          setHasPreferenceUpdates(true);
-        }
-        const incomingDob = typeof incomingPreferences.dob === "string" ? incomingPreferences.dob : "";
-        setDob(parseDobString(incomingDob));
-        setInterests(Array.isArray(incomingPreferences.interests) ? incomingPreferences.interests : []);
-        setForm({
-          displayName: data.user?.displayName ?? data.profile?.name ?? "",
-          firstName: data.user?.firstName ?? "",
-          lastName: data.user?.lastName ?? "",
-          gender: data.profile.gender ?? "",
-          genderPreference: data.profile.genderPreference ?? "ALL",
-          age: data.profile.age?.toString() ?? "",
-          city: data.profile.city ?? "",
-          profession: data.profile.profession ?? "",
-          bioShort: data.profile.bioShort ?? ""
-        });
+  useEffect(() => {
+    if (!profileQuery.data) return;
+    const data = profileQuery.data;
+    if (data?.profile || data?.user) {
+      const incomingPreferences = data.profile?.preferences ?? {};
+      setExistingPreferences(incomingPreferences);
+      const resolvedIntent =
+        typeof incomingPreferences.intent === "string" ? incomingPreferences.intent : preferenceDefaults.intent;
+      const resolvedDistance =
+        typeof incomingPreferences.distance === "string"
+          ? incomingPreferences.distance
+          : preferenceDefaults.distance;
+      setPreferences({ intent: resolvedIntent, distance: resolvedDistance });
+      if (!incomingPreferences.intent && !incomingPreferences.distance) {
+        setHasPreferenceUpdates(true);
       }
-      setPhotos(data.photos ?? []);
-      setLoadStatus("success");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to load profile.");
-      setLoadStatus("error");
+      const incomingDob = typeof incomingPreferences.dob === "string" ? incomingPreferences.dob : "";
+      setDob(parseDobString(incomingDob));
+      setInterests(Array.isArray(incomingPreferences.interests) ? incomingPreferences.interests : []);
+      setForm({
+        displayName: data.user?.displayName ?? data.profile?.name ?? "",
+        firstName: data.user?.firstName ?? "",
+        lastName: data.user?.lastName ?? "",
+        gender: data.profile.gender ?? "",
+        genderPreference: data.profile.genderPreference ?? "ALL",
+        age: data.profile.age?.toString() ?? "",
+        city: data.profile.city ?? "",
+        profession: data.profile.profession ?? "",
+        bioShort: data.profile.bioShort ?? ""
+      });
     }
-  }
+  }, [profileQuery.data]);
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onprogress = (event) => {
+          if (event.lengthComputable) {
+            setUploadProgress(Math.round((event.loaded / event.total) * 100));
+          }
+        };
+        reader.onerror = () => reject(new Error("Unable to read file"));
+        reader.readAsDataURL(file);
+      });
+      return apiFetch("/photos/upload", {
+        method: "POST",
+        body: JSON.stringify({
+          filename: file.name,
+          dataUrl
+        })
+      });
+    },
+    onSuccess: () => {
+      setStatus("success");
+      setMessage("Photo uploaded.");
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile("me") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      queryClient.invalidateQueries({ queryKey: queryKeys.uploads });
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminQueues });
+    },
+    onError: (error) => {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Unable to upload photo.");
+    },
+    onSettled: () => {
+      setIsUploading(false);
+    }
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: (payload: any) =>
+      apiFetch("/profile", {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      }),
+    onSuccess: () => {
+      setStatus("success");
+      setMessage("Your profile is updated and ready to go.");
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile("me") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+    },
+    onError: (error) => {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Unable to save your profile right now.");
+    }
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: () => apiFetch("/auth/logout", { method: "POST" }),
+    onSuccess: () => {
+      clearAccessToken();
+    },
+    onSettled: async () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      await refresh();
+      router.push("/");
+    }
+  });
 
   function updateField(key: string, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -148,43 +214,16 @@ export default function ProfilePage() {
     return true;
   }
 
-  async function handlePhotoUpload(file: File) {
+  function handlePhotoUpload(file: File) {
     if (!validatePhoto(file)) return;
     setStatus("loading");
     setMessage("Uploading photo...");
     setUploadProgress(0);
     setIsUploading(true);
-    try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onprogress = (event) => {
-          if (event.lengthComputable) {
-            setUploadProgress(Math.round((event.loaded / event.total) * 100));
-          }
-        };
-        reader.onerror = () => reject(new Error("Unable to read file"));
-        reader.readAsDataURL(file);
-      });
-      await apiFetch("/photos/upload", {
-        method: "POST",
-        body: JSON.stringify({
-          filename: file.name,
-          dataUrl
-        })
-      });
-      setStatus("success");
-      setMessage("Photo uploaded.");
-      await loadProfile();
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to upload photo.");
-    } finally {
-      setIsUploading(false);
-    }
+    uploadMutation.mutate(file);
   }
 
-  async function saveProfile() {
+  function saveProfile() {
     const displayName = form.displayName.trim();
     const ageNumber = Number(form.age);
     const city = form.city.trim();
@@ -204,50 +243,35 @@ export default function ProfilePage() {
     }
     setStatus("loading");
     setMessage("Saving your profile...");
-    try {
-      const intent =
-        preferences.intent || existingPreferences.intent || preferenceDefaults.intent;
-      const distance =
-        preferences.distance || existingPreferences.distance || preferenceDefaults.distance;
-      const nextPreferences = hasPreferenceUpdates
-        ? {
-            ...existingPreferences,
-            intent,
-            distance,
-            interests,
-            dob: dobString || existingPreferences.dob
-          }
-        : Object.keys(existingPreferences).length
-          ? existingPreferences
-          : { intent, distance, interests, dob: dobString };
-      await apiFetch("/profile", {
-        method: "PUT",
-        body: JSON.stringify({
-          displayName,
-          firstName: firstName || null,
-          lastName: lastName || null,
-          gender: form.gender,
-          genderPreference: form.genderPreference,
-          age: ageNumber,
-          city,
-          profession,
-          bioShort,
-          preferences: nextPreferences
-        })
-      });
-      setStatus("success");
-      setMessage("Your profile is updated and ready to go.");
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to save your profile right now.");
-    }
+    const intent = preferences.intent || existingPreferences.intent || preferenceDefaults.intent;
+    const distance = preferences.distance || existingPreferences.distance || preferenceDefaults.distance;
+    const nextPreferences = hasPreferenceUpdates
+      ? {
+          ...existingPreferences,
+          intent,
+          distance,
+          interests,
+          dob: dobString || existingPreferences.dob
+        }
+      : Object.keys(existingPreferences).length
+        ? existingPreferences
+        : { intent, distance, interests, dob: dobString };
+    saveMutation.mutate({
+      displayName,
+      firstName: firstName || null,
+      lastName: lastName || null,
+      gender: form.gender,
+      genderPreference: form.genderPreference,
+      age: ageNumber,
+      city,
+      profession,
+      bioShort,
+      preferences: nextPreferences
+    });
   }
 
-  async function logout() {
-    await apiFetch("/auth/logout", { method: "POST" });
-    clearAccessToken();
-    await refresh();
-    router.push("/");
+  function logout() {
+    logoutMutation.mutate();
   }
 
   return (
@@ -255,10 +279,16 @@ export default function ProfilePage() {
       <AppShellLayout>
         <div className="profile-sections">
           <PageHeader title="Profile" subtitle="Curate your presence on ELITE MATCH." />
-          {loadStatus === "loading" ? (
+          {profileQuery.isLoading ? (
             <LoadingState message="Loading your profile..." />
-          ) : loadStatus === "error" ? (
-            <ErrorState message={message || "Unable to load profile."} onRetry={loadProfile} />
+          ) : profileQuery.isError ? (
+            <ErrorState
+              message={message || "Unable to load profile."}
+              onRetry={() => {
+                setMessage("");
+                void profileQuery.refetch();
+              }}
+            />
           ) : (
             <>
               <Card>
@@ -295,11 +325,7 @@ export default function ProfilePage() {
                       >
                         Edit profile
                       </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploading}
-                      >
+                      <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
                         Upload photo
                       </Button>
                     </div>
@@ -364,11 +390,7 @@ export default function ProfilePage() {
                     <div className="dob-picker">
                       <div className="field">
                         <label htmlFor="profile-gender">Gender</label>
-                        <select
-                          id="profile-gender"
-                          value={form.gender}
-                          onChange={(e) => updateField("gender", e.target.value)}
-                        >
+                        <select id="profile-gender" value={form.gender} onChange={(e) => updateField("gender", e.target.value)}>
                           <option value="">Select</option>
                           <option value="MALE">Male</option>
                           <option value="FEMALE">Female</option>
@@ -394,11 +416,7 @@ export default function ProfilePage() {
                     <div className="dob-picker">
                       <div className="field">
                         <label htmlFor="edit-dob-month">Month</label>
-                        <select
-                          id="edit-dob-month"
-                          value={dob.month}
-                          onChange={(e) => updateDobField("month", e.target.value)}
-                        >
+                        <select id="edit-dob-month" value={dob.month} onChange={(e) => updateDobField("month", e.target.value)}>
                           <option value="">MM</option>
                           {Array.from({ length: 12 }).map((_, index) => (
                             <option key={index + 1} value={`${index + 1}`}>
@@ -409,11 +427,7 @@ export default function ProfilePage() {
                       </div>
                       <div className="field">
                         <label htmlFor="edit-dob-day">Day</label>
-                        <select
-                          id="edit-dob-day"
-                          value={dob.day}
-                          onChange={(e) => updateDobField("day", e.target.value)}
-                        >
+                        <select id="edit-dob-day" value={dob.day} onChange={(e) => updateDobField("day", e.target.value)}>
                           <option value="">DD</option>
                           {Array.from({ length: 31 }).map((_, index) => (
                             <option key={index + 1} value={`${index + 1}`}>
@@ -424,11 +438,7 @@ export default function ProfilePage() {
                       </div>
                       <div className="field">
                         <label htmlFor="edit-dob-year">Year</label>
-                        <select
-                          id="edit-dob-year"
-                          value={dob.year}
-                          onChange={(e) => updateDobField("year", e.target.value)}
-                        >
+                        <select id="edit-dob-year" value={dob.year} onChange={(e) => updateDobField("year", e.target.value)}>
                           <option value="">YYYY</option>
                           {Array.from({ length: 60 }).map((_, index) => {
                             const year = new Date().getFullYear() - 18 - index;
@@ -549,7 +559,7 @@ export default function ProfilePage() {
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        void handlePhotoUpload(file);
+                        handlePhotoUpload(file);
                       }
                     }}
                   />

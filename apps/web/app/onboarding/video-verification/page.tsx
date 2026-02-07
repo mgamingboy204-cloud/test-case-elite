@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../../lib/api";
+import { queryKeys } from "../../../lib/queryKeys";
 import { useSession } from "../../../lib/session";
 
 type Status = "idle" | "loading" | "success" | "error";
@@ -14,21 +16,65 @@ type VerificationStatusResponse = {
   meetUrl?: string | null;
 };
 
+type VerificationRequestResponse = {
+  request: { status: VerificationStatus; meetUrl?: string | null; verificationLink?: string | null };
+};
+
 export default function VideoVerificationPage() {
   const router = useRouter();
   const { refresh } = useSession();
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
-  const [verificationStatus, setVerificationStatus] = useState<VerificationStatusResponse | null>(null);
   const [hasJoinedCall, setHasJoinedCall] = useState(false);
-  const [isPolling, setIsPolling] = useState(false);
+
+  const statusQuery = useQuery({
+    queryKey: queryKeys.userVerificationStatus,
+    queryFn: () => apiFetch<VerificationStatusResponse>("/me/verification-status"),
+    staleTime: 5000,
+    refetchInterval: (data) => {
+      const shouldPoll = data?.status === "REQUESTED" || data?.status === "IN_PROGRESS";
+      return shouldPoll ? 7000 : false;
+    }
+  });
+
+  const requestMutation = useMutation({
+    mutationFn: () => apiFetch<VerificationRequestResponse>("/verification-requests", { method: "POST" }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.userVerificationStatus, {
+        status: data.request.status,
+        meetUrl: data.request.meetUrl ?? data.request.verificationLink ?? null
+      });
+      queryClient.invalidateQueries({ queryKey: ["adminVideoQueue"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile("me") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.uploads });
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminQueues });
+      setStatus("success");
+    },
+    onError: (error) => {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Unable to submit verification request.");
+    }
+  });
 
   useEffect(() => {
-    void loadStatus();
-  }, []);
+    if (statusQuery.isLoading) {
+      setStatus("loading");
+      return;
+    }
+    if (statusQuery.isError) {
+      setStatus("error");
+      setMessage(statusQuery.error instanceof Error ? statusQuery.error.message : "Unable to load verification status.");
+      return;
+    }
+    if (statusQuery.isSuccess) {
+      setStatus("success");
+    }
+  }, [statusQuery.isLoading, statusQuery.isError, statusQuery.isSuccess, statusQuery.error]);
 
   useEffect(() => {
-    if (verificationStatus?.status !== "COMPLETED") return;
+    if (statusQuery.data?.status !== "COMPLETED") return;
     const timer = setTimeout(async () => {
       const user = await refresh();
       if (user?.onboardingStep === "VIDEO_VERIFIED" || user?.paymentStatus === "NOT_STARTED") {
@@ -36,57 +82,21 @@ export default function VideoVerificationPage() {
       }
     }, 2000);
     return () => clearTimeout(timer);
-  }, [verificationStatus?.status, refresh, router]);
+  }, [statusQuery.data?.status, refresh, router]);
 
-  useEffect(() => {
-    const shouldPoll = verificationStatus?.status === "REQUESTED" || verificationStatus?.status === "IN_PROGRESS";
-    if (!shouldPoll) {
-      setIsPolling(false);
-      return;
-    }
-    setIsPolling(true);
-    const interval = setInterval(() => {
-      void loadStatus(true);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [verificationStatus?.status]);
-
-  async function loadStatus(silent = false) {
-    if (!silent) {
-      setStatus("loading");
-      setMessage("");
-    }
-    try {
-      const data = await apiFetch<VerificationStatusResponse>("/me/verification-status");
-      setVerificationStatus(data);
-      if (!silent) {
-        setStatus("success");
-      }
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to load verification status.");
-    }
-  }
-
-  async function submitRequest() {
+  function loadStatus() {
     setStatus("loading");
     setMessage("");
-    try {
-      const data = await apiFetch<{ request: { status: VerificationStatus; meetUrl?: string | null; verificationLink?: string | null } }>(
-        "/verification-requests",
-        { method: "POST" }
-      );
-      setVerificationStatus({
-        status: data.request.status,
-        meetUrl: data.request.meetUrl ?? data.request.verificationLink ?? null
-      });
-      setStatus("success");
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to submit verification request.");
-    }
+    void statusQuery.refetch();
   }
 
+  function submitRequest() {
+    setStatus("loading");
+    setMessage("");
+    requestMutation.mutate();
+  }
+
+  const verificationStatus = statusQuery.data ?? null;
   const joinUrl = verificationStatus?.meetUrl ?? "";
   const derivedStatus = useMemo(() => {
     if (!verificationStatus) return "NOT_REQUESTED";
@@ -111,7 +121,7 @@ export default function VideoVerificationPage() {
                 setHasJoinedCall(true);
               }
             }
-          : { label: "Refresh status", onClick: () => loadStatus() };
+          : { label: "Refresh status", onClick: loadStatus };
   const showSecondaryRefresh = Boolean(hasRequest && linkReady && derivedStatus === "IN_PROGRESS");
 
   const steps = [
@@ -119,7 +129,12 @@ export default function VideoVerificationPage() {
     { key: "IN_PROGRESS", label: "Scheduled", copy: "A verification call is ready." },
     { key: "COMPLETED", label: "Approved", copy: "Payment is now unlocked." }
   ];
-  const activeStepIndex = Math.max(0, steps.findIndex((step) => step.key === (derivedStatus === "REJECTED" ? "REQUESTED" : derivedStatus)));
+  const activeStepIndex = Math.max(
+    0,
+    steps.findIndex((step) => step.key === (derivedStatus === "REJECTED" ? "REQUESTED" : derivedStatus))
+  );
+
+  const isPolling = statusQuery.isFetching && (derivedStatus === "REQUESTED" || derivedStatus === "IN_PROGRESS");
 
   return (
     <div className="verification-shell">
@@ -132,9 +147,7 @@ export default function VideoVerificationPage() {
         <div className="verification-card__intro">
           <span className="verification-pill">Video verification</span>
           <h3>Quick identity check</h3>
-          <p className="card-subtitle">
-            A short private call with our team. We never store recordings.
-          </p>
+          <p className="card-subtitle">A short private call with our team. We never store recordings.</p>
         </div>
 
         <div className="verification-icon-list">
@@ -160,7 +173,6 @@ export default function VideoVerificationPage() {
             </div>
           </div>
         </div>
-
       </section>
 
       <div className="verification-cta">
@@ -168,13 +180,11 @@ export default function VideoVerificationPage() {
           {status === "loading" ? "Updating..." : primaryAction.label}
         </button>
         {showSecondaryRefresh ? (
-          <button className="text-button" type="button" onClick={() => loadStatus()}>
+          <button className="text-button" type="button" onClick={loadStatus}>
             Refresh status
           </button>
         ) : null}
-        {derivedStatus === "COMPLETED" ? (
-          <p className="message success">Approved — payment is now unlocked.</p>
-        ) : null}
+        {derivedStatus === "COMPLETED" ? <p className="message success">Approved — payment is now unlocked.</p> : null}
         {message ? <p className={`message ${status}`}>{message}</p> : null}
         {linkReady && derivedStatus === "IN_PROGRESS" ? (
           <p className="helper-text">Join the call in a new tab, then return here for status updates.</p>

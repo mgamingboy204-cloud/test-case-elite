@@ -1,52 +1,71 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api";
+import { queryKeys } from "../../lib/queryKeys";
 import RouteGuard from "../components/RouteGuard";
 
 type Status = "idle" | "loading" | "success" | "error";
+
+type RefundsResponse = { refunds: any[] };
+
+type EligibilityResponse = { eligibility: { eligible: boolean; reasons: string[] } };
 
 export default function RefundsPage() {
   const [reason, setReason] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
-  const [refunds, setRefunds] = useState<any[]>([]);
+  const queryClient = useQueryClient();
 
-  async function requestRefund() {
-    setStatus("loading");
-    setMessage("Submitting refund request...");
-    try {
-      const data = await apiFetch<{ eligibility: { eligible: boolean; reasons: string[] } }>(
-        "/refunds/request",
-        {
-          method: "POST",
-          body: JSON.stringify({ reason })
-        }
-      );
+  const refundsQuery = useQuery({
+    queryKey: queryKeys.refunds,
+    queryFn: () => apiFetch<RefundsResponse>("/refunds/me"),
+    staleTime: 15000
+  });
+
+  const requestMutation = useMutation({
+    mutationFn: (payload: { reason: string }) =>
+      apiFetch<EligibilityResponse>("/refunds/request", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }),
+    onSuccess: (data) => {
       setStatus("success");
       setMessage(
         data.eligibility?.eligible
           ? "Refund request submitted."
           : `Ineligible: ${(data.eligibility?.reasons ?? []).join(", ")}`
       );
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.refunds });
+      queryClient.invalidateQueries({ queryKey: queryKeys.refundEligibility });
+    },
+    onError: (error) => {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to request refund.");
     }
+  });
+
+  const refunds = refundsQuery.data?.refunds ?? [];
+
+  function requestRefund() {
+    setStatus("loading");
+    setMessage("Submitting refund request...");
+    requestMutation.mutate({ reason });
   }
 
-  async function loadRefunds() {
+  function loadRefunds() {
     setStatus("loading");
     setMessage("Loading refund history...");
-    try {
-      const data = await apiFetch<{ refunds: any[] }>("/refunds/me");
-      setRefunds(data.refunds ?? []);
-      setStatus("success");
-      setMessage("Refund history updated.");
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to load refunds.");
-    }
+    void refundsQuery.refetch().then((result) => {
+      if (result.isSuccess) {
+        setStatus("success");
+        setMessage("Refund history updated.");
+      } else if (result.isError) {
+        setStatus("error");
+        setMessage(result.error instanceof Error ? result.error.message : "Unable to load refunds.");
+      }
+    });
   }
 
   return (

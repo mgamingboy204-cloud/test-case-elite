@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api";
 import { setAccessToken } from "../../lib/authToken";
 import { useSession } from "../../lib/session";
@@ -9,6 +10,8 @@ import { getDefaultRoute } from "../../lib/onboarding";
 import OtpInput from "../components/OtpInput";
 
 type Status = "idle" | "loading" | "success" | "error";
+
+type OtpVerifyResponse = { ok: boolean; accessToken?: string };
 
 const phoneRegex = /^\d{10}$/;
 const otpRegex = /^\d{6}$/;
@@ -33,6 +36,32 @@ export default function OtpPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const { refresh } = useSession();
 
+  const sendMutation = useMutation({
+    mutationFn: (payload: { phone: string }) =>
+      apiFetch("/auth/otp/send", {
+        method: "POST",
+        auth: "omit",
+        body: JSON.stringify(payload)
+      }),
+    onError: (error) => {
+      setSendStatus("error");
+      setSendMessage(getErrorMessage(error));
+    }
+  });
+
+  const verifyMutation = useMutation({
+    mutationFn: (payload: { phone: string; code: string; rememberMe: boolean }) =>
+      apiFetch<OtpVerifyResponse>("/auth/otp/verify", {
+        method: "POST",
+        auth: "omit",
+        body: JSON.stringify(payload)
+      }),
+    onError: (error) => {
+      setVerifyStatus("error");
+      setVerifyMessage(getErrorMessage(error));
+    }
+  });
+
   useEffect(() => {
     if (otpCountdown <= 0) return;
     const timer = setTimeout(() => setOtpCountdown((prev) => Math.max(prev - 1, 0)), 1000);
@@ -47,19 +76,10 @@ export default function OtpPage() {
     }
     setSendStatus("loading");
     setSendMessage("Sending your OTP...");
-    try {
-      await apiFetch("/auth/otp/send", {
-        method: "POST",
-        auth: "omit",
-        body: JSON.stringify({ phone: sendPhone })
-      });
-      setSendStatus("success");
-      setOtpCountdown(30);
-      setSendMessage("OTP sent! Check your device or dev logs.");
-    } catch (error) {
-      setSendStatus("error");
-      setSendMessage(getErrorMessage(error));
-    }
+    await sendMutation.mutateAsync({ phone: sendPhone });
+    setSendStatus("success");
+    setOtpCountdown(30);
+    setSendMessage("OTP sent! Check your device or dev logs.");
   }
 
   async function handleVerifyOtp() {
@@ -75,24 +95,15 @@ export default function OtpPage() {
     }
     setVerifyStatus("loading");
     setVerifyMessage("Verifying OTP...");
-    try {
-      const response = await apiFetch<{ ok: boolean; accessToken?: string }>("/auth/otp/verify", {
-        method: "POST",
-        auth: "omit",
-        body: JSON.stringify({ phone: verifyPhone, code: otpCode, rememberMe })
-      });
-      setVerifyStatus("success");
-      setVerifyMessage("OTP verified! Redirecting...");
-      if (response.accessToken) {
-        setAccessToken(response.accessToken);
-      }
-      const user = await refresh();
-      const destination = getDefaultRoute(user);
-      setTimeout(() => router.push(destination), 200);
-    } catch (error) {
-      setVerifyStatus("error");
-      setVerifyMessage(getErrorMessage(error));
+    const response = await verifyMutation.mutateAsync({ phone: verifyPhone, code: otpCode, rememberMe });
+    setVerifyStatus("success");
+    setVerifyMessage("OTP verified! Redirecting...");
+    if (response.accessToken) {
+      setAccessToken(response.accessToken);
     }
+    const user = await refresh();
+    const destination = getDefaultRoute(user);
+    setTimeout(() => router.push(destination), 200);
   }
 
   return (
@@ -112,23 +123,23 @@ export default function OtpPage() {
         </div>
         <div className="form">
           <div className="field">
-          <label htmlFor="send-phone">Phone</label>
-          <input
-            id="send-phone"
-            placeholder="10-digit phone number"
-            value={sendPhone}
-            onChange={(e) => setSendPhone(e.target.value)}
-          />
+            <label htmlFor="send-phone">Phone</label>
+            <input
+              id="send-phone"
+              placeholder="10-digit phone number"
+              value={sendPhone}
+              onChange={(e) => setSendPhone(e.target.value)}
+            />
+          </div>
+          <button onClick={handleSendOtp} disabled={sendStatus === "loading" || otpCountdown > 0}>
+            {sendStatus === "loading"
+              ? "Sending..."
+              : otpCountdown > 0
+                ? `Resend in ${otpCountdown}s`
+                : "Send OTP"}
+          </button>
+          {sendMessage ? <p className={`message ${sendStatus}`}>{sendMessage}</p> : null}
         </div>
-        <button onClick={handleSendOtp} disabled={sendStatus === "loading" || otpCountdown > 0}>
-          {sendStatus === "loading"
-            ? "Sending..."
-            : otpCountdown > 0
-              ? `Resend in ${otpCountdown}s`
-              : "Send OTP"}
-        </button>
-        {sendMessage ? <p className={`message ${sendStatus}`}>{sendMessage}</p> : null}
-      </div>
         <div className="divider" />
         <div className="form">
           <div className="field">
@@ -145,11 +156,7 @@ export default function OtpPage() {
             <OtpInput value={otpCode} onChange={setOtpCode} disabled={verifyStatus === "loading"} idPrefix="otp-code" />
           </div>
           <label className="checkbox">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-            />
+            <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
             Remember me on this device
           </label>
           <button onClick={handleVerifyOtp} disabled={verifyStatus === "loading"}>
