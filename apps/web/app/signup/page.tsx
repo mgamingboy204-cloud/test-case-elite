@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../lib/api";
+import { setAccessToken } from "../../lib/authToken";
 import { useSession } from "../../lib/session";
 import { getDefaultRoute } from "../../lib/onboarding";
 import OtpInput from "../components/OtpInput";
@@ -102,13 +103,16 @@ export default function SignupPage() {
     setStatus("loading");
     setMessage("Verifying OTP...");
     try {
-      await apiFetch("/auth/otp/verify", {
+      const response = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         auth: "omit",
         body: JSON.stringify({ phone: account.phone, code: otpCode, rememberMe })
       });
       setStatus("success");
       setMessage("OTP verified. Redirecting to onboarding...");
+      if (response.accessToken) {
+        setAccessToken(response.accessToken);
+      }
       const user = await refresh();
       const destination = getDefaultRoute(user);
       setTimeout(() => router.push(destination), 200);

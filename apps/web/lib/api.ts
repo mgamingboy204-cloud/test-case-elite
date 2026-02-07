@@ -1,10 +1,15 @@
+import { getAccessToken, setAccessToken } from "./authToken";
+
 const rawApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL;
 
 if (!rawApiUrl && process.env.NODE_ENV === "production") {
   throw new Error("NEXT_PUBLIC_API_BASE_URL is required in production.");
 }
+if (rawApiUrl && process.env.NODE_ENV === "production" && rawApiUrl.startsWith("http://")) {
+  throw new Error("NEXT_PUBLIC_API_BASE_URL must be https in production.");
+}
 
-export const API_URL = rawApiUrl ?? "http://localhost:4000";
+export const API_URL = (rawApiUrl ?? "http://localhost:4000").replace(/\/$/, "");
 
 type ApiFetchOptions = RequestInit & {
   auth?: "include" | "omit";
@@ -51,6 +56,11 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions) {
   if (options.method && options.method !== "GET" && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
+  const authMode = options.auth ?? "include";
+  const token = authMode !== "omit" ? getAccessToken() : null;
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers,
@@ -68,4 +78,21 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions) {
     throw new ApiError(message, { fieldErrors, status: res.status });
   }
   return payload as T;
+}
+
+export async function refreshAccessToken() {
+  const res = await fetch(`${API_URL}/auth/token/refresh`, {
+    method: "POST",
+    credentials: "include",
+    cache: "no-store"
+  });
+  if (!res.ok) {
+    return null;
+  }
+  const payload = (await res.json()) as { accessToken?: string };
+  if (payload.accessToken) {
+    setAccessToken(payload.accessToken);
+    return payload.accessToken;
+  }
+  return null;
 }

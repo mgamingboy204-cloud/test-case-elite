@@ -194,7 +194,6 @@ export async function validateLogin(options: {
   }
 
   if (!user.phoneVerifiedAt) {
-    await requestOtp(user.phone);
     throw new HttpError(403, { error: "Phone not verified. Please verify your phone to continue." });
   }
 

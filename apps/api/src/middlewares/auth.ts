@@ -11,20 +11,18 @@ function getBearerToken(req: Request) {
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
-  let userId = req.session.userId;
-  if (!userId) {
-    const token = getBearerToken(req);
-    if (token === null) {
-      return res.status(401).json({ error: "Missing authorization header" });
-    }
-    if (!token) {
-      return res.status(401).json({ error: "Invalid token" });
-    }
-    try {
-      userId = verifyAccessToken(token);
-    } catch (error) {
-      return res.status(401).json({ error: "Invalid token" });
-    }
+  const token = getBearerToken(req);
+  if (token === null) {
+    return res.status(401).json({ error: "Missing authorization header" });
+  }
+  if (!token) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+  let userId: string;
+  try {
+    userId = verifyAccessToken(token);
+  } catch (error) {
+    return res.status(401).json({ error: "Invalid token" });
   }
   req.userId = userId;
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -61,10 +59,6 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
 }
 
 export function requireAuthHeader(req: Request, res: Response, next: NextFunction) {
-  if (req.session.userId) {
-    req.userId = req.session.userId;
-    return next();
-  }
   const token = getBearerToken(req);
   if (token === null) {
     return res.status(401).json({ error: "Missing authorization header" });

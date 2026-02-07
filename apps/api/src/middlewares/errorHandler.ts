@@ -16,7 +16,8 @@ type ErrorBody =
       error?: {
         message?: string;
         fieldErrors?: Record<string, string[]>;
-      };
+      } | string;
+      fieldErrors?: Record<string, string[]>;
     };
 
 export function errorHandler(
@@ -48,8 +49,12 @@ export function errorHandler(
       });
     }
 
+    if (typeof body?.error === "string") {
+      return res.status(err.status).json({ message: body.error, fieldErrors: body.fieldErrors });
+    }
+
     if (typeof body?.message === "string") {
-      return res.status(err.status).json({ message: body.message });
+      return res.status(err.status).json({ message: body.message, fieldErrors: body.fieldErrors });
     }
 
     return res.status(err.status).json({ message: "Request failed" });

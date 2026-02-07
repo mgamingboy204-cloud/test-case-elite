@@ -14,9 +14,22 @@ import { createDeviceToken, registerPendingUser, requestOtp, resolveOnboardingSt
 import { HttpError } from "../utils/httpErrors";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
 
-function issueSession(req: Request, userId: string) {
-  req.session.userId = userId;
-  return req.sessionID;
+async function saveSession(req: Request) {
+  await new Promise<void>((resolve, reject) => {
+    req.session.save((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+function logSessionEvent(event: string, details: Record<string, unknown>) {
+  if (env.NODE_ENV !== "production") {
+    console.debug(`[auth] ${event}`, details);
+  }
 }
 
 const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
@@ -52,7 +65,6 @@ export async function verifyOtp(req: Request, res: Response) {
       rememberDevice30Days: req.session.pendingRememberDevice30Days ?? false,
       rememberMe: rememberMe ?? req.session.pendingRememberMe ?? false
     });
-    issueSession(req, user.id);
     req.session.pendingUserId = undefined;
     req.session.pendingPhone = undefined;
 
@@ -68,6 +80,9 @@ export async function verifyOtp(req: Request, res: Response) {
     }
     req.session.pendingRememberDevice30Days = undefined;
     req.session.pendingRememberMe = undefined;
+
+    await saveSession(req);
+    logSessionEvent("otp-verified", { userId: user.id, sessionId: req.sessionID });
 
     return res.json({
       ok: true,
@@ -95,6 +110,7 @@ export async function register(req: Request, res: Response) {
   const { phone, email, password } = req.body as { phone: string; email?: string; password: string };
   await registerPendingUser({ phone, email, password });
   req.session.pendingPhone = phone;
+  await saveSession(req);
   return res.json({ phone, otpRequired: true });
 }
 
@@ -110,7 +126,6 @@ export async function login(req: Request, res: Response) {
   const rememberDevice30DaysValue = rememberDevice30Days ?? rememberDevice ?? false;
 
   const result = await validateLogin({ phone, password });
-  issueSession(req, result.user.id);
   applySessionLifetime(req, {
     rememberDevice30Days: rememberDevice30DaysValue,
     rememberMe: rememberMe ?? false
@@ -120,6 +135,7 @@ export async function login(req: Request, res: Response) {
   const refreshToken = signRefreshToken(result.user.id, { rememberMe: resolvedRememberMe });
   const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
   res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
+  logSessionEvent("login", { userId: result.user.id });
   return res.json({
     id: result.user.id,
     phone: result.user.phone,
