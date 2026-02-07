@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiFetch } from "../../lib/api";
+import { clearAccessToken } from "../../lib/authToken";
 import { useSession } from "../../lib/session";
 import RouteGuard from "../components/RouteGuard";
 import AppShellLayout from "../components/ui/AppShellLayout";
@@ -20,6 +21,7 @@ export default function SettingsPage() {
     setLogoutStatus("loading");
     try {
       await apiFetch("/auth/logout", { method: "POST" });
+      clearAccessToken();
       await refresh();
       router.push("/");
     } finally {

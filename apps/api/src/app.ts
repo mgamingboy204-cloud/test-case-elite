@@ -17,9 +17,7 @@ const PgStore = connectPg(session);
 
 export const app = express();
 
-if (env.NODE_ENV === "production") {
-  app.set("trust proxy", 1);
-}
+app.set("trust proxy", 1);
 
 ensureUploadsDir();
 if (env.STORAGE_PROVIDER === "local") {
@@ -39,6 +37,22 @@ app.use(
         : false
   })
 );
+if (env.NODE_ENV === "production") {
+  app.use((req, res, next) => {
+    const forwardedProto = req.headers["x-forwarded-proto"];
+    if (forwardedProto && forwardedProto !== "https") {
+      if (req.method === "GET" || req.method === "HEAD") {
+        const host = req.headers.host;
+        const target = host ? `https://${host}${req.originalUrl}` : undefined;
+        if (target) {
+          return res.redirect(301, target);
+        }
+      }
+      return res.status(403).json({ message: "HTTPS required" });
+    }
+    return next();
+  });
+}
 app.use(express.json({ limit: "20mb" }));
 const allowedOrigins = [env.WEB_ORIGIN, env.ADMIN_ORIGIN, "http://localhost:3000"].filter(Boolean);
 const corsOptions: CorsOptions = {

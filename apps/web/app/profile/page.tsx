@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../lib/api";
+import { clearAccessToken } from "../../lib/authToken";
 import { getAssetUrl } from "../../lib/assets";
 import RouteGuard from "../components/RouteGuard";
 import AppShellLayout from "../components/ui/AppShellLayout";
@@ -244,6 +245,7 @@ export default function ProfilePage() {
 
   async function logout() {
     await apiFetch("/auth/logout", { method: "POST" });
+    clearAccessToken();
     await refresh();
     router.push("/");
   }

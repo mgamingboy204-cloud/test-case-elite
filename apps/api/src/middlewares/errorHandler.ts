@@ -45,19 +45,23 @@ export function errorHandler(
     if (typeof body === "string") {
       return res.status(err.status).json({ message: body });
     }
-  
-    // body is an object (or undefined)
-    const message =
-      typeof body?.message === "string" ? body.message : "Request failed";
-  
-    const fieldErrors =
-      body?.fieldErrors && typeof body.fieldErrors === "object"
-        ? body.fieldErrors
-        : undefined;
-  
-    return res
-      .status(err.status)
-      .json(fieldErrors ? { message, fieldErrors } : { message });
+
+    if (body?.error?.message) {
+      return res.status(err.status).json({
+        message: body.error.message,
+        fieldErrors: body.error.fieldErrors,
+      });
+    }
+
+    if (typeof body?.error === "string") {
+      return res.status(err.status).json({ message: body.error, fieldErrors: body.fieldErrors });
+    }
+
+    if (typeof body?.message === "string") {
+      return res.status(err.status).json({ message: body.message, fieldErrors: body.fieldErrors });
+    }
+
+    return res.status(err.status).json({ message: "Request failed" });
   }
 
 

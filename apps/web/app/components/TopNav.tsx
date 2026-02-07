@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { apiFetch } from "../../lib/api";
+import { clearAccessToken } from "../../lib/authToken";
 import { useSession } from "../../lib/session";
 
 const baseLinks = [
@@ -42,6 +43,7 @@ export default function TopNav() {
     setLogoutStatus("loading");
     try {
       await apiFetch("/auth/logout", { method: "POST" });
+      clearAccessToken();
     } finally {
       await refresh();
       setLogoutStatus("idle");
