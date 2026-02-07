@@ -28,7 +28,8 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
   }
 
   if (err instanceof ZodError) {
-    return res.status(400).json({ error: formatZodError(err) });
+    const details = formatZodError(err);
+    return res.status(400).json({ error: details, details });
   }
 
   logger.error("Unhandled error", err);

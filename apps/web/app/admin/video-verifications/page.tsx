@@ -50,7 +50,7 @@ export default function AdminVideoVerificationsPage() {
     try {
       await apiFetch(`/admin/verification-requests/${id}/start`, {
         method: "POST",
-        body: JSON.stringify({ meetUrl: links[id] })
+        body: JSON.stringify({ meetUrl: (links[id] ?? "").trim() })
       });
       await loadRequests(filter);
       setStatus("success");
