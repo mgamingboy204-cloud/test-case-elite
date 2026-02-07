@@ -1,7 +1,7 @@
 import express from "express";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import cors from "cors";
+import cors, { CorsOptions } from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import path from "path";
@@ -17,9 +17,7 @@ const PgStore = connectPg(session);
 
 export const app = express();
 
-if (env.NODE_ENV === "production") {
-  app.set("trust proxy", 1);
-}
+app.set("trust proxy", 1);
 
 ensureUploadsDir();
 if (env.STORAGE_PROVIDER === "local") {
@@ -39,24 +37,40 @@ app.use(
         : false
   })
 );
+if (env.NODE_ENV === "production") {
+  app.use((req, res, next) => {
+    const forwardedProto = req.headers["x-forwarded-proto"];
+    if (forwardedProto && forwardedProto !== "https") {
+      if (req.method === "GET" || req.method === "HEAD") {
+        const host = req.headers.host;
+        const target = host ? `https://${host}${req.originalUrl}` : undefined;
+        if (target) {
+          return res.redirect(301, target);
+        }
+      }
+      return res.status(403).json({ message: "HTTPS required" });
+    }
+    return next();
+  });
+}
 app.use(express.json({ limit: "20mb" }));
 const allowedOrigins = [env.WEB_ORIGIN, env.ADMIN_ORIGIN, "http://localhost:3000"].filter(Boolean);
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true
-  })
-);
+const corsOptions: CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true
+};
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(morgan("dev"));
 app.use((req, res, next) => {
   res.setHeader("Cache-Control", "no-store");

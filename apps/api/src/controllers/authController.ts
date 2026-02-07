@@ -14,9 +14,22 @@ import { createDeviceToken, registerPendingUser, requestOtp, resolveOnboardingSt
 import { HttpError } from "../utils/httpErrors";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
 
-function issueSession(req: Request, userId: string) {
-  req.session.userId = userId;
-  return req.sessionID;
+async function saveSession(req: Request) {
+  await new Promise<void>((resolve, reject) => {
+    req.session.save((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+function logSessionEvent(event: string, details: Record<string, unknown>) {
+  if (env.NODE_ENV !== "production") {
+    console.debug(`[auth] ${event}`, details);
+  }
 }
 
 const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
@@ -52,7 +65,7 @@ export async function verifyOtp(req: Request, res: Response) {
       rememberDevice30Days: req.session.pendingRememberDevice30Days ?? false,
       rememberMe: rememberMe ?? req.session.pendingRememberMe ?? false
     });
-    issueSession(req, user.id);
+    req.session.userId = user.id;
     req.session.pendingUserId = undefined;
     req.session.pendingPhone = undefined;
 
@@ -68,6 +81,9 @@ export async function verifyOtp(req: Request, res: Response) {
     }
     req.session.pendingRememberDevice30Days = undefined;
     req.session.pendingRememberMe = undefined;
+
+    await saveSession(req);
+    logSessionEvent("otp-verified", { userId: user.id, sessionId: req.sessionID });
 
     return res.json({
       ok: true,
@@ -87,7 +103,7 @@ export async function verifyOtp(req: Request, res: Response) {
     if (error instanceof HttpError) {
       throw error;
     }
-    return res.status(500).json({ error: "OTP verification failed. Please try again." });
+    return res.status(500).json({ message: "OTP verification failed. Please try again." });
   }
 }
 
@@ -95,6 +111,7 @@ export async function register(req: Request, res: Response) {
   const { phone, email, password } = req.body as { phone: string; email?: string; password: string };
   await registerPendingUser({ phone, email, password });
   req.session.pendingPhone = phone;
+  await saveSession(req);
   return res.json({ phone, otpRequired: true });
 }
 
@@ -110,16 +127,18 @@ export async function login(req: Request, res: Response) {
   const rememberDevice30DaysValue = rememberDevice30Days ?? rememberDevice ?? false;
 
   const result = await validateLogin({ phone, password });
-  issueSession(req, result.user.id);
   applySessionLifetime(req, {
     rememberDevice30Days: rememberDevice30DaysValue,
     rememberMe: rememberMe ?? false
   });
+  req.session.userId = result.user.id;
   const resolvedRememberMe = rememberMe ?? false;
   const accessToken = signAccessToken(result.user.id, { rememberMe: resolvedRememberMe });
   const refreshToken = signRefreshToken(result.user.id, { rememberMe: resolvedRememberMe });
   const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
   res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
+  await saveSession(req);
+  logSessionEvent("login", { userId: result.user.id });
   return res.json({
     id: result.user.id,
     phone: result.user.phone,
@@ -154,7 +173,7 @@ export async function refreshAccessToken(req: Request, res: Response) {
   const cookies = parseCookies(req.headers.cookie);
   const refreshToken = refreshTokenFromBody ?? cookies[refreshCookieName];
   if (!refreshToken) {
-    return res.status(401).json({ error: "Missing refresh token" });
+    return res.status(401).json({ message: "Missing refresh token" });
   }
   let userId: string;
   let rememberMe = false;
@@ -163,20 +182,20 @@ export async function refreshAccessToken(req: Request, res: Response) {
     userId = verification.userId;
     rememberMe = verification.rememberMe;
   } catch (error) {
-    return res.status(401).json({ error: "Invalid refresh token" });
+    return res.status(401).json({ message: "Invalid refresh token" });
   }
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
-    return res.status(401).json({ error: "Invalid refresh token" });
+    return res.status(401).json({ message: "Invalid refresh token" });
   }
   if (user.deletedAt) {
-    return res.status(403).json({ error: "Account deleted" });
+    return res.status(403).json({ message: "Account deleted" });
   }
   if (user.deactivatedAt) {
-    return res.status(403).json({ error: "Account deactivated" });
+    return res.status(403).json({ message: "Account deactivated" });
   }
   if (user.status === "BANNED") {
-    return res.status(403).json({ error: "Banned" });
+    return res.status(403).json({ message: "Banned" });
   }
   const accessToken = signAccessToken(user.id, { rememberMe });
   const nextRefreshToken = signRefreshToken(user.id, { rememberMe });
@@ -188,7 +207,7 @@ export async function refreshAccessToken(req: Request, res: Response) {
 export async function whoAmI(req: Request, res: Response) {
   const userId = req.userId;
   if (!userId) {
-    return res.status(401).json({ error: "Invalid token" });
+    return res.status(401).json({ message: "Invalid token" });
   }
   const user =
     res.locals.user ??
@@ -196,7 +215,7 @@ export async function whoAmI(req: Request, res: Response) {
       where: { id: userId }
     }));
   if (!user) {
-    return res.status(401).json({ error: "Invalid token" });
+    return res.status(401).json({ message: "Invalid token" });
   }
   return res.json({
     id: user.id,

@@ -23,7 +23,7 @@ export async function discoverProfileDetail(req: Request, res: Response) {
     targetUserId
   });
   if (!profile) {
-    return res.status(404).json({ error: "Profile not found" });
+    return res.status(404).json({ message: "Profile not found" });
   }
   return res.json({ profile });
 }

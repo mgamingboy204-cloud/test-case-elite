@@ -121,7 +121,7 @@ export async function rejectVerificationForUserHandler(req: Request, res: Respon
 
 export async function shiftPaymentDateHandler(req: Request, res: Response) {
   if (env.NODE_ENV === "production") {
-    return res.status(403).json({ error: "Not allowed" });
+    return res.status(403).json({ message: "Not allowed" });
   }
   const { userId, daysBack } = req.body as { userId: string; daysBack: number };
   const result = await shiftPaymentDate({ userId, daysBack });

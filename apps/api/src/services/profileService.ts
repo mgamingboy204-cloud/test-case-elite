@@ -24,10 +24,15 @@ export async function updateProfile(options: { userId: string; paymentStatus: st
   }
 
   const normalized = { ...options.data };
+  const rawFirstName = normalized.firstName;
+  const rawLastName = normalized.lastName;
   const displayName = (normalized.displayName ?? normalized.name ?? "").toString().trim();
   if (displayName) {
     normalized.name = displayName;
   }
+  delete normalized.displayName;
+  delete normalized.firstName;
+  delete normalized.lastName;
   if (typeof normalized.gender === "string") {
     normalized.gender = normalized.gender.toUpperCase();
   }
@@ -35,14 +40,25 @@ export async function updateProfile(options: { userId: string; paymentStatus: st
     normalized.genderPreference = normalized.genderPreference.toUpperCase();
   }
   const nameParts = displayName ? displayName.split(" ").filter(Boolean) : [];
-  const firstName = normalized.firstName?.toString().trim() || nameParts[0] || null;
+  const firstName = rawFirstName?.toString().trim() || nameParts[0] || null;
   const lastName =
-    normalized.lastName?.toString().trim() || (nameParts.length > 1 ? nameParts.slice(1).join(" ") : null);
+    rawLastName?.toString().trim() || (nameParts.length > 1 ? nameParts.slice(1).join(" ") : null);
+
+  const profileData = {
+    name: normalized.name,
+    gender: normalized.gender,
+    genderPreference: normalized.genderPreference,
+    age: normalized.age,
+    city: normalized.city,
+    profession: normalized.profession,
+    bioShort: normalized.bioShort,
+    preferences: normalized.preferences ?? {}
+  };
 
   const profile = await prisma.profile.upsert({
     where: { userId: options.userId },
-    update: normalized,
-    create: { ...normalized, userId: options.userId }
+    update: profileData,
+    create: { ...profileData, userId: options.userId }
   });
 
   const photoCount = await prisma.photo.count({ where: { userId: options.userId } });

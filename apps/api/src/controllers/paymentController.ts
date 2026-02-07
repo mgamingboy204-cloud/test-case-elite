@@ -36,7 +36,7 @@ export async function validateCouponHandler(req: Request, res: Response) {
 }
 
 export async function mockPaymentUnsupported(req: Request, res: Response) {
-  return res.status(404).json({ error: "Use /payments/mock/start or /payments/mock/confirm." });
+  return res.status(404).json({ message: "Use /payments/mock/start or /payments/mock/confirm." });
 }
 
 export async function startMockPaymentHandler(req: Request, res: Response) {

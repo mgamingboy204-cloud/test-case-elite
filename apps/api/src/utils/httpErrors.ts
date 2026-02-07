@@ -3,8 +3,20 @@ export class HttpError extends Error {
   body: Record<string, unknown>;
 
   constructor(status: number, body: Record<string, unknown>) {
-    super(typeof body.error === "string" ? body.error : "Request failed");
+    const message =
+      typeof body.message === "string"
+        ? body.message
+        : typeof body.error === "string"
+          ? body.error
+          : "Request failed";
+    super(message);
     this.status = status;
-    this.body = body;
+    if (typeof body.message === "string") {
+      this.body = body;
+    } else if (typeof body.error === "string") {
+      this.body = { message: body.error, fieldErrors: body.fieldErrors };
+    } else {
+      this.body = { message };
+    }
   }
 }
