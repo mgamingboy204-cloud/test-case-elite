@@ -30,7 +30,7 @@ export default function SafetyPage() {
             <ul>
               <li>Block and report options with fast review.</li>
               <li>Flexible visibility for photos and details.</li>
-              <li>Session security with secure token storage.</li>
+              <li>Session security with secure, HTTP-only cookies.</li>
             </ul>
           </div>
         </div>

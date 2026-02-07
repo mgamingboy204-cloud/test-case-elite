@@ -23,7 +23,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberDevice, setRememberDevice] = useState(false);
+  const [rememberDevice30Days, setRememberDevice30Days] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
@@ -31,7 +31,7 @@ export default function LoginPage() {
   const [otpCode, setOtpCode] = useState("");
   const [otpCountdown, setOtpCountdown] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  const { refresh, setToken } = useSession();
+  const { refresh } = useSession();
 
   useEffect(() => {
     if (otpCountdown <= 0) return;
@@ -60,12 +60,12 @@ export default function LoginPage() {
     setStatus("loading");
     setMessage("Checking your credentials...");
     try {
-      const response = await apiFetch<{ otpRequired?: boolean; token?: string; accessToken?: string }>(
+      const response = await apiFetch<{ otpRequired?: boolean }>(
         "/auth/login",
         {
           method: "POST",
           auth: "omit",
-          body: JSON.stringify({ phone, password, rememberDevice, rememberMe })
+          body: JSON.stringify({ phone, password, rememberDevice30Days, rememberMe })
         }
       );
       if (response.otpRequired) {
@@ -74,10 +74,6 @@ export default function LoginPage() {
         setStatus("success");
         setMessage("OTP sent. Please enter the 6-digit code.");
       } else {
-        const nextToken = response.accessToken ?? response.token;
-        if (nextToken) {
-          setToken(nextToken, rememberMe);
-        }
         setStatus("success");
         setMessage("Welcome back! Redirecting you now...");
         const user = await refresh();
@@ -122,15 +118,11 @@ export default function LoginPage() {
     setStatus("loading");
     setMessage("Verifying OTP...");
     try {
-      const response = await apiFetch<{ token?: string; accessToken?: string }>("/auth/otp/verify", {
+      await apiFetch("/auth/otp/verify", {
         method: "POST",
         auth: "omit",
         body: JSON.stringify({ phone, code: otpCode, rememberMe })
       });
-      const nextToken = response.accessToken ?? response.token;
-      if (nextToken) {
-        setToken(nextToken, rememberMe);
-      }
       setStatus("success");
       setMessage("OTP verified! Redirecting...");
       const user = await refresh();
@@ -180,8 +172,8 @@ export default function LoginPage() {
             <label className="checkbox">
               <input
                 type="checkbox"
-                checked={rememberDevice}
-                onChange={(e) => setRememberDevice(e.target.checked)}
+                checked={rememberDevice30Days}
+                onChange={(e) => setRememberDevice30Days(e.target.checked)}
               />
               Remember this device for 30 days
             </label>

@@ -173,7 +173,6 @@ export async function requestOtp(phone: string) {
 export async function validateLogin(options: {
   phone: string;
   password: string;
-  deviceToken?: string;
 }) {
   const user = await prisma.user.findUnique({ where: { phone: options.phone } });
   if (!user) {
@@ -194,17 +193,15 @@ export async function validateLogin(options: {
     throw new HttpError(401, { error: "Invalid credentials" });
   }
 
-  if (options.deviceToken) {
-    const isValid = await verifyDeviceToken(user.id, options.deviceToken);
-    if (isValid) {
-      const onboardingStep = resolveOnboardingStep(user);
-      if (user.onboardingStep !== onboardingStep) {
-        await prisma.user.update({ where: { id: user.id }, data: { onboardingStep } });
-      }
-      return { user, onboardingStep, otpRequired: false };
-    }
+  if (!user.phoneVerifiedAt) {
+    await requestOtp(user.phone);
+    throw new HttpError(403, { error: "Phone not verified. Please verify your phone to continue." });
   }
 
-  await upsertOtpCode(user.phone);
-  return { user, otpRequired: true };
+  const onboardingStep = resolveOnboardingStep(user);
+  if (user.onboardingStep !== onboardingStep) {
+    await prisma.user.update({ where: { id: user.id }, data: { onboardingStep } });
+  }
+
+  return { user, onboardingStep };
 }

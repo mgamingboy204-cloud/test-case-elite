@@ -21,7 +21,7 @@ const protectedLinks = [
 export default function TopNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { status: sessionStatus, user, refresh, setToken } = useSession();
+  const { status: sessionStatus, user, refresh } = useSession();
   const [logoutStatus, setLogoutStatus] = useState<"idle" | "loading">("idle");
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -42,7 +42,6 @@ export default function TopNav() {
     setLogoutStatus("loading");
     try {
       await apiFetch("/auth/logout", { method: "POST" });
-      setToken(null);
     } finally {
       await refresh();
       setLogoutStatus("idle");

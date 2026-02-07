@@ -5,7 +5,6 @@ import LoginPage from "../app/login/page";
 
 const refreshMock = vi.fn();
 const pushMock = vi.fn();
-const setTokenMock = vi.fn();
 
 vi.mock("../lib/api", () => ({
   apiFetch: vi.fn()
@@ -14,7 +13,6 @@ vi.mock("../lib/api", () => ({
 vi.mock("../lib/session", () => ({
   useSession: () => ({
     refresh: refreshMock,
-    setToken: setTokenMock,
     status: "logged-out",
     user: null
   })
@@ -38,7 +36,7 @@ describe("Login OTP flow", () => {
 
     (apiFetch as any)
       .mockResolvedValueOnce({ otpRequired: true })
-      .mockResolvedValueOnce({ token: "session-token" });
+      .mockResolvedValueOnce({});
 
     render(<LoginPage />);
 
@@ -49,7 +47,6 @@ describe("Login OTP flow", () => {
     await user.type(screen.getByLabelText("OTP Code"), "123456");
     await user.click(screen.getByRole("button", { name: "Verify OTP" }));
 
-    expect(setTokenMock).toHaveBeenCalledWith("session-token", true);
     expect(refreshMock).toHaveBeenCalled();
     expect(pushMock).toHaveBeenCalledWith("/onboarding/payment");
   });

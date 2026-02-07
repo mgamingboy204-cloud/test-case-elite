@@ -74,6 +74,7 @@ app.use(
     secret: env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    rolling: true,
     cookie: sessionCookieOptions
   })
 );
