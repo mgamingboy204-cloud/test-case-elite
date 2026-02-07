@@ -32,6 +32,24 @@ function logSessionEvent(event: string, details: Record<string, unknown>) {
   }
 }
 
+async function saveSession(req: Request) {
+  await new Promise<void>((resolve, reject) => {
+    req.session.save((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+function logSessionEvent(event: string, details: Record<string, unknown>) {
+  if (env.NODE_ENV !== "production") {
+    console.debug(`[auth] ${event}`, details);
+  }
+}
+
 const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
 const SIXTY_DAYS_MS = 1000 * 60 * 60 * 24 * 60;
 

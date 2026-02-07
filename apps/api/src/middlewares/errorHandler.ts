@@ -35,9 +35,13 @@ export function errorHandler(
   }
 
   // custom HttpError
-  if (err instanceof HttpError) {
-    const body = err.body as ErrorBody | undefined;
-
+    if (err instanceof HttpError) {
+    const body = err.body as
+      | string
+      | { message?: string; fieldErrors?: Record<string, string[]> }
+      | undefined;
+  
+    // body is a plain string
     if (typeof body === "string") {
       return res.status(err.status).json({ message: body });
     }
@@ -59,6 +63,7 @@ export function errorHandler(
 
     return res.status(err.status).json({ message: "Request failed" });
   }
+
 
   // prisma known errors
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
