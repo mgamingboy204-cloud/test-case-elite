@@ -1,0 +1,360 @@
+.page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+.feedColumn {
+  width: 100%;
+  max-width: 760px;
+}
+
+.feedStack {
+  position: relative;
+  width: 100%;
+  height: clamp(420px, 60vh, 560px);
+}
+
+.filtersColumn {
+  width: 100%;
+}
+
+.filtersCard {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  position: sticky;
+  top: 120px;
+}
+
+.filtersHeader h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.card {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-elevated);
+  border-radius: 28px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 0.68fr 0.32fr;
+  transition: transform 0.32s ease, opacity 0.32s ease;
+  will-change: transform;
+}
+
+.cardActive {
+  z-index: 3;
+}
+
+.cardSkeleton {
+  background: var(--bg-muted);
+}
+
+.cardSwipeLeft {
+  transform: translateX(-120%) rotate(-6deg);
+  opacity: 0;
+}
+
+.cardSwipeRight {
+  transform: translateX(120%) rotate(6deg);
+  opacity: 0;
+}
+
+.cardMedia {
+  position: relative;
+  background: var(--bg-muted);
+}
+
+.cardMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.mediaFallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 56px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mediaSkeleton {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(120deg, var(--bg-muted) 20%, var(--bg-elevated) 40%, var(--bg-muted) 60%);
+  background-size: 180% 180%;
+  animation: shimmer 1.5s infinite;
+}
+
+.cardDetails {
+  padding: 32px 28px;
+  display: grid;
+  gap: 16px;
+}
+
+.cardHeader h2 {
+  font-size: 28px;
+  margin: 0;
+}
+
+.cardHeader h2 span {
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 20px;
+}
+
+.cardLocation {
+  color: var(--text-muted);
+  margin: 6px 0 0;
+  font-size: 14px;
+}
+
+.cardBio {
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chipMuted {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.actionButton {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-soft);
+  transition: transform var(--transition), background var(--transition);
+}
+
+.actionButton:hover,
+.actionButton:focus-visible {
+  transform: translateY(-2px);
+  background: var(--bg-muted);
+}
+
+.actionButtonPass {
+  color: #ef4444;
+}
+
+.actionButtonLike {
+  color: #22c55e;
+}
+
+.filters {
+  display: grid;
+  gap: 18px;
+}
+
+.filterGroup {
+  display: grid;
+  gap: 8px;
+}
+
+.filterRow {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.filterLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.filterInput {
+  width: 100%;
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.filterRangeInput {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.filterRange {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 999px;
+  background: var(--bg-muted);
+  border: 1px solid transparent;
+}
+
+.segmentButton {
+  border: none;
+  background: transparent;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+
+.segmentButtonActive {
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: var(--shadow-soft);
+}
+
+.segmentButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.filterRefresh {
+  border-radius: 999px;
+  border: none;
+  padding: 10px 14px;
+  font-weight: 600;
+  background: var(--accent);
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform var(--transition), opacity var(--transition);
+}
+
+.filterRefresh:hover,
+.filterRefresh:focus-visible {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
+.themeToggle {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 40;
+}
+
+.themeToggle :global(.theme-switch) {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  gap: 6px;
+  box-shadow: var(--shadow-soft);
+}
+
+.themeToggle :global(.theme-switch__track) {
+  width: 28px;
+  height: 16px;
+}
+
+.themeToggle :global(.theme-switch__thumb) {
+  width: 12px;
+  height: 12px;
+}
+
+.skeletonLine {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--bg-muted);
+  opacity: 0.7;
+}
+
+.skeletonLineShort {
+  width: 60%;
+}
+
+.skeletonPillRow {
+  display: flex;
+  gap: 8px;
+}
+
+.skeletonPill {
+  width: 56px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--bg-muted);
+  opacity: 0.7;
+}
+
+@media (max-width: 1024px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .filtersColumn {
+    order: 2;
+  }
+
+  .filtersCard {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 16px;
+  }
+
+  .feedStack {
+    height: clamp(420px, 70vh, 560px);
+  }
+
+  .card {
+    grid-template-columns: 1fr;
+  }
+
+  .cardDetails {
+    padding: 24px;
+  }
+}
+
