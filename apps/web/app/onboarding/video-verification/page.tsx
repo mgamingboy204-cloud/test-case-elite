@@ -106,13 +106,14 @@ export default function VideoVerificationPage() {
         ? { label: "Contact support", onClick: () => router.push("/support") }
         : derivedStatus === "IN_CALL" && linkReady
           ? {
-              label: hasJoinedCall ? "Return to call" : "Join call",
+              label: "Join Google Meet",
               onClick: () => {
                 window.open(joinUrl, "_blank", "noopener,noreferrer");
                 setHasJoinedCall(true);
               }
             }
           : { label: "Refresh status", onClick: () => loadStatus() };
+  const showSecondaryRefresh = Boolean(hasRequest && linkReady && derivedStatus === "IN_CALL");
 
   const steps = [
     { key: "REQUESTED", label: "Requested", copy: "We received your request." },
@@ -165,17 +166,25 @@ export default function VideoVerificationPage() {
           </div>
         </div>
 
+      </section>
+
+      <div className="verification-cta">
         <button className="primary-confirm" onClick={primaryAction.onClick} disabled={status === "loading"}>
           {status === "loading" ? "Updating..." : primaryAction.label}
         </button>
+        {showSecondaryRefresh ? (
+          <button className="text-button" type="button" onClick={() => loadStatus()}>
+            Refresh status
+          </button>
+        ) : null}
         {derivedStatus === "APPROVED" ? (
           <p className="message success">Approved — payment is now unlocked.</p>
         ) : null}
         {message ? <p className={`message ${status}`}>{message}</p> : null}
         {linkReady && derivedStatus === "IN_CALL" ? (
-          <p className="helper-text">Opening Google Meet in a new tab. Return here to refresh status.</p>
+          <p className="helper-text">Join the call in a new tab, then return here to refresh status.</p>
         ) : null}
-      </section>
+      </div>
 
       <section className="card verification-card">
         <div className="status-card">

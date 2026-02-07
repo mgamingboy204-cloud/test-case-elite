@@ -1024,6 +1024,29 @@ textarea:focus {
   margin: 0;
 }
 
+.verification-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.verification-cta .primary-confirm {
+  width: 100%;
+}
+
+.text-button {
+  background: transparent;
+  border: none;
+  color: var(--accent-strong);
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+}
+
+.text-button:hover {
+  color: var(--accent);
+}
+
 .verification-icon-list {
   display: grid;
   gap: 14px;
