@@ -12,12 +12,8 @@ import {
   parseDobString
 } from "../../../lib/profileUtils";
 
-type Status = "idle" | "loading" | "success" | "error";
-
 type ProfileForm = {
   displayName: string;
-  firstName: string;
-  lastName: string;
   gender: string;
   genderPreference: string;
   age: string;
@@ -26,37 +22,137 @@ type ProfileForm = {
   bioShort: string;
 };
 
-type StepId = "name" | "dob" | "gender" | "preferences" | "interests" | "photos" | "done";
-
-type Step = {
-  id: StepId;
-  label: string;
-  description: string;
+type PreferencesState = {
+  intent: string;
+  distance: string;
 };
 
-const steps: Step[] = [
-  { id: "name", label: "Name", description: "Personalize your profile basics." },
-  { id: "dob", label: "DOB", description: "Let us calculate your visible age." },
-  { id: "gender", label: "Gender", description: "Share how you identify." },
-  { id: "preferences", label: "Preferences", description: "Tell us who you want to meet." },
-  { id: "interests", label: "Interests", description: "Pick a few conversation starters." },
-  { id: "photos", label: "Photos", description: "Add a standout first impression." },
-  { id: "done", label: "Done", description: "You are ready to discover." }
-];
+type DraftData = {
+  form?: Partial<ProfileForm>;
+  preferences?: {
+    intent?: string;
+    distance?: string;
+    dob?: string;
+    interests?: string[];
+  };
+};
 
-const mobileStepTitles = ["Name", "DOB", "City", "Intent", "Interests", "Photo"];
+type ProfilePhoto = {
+  id: string;
+  url: string;
+};
+
+type StepKey =
+  | "displayName"
+  | "dob"
+  | "gender"
+  | "genderPreference"
+  | "city"
+  | "profession"
+  | "bioShort"
+  | "intent"
+  | "distance"
+  | "interests"
+  | "photo"
+  | "done";
+
+type StepConfig = {
+  key: StepKey;
+  title: string;
+  subtitle: string;
+  componentType: "text" | "dob" | "choice" | "textarea" | "segmented" | "photo" | "done";
+  placeholder?: string;
+};
+
+const steps: StepConfig[] = [
+  {
+    key: "displayName",
+    title: "What should we call you?",
+    subtitle: "This is the name Elite Match introduces to new connections.",
+    componentType: "text",
+    placeholder: "Your display name"
+  },
+  {
+    key: "dob",
+    title: "When’s your birthday?",
+    subtitle: "We only share your age.",
+    componentType: "dob"
+  },
+  {
+    key: "gender",
+    title: "How do you identify?",
+    subtitle: "Choose the gender that best represents you.",
+    componentType: "choice"
+  },
+  {
+    key: "genderPreference",
+    title: "Who do you want to meet?",
+    subtitle: "Elite Match is built for genuine dating connections.",
+    componentType: "choice"
+  },
+  {
+    key: "city",
+    title: "Where are you based?",
+    subtitle: "Matches will see your city.",
+    componentType: "text",
+    placeholder: "City"
+  },
+  {
+    key: "profession",
+    title: "What do you do?",
+    subtitle: "Add a quick line about your profession.",
+    componentType: "text",
+    placeholder: "Profession"
+  },
+  {
+    key: "bioShort",
+    title: "Share a short intro",
+    subtitle: "Keep it warm, confident, and dating-forward.",
+    componentType: "textarea",
+    placeholder: "A quick line about your vibe"
+  },
+  {
+    key: "intent",
+    title: "What are you hoping to find?",
+    subtitle: "We focus on real dating connections.",
+    componentType: "segmented"
+  },
+  {
+    key: "distance",
+    title: "How far can we search?",
+    subtitle: "Set your discovery radius.",
+    componentType: "segmented"
+  },
+  {
+    key: "interests",
+    title: "Pick a few interests",
+    subtitle: "Choose up to five to spark great first chats.",
+    componentType: "choice"
+  },
+  {
+    key: "photo",
+    title: "Add your profile photo",
+    subtitle: "One strong photo is all you need.",
+    componentType: "photo"
+  },
+  {
+    key: "done",
+    title: "Profile complete",
+    subtitle: "You’re ready to start meeting curated matches.",
+    componentType: "done"
+  }
+];
 
 const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 const maxBytes = 5 * 1024 * 1024;
 const preferenceDefaults = { intent: "serious", distance: "local" };
+const draftKey = "elite-onboarding-draft";
 
 export default function OnboardingProfilePage() {
   const router = useRouter();
   const { refresh } = useSession();
   const [form, setForm] = useState<ProfileForm>({
     displayName: "",
-    firstName: "",
-    lastName: "",
     gender: "",
     genderPreference: "ALL",
     age: "",
@@ -64,22 +160,28 @@ export default function OnboardingProfilePage() {
     profession: "",
     bioShort: ""
   });
-  const [preferences, setPreferences] = useState({ intent: "serious", distance: "local" });
-  const [existingPreferences, setExistingPreferences] = useState<Record<string, any>>({});
-  const [hasPreferenceUpdates, setHasPreferenceUpdates] = useState(false);
+  const [preferences, setPreferences] = useState<PreferencesState>({
+    intent: preferenceDefaults.intent,
+    distance: preferenceDefaults.distance
+  });
+  const [existingPreferences, setExistingPreferences] = useState<Record<string, unknown>>({});
   const [interests, setInterests] = useState<string[]>([]);
   const [dob, setDob] = useState({ year: "", month: "", day: "" });
-  const [photos, setPhotos] = useState<any[]>([]);
-  const [status, setStatus] = useState<Status>("idle");
-  const [message, setMessage] = useState("");
+  const [photos, setPhotos] = useState<ProfilePhoto[]>([]);
+  const [errorMessage, setErrorMessage] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dobString = useMemo(() => buildDobString(dob), [dob]);
   const agePreview = useMemo(() => (dobString ? getAgeFromDob(dobString) : null), [dobString]);
+  const currentStep = steps[stepIndex];
+  const progressValue = Math.round(((stepIndex + 1) / steps.length) * 100);
 
   useEffect(() => {
     void loadProfile();
@@ -92,62 +194,96 @@ export default function OnboardingProfilePage() {
 
   async function loadProfile() {
     try {
-      const data = await apiFetch<{ profile?: any; photos?: any[]; user?: any }>("/profile");
-      if (data.profile || data.user) {
-        const incomingPreferences = data.profile?.preferences ?? {};
-        setExistingPreferences(incomingPreferences);
-        const resolvedIntent =
-          typeof incomingPreferences.intent === "string"
-            ? incomingPreferences.intent
-            : preferenceDefaults.intent;
-        const resolvedDistance =
-          typeof incomingPreferences.distance === "string"
-            ? incomingPreferences.distance
-            : preferenceDefaults.distance;
-        setPreferences({ intent: resolvedIntent, distance: resolvedDistance });
-        if (!incomingPreferences.intent && !incomingPreferences.distance) {
-          setHasPreferenceUpdates(true);
-        }
-        const incomingDob = typeof incomingPreferences.dob === "string" ? incomingPreferences.dob : "";
-        setDob(parseDobString(incomingDob));
-        setInterests(Array.isArray(incomingPreferences.interests) ? incomingPreferences.interests : []);
-        setForm({
-          displayName: data.user?.displayName ?? data.profile?.name ?? "",
-          firstName: data.user?.firstName ?? "",
-          lastName: data.user?.lastName ?? "",
-          gender: data.profile.gender ?? "",
-          genderPreference: data.profile.genderPreference ?? "ALL",
-          age: data.profile.age?.toString() ?? "",
-          city: data.profile.city ?? "",
-          profession: data.profile.profession ?? "",
-          bioShort: data.profile.bioShort ?? ""
-        });
-      }
+      const data = await apiFetch<{ profile?: any; photos?: ProfilePhoto[]; user?: any }>("/profile");
+      const draft = readDraft();
+      const draftForm = draft?.form ?? {};
+      const draftPreferences = draft?.preferences ?? {};
+      const profile = data.profile ?? {};
+      const user = data.user ?? {};
+      const incomingPreferences = profile.preferences ?? {};
+      const mergedPreferences = { ...incomingPreferences, ...draftPreferences };
+
+      setExistingPreferences(incomingPreferences);
+      setPreferences({
+        intent:
+          typeof mergedPreferences.intent === "string"
+            ? mergedPreferences.intent
+            : preferenceDefaults.intent,
+        distance:
+          typeof mergedPreferences.distance === "string"
+            ? mergedPreferences.distance
+            : preferenceDefaults.distance
+      });
+
+      const incomingDob = typeof mergedPreferences.dob === "string" ? mergedPreferences.dob : "";
+      setDob(parseDobString(incomingDob));
+      setInterests(Array.isArray(mergedPreferences.interests) ? mergedPreferences.interests : []);
+
+      setForm({
+        displayName: draftForm.displayName ?? user.displayName ?? profile.name ?? "",
+        gender: draftForm.gender ?? profile.gender ?? "",
+        genderPreference: draftForm.genderPreference ?? profile.genderPreference ?? "ALL",
+        age: draftForm.age ?? profile.age?.toString() ?? "",
+        city: draftForm.city ?? profile.city ?? "",
+        profession: draftForm.profession ?? profile.profession ?? "",
+        bioShort: draftForm.bioShort ?? profile.bioShort ?? ""
+      });
+
       setPhotos(data.photos ?? []);
+
       const nextStep = getFirstIncompleteStep({
         form: {
-          displayName: data.user?.displayName ?? data.profile?.name ?? "",
-          gender: data.profile?.gender ?? "",
-          genderPreference: data.profile?.genderPreference ?? "ALL",
-          age: data.profile?.age?.toString() ?? "",
-          city: data.profile?.city ?? "",
-          profession: data.profile?.profession ?? "",
-          bioShort: data.profile?.bioShort ?? ""
+          displayName: draftForm.displayName ?? user.displayName ?? profile.name ?? "",
+          gender: draftForm.gender ?? profile.gender ?? "",
+          genderPreference: draftForm.genderPreference ?? profile.genderPreference ?? "ALL",
+          age: draftForm.age ?? profile.age?.toString() ?? "",
+          city: draftForm.city ?? profile.city ?? "",
+          profession: draftForm.profession ?? profile.profession ?? "",
+          bioShort: draftForm.bioShort ?? profile.bioShort ?? ""
         },
-        preferences: data.profile?.preferences ?? {},
-        interests: Array.isArray(data.profile?.preferences?.interests)
-          ? data.profile.preferences.interests
-          : [],
-        dob: typeof data.profile?.preferences?.dob === "string" ? data.profile.preferences.dob : "",
+        preferences: mergedPreferences,
+        interests: Array.isArray(mergedPreferences.interests) ? mergedPreferences.interests : [],
+        dob: incomingDob,
         photos: data.photos ?? []
       });
       setStepIndex(nextStep);
       setIsLoaded(true);
     } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to load profile.");
+      setErrorMessage(error instanceof Error ? error.message : "Unable to load profile.");
       setIsLoaded(true);
     }
+  }
+
+  function readDraft(): DraftData | null {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(draftKey);
+      if (!raw) return null;
+      return JSON.parse(raw) as DraftData;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeDraft(nextDraft: DraftData) {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(draftKey, JSON.stringify(nextDraft));
+  }
+
+  function persistDraft() {
+    writeDraft({
+      form,
+      preferences: {
+        ...preferences,
+        dob: dobString || undefined,
+        interests
+      }
+    });
+  }
+
+  function clearDraft() {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(draftKey);
   }
 
   function getFirstIncompleteStep({
@@ -157,74 +293,68 @@ export default function OnboardingProfilePage() {
     dob: dobValue,
     photos: photoList
   }: {
-    form: {
-      displayName: string;
-      gender: string;
-      genderPreference: string;
-      age: string;
-      city: string;
-      profession: string;
-      bioShort: string;
-    };
+    form: ProfileForm;
     preferences: Record<string, any>;
     interests: string[];
     dob: string;
-    photos: any[];
+    photos: ProfilePhoto[];
   }) {
-    if (!currentForm.displayName || !currentForm.city || !currentForm.profession || !currentForm.bioShort) {
-      return 0;
+    const stepCompletion: Record<StepKey, boolean> = {
+      displayName: Boolean(currentForm.displayName.trim()),
+      dob: Boolean(dobValue) && Boolean(currentForm.age),
+      gender: Boolean(currentForm.gender),
+      genderPreference: Boolean(currentForm.genderPreference),
+      city: Boolean(currentForm.city.trim()),
+      profession: Boolean(currentForm.profession.trim()),
+      bioShort: Boolean(currentForm.bioShort.trim()),
+      intent: Boolean(preferenceData.intent),
+      distance: Boolean(preferenceData.distance),
+      interests: Boolean(interestList.length),
+      photo: Boolean(photoList.length),
+      done: false
+    };
+
+    for (const step of steps) {
+      if (!stepCompletion[step.key]) {
+        return steps.findIndex((item) => item.key === step.key);
+      }
     }
-    if (!dobValue || !currentForm.age) {
-      return 1;
-    }
-    if (!currentForm.gender) {
-      return 2;
-    }
-    if (!currentForm.genderPreference || !preferenceData.intent || !preferenceData.distance) {
-      return 3;
-    }
-    if (!interestList.length) {
-      return 4;
-    }
-    if (!photoList.length) {
-      return 5;
-    }
-    return 6;
+    return steps.length - 1;
   }
 
   function updateField(key: keyof ProfileForm, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function updatePreference(key: "intent" | "distance", value: string) {
+  function updatePreference(key: keyof PreferencesState, value: string) {
     setPreferences((prev) => ({ ...prev, [key]: value }));
-    setHasPreferenceUpdates(true);
   }
 
   function updateDobField(key: "year" | "month" | "day", value: string) {
     setDob((prev) => ({ ...prev, [key]: value }));
-    setHasPreferenceUpdates(true);
   }
 
   function toggleInterest(value: string) {
+    setErrorMessage("");
     setInterests((prev) => {
       if (prev.includes(value)) {
         return prev.filter((interest) => interest !== value);
       }
+      if (prev.length >= 5) {
+        setErrorMessage("Choose up to five interests.");
+        return prev;
+      }
       return [...prev, value];
     });
-    setHasPreferenceUpdates(true);
   }
 
   function validatePhoto(file: File) {
     if (!allowedTypes.includes(file.type)) {
-      setStatus("error");
-      setMessage("Only JPEG, PNG, or WebP images are supported.");
+      setErrorMessage("Only JPEG, PNG, or WebP images are supported.");
       return false;
     }
     if (file.size > maxBytes) {
-      setStatus("error");
-      setMessage("Image must be 5MB or smaller.");
+      setErrorMessage("Image must be 5MB or smaller.");
       return false;
     }
     return true;
@@ -232,8 +362,7 @@ export default function OnboardingProfilePage() {
 
   async function handlePhotoUpload(file: File) {
     if (!validatePhoto(file)) return;
-    setStatus("loading");
-    setMessage("Uploading photo...");
+    setErrorMessage("");
     setUploadProgress(0);
     setIsUploading(true);
     try {
@@ -255,216 +384,210 @@ export default function OnboardingProfilePage() {
           dataUrl
         })
       });
-      setStatus("success");
-      setMessage("Photo uploaded.");
       await loadProfile();
     } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to upload photo.");
+      setErrorMessage(error instanceof Error ? error.message : "Unable to upload photo.");
     } finally {
       setIsUploading(false);
     }
   }
 
-  function validateStep(step: StepId) {
-    if (step === "name") {
-      if (!form.displayName.trim() || !form.city.trim() || !form.profession.trim() || !form.bioShort.trim()) {
-        setStatus("error");
-        setMessage("Please add your name, location, profession, and a short bio.");
-        return false;
-      }
-    }
-    if (step === "dob") {
-      if (!dobString || !agePreview) {
-        setStatus("error");
-        setMessage("Please choose your date of birth.");
-        return false;
-      }
-      if (agePreview < 18) {
-        setStatus("error");
-        setMessage("You must be 18 or older to join.");
-        return false;
-      }
-    }
-    if (step === "gender" && !form.gender) {
-      setStatus("error");
-      setMessage("Please select your gender.");
-      return false;
-    }
-    if (step === "preferences" && (!form.genderPreference || !preferences.intent || !preferences.distance)) {
-      setStatus("error");
-      setMessage("Please set who you want to see.");
-      return false;
-    }
-    if (step === "interests" && !interests.length) {
-      setStatus("error");
-      setMessage("Pick at least one interest.");
-      return false;
-    }
-    if (step === "photos" && !photos.length) {
-      setStatus("error");
-      setMessage("Add at least one photo to continue.");
-      return false;
-    }
-    return true;
+  function buildPreferences() {
+    return {
+      ...existingPreferences,
+      intent: preferences.intent || preferenceDefaults.intent,
+      distance: preferences.distance || preferenceDefaults.distance,
+      interests,
+      dob: dobString || existingPreferences.dob
+    };
   }
 
-  async function saveProfile() {
+  function canSaveProfile() {
+    const displayName = form.displayName.trim();
+    const ageNumber = Number(form.age);
+    return Boolean(
+      displayName &&
+        form.gender &&
+        Number.isFinite(ageNumber) &&
+        ageNumber >= 18 &&
+        form.city.trim() &&
+        form.profession.trim() &&
+        form.bioShort.trim()
+    );
+  }
+
+  async function saveProfileData(options: { auto?: boolean; requirePhoto?: boolean } = {}) {
+    persistDraft();
+    if (!canSaveProfile()) {
+      setSaveState("saved");
+      return true;
+    }
     const displayName = form.displayName.trim();
     const ageNumber = Number(form.age);
     const city = form.city.trim();
     const profession = form.profession.trim();
     const bioShort = form.bioShort.trim();
-    const firstName = form.firstName.trim();
-    const lastName = form.lastName.trim();
-
-    if (!displayName || !form.gender || !form.age || !city || !profession || !bioShort) {
-      setStatus("error");
-      setMessage("Please complete every required field.");
-      return false;
-    }
-    if (!Number.isFinite(ageNumber) || ageNumber < 18) {
-      setStatus("error");
-      setMessage("Please enter an age of 18 or older.");
-      return false;
-    }
-    setStatus("loading");
-    setMessage("Saving profile…");
+    setIsSaving(true);
     try {
-      const intent = preferences.intent || existingPreferences.intent || preferenceDefaults.intent;
-      const distance =
-        preferences.distance || existingPreferences.distance || preferenceDefaults.distance;
-      const nextPreferences = hasPreferenceUpdates
-        ? {
-            ...existingPreferences,
-            intent,
-            distance,
-            interests,
-            dob: dobString || existingPreferences.dob
-          }
-        : Object.keys(existingPreferences).length
-          ? existingPreferences
-          : { intent, distance, interests, dob: dobString };
       const response = await apiFetch<{ requiresPhoto?: boolean }>("/profile", {
         method: "PUT",
         body: JSON.stringify({
           displayName,
-          firstName: firstName || null,
-          lastName: lastName || null,
           gender: form.gender,
           genderPreference: form.genderPreference,
           age: ageNumber,
           city,
           profession,
           bioShort,
-          preferences: nextPreferences
+          preferences: buildPreferences()
         })
       });
-      if (response.requiresPhoto) {
-        setStatus("error");
-        setMessage("Add at least one photo to activate your profile.");
+      if (options.requirePhoto && response.requiresPhoto) {
+        setErrorMessage("Add your profile photo to continue.");
+        setIsSaving(false);
         return false;
       }
-      setStatus("success");
-      setMessage("Profile completed. Redirecting you to discover...");
-      await refresh();
+      setSaveState("saved");
+      setErrorMessage("");
+      clearDraft();
       return true;
     } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to save profile.");
+      setErrorMessage(error instanceof Error ? error.message : "Unable to save profile.");
       return false;
+    } finally {
+      setIsSaving(false);
     }
   }
 
+  async function finalizeProfileAndNavigate() {
+    setErrorMessage("");
+    setIsSaving(true);
+    try {
+      await apiFetch("/profile/complete", { method: "POST" });
+      await refresh();
+      router.push("/discover");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to complete profile.";
+      setErrorMessage(message);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Failed to finalize profile completion.", error);
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function scheduleAutoSave() {
+    persistDraft();
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    setSaveState("saving");
+    saveTimeoutRef.current = setTimeout(() => {
+      void saveProfileData({ auto: true });
+    }, 600);
+  }
+
+  function validateStep(step: StepKey) {
+    setErrorMessage("");
+    if (step === "displayName" && !form.displayName.trim()) {
+      setErrorMessage("Please enter the name you want displayed.");
+      return false;
+    }
+    if (step === "dob") {
+      if (!dobString || !agePreview) {
+        setErrorMessage("Please choose your date of birth.");
+        return false;
+      }
+      if (agePreview < 18) {
+        setErrorMessage("You must be 18 or older to join.");
+        return false;
+      }
+    }
+    if (step === "gender" && !form.gender) {
+      setErrorMessage("Please select your gender.");
+      return false;
+    }
+    if (step === "genderPreference" && !form.genderPreference) {
+      setErrorMessage("Please choose who you want to meet.");
+      return false;
+    }
+    if (step === "city" && !form.city.trim()) {
+      setErrorMessage("Please enter your city.");
+      return false;
+    }
+    if (step === "profession" && !form.profession.trim()) {
+      setErrorMessage("Please enter your profession.");
+      return false;
+    }
+    if (step === "bioShort" && !form.bioShort.trim()) {
+      setErrorMessage("Please add a short intro.");
+      return false;
+    }
+    if (step === "intent" && !preferences.intent) {
+      setErrorMessage("Please select your dating intent.");
+      return false;
+    }
+    if (step === "distance" && !preferences.distance) {
+      setErrorMessage("Please select a distance preference.");
+      return false;
+    }
+    if (step === "interests" && !interests.length) {
+      setErrorMessage("Pick at least one interest.");
+      return false;
+    }
+    if (step === "photo" && !photos.length) {
+      setErrorMessage("Add your profile photo to continue.");
+      return false;
+    }
+    return true;
+  }
+
   async function handleNext() {
-    const step = steps[stepIndex].id;
-    setMessage("");
-    if (!validateStep(step)) return;
-    if (step === "photos") {
-      const saved = await saveProfile();
+    setErrorMessage("");
+    if (currentStep.key === "done") {
+      await finalizeProfileAndNavigate();
+      return;
+    }
+    if (!validateStep(currentStep.key)) return;
+
+    if (currentStep.key === "photo") {
+      const saved = await saveProfileData({ requirePhoto: true });
       if (saved) {
+        await refresh();
         setStepIndex((prev) => Math.min(prev + 1, steps.length - 1));
       }
       return;
     }
+
+    scheduleAutoSave();
     setStepIndex((prev) => Math.min(prev + 1, steps.length - 1));
   }
 
   function handleBack() {
-    setMessage("");
-    setStatus("idle");
+    setErrorMessage("");
     setStepIndex((prev) => Math.max(prev - 1, 0));
   }
 
   function renderStep() {
-    const step = steps[stepIndex].id;
-    if (step === "name") {
+    if (currentStep.key === "displayName") {
       return (
-        <div className="wizard-step">
-          <div className="field">
-            <label htmlFor="profile-display-name">Display name</label>
-            <input
-              id="profile-display-name"
-              placeholder="Your display name"
-              value={form.displayName}
-              onChange={(e) => updateField("displayName", e.target.value)}
-            />
-          </div>
-          <div className="grid two-column">
-            <div className="field">
-              <label htmlFor="profile-first-name">First name</label>
-              <input
-                id="profile-first-name"
-                placeholder="First name"
-                value={form.firstName}
-                onChange={(e) => updateField("firstName", e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="profile-last-name">Last name</label>
-              <input
-                id="profile-last-name"
-                placeholder="Last name"
-                value={form.lastName}
-                onChange={(e) => updateField("lastName", e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="grid two-column">
-            <div className="field">
-              <label htmlFor="profile-city">City</label>
-              <input
-                id="profile-city"
-                placeholder="City"
-                value={form.city}
-                onChange={(e) => updateField("city", e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="profile-profession">Profession</label>
-              <input
-                id="profile-profession"
-                placeholder="Profession"
-                value={form.profession}
-                onChange={(e) => updateField("profession", e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="field">
-            <label htmlFor="profile-bio">Short bio</label>
-            <textarea
-              id="profile-bio"
-              placeholder="A quick line about your vibe."
-              value={form.bioShort}
-              onChange={(e) => updateField("bioShort", e.target.value)}
-            />
-          </div>
+        <div className="wizard-step-body" key={currentStep.key}>
+          <label className="wizard-label" htmlFor="profile-display-name">
+            Display name
+          </label>
+          <input
+            id="profile-display-name"
+            placeholder={currentStep.placeholder}
+            value={form.displayName}
+            onChange={(e) => updateField("displayName", e.target.value)}
+          />
         </div>
       );
     }
-    if (step === "dob") {
+    if (currentStep.key === "dob") {
       return (
-        <div className="wizard-step">
+        <div className="wizard-step-body" key={currentStep.key}>
           <div className="dob-picker">
             <div className="field">
               <label htmlFor="dob-month">Month</label>
@@ -515,99 +638,149 @@ export default function OnboardingProfilePage() {
               </select>
             </div>
           </div>
-          <div className="dob-preview">
-            {agePreview ? (
-              <p className="card-subtitle">You’ll appear as {agePreview} years old.</p>
-            ) : (
-              <p className="card-subtitle">Select your DOB to preview your age.</p>
-            )}
+          <p className="card-subtitle">
+            {agePreview ? `You’ll appear as ${agePreview} years old.` : "Select your DOB to preview your age."}
+          </p>
+        </div>
+      );
+    }
+    if (currentStep.key === "gender") {
+      return (
+        <div className="wizard-step-body" key={currentStep.key}>
+          <div className="wizard-choice-grid">
+            {[
+              { value: "MALE", label: "Male" },
+              { value: "FEMALE", label: "Female" },
+              { value: "NON_BINARY", label: "Non-binary" },
+              { value: "OTHER", label: "Other" }
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={form.gender === option.value ? "chip active" : "chip"}
+                onClick={() => updateField("gender", option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
       );
     }
-    if (step === "gender") {
+    if (currentStep.key === "genderPreference") {
       return (
-        <div className="wizard-step">
-          <div className="field">
-            <label htmlFor="profile-gender">Gender</label>
-            <select
-              id="profile-gender"
-              value={form.gender}
-              onChange={(e) => updateField("gender", e.target.value)}
-            >
-              <option value="">Select</option>
-              <option value="MALE">Male</option>
-              <option value="FEMALE">Female</option>
-              <option value="NON_BINARY">Non-binary</option>
-              <option value="OTHER">Other</option>
-            </select>
+        <div className="wizard-step-body" key={currentStep.key}>
+          <div className="wizard-choice-grid">
+            {[
+              { value: "ALL", label: "Everyone" },
+              { value: "MALE", label: "Men" },
+              { value: "FEMALE", label: "Women" },
+              { value: "NON_BINARY", label: "Non-binary" },
+              { value: "OTHER", label: "Other" }
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={form.genderPreference === option.value ? "chip active" : "chip"}
+                onClick={() => updateField("genderPreference", option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
       );
     }
-    if (step === "preferences") {
+    if (currentStep.key === "city") {
       return (
-        <div className="wizard-step">
-          <div className="field">
-            <label>Interested in</label>
-            <div className="chip-grid">
-              {["ALL", "MALE", "FEMALE", "NON_BINARY", "OTHER"].map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={form.genderPreference === value ? "chip active" : "chip"}
-                  onClick={() => updateField("genderPreference", value)}
-                >
-                  {value === "ALL" ? "Everyone" : value.replace("_", " ")}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="field">
-            <label>Intent</label>
-            <div className="segmented-control">
+        <div className="wizard-step-body" key={currentStep.key}>
+          <label className="wizard-label" htmlFor="profile-city">
+            City
+          </label>
+          <input
+            id="profile-city"
+            placeholder={currentStep.placeholder}
+            value={form.city}
+            onChange={(e) => updateField("city", e.target.value)}
+          />
+        </div>
+      );
+    }
+    if (currentStep.key === "profession") {
+      return (
+        <div className="wizard-step-body" key={currentStep.key}>
+          <label className="wizard-label" htmlFor="profile-profession">
+            Profession
+          </label>
+          <input
+            id="profile-profession"
+            placeholder={currentStep.placeholder}
+            value={form.profession}
+            onChange={(e) => updateField("profession", e.target.value)}
+          />
+        </div>
+      );
+    }
+    if (currentStep.key === "bioShort") {
+      return (
+        <div className="wizard-step-body" key={currentStep.key}>
+          <label className="wizard-label" htmlFor="profile-bio">
+            Short bio
+          </label>
+          <textarea
+            id="profile-bio"
+            placeholder={currentStep.placeholder}
+            value={form.bioShort}
+            onChange={(e) => updateField("bioShort", e.target.value)}
+          />
+        </div>
+      );
+    }
+    if (currentStep.key === "intent") {
+      return (
+        <div className="wizard-step-body" key={currentStep.key}>
+          <div className="segmented-control">
+            {[
+              { value: "serious", label: "Serious relationship" },
+              { value: "casual", label: "See where it goes" }
+            ].map((option) => (
               <button
+                key={option.value}
                 type="button"
-                className={preferences.intent === "serious" ? "active" : ""}
-                onClick={() => updatePreference("intent", "serious")}
+                className={preferences.intent === option.value ? "active" : ""}
+                onClick={() => updatePreference("intent", option.value)}
               >
-                Serious
+                {option.label}
               </button>
-              <button
-                type="button"
-                className={preferences.intent === "casual" ? "active" : ""}
-                onClick={() => updatePreference("intent", "casual")}
-              >
-                Casual
-              </button>
-            </div>
-          </div>
-          <div className="field">
-            <label>Distance</label>
-            <div className="segmented-control">
-              <button
-                type="button"
-                className={preferences.distance === "local" ? "active" : ""}
-                onClick={() => updatePreference("distance", "local")}
-              >
-                Local
-              </button>
-              <button
-                type="button"
-                className={preferences.distance === "anywhere" ? "active" : ""}
-                onClick={() => updatePreference("distance", "anywhere")}
-              >
-                Anywhere
-              </button>
-            </div>
+            ))}
           </div>
         </div>
       );
     }
-    if (step === "interests") {
+    if (currentStep.key === "distance") {
       return (
-        <div className="wizard-step">
-          <p className="card-subtitle">Choose up to five interests.</p>
+        <div className="wizard-step-body" key={currentStep.key}>
+          <div className="segmented-control">
+            {[
+              { value: "local", label: "Local" },
+              { value: "anywhere", label: "Open to distance" }
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={preferences.distance === option.value ? "active" : ""}
+                onClick={() => updatePreference("distance", option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    if (currentStep.key === "interests") {
+      return (
+        <div className="wizard-step-body" key={currentStep.key}>
           <div className="chip-grid">
             {INTEREST_OPTIONS.map((interest) => {
               const isActive = interests.includes(interest);
@@ -623,12 +796,14 @@ export default function OnboardingProfilePage() {
               );
             })}
           </div>
+          <p className="card-subtitle">{interests.length}/5 selected</p>
         </div>
       );
     }
-    if (step === "photos") {
+    if (currentStep.key === "photo") {
+      const photoUrl = photos.length ? getAssetUrl(photos[0].url) : null;
       return (
-        <div className="wizard-step">
+        <div className="wizard-step-body" key={currentStep.key}>
           <input
             ref={fileInputRef}
             type="file"
@@ -644,7 +819,7 @@ export default function OnboardingProfilePage() {
           <div className="inline-actions">
             <button
               type="button"
-              className="secondary"
+              className="btn btn-secondary"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
             >
@@ -652,24 +827,28 @@ export default function OnboardingProfilePage() {
             </button>
             {isUploading ? <span className="card-subtitle">Uploading… {uploadProgress}%</span> : null}
           </div>
-          {photos.length ? (
+          {photoUrl ? (
             <div className="photo-grid single">
-              <img key={photos[0].id} src={getAssetUrl(photos[0].url) ?? ""} alt="Profile" />
+              <img src={photoUrl} alt="Profile" />
             </div>
           ) : (
-            <p className="card-subtitle">No photos uploaded yet.</p>
+            <p className="card-subtitle">No photo uploaded yet.</p>
           )}
         </div>
       );
     }
     return (
-      <div className="wizard-step wizard-done">
-        <div className="avatar-placeholder">✨</div>
-        <h3>Profile ready</h3>
-        <p className="card-subtitle">You’re all set to start discovering premium introductions.</p>
-        <button onClick={() => router.push("/discover")} type="button">
-          Go to Discover
-        </button>
+      <div className="wizard-step-body" key={currentStep.key}>
+        <div className="wizard-done">
+          <div className="avatar-placeholder">✨</div>
+          <h3>Profile ready</h3>
+          <p className="card-subtitle">You’re set to begin curated introductions.</p>
+          {errorMessage ? (
+            <button type="button" className="btn btn-secondary" onClick={() => window.location.reload()}>
+              Reload
+            </button>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -683,67 +862,125 @@ export default function OnboardingProfilePage() {
     );
   }
 
-  const mobileStepIndex = Math.min(stepIndex, mobileStepTitles.length - 1);
+  const saveLabel = saveState === "saving" ? "Saving..." : saveState === "saved" ? "Saved" : "";
+  const primaryLabel =
+    currentStep.key === "photo"
+      ? "Finish profile"
+      : currentStep.key === "done"
+        ? "Go to Discover"
+        : "Next";
+  const previewPhoto = photos.length ? getAssetUrl(photos[0].url) : null;
+  const previewAge = agePreview ?? (form.age ? Number(form.age) : null);
 
   return (
-    <div className="wizard-layout">
-      <div className="mobile-gate-header">
-        <span className="mobile-gate-step">Step {mobileStepIndex + 1} of {mobileStepTitles.length}</span>
-        <h2>{mobileStepTitles[mobileStepIndex]}</h2>
-        <p className="text-muted">Complete each step to unlock introductions.</p>
-      </div>
-      <section className="card wizard-card">
-        <div className="wizard-header">
+    <div className="profile-wizard">
+      <div className="wizard-mobile">
+        <div className="wizard-top">
           <div>
-            <h2>Profile setup</h2>
-            <p className="card-subtitle">A guided setup for your best first impression.</p>
-          </div>
-          <div className="wizard-progress">
-            <span>
-              Step {Math.min(stepIndex + 1, steps.length)} of {steps.length}
+            <span className="wizard-step-count">
+              Step {stepIndex + 1} of {steps.length}
             </span>
+            <h2>Profile setup</h2>
+            <p className="text-muted">One step at a time for a premium dating profile.</p>
           </div>
+          <span className="wizard-save">{saveLabel}</span>
         </div>
-        <div className="wizard-step-header">
-          <h3>{steps[stepIndex].label}</h3>
-          <p className="card-subtitle">{steps[stepIndex].description}</p>
+        <div className="wizard-progress-bar" aria-hidden="true">
+          <span style={{ width: `${progressValue}%` }} />
         </div>
-        {renderStep()}
-        {message ? <p className={`message ${status}`}>{message}</p> : null}
-        <div className="wizard-actions">
-          <button type="button" className="secondary" onClick={handleBack} disabled={stepIndex === 0}>
+        <section className="card wizard-panel">
+          <div className="wizard-step-header">
+            <h3>{currentStep.title}</h3>
+            <p className="card-subtitle">{currentStep.subtitle}</p>
+          </div>
+          {renderStep()}
+          {errorMessage ? <div className="wizard-banner error">{errorMessage}</div> : null}
+        </section>
+        <div className="wizard-mobile-actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleBack}
+            disabled={stepIndex === 0}
+          >
             Back
           </button>
-          {steps[stepIndex].id === "done" ? null : (
-            <button type="button" onClick={handleNext} disabled={status === "loading"}>
-              {steps[stepIndex].id === "photos" ? "Finish" : "Next"}
-            </button>
-          )}
+          <button
+            type="button"
+            className="btn btn-block"
+            onClick={handleNext}
+            disabled={isSaving || isUploading}
+          >
+            {primaryLabel}
+          </button>
         </div>
-      </section>
-      <section className="card wizard-progress-card">
-        <h3>Progress</h3>
-        <ul className="progress">
-          {steps.map((step, index) => (
-            <li
-              key={step.id}
-              className={
-                index === stepIndex
-                  ? "active"
-                  : index < stepIndex
-                    ? "done"
-                    : ""
-              }
+      </div>
+
+      <div className="wizard-desktop">
+        <section className="card wizard-panel">
+          <div className="wizard-top">
+            <div>
+              <span className="wizard-step-count">
+                Step {stepIndex + 1} of {steps.length}
+              </span>
+              <h2>Profile setup</h2>
+              <p className="text-muted">A refined experience for intentional dating.</p>
+            </div>
+            <span className="wizard-save">{saveLabel}</span>
+          </div>
+          <div className="wizard-progress-bar" aria-hidden="true">
+            <span style={{ width: `${progressValue}%` }} />
+          </div>
+          <div className="wizard-step-header">
+            <h3>{currentStep.title}</h3>
+            <p className="card-subtitle">{currentStep.subtitle}</p>
+          </div>
+          {renderStep()}
+          {errorMessage ? <div className="wizard-banner error">{errorMessage}</div> : null}
+          <div className="wizard-actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleBack}
+              disabled={stepIndex === 0}
             >
-              <span>{index + 1}</span>
-              <div>
-                <strong>{step.label}</strong>
-                <p>{step.description}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
+              Back
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={handleNext}
+              disabled={isSaving || isUploading}
+            >
+              {primaryLabel}
+            </button>
+          </div>
+        </section>
+
+        <aside className="card wizard-preview">
+          <h3>Profile preview</h3>
+          <div className="wizard-preview-photo">
+            {previewPhoto ? <img src={previewPhoto} alt="Profile preview" /> : <span>Photo</span>}
+          </div>
+          <div className="wizard-preview-details">
+            <h4>{form.displayName.trim() || "Elite Member"}</h4>
+            <p className="text-muted">
+              {previewAge ? `${previewAge} • ` : ""}
+              {form.city.trim() || "City"} • {form.profession.trim() || "Profession"}
+            </p>
+            <p>{form.bioShort.trim() || "Share a short, authentic intro to spark real conversation."}</p>
+          </div>
+          <div className="wizard-preview-tags">
+            <span className="badge">{preferences.intent || preferenceDefaults.intent}</span>
+            <span className="badge">{preferences.distance || preferenceDefaults.distance}</span>
+            {interests.slice(0, 3).map((interest) => (
+              <span key={interest} className="badge">
+                {interest}
+              </span>
+            ))}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
