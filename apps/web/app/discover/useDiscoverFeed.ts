@@ -49,7 +49,7 @@ function buildDiscoverParams(filters: DiscoverFilters, cursor?: string | number)
 }
 
 export function useDiscoverFeed(filters: DiscoverFilters) {
-  return useInfiniteQuery({
+  return useInfiniteQuery<DiscoverFeedResponse>({
     queryKey: queryKeys.discoverFeed(filters),
     queryFn: ({ pageParam }) => {
       const params = buildDiscoverParams(filters, pageParam);

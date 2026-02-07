@@ -100,7 +100,10 @@ export default function DiscoverPage() {
   }, [filtersKey]);
 
   const discoverQuery = useDiscoverFeed(filters);
-  const feedItems = useMemo(() => discoverQuery.data?.pages.flatMap((page) => page.items) ?? [], [discoverQuery.data]);
+  const feedItems = useMemo(
+    () => discoverQuery.data?.pages.flatMap((page) => page.items ?? []) ?? [],
+    [discoverQuery.data]
+  );
   const profileMap = useMemo(() => new Map(feedItems.map((profile) => [profile.userId, profile])), [feedItems]);
   const hasNextPage = Boolean(discoverQuery.hasNextPage);
   const shouldCycle = !hasNextPage && feedItems.length > 0;
