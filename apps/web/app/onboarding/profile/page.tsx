@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiFetch } from "../../../lib/api";
+import { ApiError, apiFetch } from "../../../lib/api";
 import { getAssetUrl } from "../../../lib/assets";
 import { useSession } from "../../../lib/session";
 import {
@@ -144,7 +144,7 @@ const steps: StepConfig[] = [
 ];
 
 const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-const maxBytes = 5 * 1024 * 1024;
+const maxBytes = 10 * 1024 * 1024;
 const preferenceDefaults = { intent: "serious", distance: "local" };
 const draftKey = "elite-onboarding-draft";
 
@@ -169,6 +169,7 @@ export default function OnboardingProfilePage() {
   const [dob, setDob] = useState({ year: "", month: "", day: "" });
   const [photos, setPhotos] = useState<ProfilePhoto[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -188,6 +189,14 @@ export default function OnboardingProfilePage() {
   }, []);
 
   useEffect(() => {
+    if (!isLoaded) return;
+    const timeout = setTimeout(() => {
+      persistDraft();
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [form, preferences, interests, dobString, isLoaded]);
+
+  useEffect(() => {
     if (!agePreview) return;
     setForm((prev) => ({ ...prev, age: agePreview.toString() }));
   }, [agePreview]);
@@ -195,6 +204,9 @@ export default function OnboardingProfilePage() {
   async function loadProfile() {
     try {
       const data = await apiFetch<{ profile?: any; photos?: ProfilePhoto[]; user?: any }>("/profile");
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[wizard] load profile", data);
+      }
       const draft = readDraft();
       const draftForm = draft?.form ?? {};
       const draftPreferences = draft?.preferences ?? {};
@@ -247,6 +259,8 @@ export default function OnboardingProfilePage() {
         photos: data.photos ?? []
       });
       setStepIndex(nextStep);
+      setErrorMessage("");
+      setFieldErrors({});
       setIsLoaded(true);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to load profile.");
@@ -323,19 +337,26 @@ export default function OnboardingProfilePage() {
   }
 
   function updateField(key: keyof ProfileForm, value: string) {
+    setErrorMessage("");
+    setFieldErrors((prev) => ({ ...prev, [key]: [] }));
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   function updatePreference(key: keyof PreferencesState, value: string) {
+    setErrorMessage("");
+    setFieldErrors((prev) => ({ ...prev, [key]: [] }));
     setPreferences((prev) => ({ ...prev, [key]: value }));
   }
 
   function updateDobField(key: "year" | "month" | "day", value: string) {
+    setErrorMessage("");
+    setFieldErrors((prev) => ({ ...prev, dob: [] }));
     setDob((prev) => ({ ...prev, [key]: value }));
   }
 
   function toggleInterest(value: string) {
     setErrorMessage("");
+    setFieldErrors((prev) => ({ ...prev, interests: [] }));
     setInterests((prev) => {
       if (prev.includes(value)) {
         return prev.filter((interest) => interest !== value);
@@ -349,12 +370,15 @@ export default function OnboardingProfilePage() {
   }
 
   function validatePhoto(file: File) {
+    setFieldErrors((prev) => ({ ...prev, photo: [] }));
     if (!allowedTypes.includes(file.type)) {
       setErrorMessage("Only JPEG, PNG, or WebP images are supported.");
+      setFieldErrors({ photo: ["Only JPEG, PNG, or WebP images are supported."] });
       return false;
     }
     if (file.size > maxBytes) {
-      setErrorMessage("Image must be 5MB or smaller.");
+      setErrorMessage("Image must be 10MB or smaller.");
+      setFieldErrors({ photo: ["Image must be 10MB or smaller."] });
       return false;
     }
     return true;
@@ -363,9 +387,13 @@ export default function OnboardingProfilePage() {
   async function handlePhotoUpload(file: File) {
     if (!validatePhoto(file)) return;
     setErrorMessage("");
+    setFieldErrors({});
     setUploadProgress(0);
     setIsUploading(true);
     try {
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[wizard] upload photo", { name: file.name, size: file.size, type: file.type });
+      }
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
@@ -377,16 +405,24 @@ export default function OnboardingProfilePage() {
         reader.onerror = () => reject(new Error("Unable to read file"));
         reader.readAsDataURL(file);
       });
-      await apiFetch("/photos/upload", {
+      const response = await apiFetch<{ photo?: ProfilePhoto }>("/photos/upload", {
         method: "POST",
         body: JSON.stringify({
           filename: file.name,
           dataUrl
         })
       });
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[wizard] upload response", response);
+      }
       await loadProfile();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to upload photo.");
+      if (error instanceof ApiError) {
+        setFieldErrors(error.fieldErrors ?? {});
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : "Unable to upload photo.");
+      }
     } finally {
       setIsUploading(false);
     }
@@ -429,6 +465,18 @@ export default function OnboardingProfilePage() {
     const bioShort = form.bioShort.trim();
     setIsSaving(true);
     try {
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[wizard] save profile", {
+          displayName,
+          gender: form.gender,
+          genderPreference: form.genderPreference,
+          age: ageNumber,
+          city,
+          profession,
+          bioShort,
+          preferences: buildPreferences()
+        });
+      }
       const response = await apiFetch<{ requiresPhoto?: boolean }>("/profile", {
         method: "PUT",
         body: JSON.stringify({
@@ -442,17 +490,27 @@ export default function OnboardingProfilePage() {
           preferences: buildPreferences()
         })
       });
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[wizard] save response", response);
+      }
       if (options.requirePhoto && response.requiresPhoto) {
         setErrorMessage("Add your profile photo to continue.");
+        setFieldErrors({ photo: ["Add your profile photo to continue."] });
         setIsSaving(false);
         return false;
       }
       setSaveState("saved");
       setErrorMessage("");
+      setFieldErrors({});
       clearDraft();
       return true;
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to save profile.");
+      if (error instanceof ApiError) {
+        setFieldErrors(error.fieldErrors ?? {});
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : "Unable to save profile.");
+      }
       return false;
     } finally {
       setIsSaving(false);
@@ -463,6 +521,9 @@ export default function OnboardingProfilePage() {
     setErrorMessage("");
     setIsSaving(true);
     try {
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[wizard] finalize profile");
+      }
       await apiFetch("/profile/complete", { method: "POST" });
       await refresh();
       router.push("/discover");
@@ -478,7 +539,6 @@ export default function OnboardingProfilePage() {
   }
 
   const scheduleAutoSave = useCallback(() => {
-    persistDraft();
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
@@ -486,58 +546,71 @@ export default function OnboardingProfilePage() {
     saveTimeoutRef.current = setTimeout(() => {
       void saveProfileData({ auto: true });
     }, 600);
-  }, [saveProfileData, persistDraft]);
+  }, [saveProfileData]);
 
   function validateStep(step: StepKey) {
     setErrorMessage("");
+    setFieldErrors({});
     if (step === "displayName" && !form.displayName.trim()) {
       setErrorMessage("Please enter the name you want displayed.");
+      setFieldErrors({ displayName: ["Please enter the name you want displayed."] });
       return false;
     }
     if (step === "dob") {
       if (!dobString || !agePreview) {
         setErrorMessage("Please choose your date of birth.");
+        setFieldErrors({ dob: ["Please choose your date of birth."] });
         return false;
       }
       if (agePreview < 18) {
         setErrorMessage("You must be 18 or older to join.");
+        setFieldErrors({ dob: ["You must be 18 or older to join."] });
         return false;
       }
     }
     if (step === "gender" && !form.gender) {
       setErrorMessage("Please select your gender.");
+      setFieldErrors({ gender: ["Please select your gender."] });
       return false;
     }
     if (step === "genderPreference" && !form.genderPreference) {
       setErrorMessage("Please choose who you want to meet.");
+      setFieldErrors({ genderPreference: ["Please choose who you want to meet."] });
       return false;
     }
     if (step === "city" && !form.city.trim()) {
       setErrorMessage("Please enter your city.");
+      setFieldErrors({ city: ["Please enter your city."] });
       return false;
     }
     if (step === "profession" && !form.profession.trim()) {
       setErrorMessage("Please enter your profession.");
+      setFieldErrors({ profession: ["Please enter your profession."] });
       return false;
     }
     if (step === "bioShort" && !form.bioShort.trim()) {
       setErrorMessage("Please add a short intro.");
+      setFieldErrors({ bioShort: ["Please add a short intro."] });
       return false;
     }
     if (step === "intent" && !preferences.intent) {
       setErrorMessage("Please select your dating intent.");
+      setFieldErrors({ intent: ["Please select your dating intent."] });
       return false;
     }
     if (step === "distance" && !preferences.distance) {
       setErrorMessage("Please select a distance preference.");
+      setFieldErrors({ distance: ["Please select a distance preference."] });
       return false;
     }
     if (step === "interests" && !interests.length) {
       setErrorMessage("Pick at least one interest.");
+      setFieldErrors({ interests: ["Pick at least one interest."] });
       return false;
     }
     if (step === "photo" && !photos.length) {
       setErrorMessage("Add your profile photo to continue.");
+      setFieldErrors({ photo: ["Add your profile photo to continue."] });
       return false;
     }
     return true;
@@ -560,9 +633,17 @@ export default function OnboardingProfilePage() {
       return;
     }
 
+    if (canSaveProfile()) {
+      const saved = await saveProfileData();
+      if (!saved) return;
+    } else {
+      setSaveState("saved");
+    }
     scheduleAutoSave();
     setStepIndex((prev) => Math.min(prev + 1, steps.length - 1));
   }
+
+  const stepFieldError = (key: string) => fieldErrors[key]?.[0];
 
   function handleBack() {
     setErrorMessage("");
@@ -582,6 +663,7 @@ export default function OnboardingProfilePage() {
             value={form.displayName}
             onChange={(e) => updateField("displayName", e.target.value)}
           />
+          {stepFieldError("displayName") ? <p className="field-error">{stepFieldError("displayName")}</p> : null}
         </div>
       );
     }
@@ -641,6 +723,7 @@ export default function OnboardingProfilePage() {
           <p className="card-subtitle">
             {agePreview ? `You’ll appear as ${agePreview} years old.` : "Select your DOB to preview your age."}
           </p>
+          {stepFieldError("dob") ? <p className="field-error">{stepFieldError("dob")}</p> : null}
         </div>
       );
     }
@@ -664,6 +747,7 @@ export default function OnboardingProfilePage() {
               </button>
             ))}
           </div>
+          {stepFieldError("gender") ? <p className="field-error">{stepFieldError("gender")}</p> : null}
         </div>
       );
     }
@@ -688,6 +772,7 @@ export default function OnboardingProfilePage() {
               </button>
             ))}
           </div>
+          {stepFieldError("genderPreference") ? <p className="field-error">{stepFieldError("genderPreference")}</p> : null}
         </div>
       );
     }
@@ -703,6 +788,7 @@ export default function OnboardingProfilePage() {
             value={form.city}
             onChange={(e) => updateField("city", e.target.value)}
           />
+          {stepFieldError("city") ? <p className="field-error">{stepFieldError("city")}</p> : null}
         </div>
       );
     }
@@ -718,6 +804,7 @@ export default function OnboardingProfilePage() {
             value={form.profession}
             onChange={(e) => updateField("profession", e.target.value)}
           />
+          {stepFieldError("profession") ? <p className="field-error">{stepFieldError("profession")}</p> : null}
         </div>
       );
     }
@@ -733,6 +820,7 @@ export default function OnboardingProfilePage() {
             value={form.bioShort}
             onChange={(e) => updateField("bioShort", e.target.value)}
           />
+          {stepFieldError("bioShort") ? <p className="field-error">{stepFieldError("bioShort")}</p> : null}
         </div>
       );
     }
@@ -754,6 +842,7 @@ export default function OnboardingProfilePage() {
               </button>
             ))}
           </div>
+          {stepFieldError("intent") ? <p className="field-error">{stepFieldError("intent")}</p> : null}
         </div>
       );
     }
@@ -775,6 +864,7 @@ export default function OnboardingProfilePage() {
               </button>
             ))}
           </div>
+          {stepFieldError("distance") ? <p className="field-error">{stepFieldError("distance")}</p> : null}
         </div>
       );
     }
@@ -797,6 +887,7 @@ export default function OnboardingProfilePage() {
             })}
           </div>
           <p className="card-subtitle">{interests.length}/5 selected</p>
+          {stepFieldError("interests") ? <p className="field-error">{stepFieldError("interests")}</p> : null}
         </div>
       );
     }
@@ -814,6 +905,7 @@ export default function OnboardingProfilePage() {
               if (file) {
                 void handlePhotoUpload(file);
               }
+              e.currentTarget.value = "";
             }}
           />
           <div className="inline-actions">
@@ -834,6 +926,7 @@ export default function OnboardingProfilePage() {
           ) : (
             <p className="card-subtitle">No photo uploaded yet.</p>
           )}
+          {stepFieldError("photo") ? <p className="field-error">{stepFieldError("photo")}</p> : null}
         </div>
       );
     }

@@ -39,8 +39,8 @@ app.use(
         : false
   })
 );
-app.use(express.json({ limit: "7mb" }));
-const allowedOrigins = [env.WEB_ORIGIN, env.ADMIN_ORIGIN].filter(Boolean);
+app.use(express.json({ limit: "20mb" }));
+const allowedOrigins = [env.WEB_ORIGIN, env.ADMIN_ORIGIN, "http://localhost:3000"].filter(Boolean);
 app.use(
   cors({
     origin: (origin, callback) => {

@@ -30,6 +30,18 @@ function extractErrorMessage(payload: any, fallback: string) {
   return fallback;
 }
 
+export class ApiError extends Error {
+  fieldErrors?: Record<string, string[]>;
+  status?: number;
+
+  constructor(message: string, options?: { fieldErrors?: Record<string, string[]>; status?: number }) {
+    super(message);
+    this.name = "ApiError";
+    this.fieldErrors = options?.fieldErrors;
+    this.status = options?.status;
+  }
+}
+
 export async function apiFetch<T = any>(path: string, options: ApiFetchOptions = {}) {
   return apiFetchWithRetry<T>(path, options);
 }
@@ -49,7 +61,11 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions) {
   const payload = contentType.includes("application/json") ? await res.json() : await res.text();
   if (!res.ok) {
     const message = extractErrorMessage(payload, "Request failed. Please try again.");
-    throw new Error(message);
+    const fieldErrors =
+      payload?.fieldErrors ??
+      payload?.error?.fieldErrors ??
+      undefined;
+    throw new ApiError(message, { fieldErrors, status: res.status });
   }
   return payload as T;
 }
