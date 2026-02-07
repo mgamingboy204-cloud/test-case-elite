@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../../lib/api";
 import { useSession } from "../../../lib/session";
@@ -22,6 +22,8 @@ export default function VideoVerificationPage() {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [request, setRequest] = useState<VerificationRequest | null>(null);
+  const [hasJoinedCall, setHasJoinedCall] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
 
   useEffect(() => {
     void loadStatus();
@@ -34,17 +36,35 @@ export default function VideoVerificationPage() {
       if (user?.onboardingStep === "VIDEO_VERIFIED" || user?.paymentStatus === "NOT_STARTED") {
         router.replace("/onboarding/payment");
       }
-    }, 500);
+    }, 2000);
     return () => clearTimeout(timer);
   }, [request?.status, refresh, router]);
 
-  async function loadStatus() {
-    setStatus("loading");
-    setMessage("");
+  useEffect(() => {
+    const shouldPoll =
+      request?.status === "REQUESTED" || request?.status === "IN_PROGRESS";
+    if (!shouldPoll) {
+      setIsPolling(false);
+      return;
+    }
+    setIsPolling(true);
+    const interval = setInterval(() => {
+      void loadStatus(true);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [request?.status]);
+
+  async function loadStatus(silent = false) {
+    if (!silent) {
+      setStatus("loading");
+      setMessage("");
+    }
     try {
       const data = await apiFetch<{ request: VerificationRequest | null }>("/verification/status");
       setRequest(data.request ?? null);
-      setStatus("success");
+      if (!silent) {
+        setStatus("success");
+      }
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to load verification status.");
@@ -64,96 +84,141 @@ export default function VideoVerificationPage() {
     }
   }
 
+  const joinUrl = request?.verificationLink ?? "";
+  const derivedStatus = useMemo(() => {
+    if (!request) return "NOT_STARTED";
+    if (request.status === "COMPLETED") return "APPROVED";
+    if (request.status === "REJECTED") return "REJECTED";
+    if (request.status === "IN_PROGRESS") {
+      return joinUrl && hasJoinedCall ? "REVIEWING" : "IN_CALL";
+    }
+    return "REQUESTED";
+  }, [request, joinUrl, hasJoinedCall]);
+
   const hasRequest = Boolean(request);
-  const isRequested = request?.status === "REQUESTED";
-  const isInProgress = request?.status === "IN_PROGRESS";
-  const isApproved = request?.status === "COMPLETED";
-  const isRejected = request?.status === "REJECTED";
-  const linkReady = Boolean(request?.verificationLink);
-  const statusLabel = request?.status ?? "NOT_STARTED";
+  const linkReady = Boolean(joinUrl);
+  const statusLabel = derivedStatus;
   const primaryAction = !hasRequest
     ? { label: "Start verification", onClick: submitRequest }
-    : isApproved
-      ? { label: "Continue", onClick: () => router.push("/onboarding/payment") }
-      : { label: "Refresh status", onClick: loadStatus };
+    : derivedStatus === "APPROVED"
+      ? { label: "Continue to payment", onClick: () => router.push("/onboarding/payment") }
+      : derivedStatus === "REJECTED"
+        ? { label: "Contact support", onClick: () => router.push("/support") }
+        : derivedStatus === "IN_CALL" && linkReady
+          ? {
+              label: hasJoinedCall ? "Return to call" : "Join call",
+              onClick: () => {
+                window.open(joinUrl, "_blank", "noopener,noreferrer");
+                setHasJoinedCall(true);
+              }
+            }
+          : { label: "Refresh status", onClick: () => loadStatus() };
+
+  const steps = [
+    { key: "REQUESTED", label: "Requested", copy: "We received your request." },
+    { key: "IN_CALL", label: "In call", copy: "Join your concierge call." },
+    { key: "REVIEWING", label: "Reviewing", copy: "We’re finalizing your review." },
+    { key: "APPROVED", label: "Approved", copy: "Payment is now unlocked." }
+  ];
+  const activeStepIndex = Math.max(
+    0,
+    steps.findIndex((step) => step.key === (derivedStatus === "REJECTED" ? "REVIEWING" : derivedStatus))
+  );
 
   return (
     <div className="verification-shell">
-      <div className="mobile-gate-header">
+      <div className="verification-header">
         <span className="mobile-gate-step">Step 2 of 3</span>
-        <h2>Video verification</h2>
-        <p className="text-muted">We’re reviewing in the order requests are received.</p>
+        <h2>Quick identity check</h2>
+        <p className="text-muted">A short private call with our team. We never store recordings.</p>
       </div>
       <section className="card verification-card">
-        <div>
-          <span className="verification-pill">Video Verification</span>
-          <h2>Quick identity check</h2>
+        <div className="verification-card__intro">
+          <span className="verification-pill">Video verification</span>
+          <h3>Quick identity check</h3>
           <p className="card-subtitle">
-            A short, private call with our team. We never store recordings.
+            A short private call with our team. We never store recordings.
           </p>
         </div>
 
-        <ul className="expectation-list">
-          <li>2–3 minute concierge call.</li>
-          <li>Have a government-issued ID nearby.</li>
-          <li>Approval unlocks the payment step.</li>
-        </ul>
+        <div className="verification-icon-list">
+          <div className="verification-icon-row">
+            <span>⏱</span>
+            <div>
+              <strong>2–3 minute concierge call</strong>
+              <p className="text-muted">Quick and guided by our verification team.</p>
+            </div>
+          </div>
+          <div className="verification-icon-row">
+            <span>🪪</span>
+            <div>
+              <strong>Have a government-issued ID nearby</strong>
+              <p className="text-muted">We’ll verify identity in real time.</p>
+            </div>
+          </div>
+          <div className="verification-icon-row">
+            <span>🔓</span>
+            <div>
+              <strong>Approval unlocks payment</strong>
+              <p className="text-muted">Continue immediately once approved.</p>
+            </div>
+          </div>
+        </div>
 
-        <button onClick={primaryAction.onClick} disabled={status === "loading"}>
+        <button className="primary-confirm" onClick={primaryAction.onClick} disabled={status === "loading"}>
           {status === "loading" ? "Updating..." : primaryAction.label}
         </button>
+        {derivedStatus === "APPROVED" ? (
+          <p className="message success">Approved — payment is now unlocked.</p>
+        ) : null}
         {message ? <p className={`message ${status}`}>{message}</p> : null}
+        {linkReady && derivedStatus === "IN_CALL" ? (
+          <p className="helper-text">Opening Google Meet in a new tab. Return here to refresh status.</p>
+        ) : null}
       </section>
 
       <section className="card verification-card">
         <div className="status-card">
-          <h3>Live status</h3>
-          <p className="card-subtitle">We’ll update this as soon as your reviewer joins.</p>
-          <div className="status-pill">
-            Status: <strong>{statusLabel}</strong>
+          <div>
+            <h3>Live status</h3>
+            <p className="card-subtitle">We’ll update this as soon as your reviewer completes the call.</p>
           </div>
+          <span className={`status-pill status-pill--${statusLabel.toLowerCase().replace("_", "-")}`}>
+            {statusLabel.replace("_", " ")}
+          </span>
         </div>
 
-        {isRequested ? (
-          <div className="card muted">
-            <h4>Requested</h4>
-            <p className="card-subtitle">We’re reviewing. Refresh here to see updates.</p>
+        {status === "loading" && !hasRequest ? (
+          <div className="status-skeleton">
+            <div className="skeleton-line" />
+            <div className="skeleton-line short" />
           </div>
         ) : null}
-        {isInProgress && !linkReady ? (
-          <div className="card muted">
-            <h4>Waiting for link</h4>
-            <p className="card-subtitle">We’re reviewing and preparing your call link.</p>
-          </div>
+        {!hasRequest && status !== "loading" ? (
+          <p className="card-subtitle">Start verification to schedule your call.</p>
         ) : null}
-        {isInProgress && linkReady ? (
-          <div className="card muted">
-            <h4>Ready to join</h4>
-            <p className="card-subtitle">Click below to join the secure verification call.</p>
-            <button
-              onClick={() => window.open(request?.verificationLink ?? "#", "_blank", "noopener,noreferrer")}
-              type="button"
-            >
-              Join Google Meet
-            </button>
-          </div>
-        ) : null}
-        {isApproved ? (
-          <div className="card muted">
-            <h4>Approved</h4>
-            <p className="card-subtitle">Verification successful. Continue to payment.</p>
-            <button onClick={() => router.push("/onboarding/payment")} type="button">
-              Continue to payment
-            </button>
-          </div>
-        ) : null}
-        {isRejected ? (
-          <div className="card muted">
-            <h4>Needs retry</h4>
-            <p className="card-subtitle">Verification could not be completed. Request another review.</p>
-            <button onClick={submitRequest} type="button">
-              Request another review
-            </button>
+
+        <div className="status-stepper">
+          {steps.map((step, index) => {
+            const isComplete = index < activeStepIndex;
+            const isActive = index === activeStepIndex;
+            return (
+              <div key={step.key} className={`status-step ${isComplete ? "complete" : ""} ${isActive ? "active" : ""}`}>
+                <span className="status-dot" />
+                <div>
+                  <strong>{step.label}</strong>
+                  <p className="text-muted">{step.copy}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {isPolling ? <p className="helper-text">Refreshing automatically every few seconds.</p> : null}
+        {status === "error" ? (
+          <div className="message error">
+            <strong>We couldn’t refresh your status.</strong>
+            <span>Tap the button above to retry.</span>
           </div>
         ) : null}
       </section>

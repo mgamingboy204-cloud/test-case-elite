@@ -45,8 +45,8 @@ export default function DiscoverPage() {
   const activeProfile = useMemo(() => profiles[0], [profiles]);
 
   useEffect(() => {
-    void loadProfiles(true);
-  }, []);
+    void loadProfiles(true, mode);
+  }, [mode]);
 
   async function loadProfiles(reset = false, nextMode: "dating" | "friends" = mode) {
     if (isFetching) return;
