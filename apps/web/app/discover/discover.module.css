@@ -11,12 +11,17 @@
 .feedColumn {
   width: 100%;
   max-width: 760px;
+  position: relative;
+}
+
+.feedStage {
+  position: relative;
 }
 
 .feedStack {
   position: relative;
   width: 100%;
-  height: clamp(420px, 60vh, 560px);
+  height: clamp(460px, 60vh, 580px);
 }
 
 .filtersColumn {
@@ -98,6 +103,10 @@
   animation: shimmer 1.5s infinite;
 }
 
+.cardOverlay {
+  display: none;
+}
+
 .cardDetails {
   padding: 32px 28px;
   display: grid;
@@ -136,12 +145,12 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  height: 30px;
-  padding: 0 10px;
+  height: 24px;
+  padding: 0 8px;
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent-strong);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -180,6 +189,10 @@
 
 .actionButtonPass {
   color: #ef4444;
+}
+
+.actionButtonStar {
+  color: #f59e0b;
 }
 
 .actionButtonLike {
@@ -277,29 +290,108 @@
   opacity: 0.9;
 }
 
-.themeToggle {
+.filterSheet {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
-  z-index: 40;
+  inset: 0;
+  z-index: 60;
+  display: none;
 }
 
-.themeToggle :global(.theme-switch) {
-  padding: 6px 10px;
+.filterSheetOpen {
+  display: block;
+}
+
+.filterSheetBackdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.filterSheetPanel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg);
+  border-radius: 24px 24px 0 0;
+  padding: 20px;
+  display: grid;
+  gap: 18px;
+  box-shadow: 0 -16px 40px rgba(15, 23, 42, 0.2);
+}
+
+.filterSheetHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filterSheetHeader h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.filterSheetClose {
+  border: none;
+  background: var(--bg-muted);
+  color: var(--text);
   border-radius: 999px;
+  padding: 6px 12px;
   font-size: 12px;
-  gap: 6px;
-  box-shadow: var(--shadow-soft);
+  cursor: pointer;
 }
 
-.themeToggle :global(.theme-switch__track) {
-  width: 28px;
-  height: 16px;
+.filterSheetFooter {
+  display: grid;
+  gap: 12px;
 }
 
-.themeToggle :global(.theme-switch__thumb) {
-  width: 12px;
-  height: 12px;
+.filterSheetActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.filterApply {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 16px;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.filterReset {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filterRefreshSecondary {
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.emptyState {
+  min-height: clamp(460px, 60vh, 580px);
+  display: grid;
+  place-items: center;
+}
+
+.mobileHeader,
+.mobileBottomNav {
+  display: none;
 }
 
 .skeletonLine {
@@ -331,10 +423,6 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .filtersColumn {
-    order: 2;
-  }
-
   .filtersCard {
     position: static;
   }
@@ -342,19 +430,151 @@
 
 @media (max-width: 768px) {
   .page {
-    padding: 16px;
+    padding: 84px 16px 110px;
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 100%;
   }
 
   .feedStack {
-    height: clamp(420px, 70vh, 560px);
+    height: clamp(460px, 70vh, 580px);
   }
 
   .card {
     grid-template-columns: 1fr;
+    border-radius: 32px;
   }
 
   .cardDetails {
-    padding: 24px;
+    display: none;
+  }
+
+  .cardMedia {
+    height: 100%;
+  }
+
+  .cardOverlay {
+    display: grid;
+    gap: 6px;
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    color: #fff;
+    z-index: 2;
+  }
+
+  .cardOverlay::before {
+    content: "";
+    position: absolute;
+    inset: -80px -24px -24px -24px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.7) 70%);
+    z-index: -1;
+  }
+
+  .cardOverlay h2 {
+    margin: 0;
+    font-size: 24px;
+  }
+
+  .cardOverlay h2 span {
+    font-weight: 500;
+    font-size: 18px;
+  }
+
+  .cardOverlay p {
+    margin: 0;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .actions {
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 0;
+  }
+
+  .actionButton {
+    width: 46px;
+    height: 46px;
+    font-size: 18px;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.25);
+  }
+
+  .filtersColumn {
+    display: none;
+  }
+
+  .mobileHeader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    padding: calc(env(safe-area-inset-top) + 8px) 16px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    z-index: 40;
+  }
+
+  .mobileTitle {
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  .mobileIconButton {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+  }
+
+  .mobileIconButton svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .mobileBottomNav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    z-index: 40;
+  }
+
+  .mobileBottomNav a,
+  .mobileBottomNavActive {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 999px;
+  }
+
+  .mobileBottomNavActive {
+    color: var(--accent-strong);
+    background: var(--accent-soft);
+  }
+
+  .filterSheetPanel {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
   }
 }
-

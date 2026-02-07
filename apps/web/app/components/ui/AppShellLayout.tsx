@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useSession } from "../../../lib/session";
 import MobileShell from "../MobileShell";
-import ThemeToggle from "../ThemeToggle";
 import SidebarNavItem from "./SidebarNavItem";
 
 const titleMap: { prefix: string; title: string }[] = [
@@ -94,19 +93,22 @@ function RailIcon({ type }: { type: string }) {
 type AppShellLayoutProps = {
   children: ReactNode;
   rightPanel?: ReactNode;
+  showMobileShell?: boolean;
 };
 
-export default function AppShellLayout({ children, rightPanel }: AppShellLayoutProps) {
+export default function AppShellLayout({
+  children,
+  rightPanel,
+  showMobileShell = true
+}: AppShellLayoutProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const { user } = useSession();
   const title = getTitle(pathname);
-  const avatarLabel = user?.displayName?.[0] ?? user?.phone?.[0] ?? "E";
   const isAdmin = user?.role === "ADMIN" || user?.isAdmin;
 
   return (
     <div className="app-shell-layout">
-      <MobileShell title={title} />
+      {showMobileShell ? <MobileShell title={title} /> : null}
       <aside className="app-rail" aria-label="Primary">
         <Link className="rail-brand" href="/discover">
           ELITE MATCH
@@ -133,12 +135,6 @@ export default function AppShellLayout({ children, rightPanel }: AppShellLayoutP
             />
           ) : null}
         </nav>
-        <div className="rail-footer">
-          <ThemeToggle />
-          <button className="rail-avatar" type="button" onClick={() => router.push("/profile")}>
-            {avatarLabel}
-          </button>
-        </div>
       </aside>
 
       <div className="app-main">
@@ -150,7 +146,7 @@ export default function AppShellLayout({ children, rightPanel }: AppShellLayoutP
 
         <div className={rightPanel ? "app-content app-content--split" : "app-content"}>
           <div className="app-center">
-            <div className="mobile-shell__content">{children}</div>
+            <div className={showMobileShell ? "mobile-shell__content" : ""}>{children}</div>
           </div>
           {rightPanel ? <aside className="app-right">{rightPanel}</aside> : null}
         </div>

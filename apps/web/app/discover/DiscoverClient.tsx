@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 
@@ -8,7 +9,6 @@ import { apiFetch } from "../../lib/api";
 import { queryKeys } from "../../lib/queryKeys";
 
 import RouteGuard from "../components/RouteGuard";
-import ThemeToggle from "../components/ThemeToggle";
 import AppShellLayout from "../components/ui/AppShellLayout";
 import Card from "../components/ui/Card";
 import EmptyState from "../components/ui/EmptyState";
@@ -27,7 +27,6 @@ import {
 /* -------------------- DEFAULT FILTERS -------------------- */
 
 const defaultFilters: DiscoverFiltersState = {
-  gender: "all",
   intent: "dating",
   ageMin: 24,
   ageMax: 38,
@@ -37,14 +36,12 @@ const defaultFilters: DiscoverFiltersState = {
 /* -------------------- HELPERS -------------------- */
 
 function parseFilters(params: URLSearchParams): DiscoverFiltersState {
-  const gender = params.get("gender");
   const intent = params.get("intent");
   const ageMin = Number(params.get("ageMin"));
   const ageMax = Number(params.get("ageMax"));
   const distance = Number(params.get("distance"));
 
   return {
-    gender: gender === "male" || gender === "female" ? gender : "all",
     intent: intent === "friends" || intent === "all" ? intent : "dating",
     ageMin: Number.isFinite(ageMin) && ageMin >= 18 ? ageMin : defaultFilters.ageMin,
     ageMax: Number.isFinite(ageMax) && ageMax >= 18 ? ageMax : defaultFilters.ageMax,
@@ -54,7 +51,6 @@ function parseFilters(params: URLSearchParams): DiscoverFiltersState {
 
 function buildFilterSearch(filters: DiscoverFiltersState) {
   const params = new URLSearchParams();
-  if (filters.gender !== "all") params.set("gender", filters.gender);
   if (filters.intent !== "dating") params.set("intent", filters.intent);
   if (filters.ageMin !== defaultFilters.ageMin) params.set("ageMin", String(filters.ageMin));
   if (filters.ageMax !== defaultFilters.ageMax) params.set("ageMax", String(filters.ageMax));
@@ -86,6 +82,8 @@ export default function DiscoverClient() {
 
   const initialFilters = useMemo(() => parseFilters(searchParams), [searchParams]);
   const [filters, setFilters] = useState(initialFilters);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [draftFilters, setDraftFilters] = useState(initialFilters);
 
   useEffect(() => {
     setFilters(initialFilters);
@@ -95,6 +93,12 @@ export default function DiscoverClient() {
     const qs = buildFilterSearch(filters);
     router.replace(qs ? `/discover?${qs}` : "/discover");
   }, [filters, router]);
+
+  useEffect(() => {
+    if (isFilterSheetOpen) {
+      setDraftFilters(filters);
+    }
+  }, [filters, isFilterSheetOpen]);
 
   /* ---------- FEED STATE ---------- */
 
@@ -193,65 +197,102 @@ export default function DiscoverClient() {
 
   return (
     <RouteGuard requireActive>
-      <AppShellLayout>
+      <AppShellLayout showMobileShell={false}>
         <div className={styles.page}>
+          <header className={styles.mobileHeader}>
+            <Link href="/profile" className={styles.mobileIconButton} aria-label="Profile">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M12 12.2a4.3 4.3 0 1 0-4.3-4.3 4.3 4.3 0 0 0 4.3 4.3Zm0 2c-3.8 0-7 2.1-7 4.6 0 1 .8 1.7 1.9 1.7h10.2c1 0 1.9-.7 1.9-1.7 0-2.5-3.2-4.6-7-4.6Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </Link>
+            <span className={styles.mobileTitle}>Discover</span>
+            <button
+              type="button"
+              className={styles.mobileIconButton}
+              aria-label="Filters"
+              onClick={() => setIsFilterSheetOpen(true)}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M4 6.5a1 1 0 0 1 1-1h14a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1Zm3 5a1 1 0 0 1 1-1h8a1 1 0 1 1 0 2H8a1 1 0 0 1-1-1Zm3 5a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2h-2a1 1 0 0 1-1-1Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+          </header>
+
           <section className={styles.feedColumn}>
-            {discoverQuery.isLoading && !feedItems.length ? (
-              <div className={styles.feedStack} aria-hidden="true">
-                <DiscoverCard isPlaceholder />
-                <DiscoverCard isPlaceholder style={{ transform: "translateY(12px) scale(0.98)" }} />
-              </div>
-            ) : discoverQuery.isError ? (
-              <ErrorState
-                message="Unable to load profiles"
-                onRetry={() => discoverQuery.refetch()}
-              />
-            ) : activeProfile ? (
-              <>
-                <div className={styles.feedStack}>
-                  {[activeProfile, feedItems[activeIndex + 1], feedItems[activeIndex + 2]].map(
-                    (profile, index) => {
-                      if (!profile) return null;
-                      const offset = index * 10;
-                      const scale = 1 - index * 0.03;
-                      const stackStyle = index
-                        ? { transform: `translateY(${offset}px) scale(${scale})` }
-                        : undefined;
-                      return (
-                        <DiscoverCard
-                          key={`${profile.userId}-${index}`}
-                          profile={profile}
-                          isActive={index === 0}
-                          isAnimating={index === 0 ? isAnimating : false}
-                          swipeDirection={index === 0 ? swipeDirection : null}
-                          style={stackStyle}
-                        />
-                      );
-                    }
-                  )}
+            <div className={styles.feedStage}>
+              {discoverQuery.isLoading && !feedItems.length ? (
+                <div className={styles.feedStack} aria-hidden="true">
+                  <DiscoverCard isPlaceholder />
+                  <DiscoverCard isPlaceholder style={{ transform: "translateY(12px) scale(0.98)" }} />
                 </div>
-                <div className={styles.actions}>
-                  <button
-                    className={`${styles.actionButton} ${styles.actionButtonPass}`}
-                    onClick={() => handleSwipe("PASS")}
-                    aria-label="Pass"
-                    type="button"
-                  >
-                    ✕
-                  </button>
-                  <button
-                    className={`${styles.actionButton} ${styles.actionButtonLike}`}
-                    onClick={() => handleSwipe("LIKE")}
-                    aria-label="Like"
-                    type="button"
-                  >
-                    ❤
-                  </button>
+              ) : discoverQuery.isError ? (
+                <ErrorState
+                  message="Unable to load profiles"
+                  onRetry={() => discoverQuery.refetch()}
+                />
+              ) : activeProfile ? (
+                <>
+                  <div className={styles.feedStack}>
+                    {[activeProfile, feedItems[activeIndex + 1], feedItems[activeIndex + 2]].map(
+                      (profile, index) => {
+                        if (!profile) return null;
+                        const offset = index * 10;
+                        const scale = 1 - index * 0.03;
+                        const stackStyle = index
+                          ? { transform: `translateY(${offset}px) scale(${scale})` }
+                          : undefined;
+                        return (
+                          <DiscoverCard
+                            key={`${profile.userId}-${index}`}
+                            profile={profile}
+                            isActive={index === 0}
+                            isAnimating={index === 0 ? isAnimating : false}
+                            swipeDirection={index === 0 ? swipeDirection : null}
+                            style={stackStyle}
+                          />
+                        );
+                      }
+                    )}
+                  </div>
+                  <div className={styles.actions}>
+                    <button
+                      className={`${styles.actionButton} ${styles.actionButtonPass}`}
+                      onClick={() => handleSwipe("PASS")}
+                      aria-label="Pass"
+                      type="button"
+                    >
+                      ✕
+                    </button>
+                    <button
+                      className={`${styles.actionButton} ${styles.actionButtonStar}`}
+                      onClick={() => handleSwipe("LIKE")}
+                      aria-label="Star"
+                      type="button"
+                    >
+                      ★
+                    </button>
+                    <button
+                      className={`${styles.actionButton} ${styles.actionButtonLike}`}
+                      onClick={() => handleSwipe("LIKE")}
+                      aria-label="Like"
+                      type="button"
+                    >
+                      ❤
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.emptyState}>
+                  <EmptyState title="No profiles" message="Check back later." />
                 </div>
-              </>
-            ) : (
-              <EmptyState title="No profiles" message="Check back later." />
-            )}
+              )}
+            </div>
             {discoverQuery.isFetching && feedItems.length ? (
               <LoadingState message="Loading more…" />
             ) : null}
@@ -267,14 +308,31 @@ export default function DiscoverClient() {
                 onChange={setFilters}
                 onRefresh={() => discoverQuery.refetch()}
                 isRefreshing={discoverQuery.isFetching}
+                showRefresh
               />
             </Card>
           </aside>
         </div>
-
-        <div className={styles.themeToggle}>
-          <ThemeToggle variant="switch" label="Toggle dark mode" />
-        </div>
+        <DiscoverFilters
+          variant="sheet"
+          filters={draftFilters}
+          onChange={setDraftFilters}
+          isOpen={isFilterSheetOpen}
+          onClose={() => setIsFilterSheetOpen(false)}
+          onApply={() => {
+            setFilters(draftFilters);
+            setIsFilterSheetOpen(false);
+          }}
+          onReset={() => setDraftFilters(defaultFilters)}
+          onRefresh={() => discoverQuery.refetch()}
+          isRefreshing={discoverQuery.isFetching}
+          showRefresh
+        />
+        <nav className={styles.mobileBottomNav} aria-label="Discover navigation">
+          <Link href="/likes">Likes</Link>
+          <span className={styles.mobileBottomNavActive}>Discover</span>
+          <Link href="/profile">Profile</Link>
+        </nav>
       </AppShellLayout>
     </RouteGuard>
   );

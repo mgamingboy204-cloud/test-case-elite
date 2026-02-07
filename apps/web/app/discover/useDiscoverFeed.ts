@@ -5,7 +5,6 @@ import { apiFetch } from "../../lib/api";
 import { queryKeys } from "../../lib/queryKeys";
 
 export type DiscoverFilters = {
-  gender: "all" | "male" | "female";
   intent: "all" | "dating" | "friends";
   ageMin: number;
   ageMax: number;
@@ -40,7 +39,6 @@ type DiscoverCursor = string | undefined;
 
 function buildDiscoverParams(filters: DiscoverFilters, cursor?: string) {
   const params = new URLSearchParams();
-  if (filters.gender !== "all") params.set("gender", filters.gender);
   if (filters.intent !== "all") params.set("intent", filters.intent);
   if (filters.ageMin) params.set("minAge", String(filters.ageMin));
   if (filters.ageMax) params.set("maxAge", String(filters.ageMax));
