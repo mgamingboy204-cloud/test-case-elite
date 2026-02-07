@@ -7,13 +7,11 @@ import { useSession } from "../../../lib/session";
 
 type Status = "idle" | "loading" | "success" | "error";
 
-type VerificationRequest = {
-  id: string;
-  status: "REQUESTED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED";
-  verificationLink?: string | null;
-  linkExpiresAt?: string | null;
-  createdAt?: string;
-  completedAt?: string | null;
+type VerificationStatus = "NOT_REQUESTED" | "REQUESTED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED";
+
+type VerificationStatusResponse = {
+  status: VerificationStatus;
+  meetUrl?: string | null;
 };
 
 export default function VideoVerificationPage() {
@@ -21,7 +19,7 @@ export default function VideoVerificationPage() {
   const { refresh } = useSession();
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
-  const [request, setRequest] = useState<VerificationRequest | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatusResponse | null>(null);
   const [hasJoinedCall, setHasJoinedCall] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
 
@@ -30,7 +28,7 @@ export default function VideoVerificationPage() {
   }, []);
 
   useEffect(() => {
-    if (request?.status !== "COMPLETED") return;
+    if (verificationStatus?.status !== "COMPLETED") return;
     const timer = setTimeout(async () => {
       const user = await refresh();
       if (user?.onboardingStep === "VIDEO_VERIFIED" || user?.paymentStatus === "NOT_STARTED") {
@@ -38,11 +36,10 @@ export default function VideoVerificationPage() {
       }
     }, 2000);
     return () => clearTimeout(timer);
-  }, [request?.status, refresh, router]);
+  }, [verificationStatus?.status, refresh, router]);
 
   useEffect(() => {
-    const shouldPoll =
-      request?.status === "REQUESTED" || request?.status === "IN_PROGRESS";
+    const shouldPoll = verificationStatus?.status === "REQUESTED" || verificationStatus?.status === "IN_PROGRESS";
     if (!shouldPoll) {
       setIsPolling(false);
       return;
@@ -50,9 +47,9 @@ export default function VideoVerificationPage() {
     setIsPolling(true);
     const interval = setInterval(() => {
       void loadStatus(true);
-    }, 8000);
+    }, 4000);
     return () => clearInterval(interval);
-  }, [request?.status]);
+  }, [verificationStatus?.status]);
 
   async function loadStatus(silent = false) {
     if (!silent) {
@@ -60,8 +57,8 @@ export default function VideoVerificationPage() {
       setMessage("");
     }
     try {
-      const data = await apiFetch<{ request: VerificationRequest | null }>("/verification/status");
-      setRequest(data.request ?? null);
+      const data = await apiFetch<VerificationStatusResponse>("/me/verification-status");
+      setVerificationStatus(data);
       if (!silent) {
         setStatus("success");
       }
@@ -75,8 +72,14 @@ export default function VideoVerificationPage() {
     setStatus("loading");
     setMessage("");
     try {
-      const data = await apiFetch<{ request: VerificationRequest }>("/verification-requests", { method: "POST" });
-      setRequest(data.request);
+      const data = await apiFetch<{ request: { status: VerificationStatus; meetUrl?: string | null; verificationLink?: string | null } }>(
+        "/verification-requests",
+        { method: "POST" }
+      );
+      setVerificationStatus({
+        status: data.request.status,
+        meetUrl: data.request.meetUrl ?? data.request.verificationLink ?? null
+      });
       setStatus("success");
     } catch (error) {
       setStatus("error");
@@ -84,47 +87,39 @@ export default function VideoVerificationPage() {
     }
   }
 
-  const joinUrl = request?.verificationLink ?? "";
+  const joinUrl = verificationStatus?.meetUrl ?? "";
   const derivedStatus = useMemo(() => {
-    if (!request) return "NOT_STARTED";
-    if (request.status === "COMPLETED") return "APPROVED";
-    if (request.status === "REJECTED") return "REJECTED";
-    if (request.status === "IN_PROGRESS") {
-      return joinUrl && hasJoinedCall ? "REVIEWING" : "IN_CALL";
-    }
-    return "REQUESTED";
-  }, [request, joinUrl, hasJoinedCall]);
+    if (!verificationStatus) return "NOT_REQUESTED";
+    return verificationStatus.status;
+  }, [verificationStatus]);
 
-  const hasRequest = Boolean(request);
+  const hasRequest = derivedStatus !== "NOT_REQUESTED";
   const linkReady = Boolean(joinUrl);
-  const statusLabel = derivedStatus;
+  const statusLabel =
+    derivedStatus === "IN_PROGRESS" && linkReady ? (hasJoinedCall ? "IN_CALL" : "SCHEDULED") : derivedStatus;
   const primaryAction = !hasRequest
     ? { label: "Start verification", onClick: submitRequest }
-    : derivedStatus === "APPROVED"
+    : derivedStatus === "COMPLETED"
       ? { label: "Continue to payment", onClick: () => router.push("/onboarding/payment") }
       : derivedStatus === "REJECTED"
         ? { label: "Contact support", onClick: () => router.push("/support") }
-        : derivedStatus === "IN_CALL" && linkReady
+        : derivedStatus === "IN_PROGRESS" && linkReady
           ? {
-              label: "Join Google Meet",
+              label: "Join verification call",
               onClick: () => {
                 window.open(joinUrl, "_blank", "noopener,noreferrer");
                 setHasJoinedCall(true);
               }
             }
           : { label: "Refresh status", onClick: () => loadStatus() };
-  const showSecondaryRefresh = Boolean(hasRequest && linkReady && derivedStatus === "IN_CALL");
+  const showSecondaryRefresh = Boolean(hasRequest && linkReady && derivedStatus === "IN_PROGRESS");
 
   const steps = [
     { key: "REQUESTED", label: "Requested", copy: "We received your request." },
-    { key: "IN_CALL", label: "In call", copy: "Join your concierge call." },
-    { key: "REVIEWING", label: "Reviewing", copy: "We’re finalizing your review." },
-    { key: "APPROVED", label: "Approved", copy: "Payment is now unlocked." }
+    { key: "IN_PROGRESS", label: "Scheduled", copy: "A verification call is ready." },
+    { key: "COMPLETED", label: "Approved", copy: "Payment is now unlocked." }
   ];
-  const activeStepIndex = Math.max(
-    0,
-    steps.findIndex((step) => step.key === (derivedStatus === "REJECTED" ? "REVIEWING" : derivedStatus))
-  );
+  const activeStepIndex = Math.max(0, steps.findIndex((step) => step.key === (derivedStatus === "REJECTED" ? "REQUESTED" : derivedStatus)));
 
   return (
     <div className="verification-shell">
@@ -177,12 +172,12 @@ export default function VideoVerificationPage() {
             Refresh status
           </button>
         ) : null}
-        {derivedStatus === "APPROVED" ? (
+        {derivedStatus === "COMPLETED" ? (
           <p className="message success">Approved — payment is now unlocked.</p>
         ) : null}
         {message ? <p className={`message ${status}`}>{message}</p> : null}
-        {linkReady && derivedStatus === "IN_CALL" ? (
-          <p className="helper-text">Join the call in a new tab, then return here to refresh status.</p>
+        {linkReady && derivedStatus === "IN_PROGRESS" ? (
+          <p className="helper-text">Join the call in a new tab, then return here for status updates.</p>
         ) : null}
       </div>
 

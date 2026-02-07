@@ -34,7 +34,7 @@ export async function getLatestVerificationRequest(userId: string) {
   if (request.status === "IN_PROGRESS" && request.linkExpiresAt && request.linkExpiresAt < new Date()) {
     const updated = await prisma.verificationRequest.update({
       where: { id: request.id },
-      data: { status: "REQUESTED", verificationLink: null, linkExpiresAt: null }
+      data: { status: "REQUESTED", verificationLink: null, meetUrl: null, linkExpiresAt: null }
     });
     return { request: updated };
   }
