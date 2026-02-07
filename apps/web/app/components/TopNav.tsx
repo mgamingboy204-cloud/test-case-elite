@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api";
 import { clearAccessToken } from "../../lib/authToken";
+import { queryKeys } from "../../lib/queryKeys";
 import { useSession } from "../../lib/session";
 
 const baseLinks = [
@@ -22,9 +24,22 @@ const protectedLinks = [
 export default function TopNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { status: sessionStatus, user, refresh } = useSession();
-  const [logoutStatus, setLogoutStatus] = useState<"idle" | "loading">("idle");
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const logoutMutation = useMutation({
+    mutationFn: () => apiFetch("/auth/logout", { method: "POST" }),
+    onSuccess: () => {
+      clearAccessToken();
+    },
+    onSettled: async () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      await refresh();
+      setMenuOpen(false);
+      router.push("/");
+    }
+  });
 
   const navLinks = useMemo(() => {
     if (sessionStatus === "logged-in" && user?.onboardingStep === "ACTIVE") {
@@ -39,17 +54,8 @@ export default function TopNav() {
     return match?.href ?? pathname;
   }, [pathname, navLinks]);
 
-  async function handleLogout() {
-    setLogoutStatus("loading");
-    try {
-      await apiFetch("/auth/logout", { method: "POST" });
-      clearAccessToken();
-    } finally {
-      await refresh();
-      setLogoutStatus("idle");
-      setMenuOpen(false);
-      router.push("/");
-    }
+  function handleLogout() {
+    logoutMutation.mutate();
   }
 
   return (
@@ -85,12 +91,8 @@ export default function TopNav() {
                       Admin
                     </button>
                   ) : null}
-                  <button
-                    className="menu-link"
-                    onClick={handleLogout}
-                    disabled={logoutStatus === "loading"}
-                  >
-                    {logoutStatus === "loading" ? "Signing out..." : "Logout"}
+                  <button className="menu-link" onClick={handleLogout} disabled={logoutMutation.isPending}>
+                    {logoutMutation.isPending ? "Signing out..." : "Logout"}
                   </button>
                 </div>
               ) : null}

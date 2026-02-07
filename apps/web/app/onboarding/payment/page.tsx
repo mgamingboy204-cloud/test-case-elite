@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../../lib/api";
+import { queryKeys } from "../../../lib/queryKeys";
 import { useSession } from "../../../lib/session";
 
 const SUBTOTAL_AMOUNT = 99999;
@@ -21,6 +23,9 @@ type PaymentInitiationResponse = {
   paymentStatus: string;
   paymentLink?: string;
   orderId?: string;
+};
+type PaymentStatusResponse = {
+  paymentStatus?: "NOT_STARTED" | "PENDING" | "COMPLETED" | "FAILED" | null;
 };
 type CouponValidationResponse = {
   valid: boolean;
@@ -199,7 +204,7 @@ function CheckoutCard({
                   onClick={onApplyCoupon}
                   disabled={couponState === "validating" || isActionLoading}
                 >
-                  {couponState === "validating" ? "Applying..." : "Apply"}
+                  {couponState === "validating" ? "Checking" : "Apply"}
                 </button>
               )}
             </div>
@@ -208,72 +213,132 @@ function CheckoutCard({
         ) : null}
       </div>
 
-      <div className="price-breakdown">
-        <div className="price-row">
+      <div className="summary-table">
+        <div>
           <span>Subtotal</span>
-          <strong>{formatCurrency(subtotalAmount)}</strong>
+          <span>{formatCurrency(subtotalAmount)}</span>
         </div>
-        {appliedCoupon ? (
-          <div className="price-row discount">
-            <span>Discount {appliedCoupon.discountType === "PERCENT" ? `(${appliedCoupon.discountValue}%)` : ""}</span>
-            <strong>-{formatCurrency(discountAmount)}</strong>
-          </div>
-        ) : null}
-        <div className="price-row total">
-          <span>Total</span>
-          <strong>{formatCurrency(totalAmount)}</strong>
+        <div>
+          <span>Discount</span>
+          <span>-{formatCurrency(discountAmount)}</span>
+        </div>
+        <div className="summary-total">
+          <span>Total due</span>
+          <span>{formatCurrency(totalAmount)}</span>
         </div>
       </div>
 
-      <div className="checkout-actions">{children}</div>
+      {children}
 
       {message ? <p className={`message ${status}`}>{message}</p> : null}
+      {isMobile ? <div className="mobile-cta-spacer" /> : null}
     </section>
   );
 }
 
-type MobileStickyCheckoutBarProps = {
-  totalAmount: number;
-  formatCurrency: (value: number) => string;
-  primaryLabel: string;
-  onPrimaryAction: () => void;
-  isActionLoading: boolean;
-};
-
-function MobileStickyCheckoutBar({
-  totalAmount,
-  formatCurrency,
-  primaryLabel,
-  onPrimaryAction,
-  isActionLoading
-}: MobileStickyCheckoutBarProps) {
-  return (
-    <div className="mobile-sticky-bar">
-      <div>
-        <p className="sticky-label">Total</p>
-        <strong className="sticky-amount">{formatCurrency(totalAmount)}</strong>
-      </div>
-      <button className="primary-cta" onClick={onPrimaryAction} disabled={isActionLoading}>
-        {isActionLoading ? "Processing..." : primaryLabel}
-      </button>
-    </div>
-  );
-}
-
 export default function PaymentPage() {
-  const { refresh } = useSession();
   const router = useRouter();
+  const { refresh } = useSession();
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [couponCode, setCouponCode] = useState("");
-  const [couponState, setCouponState] = useState<CouponState>("idle");
-  const [couponMessage, setCouponMessage] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<CouponDetails | null>(null);
   const [showBenefits, setShowBenefits] = useState(true);
   const [showCoupon, setShowCoupon] = useState(false);
+  const [couponState, setCouponState] = useState<CouponState>("idle");
+  const [couponMessage, setCouponMessage] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponDetails | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  const paymentQuery = useQuery<PaymentStatusResponse>({
+    queryKey: queryKeys.paymentStatus,
+    queryFn: () => apiFetch<PaymentStatusResponse>("/payments/me"),
+    staleTime: 5000,
+    refetchInterval: (result) => {
+      if (!result || typeof result !== "object" || !("data" in result)) return false;
+      const data = (result as { data?: PaymentStatusResponse }).data;
+      const statusValue = data?.paymentStatus ?? null;
+      if (!statusValue || statusValue === "NOT_STARTED" || statusValue === "PENDING") {
+        return 8000;
+      }
+      return false;
+    }
+  });
+
+  const startMutation = useMutation({
+    mutationFn: (payload: { couponCode?: string }) =>
+      apiFetch<PaymentInitiationResponse>("/payments/mock/start", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }),
+    onSuccess: async (data) => {
+      setPaymentStatus(data.paymentStatus);
+      setStatus("success");
+      setMessage("Payment initiated. Confirm to continue.");
+      queryClient.invalidateQueries({ queryKey: queryKeys.paymentStatus });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      if (data.paymentLink) {
+        window.location.assign(data.paymentLink);
+      } else if (data.orderId) {
+        openRazorpayCheckout(data.orderId);
+      }
+      await refresh();
+    },
+    onError: (error) => {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Unable to start payment.");
+    },
+    onSettled: () => {
+      setConfirming(false);
+    }
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: () => apiFetch<{ paymentStatus: string }>("/payments/mock/confirm", { method: "POST" }),
+    onSuccess: async (data) => {
+      setPaymentStatus(data.paymentStatus);
+      setStatus("success");
+      setMessage("Payment confirmed. Continue to profile setup.");
+      queryClient.invalidateQueries({ queryKey: queryKeys.paymentStatus });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      await refresh();
+    },
+    onError: (error) => {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Unable to confirm payment.");
+    }
+  });
+
+  const couponMutation = useMutation({
+    mutationFn: (payload: { code: string }) =>
+      apiFetch<CouponValidationResponse>("/payments/coupon/validate", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }),
+    onError: (error) => {
+      setAppliedCoupon(null);
+      setCouponState("invalid");
+      setCouponMessage(error instanceof Error ? error.message : "Unable to validate coupon.");
+    }
+  });
+
+  const mockProceedMutation = useMutation({
+    mutationFn: () => apiFetch<{ paymentStatus: string }>("/payments/mock/confirm", { method: "POST" }),
+    onSuccess: async (data) => {
+      setPaymentStatus(data.paymentStatus);
+      setStatus("success");
+      setMessage("Mock proceed complete. Continue to profile setup.");
+      queryClient.invalidateQueries({ queryKey: queryKeys.paymentStatus });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      await refresh();
+    },
+    onError: (error) => {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Unable to mock proceed.");
+    }
+  });
 
   const currencyFormatter = useMemo(
     () =>
@@ -284,10 +349,6 @@ export default function PaymentPage() {
       }),
     []
   );
-
-  useEffect(() => {
-    void loadPayment();
-  }, []);
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth <= 768);
@@ -306,59 +367,32 @@ export default function PaymentPage() {
     }
   }, [isMobile]);
 
+  useEffect(() => {
+    if (!paymentQuery.data) return;
+    setPaymentStatus(paymentQuery.data.paymentStatus ?? null);
+  }, [paymentQuery.data]);
+
+  useEffect(() => {
+    if (!paymentQuery.isError) return;
+    setStatus("error");
+    setMessage(paymentQuery.error instanceof Error ? paymentQuery.error.message : "Unable to load payment status.");
+  }, [paymentQuery.isError, paymentQuery.error]);
+
   function formatCurrency(value: number) {
     return currencyFormatter.format(value);
   }
 
-  async function loadPayment() {
-    try {
-      const data = await apiFetch<{ paymentStatus?: string }>("/payments/me");
-      setPaymentStatus(data.paymentStatus ?? null);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to load payment status.");
-      setStatus("error");
-    }
-  }
-
-  async function startPayment() {
+  function startPayment() {
     setStatus("loading");
     setMessage("Starting payment...");
-    try {
-      const payload = appliedCoupon?.code ? { couponCode: appliedCoupon.code } : {};
-      const data = await apiFetch<PaymentInitiationResponse>("/payments/mock/start", {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      setPaymentStatus(data.paymentStatus);
-      setStatus("success");
-      setMessage("Payment initiated. Confirm to continue.");
-      if (data.paymentLink) {
-        window.location.assign(data.paymentLink);
-      } else if (data.orderId) {
-        openRazorpayCheckout(data.orderId);
-      }
-      await refresh();
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to start payment.");
-    } finally {
-      setConfirming(false);
-    }
+    const payload = appliedCoupon?.code ? { couponCode: appliedCoupon.code } : {};
+    startMutation.mutate(payload);
   }
 
-  async function confirmPayment() {
+  function confirmPayment() {
     setStatus("loading");
     setMessage("Confirming payment...");
-    try {
-      const data = await apiFetch<{ paymentStatus: string }>("/payments/mock/confirm", { method: "POST" });
-      setPaymentStatus(data.paymentStatus);
-      setStatus("success");
-      setMessage("Payment confirmed. Continue to profile setup.");
-      await refresh();
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to confirm payment.");
-    }
+    confirmMutation.mutate();
   }
 
   async function applyCoupon() {
@@ -375,29 +409,20 @@ export default function PaymentPage() {
     }
     setCouponState("validating");
     setCouponMessage("Validating coupon...");
-    try {
-      const response = await apiFetch<CouponValidationResponse>("/payments/coupon/validate", {
-        method: "POST",
-        body: JSON.stringify({ code: normalized })
+    const response = await couponMutation.mutateAsync({ code: normalized });
+    if (response.valid && response.discountType && typeof response.discountValue === "number") {
+      setAppliedCoupon({
+        code: response.code ?? normalized,
+        discountType: response.discountType,
+        discountValue: response.discountValue,
+        message: response.message
       });
-      if (response.valid && response.discountType && typeof response.discountValue === "number") {
-        setAppliedCoupon({
-          code: response.code ?? normalized,
-          discountType: response.discountType,
-          discountValue: response.discountValue,
-          message: response.message
-        });
-        setCouponState("applied");
-        setCouponMessage(response.message ?? "Coupon applied.");
-      } else {
-        setAppliedCoupon(null);
-        setCouponState("invalid");
-        setCouponMessage(response.message ?? "Coupon not valid.");
-      }
-    } catch (error) {
+      setCouponState("applied");
+      setCouponMessage(response.message ?? "Coupon applied.");
+    } else {
       setAppliedCoupon(null);
       setCouponState("invalid");
-      setCouponMessage(error instanceof Error ? error.message : "Unable to validate coupon.");
+      setCouponMessage(response.message ?? "Coupon not valid.");
     }
   }
 
@@ -407,19 +432,10 @@ export default function PaymentPage() {
     setCouponMessage("");
   }
 
-  async function handleMockProceed() {
+  function handleMockProceed() {
     setStatus("loading");
     setMessage("Mock proceed enabled. Completing payment step...");
-    try {
-      const data = await apiFetch<{ paymentStatus: string }>("/payments/mock/confirm", { method: "POST" });
-      setPaymentStatus(data.paymentStatus);
-      setStatus("success");
-      setMessage("Mock proceed complete. Continue to profile setup.");
-      await refresh();
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to mock proceed.");
-    }
+    mockProceedMutation.mutate();
   }
 
   function openRazorpayCheckout(orderId: string) {
@@ -479,117 +495,83 @@ export default function PaymentPage() {
       : isPending
         ? "Confirm payment"
         : isPaid
-          ? "Continue to profile setup"
-          : "Retry payment";
-  const primaryCtaAction = showMobileConfirm
-    ? startPayment
-    : isNotStarted
-      ? () => setConfirming(true)
-      : isPending
-        ? confirmPayment
-        : isPaid
-          ? () => router.push("/onboarding/profile")
-          : startPayment;
+          ? "Continue to profile"
+          : isFailed
+            ? "Retry payment"
+            : "Check status";
+
+  function handlePrimaryAction() {
+    if (isPaid) {
+      router.push("/onboarding/profile");
+      return;
+    }
+    if (isNotStarted) {
+      if (isMobile) {
+        setConfirming((prev) => !prev);
+        return;
+      }
+      startPayment();
+      return;
+    }
+    if (isPending || isFailed) {
+      confirmPayment();
+    }
+  }
 
   return (
-    <div className="payment-shell premium-payment">
-      <div className="payment-container">
-        <div className="payment-hero">
-          <div>
-            <span className="verification-pill">Membership payment</span>
-            <h1>Elite Match Membership</h1>
-            <p className="text-muted">
-              A concierge-grade membership designed for intentional matchmaking, private introductions, and priority
-              support.
-            </p>
-          </div>
-          <span className={`status-chip status-${statusDetails.tone}`}>{statusDetails.label}</span>
-        </div>
-
-        <div className="payment-grid">
-          <MembershipPlanCard
-            subtotalAmount={SUBTOTAL_AMOUNT}
-            formatCurrency={formatCurrency}
-            isMobile={isMobile}
-            showBenefits={benefitsExpanded}
-            onToggleBenefits={() => setShowBenefits((prev) => !prev)}
-          />
-
-          <CheckoutCard
-            statusDetails={statusDetails}
-            couponState={couponState}
-            couponMessage={couponMessage}
-            couponCode={couponCode}
-            maxCouponLength={MAX_COUPON_LENGTH}
-            appliedCoupon={appliedCoupon}
-            onCouponChange={(value) => {
-              const nextValue = value.toUpperCase();
-              setCouponCode(nextValue);
-              if (couponState === "applied") {
-                setCouponState("idle");
-                setAppliedCoupon(null);
-                setCouponMessage("");
-              }
-            }}
-            onApplyCoupon={applyCoupon}
-            onRemoveCoupon={removeCoupon}
-            isActionLoading={isActionLoading}
-            isCouponOpen={couponExpanded}
-            onToggleCoupon={() => setShowCoupon((prev) => !prev)}
-            discountAmount={discountAmount}
-            totalAmount={totalAmount}
-            subtotalAmount={SUBTOTAL_AMOUNT}
-            formatCurrency={formatCurrency}
-            message={message}
-            status={status}
-            isMobile={isMobile}
-          >
-            {isNotStarted ? (
-              <>
-                <button
-                  className="primary-cta"
-                  onClick={isMobile ? () => setConfirming(true) : startPayment}
-                  disabled={isActionLoading}
-                >
-                  {isActionLoading ? "Processing..." : "Start payment"}
-                </button>
-                {showMobileConfirm ? (
-                  <button onClick={startPayment} disabled={isActionLoading} className="primary-confirm">
-                    Confirm &amp; proceed
-                  </button>
-                ) : null}
-              </>
-            ) : isPending ? (
-              <button className="primary-cta" onClick={confirmPayment} disabled={isActionLoading}>
-                {isActionLoading ? "Confirming..." : "Confirm payment"}
-              </button>
-            ) : isPaid ? (
-              <button className="primary-cta" onClick={() => router.push("/onboarding/profile")} disabled={isActionLoading}>
-                Continue to profile setup
-              </button>
-            ) : isFailed ? (
-              <button className="primary-cta" onClick={startPayment} disabled={isActionLoading}>
-                Retry payment
-              </button>
-            ) : null}
-
-            {ENABLE_MOCK_PROCEED ? (
-              <button type="button" className="mock-proceed" onClick={handleMockProceed} disabled={isActionLoading}>
-                Mock Proceed (temp)
-              </button>
-            ) : null}
-          </CheckoutCard>
-        </div>
+    <div className="payment-shell">
+      <div className="payment-header">
+        <span className="mobile-gate-step">Step 3 of 3</span>
+        <h2>Secure your membership</h2>
+        <p className="text-muted">One annual membership unlocks curated introductions and concierge support.</p>
       </div>
-      {isMobile ? null : (
-        <MobileStickyCheckoutBar
-          totalAmount={totalAmount}
+      <div className="payment-grid">
+        <MembershipPlanCard
+          subtotalAmount={SUBTOTAL_AMOUNT}
           formatCurrency={formatCurrency}
-          primaryLabel={primaryCtaLabel}
-          onPrimaryAction={primaryCtaAction}
-          isActionLoading={isActionLoading}
+          isMobile={isMobile}
+          showBenefits={benefitsExpanded}
+          onToggleBenefits={() => setShowBenefits((prev) => !prev)}
         />
-      )}
+        <CheckoutCard
+          statusDetails={statusDetails}
+          couponState={couponState}
+          couponMessage={couponMessage}
+          couponCode={couponCode}
+          maxCouponLength={MAX_COUPON_LENGTH}
+          appliedCoupon={appliedCoupon}
+          onCouponChange={setCouponCode}
+          onApplyCoupon={applyCoupon}
+          onRemoveCoupon={removeCoupon}
+          isActionLoading={isActionLoading}
+          isCouponOpen={couponExpanded}
+          onToggleCoupon={() => setShowCoupon((prev) => !prev)}
+          discountAmount={discountAmount}
+          totalAmount={totalAmount}
+          subtotalAmount={SUBTOTAL_AMOUNT}
+          formatCurrency={formatCurrency}
+          message={message}
+          status={status}
+          isMobile={isMobile}
+        >
+          <button className="primary" onClick={handlePrimaryAction} disabled={isActionLoading}>
+            {isActionLoading ? "Working..." : primaryCtaLabel}
+          </button>
+          {showMobileConfirm ? (
+            <div className="confirm-panel">
+              <p className="card-subtitle">Confirm once you’re ready to proceed.</p>
+              <button className="primary" onClick={startPayment} disabled={isActionLoading}>
+                {isActionLoading ? "Starting..." : "Proceed to payment"}
+              </button>
+            </div>
+          ) : null}
+          {ENABLE_MOCK_PROCEED ? (
+            <button className="secondary" onClick={handleMockProceed} disabled={isActionLoading}>
+              Mock proceed
+            </button>
+          ) : null}
+        </CheckoutCard>
+      </div>
     </div>
   );
 }

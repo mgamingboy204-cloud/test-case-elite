@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api";
 import { getAssetUrl } from "../../lib/assets";
+import { queryKeys } from "../../lib/queryKeys";
 import RouteGuard from "../components/RouteGuard";
 import AppShellLayout from "../components/ui/AppShellLayout";
 import Button from "../components/ui/Button";
@@ -24,97 +26,128 @@ type Profile = {
   photos: string[];
 };
 
+type ProfileResponse = { profiles: Profile[] };
+
+type DetailResponse = { profile: any };
+
 const PAGE_SIZE = 8;
 const SWIPE_THRESHOLD = 120;
 const SWIPE_DETAIL_THRESHOLD = 80;
 
 export default function DiscoverPage() {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
-  const [isFetching, setIsFetching] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0, active: false });
   const [mode, setMode] = useState<"dating" | "friends">("dating");
-  const [detailStatus, setDetailStatus] = useState<Status>("idle");
-  const [detailProfile, setDetailProfile] = useState<any | null>(null);
+  const [detailUserId, setDetailUserId] = useState<string | null>(null);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const ignoreClickRef = useRef(false);
   const sheetDragStart = useRef<{ y: number } | null>(null);
 
+  const profilesQuery = useQuery({
+    queryKey: queryKeys.discoverFeed(mode),
+    queryFn: () =>
+      apiFetch<ProfileResponse>(`/profiles?page=1&pageSize=${PAGE_SIZE}&mode=${mode}`),
+    staleTime: 15000
+  });
+
+  const profiles = profilesQuery.data?.profiles ?? [];
   const activeProfile = useMemo(() => profiles[0], [profiles]);
 
   useEffect(() => {
-    void loadProfiles(true, mode);
-  }, [mode]);
-
-  async function loadProfiles(reset = false, nextMode: "dating" | "friends" = mode) {
-    if (isFetching) return;
-    setIsFetching(true);
-    setStatus("loading");
-    setMessage(reset ? "Loading curated introductions..." : "Fetching more profiles...");
-    try {
-      const data = await apiFetch<{ profiles: Profile[] }>(
-        `/profiles?page=1&pageSize=${PAGE_SIZE}&mode=${nextMode}`
-      );
-      const fetched = data.profiles ?? [];
-      setProfiles(fetched);
-      setStatus("success");
-      if (fetched.length) {
-        setMessage("Here is your next introduction.");
-      } else if (reset) {
-        setMessage("No profiles yet. We’ll keep checking for new introductions.");
-      } else {
-        setMessage("No more profiles right now. We’ll keep checking for new introductions.");
-      }
-    } catch (error) {
+    if (profilesQuery.isError) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to load profiles.");
-    } finally {
-      setIsFetching(false);
+      setMessage(
+        profilesQuery.error instanceof Error ? profilesQuery.error.message : "Unable to load profiles."
+      );
     }
-  }
+  }, [profilesQuery.isError, profilesQuery.error]);
 
-  async function sendLike(profile: Profile, type: "LIKE" | "PASS") {
-    setMessage(type === "LIKE" ? "Sending like..." : "Recording pass...");
-    setStatus("loading");
-    setProfiles((prev) => prev.slice(1));
-    try {
-      await apiFetch("/likes", {
+  useEffect(() => {
+    if (!profilesQuery.isSuccess) return;
+    setStatus("success");
+    if (profiles.length) {
+      setMessage("Here is your next introduction.");
+    } else {
+      setMessage("No profiles yet. We’ll keep checking for new introductions.");
+    }
+  }, [profilesQuery.isSuccess, profiles.length, mode]);
+
+  const likeMutation = useMutation({
+    mutationFn: ({ profile, type }: { profile: Profile; type: "LIKE" | "PASS" }) =>
+      apiFetch("/likes", {
         method: "POST",
         body: JSON.stringify({ toUserId: profile.userId, type })
+      }),
+    onMutate: async ({ profile }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.discoverFeed(mode) });
+      const previous = queryClient.getQueryData<ProfileResponse>(queryKeys.discoverFeed(mode));
+      queryClient.setQueryData<ProfileResponse>(queryKeys.discoverFeed(mode), (old) => {
+        const nextProfiles = (old?.profiles ?? []).filter((item) => item.userId !== profile.userId);
+        return { profiles: nextProfiles };
       });
-      setStatus("success");
-      setMessage(type === "LIKE" ? "Like sent!" : "Pass recorded.");
-    } catch (error) {
-      setProfiles((prev) => [profile, ...prev]);
+      return { previous };
+    },
+    onError: (error, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.discoverFeed(mode), context.previous);
+      }
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to send action.");
-    } finally {
-      setDragOffset({ x: 0, y: 0, active: false });
+    },
+    onSuccess: (_data, variables) => {
+      setStatus("success");
+      setMessage(variables.type === "LIKE" ? "Like sent!" : "Pass recorded.");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.discoverFeed(mode) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.matches });
+      queryClient.invalidateQueries({ queryKey: queryKeys.likes });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notificationsCount });
     }
+  });
+
+  const detailQuery = useQuery({
+    queryKey: queryKeys.profile(detailUserId),
+    queryFn: () => apiFetch<DetailResponse>(`/profiles/${detailUserId}`),
+    enabled: Boolean(detailUserId),
+    staleTime: 30000
+  });
+
+  const detailProfile = detailQuery.data?.profile ?? null;
+  const detailStatus: Status = detailUserId
+    ? detailQuery.isLoading
+      ? "loading"
+      : detailQuery.isError
+        ? "error"
+        : "success"
+    : "idle";
+
+  function refreshProfiles() {
+    setStatus("loading");
+    setMessage("Loading curated introductions...");
+    void profilesQuery.refetch();
   }
 
-  async function openDetail(profile: Profile) {
+  function sendLike(profile: Profile, type: "LIKE" | "PASS") {
+    setMessage(type === "LIKE" ? "Sending like..." : "Recording pass...");
+    setStatus("loading");
+    likeMutation.mutate({ profile, type });
+    setDragOffset({ x: 0, y: 0, active: false });
+  }
+
+  function openDetail(profile: Profile) {
     if (ignoreClickRef.current) {
       ignoreClickRef.current = false;
       return;
     }
-    setDetailStatus("loading");
-    setDetailProfile(null);
-    try {
-      const data = await apiFetch<{ profile: any }>(`/profiles/${profile.userId}`);
-      setDetailProfile(data.profile);
-      setDetailStatus("success");
-    } catch (error) {
-      setDetailStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to load profile details.");
-    }
+    setDetailUserId(profile.userId);
   }
 
   function closeDetail() {
-    setDetailProfile(null);
-    setDetailStatus("idle");
+    setDetailUserId(null);
   }
 
   function handlePointerDown(event: PointerEvent) {
@@ -144,18 +177,18 @@ export default function DiscoverPage() {
     dragStart.current = null;
     if (absY > absX && y < -SWIPE_DETAIL_THRESHOLD) {
       ignoreClickRef.current = true;
-      void openDetail(activeProfile);
+      openDetail(activeProfile);
       setDragOffset({ x: 0, y: 0, active: false });
       return;
     }
     if (absX > absY && x > SWIPE_THRESHOLD) {
       ignoreClickRef.current = true;
-      void sendLike(activeProfile, "LIKE");
+      sendLike(activeProfile, "LIKE");
       return;
     }
     if (absX > absY && x < -SWIPE_THRESHOLD) {
       ignoreClickRef.current = true;
-      void sendLike(activeProfile, "PASS");
+      sendLike(activeProfile, "PASS");
       return;
     }
     setDragOffset({ x: 0, y: 0, active: false });
@@ -180,11 +213,12 @@ export default function DiscoverPage() {
         transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${dragOffset.x / 14}deg)`,
         transition: dragOffset.active ? "none" : "transform 0.2s ease"
       }
-      : undefined;
+    : undefined;
   const detailInterests = detailProfile?.preferences?.interests ?? detailProfile?.interests ?? [];
   const detailPhotos = detailProfile?.photos ?? detailProfile?.photoUrls ?? [];
   const detailIntent = detailProfile?.intent ?? detailProfile?.preferences?.intent;
   const detailDistance = detailProfile?.distance ?? detailProfile?.preferences?.distance;
+  const isFetching = profilesQuery.isFetching;
 
   return (
     <RouteGuard requireActive>
@@ -225,11 +259,7 @@ export default function DiscoverPage() {
             </Card>
             <Card>
               <h3>Quick actions</h3>
-              <Button
-                variant="secondary"
-                onClick={() => loadProfiles(true, mode)}
-                disabled={isFetching}
-              >
+              <Button variant="secondary" onClick={refreshProfiles} disabled={isFetching}>
                 {isFetching ? "Refreshing..." : "Refresh feed"}
               </Button>
             </Card>
@@ -239,19 +269,14 @@ export default function DiscoverPage() {
         <div className="discover-grid">
           <div className="discover-mobile-header">
             <span className="text-muted">Curated introductions</span>
-            <button
-              className="text-button"
-              type="button"
-              onClick={() => loadProfiles(true, mode)}
-              disabled={isFetching}
-            >
+            <button className="text-button" type="button" onClick={refreshProfiles} disabled={isFetching}>
               {isFetching ? "Refreshing..." : "Refresh"}
             </button>
           </div>
-          {status === "loading" && !profiles.length ? (
+          {profilesQuery.isLoading && !profiles.length ? (
             <LoadingState message="Loading curated introductions..." />
-          ) : status === "error" ? (
-            <ErrorState message={message || "Unable to load profiles."} onRetry={() => loadProfiles(true, mode)} />
+          ) : profilesQuery.isError ? (
+            <ErrorState message={message || "Unable to load profiles."} onRetry={refreshProfiles} />
           ) : activeProfile ? (
             <>
               <div className="discover-stack">
@@ -359,7 +384,7 @@ export default function DiscoverPage() {
               title="No more profiles"
               message="Check back soon or refresh to load new introductions."
               actionLabel="Refresh feed"
-              onAction={() => loadProfiles(true, mode)}
+              onAction={refreshProfiles}
             />
           )}
           {message && status !== "error" ? <p className={`message ${status}`}>{message}</p> : null}
@@ -427,11 +452,7 @@ export default function DiscoverPage() {
                         {detailPhotos.map((photo: any) => {
                           const url = typeof photo === "string" ? photo : photo.url;
                           return (
-                            <img
-                              key={photo.id ?? url}
-                              src={getAssetUrl(url) ?? ""}
-                              alt="Profile detail"
-                            />
+                            <img key={photo.id ?? url} src={getAssetUrl(url) ?? ""} alt="Profile detail" />
                           );
                         })}
                       </div>

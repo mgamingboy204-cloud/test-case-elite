@@ -2,15 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiFetch } from "../../../lib/api";
 import { getAssetUrl } from "../../../lib/assets";
+import { queryKeys } from "../../../lib/queryKeys";
 import { useSession } from "../../../lib/session";
-import {
-  buildDobString,
-  getAgeFromDob,
-  INTEREST_OPTIONS,
-  parseDobString
-} from "../../../lib/profileUtils";
+import { buildDobString, getAgeFromDob, INTEREST_OPTIONS, parseDobString } from "../../../lib/profileUtils";
 
 type ProfileForm = {
   displayName: string;
@@ -63,6 +60,10 @@ type StepConfig = {
   componentType: "text" | "dob" | "choice" | "textarea" | "segmented" | "photo" | "done";
   placeholder?: string;
 };
+
+type ProfileResponse = { profile?: any; photos?: ProfilePhoto[]; user?: any };
+
+type SaveResponse = { requiresPhoto?: boolean };
 
 const steps: StepConfig[] = [
   {
@@ -151,6 +152,7 @@ const draftKey = "elite-onboarding-draft";
 export default function OnboardingProfilePage() {
   const router = useRouter();
   const { refresh } = useSession();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<ProfileForm>({
     displayName: "",
     gender: "",
@@ -184,9 +186,79 @@ export default function OnboardingProfilePage() {
   const currentStep = steps[stepIndex];
   const progressValue = Math.round(((stepIndex + 1) / steps.length) * 100);
 
-  useEffect(() => {
-    void loadProfile();
-  }, []);
+  const profileQuery = useQuery({
+    queryKey: queryKeys.profile("me"),
+    queryFn: () => apiFetch<ProfileResponse>("/profile"),
+    staleTime: 15000
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[wizard] upload photo", { name: file.name, size: file.size, type: file.type });
+      }
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onprogress = (event) => {
+          if (event.lengthComputable) {
+            setUploadProgress(Math.round((event.loaded / event.total) * 100));
+          }
+        };
+        reader.onerror = () => reject(new Error("Unable to read file"));
+        reader.readAsDataURL(file);
+      });
+      return apiFetch<{ photo?: ProfilePhoto }>("/photos/upload", {
+        method: "POST",
+        body: JSON.stringify({
+          filename: file.name,
+          dataUrl
+        })
+      });
+    },
+    onSuccess: (response) => {
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[wizard] upload response", response);
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile("me") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      queryClient.invalidateQueries({ queryKey: queryKeys.uploads });
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminQueues });
+    },
+    onError: (error) => {
+      if (error instanceof ApiError) {
+        setFieldErrors(error.fieldErrors ?? {});
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : "Unable to upload photo.");
+      }
+    },
+    onSettled: () => {
+      setIsUploading(false);
+    }
+  });
+
+  const saveProfileMutation = useMutation({
+    mutationFn: (payload: any) =>
+      apiFetch<SaveResponse>("/profile", {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile("me") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+    }
+  });
+
+  const finalizeMutation = useMutation({
+    mutationFn: () => apiFetch("/profile/complete", { method: "POST" }),
+    onSuccess: async () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile("me") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      await refresh();
+      router.push("/discover");
+    }
+  });
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -201,37 +273,55 @@ export default function OnboardingProfilePage() {
     setForm((prev) => ({ ...prev, age: agePreview.toString() }));
   }, [agePreview]);
 
-  async function loadProfile() {
-    try {
-      const data = await apiFetch<{ profile?: any; photos?: ProfilePhoto[]; user?: any }>("/profile");
-      if (process.env.NODE_ENV !== "production") {
-        console.debug("[wizard] load profile", data);
-      }
-      const draft = readDraft();
-      const draftForm = draft?.form ?? {};
-      const draftPreferences = draft?.preferences ?? {};
-      const profile = data.profile ?? {};
-      const user = data.user ?? {};
-      const incomingPreferences = profile.preferences ?? {};
-      const mergedPreferences = { ...incomingPreferences, ...draftPreferences };
+  useEffect(() => {
+    if (profileQuery.isError) {
+      setErrorMessage(profileQuery.error instanceof Error ? profileQuery.error.message : "Unable to load profile.");
+      setIsLoaded(true);
+      return;
+    }
+    if (!profileQuery.data) return;
+    const data = profileQuery.data;
+    if (process.env.NODE_ENV !== "production") {
+      console.debug("[wizard] load profile", data);
+    }
+    const draft = readDraft();
+    const draftForm = draft?.form ?? {};
+    const draftPreferences = draft?.preferences ?? {};
+    const profile = data.profile ?? {};
+    const user = data.user ?? {};
+    const incomingPreferences = profile.preferences ?? {};
+    const mergedPreferences = { ...incomingPreferences, ...draftPreferences };
 
-      setExistingPreferences(incomingPreferences);
-      setPreferences({
-        intent:
-          typeof mergedPreferences.intent === "string"
-            ? mergedPreferences.intent
-            : preferenceDefaults.intent,
-        distance:
-          typeof mergedPreferences.distance === "string"
-            ? mergedPreferences.distance
-            : preferenceDefaults.distance
-      });
+    setExistingPreferences(incomingPreferences);
+    setPreferences({
+      intent:
+        typeof mergedPreferences.intent === "string"
+          ? mergedPreferences.intent
+          : preferenceDefaults.intent,
+      distance:
+        typeof mergedPreferences.distance === "string"
+          ? mergedPreferences.distance
+          : preferenceDefaults.distance
+    });
 
-      const incomingDob = typeof mergedPreferences.dob === "string" ? mergedPreferences.dob : "";
-      setDob(parseDobString(incomingDob));
-      setInterests(Array.isArray(mergedPreferences.interests) ? mergedPreferences.interests : []);
+    const incomingDob = typeof mergedPreferences.dob === "string" ? mergedPreferences.dob : "";
+    setDob(parseDobString(incomingDob));
+    setInterests(Array.isArray(mergedPreferences.interests) ? mergedPreferences.interests : []);
 
-      setForm({
+    setForm({
+      displayName: draftForm.displayName ?? user.displayName ?? profile.name ?? "",
+      gender: draftForm.gender ?? profile.gender ?? "",
+      genderPreference: draftForm.genderPreference ?? profile.genderPreference ?? "ALL",
+      age: draftForm.age ?? profile.age?.toString() ?? "",
+      city: draftForm.city ?? profile.city ?? "",
+      profession: draftForm.profession ?? profile.profession ?? "",
+      bioShort: draftForm.bioShort ?? profile.bioShort ?? ""
+    });
+
+    setPhotos(data.photos ?? []);
+
+    const nextStep = getFirstIncompleteStep({
+      form: {
         displayName: draftForm.displayName ?? user.displayName ?? profile.name ?? "",
         gender: draftForm.gender ?? profile.gender ?? "",
         genderPreference: draftForm.genderPreference ?? profile.genderPreference ?? "ALL",
@@ -239,34 +329,17 @@ export default function OnboardingProfilePage() {
         city: draftForm.city ?? profile.city ?? "",
         profession: draftForm.profession ?? profile.profession ?? "",
         bioShort: draftForm.bioShort ?? profile.bioShort ?? ""
-      });
-
-      setPhotos(data.photos ?? []);
-
-      const nextStep = getFirstIncompleteStep({
-        form: {
-          displayName: draftForm.displayName ?? user.displayName ?? profile.name ?? "",
-          gender: draftForm.gender ?? profile.gender ?? "",
-          genderPreference: draftForm.genderPreference ?? profile.genderPreference ?? "ALL",
-          age: draftForm.age ?? profile.age?.toString() ?? "",
-          city: draftForm.city ?? profile.city ?? "",
-          profession: draftForm.profession ?? profile.profession ?? "",
-          bioShort: draftForm.bioShort ?? profile.bioShort ?? ""
-        },
-        preferences: mergedPreferences,
-        interests: Array.isArray(mergedPreferences.interests) ? mergedPreferences.interests : [],
-        dob: incomingDob,
-        photos: data.photos ?? []
-      });
-      setStepIndex(nextStep);
-      setErrorMessage("");
-      setFieldErrors({});
-      setIsLoaded(true);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Unable to load profile.");
-      setIsLoaded(true);
-    }
-  }
+      },
+      preferences: mergedPreferences,
+      interests: Array.isArray(mergedPreferences.interests) ? mergedPreferences.interests : [],
+      dob: incomingDob,
+      photos: data.photos ?? []
+    });
+    setStepIndex(nextStep);
+    setErrorMessage("");
+    setFieldErrors({});
+    setIsLoaded(true);
+  }, [profileQuery.data, profileQuery.isError, profileQuery.error]);
 
   function readDraft(): DraftData | null {
     if (typeof window === "undefined") return null;
@@ -384,48 +457,13 @@ export default function OnboardingProfilePage() {
     return true;
   }
 
-  async function handlePhotoUpload(file: File) {
+  function handlePhotoUpload(file: File) {
     if (!validatePhoto(file)) return;
     setErrorMessage("");
     setFieldErrors({});
     setUploadProgress(0);
     setIsUploading(true);
-    try {
-      if (process.env.NODE_ENV !== "production") {
-        console.debug("[wizard] upload photo", { name: file.name, size: file.size, type: file.type });
-      }
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onprogress = (event) => {
-          if (event.lengthComputable) {
-            setUploadProgress(Math.round((event.loaded / event.total) * 100));
-          }
-        };
-        reader.onerror = () => reject(new Error("Unable to read file"));
-        reader.readAsDataURL(file);
-      });
-      const response = await apiFetch<{ photo?: ProfilePhoto }>("/photos/upload", {
-        method: "POST",
-        body: JSON.stringify({
-          filename: file.name,
-          dataUrl
-        })
-      });
-      if (process.env.NODE_ENV !== "production") {
-        console.debug("[wizard] upload response", response);
-      }
-      await loadProfile();
-    } catch (error) {
-      if (error instanceof ApiError) {
-        setFieldErrors(error.fieldErrors ?? {});
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage(error instanceof Error ? error.message : "Unable to upload photo.");
-      }
-    } finally {
-      setIsUploading(false);
-    }
+    uploadMutation.mutate(file);
   }
 
   function buildPreferences() {
@@ -434,7 +472,7 @@ export default function OnboardingProfilePage() {
       intent: preferences.intent || preferenceDefaults.intent,
       distance: preferences.distance || preferenceDefaults.distance,
       interests,
-      dob: dobString || existingPreferences.dob
+      dob: dobString || (existingPreferences as any).dob
     };
   }
 
@@ -477,18 +515,15 @@ export default function OnboardingProfilePage() {
           preferences: buildPreferences()
         });
       }
-      const response = await apiFetch<{ requiresPhoto?: boolean }>("/profile", {
-        method: "PUT",
-        body: JSON.stringify({
-          displayName,
-          gender: form.gender,
-          genderPreference: form.genderPreference,
-          age: ageNumber,
-          city,
-          profession,
-          bioShort,
-          preferences: buildPreferences()
-        })
+      const response = await saveProfileMutation.mutateAsync({
+        displayName,
+        gender: form.gender,
+        genderPreference: form.genderPreference,
+        age: ageNumber,
+        city,
+        profession,
+        bioShort,
+        preferences: buildPreferences()
       });
       if (process.env.NODE_ENV !== "production") {
         console.debug("[wizard] save response", response);
@@ -524,9 +559,7 @@ export default function OnboardingProfilePage() {
       if (process.env.NODE_ENV !== "production") {
         console.debug("[wizard] finalize profile");
       }
-      await apiFetch("/profile/complete", { method: "POST" });
-      await refresh();
-      router.push("/discover");
+      await finalizeMutation.mutateAsync();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to complete profile.";
       setErrorMessage(message);
@@ -673,11 +706,7 @@ export default function OnboardingProfilePage() {
           <div className="dob-picker">
             <div className="field">
               <label htmlFor="dob-month">Month</label>
-              <select
-                id="dob-month"
-                value={dob.month}
-                onChange={(e) => updateDobField("month", e.target.value)}
-              >
+              <select id="dob-month" value={dob.month} onChange={(e) => updateDobField("month", e.target.value)}>
                 <option value="">MM</option>
                 {Array.from({ length: 12 }).map((_, index) => (
                   <option key={index + 1} value={`${index + 1}`}>
@@ -688,11 +717,7 @@ export default function OnboardingProfilePage() {
             </div>
             <div className="field">
               <label htmlFor="dob-day">Day</label>
-              <select
-                id="dob-day"
-                value={dob.day}
-                onChange={(e) => updateDobField("day", e.target.value)}
-              >
+              <select id="dob-day" value={dob.day} onChange={(e) => updateDobField("day", e.target.value)}>
                 <option value="">DD</option>
                 {Array.from({ length: 31 }).map((_, index) => (
                   <option key={index + 1} value={`${index + 1}`}>
@@ -703,11 +728,7 @@ export default function OnboardingProfilePage() {
             </div>
             <div className="field">
               <label htmlFor="dob-year">Year</label>
-              <select
-                id="dob-year"
-                value={dob.year}
-                onChange={(e) => updateDobField("year", e.target.value)}
-              >
+              <select id="dob-year" value={dob.year} onChange={(e) => updateDobField("year", e.target.value)}>
                 <option value="">YYYY</option>
                 {Array.from({ length: 60 }).map((_, index) => {
                   const year = new Date().getFullYear() - 18 - index;
@@ -772,7 +793,9 @@ export default function OnboardingProfilePage() {
               </button>
             ))}
           </div>
-          {stepFieldError("genderPreference") ? <p className="field-error">{stepFieldError("genderPreference")}</p> : null}
+          {stepFieldError("genderPreference") ? (
+            <p className="field-error">{stepFieldError("genderPreference")}</p>
+          ) : null}
         </div>
       );
     }
@@ -903,7 +926,7 @@ export default function OnboardingProfilePage() {
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) {
-                void handlePhotoUpload(file);
+                handlePhotoUpload(file);
               }
               e.currentTarget.value = "";
             }}
@@ -919,160 +942,57 @@ export default function OnboardingProfilePage() {
             </button>
             {isUploading ? <span className="card-subtitle">Uploading… {uploadProgress}%</span> : null}
           </div>
-          {photoUrl ? (
-            <div className="photo-grid single">
-              <img src={photoUrl} alt="Profile" />
-            </div>
-          ) : (
-            <p className="card-subtitle">No photo uploaded yet.</p>
-          )}
+          {photoUrl ? <img className="photo-preview" src={photoUrl} alt="Profile" /> : null}
           {stepFieldError("photo") ? <p className="field-error">{stepFieldError("photo")}</p> : null}
         </div>
       );
     }
     return (
       <div className="wizard-step-body" key={currentStep.key}>
-        <div className="wizard-done">
-          <div className="avatar-placeholder">✨</div>
-          <h3>Profile ready</h3>
-          <p className="card-subtitle">You’re set to begin curated introductions.</p>
-          {errorMessage ? (
-            <button type="button" className="btn btn-secondary" onClick={() => window.location.reload()}>
-              Reload
-            </button>
-          ) : null}
+        <div className="wizard-complete">
+          <span className="complete-icon">✓</span>
+          <p>You’re ready to start meeting curated matches.</p>
         </div>
       </div>
     );
   }
-
-  if (!isLoaded) {
-    return (
-      <div className="card">
-        <h2>Setting up your profile...</h2>
-        <p className="card-subtitle">Loading your saved details.</p>
-      </div>
-    );
-  }
-
-  const saveLabel = saveState === "saving" ? "Saving..." : saveState === "saved" ? "Saved" : "";
-  const primaryLabel =
-    currentStep.key === "photo"
-      ? "Finish profile"
-      : currentStep.key === "done"
-        ? "Go to Discover"
-        : "Next";
-  const previewPhoto = photos.length ? getAssetUrl(photos[0].url) : null;
-  const previewAge = agePreview ?? (form.age ? Number(form.age) : null);
 
   return (
-    <div className="profile-wizard">
-      <div className="wizard-mobile">
-        <div className="wizard-top">
-          <div>
-            <span className="wizard-step-count">
-              Step {stepIndex + 1} of {steps.length}
-            </span>
-            <h2>Profile setup</h2>
-            <p className="text-muted">One step at a time for a premium dating profile.</p>
-          </div>
-          <span className="wizard-save">{saveLabel}</span>
+    <div className="wizard-shell">
+      <div className="wizard-sidebar">
+        <span className="wizard-badge">Step {stepIndex + 1} of {steps.length}</span>
+        <h2>{currentStep.title}</h2>
+        <p className="text-muted">{currentStep.subtitle}</p>
+        <div className="wizard-progress">
+          <div className="wizard-progress__bar" style={{ width: `${progressValue}%` }} />
         </div>
-        <div className="wizard-progress-bar" aria-hidden="true">
-          <span style={{ width: `${progressValue}%` }} />
-        </div>
-        <section className="card wizard-panel">
-          <div className="wizard-step-header">
-            <h3>{currentStep.title}</h3>
-            <p className="card-subtitle">{currentStep.subtitle}</p>
-          </div>
-          {renderStep()}
-          {errorMessage ? <div className="wizard-banner error">{errorMessage}</div> : null}
-        </section>
-        <div className="wizard-mobile-actions">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleBack}
-            disabled={stepIndex === 0}
-          >
-            Back
-          </button>
-          <button
-            type="button"
-            className="btn btn-block"
-            onClick={handleNext}
-            disabled={isSaving || isUploading}
-          >
-            {primaryLabel}
-          </button>
-        </div>
+        {saveState === "saving" ? <p className="text-muted">Saving draft…</p> : null}
+        {saveState === "saved" ? <p className="text-muted">Draft saved.</p> : null}
       </div>
-
-      <div className="wizard-desktop">
-        <section className="card wizard-panel">
-          <div className="wizard-top">
-            <div>
-              <span className="wizard-step-count">
-                Step {stepIndex + 1} of {steps.length}
-              </span>
-              <h2>Profile setup</h2>
-              <p className="text-muted">A refined experience for intentional dating.</p>
+      <div className="wizard-main">
+        {!isLoaded ? (
+          <div className="card">
+            <p className="text-muted">Loading profile…</p>
+          </div>
+        ) : (
+          <div className="card wizard-card">
+            <div className="wizard-header">
+              <span className="wizard-step">Step {stepIndex + 1} of {steps.length}</span>
+              <h3>{currentStep.title}</h3>
+              <p className="card-subtitle">{currentStep.subtitle}</p>
             </div>
-            <span className="wizard-save">{saveLabel}</span>
+            {errorMessage ? <p className="message error">{errorMessage}</p> : null}
+            {renderStep()}
+            <div className="wizard-actions">
+              <button type="button" className="secondary" onClick={handleBack} disabled={stepIndex === 0 || isSaving}>
+                Back
+              </button>
+              <button type="button" className="primary" onClick={handleNext} disabled={isSaving}>
+                {currentStep.key === "done" ? "Finish" : "Continue"}
+              </button>
+            </div>
           </div>
-          <div className="wizard-progress-bar" aria-hidden="true">
-            <span style={{ width: `${progressValue}%` }} />
-          </div>
-          <div className="wizard-step-header">
-            <h3>{currentStep.title}</h3>
-            <p className="card-subtitle">{currentStep.subtitle}</p>
-          </div>
-          {renderStep()}
-          {errorMessage ? <div className="wizard-banner error">{errorMessage}</div> : null}
-          <div className="wizard-actions">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleBack}
-              disabled={stepIndex === 0}
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={handleNext}
-              disabled={isSaving || isUploading}
-            >
-              {primaryLabel}
-            </button>
-          </div>
-        </section>
-
-        <aside className="card wizard-preview">
-          <h3>Profile preview</h3>
-          <div className="wizard-preview-photo">
-            {previewPhoto ? <img src={previewPhoto} alt="Profile preview" /> : <span>Photo</span>}
-          </div>
-          <div className="wizard-preview-details">
-            <h4>{form.displayName.trim() || "Elite Member"}</h4>
-            <p className="text-muted">
-              {previewAge ? `${previewAge} • ` : ""}
-              {form.city.trim() || "City"} • {form.profession.trim() || "Profession"}
-            </p>
-            <p>{form.bioShort.trim() || "Share a short, authentic intro to spark real conversation."}</p>
-          </div>
-          <div className="wizard-preview-tags">
-            <span className="badge">{preferences.intent || preferenceDefaults.intent}</span>
-            <span className="badge">{preferences.distance || preferenceDefaults.distance}</span>
-            {interests.slice(0, 3).map((interest) => (
-              <span key={interest} className="badge">
-                {interest}
-              </span>
-            ))}
-          </div>
-        </aside>
+        )}
       </div>
     </div>
   );

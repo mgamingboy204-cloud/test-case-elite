@@ -1,40 +1,51 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../../lib/api";
+import { queryKeys } from "../../../lib/queryKeys";
 
 export default function AdminRefundsPage() {
-  const [refunds, setRefunds] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
-  async function loadRefunds() {
+  const refundsQuery = useQuery({
+    queryKey: queryKeys.adminRefunds,
+    queryFn: () => apiFetch("/admin/refunds"),
+    staleTime: 5000,
+    refetchInterval: 4000
+  });
+
+  const decideMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: "approve" | "deny" }) =>
+      apiFetch(`/admin/refunds/${id}/${action}`, { method: "POST" }),
+    onSuccess: (_data, variables) => {
+      setMessage(`Refund ${variables.action}d.`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminRefunds });
+      queryClient.invalidateQueries({ queryKey: queryKeys.refunds });
+    },
+    onError: (error) => {
+      setMessage(error instanceof Error ? error.message : "Unable to update refund.");
+    },
+    onSettled: () => {
+      setLoading(false);
+    }
+  });
+
+  function loadRefunds() {
     setLoading(true);
     setMessage("Loading refund requests...");
-    try {
-      const data = await apiFetch("/admin/refunds");
-      setRefunds(data.refunds ?? []);
-      setMessage("Refund requests loaded.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to load refunds.");
-    } finally {
-      setLoading(false);
-    }
+    void refundsQuery.refetch().finally(() => setLoading(false));
   }
 
-  async function decide(id: string, action: "approve" | "deny") {
+  function decide(id: string, action: "approve" | "deny") {
     setLoading(true);
     setMessage(`${action === "approve" ? "Approving" : "Denying"} refund...`);
-    try {
-      await apiFetch(`/admin/refunds/${id}/${action}`, { method: "POST" });
-      setMessage(`Refund ${action}d.`);
-      await loadRefunds();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to update refund.");
-    } finally {
-      setLoading(false);
-    }
+    decideMutation.mutate({ id, action });
   }
+
+  const refunds = refundsQuery.data?.refunds ?? [];
 
   return (
     <div className="card">
@@ -44,7 +55,7 @@ export default function AdminRefundsPage() {
       </button>
       {message ? <p className="message">{message}</p> : null}
       <ul className="list">
-        {refunds.map((refund) => (
+        {refunds.map((refund: any) => (
           <li key={refund.id} className="list-item">
             <div>
               <strong>{refund.user?.phone ?? "Unknown"}</strong>
