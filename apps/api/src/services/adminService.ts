@@ -5,6 +5,35 @@ import { HttpError } from "../utils/httpErrors";
 type VerificationRequestListItem = Prisma.VerificationRequestGetPayload<{
   include: { user: { select: { id: true; phone: true; email: true } } };
 }>;
+type UserListItem = Prisma.UserGetPayload<{
+  select: {
+    id: true;
+    phone: true;
+    email: true;
+    firstName: true;
+    lastName: true;
+    displayName: true;
+    gender: true;
+    role: true;
+    isAdmin: true;
+    status: true;
+    onboardingStep: true;
+    videoVerificationStatus: true;
+    paymentStatus: true;
+    profileCompletedAt: true;
+    deactivatedAt: true;
+    deletedAt: true;
+    verifiedAt: true;
+    createdAt: true;
+    profile: { select: { name: true } };
+  };
+}>;
+type ReportListItem = Prisma.ReportGetPayload<{
+  include: { reporter: { select: { id: true; phone: true } }; reportedUser: { select: { id: true; phone: true } } };
+}>;
+type RefundListItem = Prisma.RefundRequestGetPayload<{
+  include: { user: { select: { id: true; phone: true; email: true } } };
+}>;
 
 export async function approveUser(userId: string, actorUserId: string) {
   const user = await prisma.user.update({
@@ -39,8 +68,8 @@ export async function banUser(userId: string, actorUserId: string) {
   return { id: user.id, status: user.status };
 }
 
-export async function listUsers(status?: string) {
-  const users = await prisma.user.findMany({
+export async function listUsers(status?: string): Promise<{ users: UserListItem[] }> {
+  const users: UserListItem[] = await prisma.user.findMany({
     where: status ? { status: status as any } : {},
     select: {
       id: true,
@@ -127,15 +156,15 @@ export async function deleteUser(userId: string) {
   return { id: userId, deleted: true };
 }
 
-export async function listReports() {
-  const reports = await prisma.report.findMany({
+export async function listReports(): Promise<{ reports: ReportListItem[] }> {
+  const reports: ReportListItem[] = await prisma.report.findMany({
     include: { reporter: { select: { id: true, phone: true } }, reportedUser: { select: { id: true, phone: true } } }
   });
   return { reports };
 }
 
-export async function listRefunds() {
-  const refunds = await prisma.refundRequest.findMany({
+export async function listRefunds(): Promise<{ refunds: RefundListItem[] }> {
+  const refunds: RefundListItem[] = await prisma.refundRequest.findMany({
     include: { user: { select: { id: true, phone: true, email: true } } }
   });
   return { refunds };
