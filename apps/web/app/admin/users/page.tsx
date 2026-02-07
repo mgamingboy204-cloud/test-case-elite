@@ -1,8 +1,10 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../../lib/api";
+import { queryKeys } from "../../../lib/queryKeys";
 
 type AdminUser = {
   id: string;
@@ -16,6 +18,8 @@ type AdminUser = {
   profile?: { name?: string | null };
   videoVerificationStatus?: string | null;
 };
+
+type UsersResponse = { users: AdminUser[] };
 
 const modalOverlayStyle: CSSProperties = {
   position: "fixed",
@@ -34,7 +38,7 @@ const modalCardStyle: CSSProperties = {
 };
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<AdminUser[]>([]);
+  const queryClient = useQueryClient();
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [meetModalUser, setMeetModalUser] = useState<AdminUser | null>(null);
@@ -42,83 +46,103 @@ export default function AdminUsersPage() {
   const [rejectModalUser, setRejectModalUser] = useState<AdminUser | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  useEffect(() => {
-    void loadUsers();
-  }, []);
+  const usersQuery = useQuery({
+    queryKey: queryKeys.adminUsers,
+    queryFn: () => apiFetch<UsersResponse>("/admin/users"),
+    staleTime: 10000
+  });
 
-  async function loadUsers() {
-    setLoading(true);
-    setMessage("Loading users...");
-    try {
-      const data = await apiFetch("/admin/users");
-      setUsers(data.users ?? []);
-      setMessage("Users loaded.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to load users.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function updateUserVerification(id: string, action: "approve" | "reject", reason?: string) {
-    setLoading(true);
-    setMessage(`${action} user...`);
-    try {
-      const data = await apiFetch(`/admin/verifications/${id}/${action}`, {
+  const updateVerificationMutation = useMutation({
+    mutationFn: ({ id, action, reason }: { id: string; action: "approve" | "reject"; reason?: string }) =>
+      apiFetch(`/admin/verifications/${id}/${action}`, {
         method: "POST",
         body: JSON.stringify({ reason })
-      });
-      const updatedStatus = data.request?.status;
-      setUsers((prev) =>
-        prev.map((user) =>
-          user.id === id
-            ? {
-                ...user,
-                status: updatedStatus === "COMPLETED" ? "APPROVED" : updatedStatus === "REJECTED" ? "REJECTED" : user.status,
-                videoVerificationStatus:
-                  updatedStatus === "COMPLETED" ? "APPROVED" : updatedStatus === "REJECTED" ? "REJECTED" : user.videoVerificationStatus
-              }
-            : user
-        )
-      );
-      setMessage(`User ${action}d.`);
-      await loadUsers();
-    } catch (error) {
+      }),
+    onSuccess: (_data, variables) => {
+      setMessage(`User ${variables.action}d.`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
+      queryClient.invalidateQueries({ queryKey: ["adminVideoQueue"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.userVerificationStatus });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+    },
+    onError: (error) => {
       setMessage(error instanceof Error ? error.message : "Unable to update user.");
-    } finally {
-      setLoading(false);
-    }
+    },
+    onSettled: () => setLoading(false)
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: "ban" }) =>
+      apiFetch(`/admin/users/${id}/${action}`, { method: "POST" }),
+    onSuccess: (_data, variables) => {
+      setMessage(`User ${variables.action}d.`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+    },
+    onError: (error) => {
+      setMessage(error instanceof Error ? error.message : "Unable to update user.");
+    },
+    onSettled: () => setLoading(false)
+  });
+
+  const manageUserMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: "deactivate" | "delete" }) =>
+      apiFetch(`/admin/users/${id}/${action}`, { method: "POST" }),
+    onSuccess: (_data, variables) => {
+      setMessage(`User ${variables.action}d.`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
+    },
+    onError: (error) => {
+      setMessage(error instanceof Error ? error.message : "Unable to update user.");
+    },
+    onSettled: () => setLoading(false)
+  });
+
+  const meetLinkMutation = useMutation({
+    mutationFn: ({ id, meetUrl }: { id: string; meetUrl: string }) =>
+      apiFetch(`/admin/verifications/${id}/meet-link`, {
+        method: "POST",
+        body: JSON.stringify({ meetUrl })
+      }),
+    onSuccess: () => {
+      setMessage("Meet link sent.");
+      setMeetModalUser(null);
+      setMeetUrl("");
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminUsers });
+      queryClient.invalidateQueries({ queryKey: ["adminVideoQueue"] });
+    },
+    onError: (error) => {
+      setMessage(error instanceof Error ? error.message : "Unable to send meet link.");
+    },
+    onSettled: () => setLoading(false)
+  });
+
+  function loadUsers() {
+    setLoading(true);
+    setMessage("Loading users...");
+    void usersQuery.refetch().finally(() => setLoading(false));
   }
 
-  async function updateUser(id: string, action: "ban") {
+  function updateUserVerification(id: string, action: "approve" | "reject", reason?: string) {
     setLoading(true);
     setMessage(`${action} user...`);
-    try {
-      await apiFetch(`/admin/users/${id}/${action}`, { method: "POST" });
-      setMessage(`User ${action}d.`);
-      await loadUsers();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to update user.");
-    } finally {
-      setLoading(false);
-    }
+    updateVerificationMutation.mutate({ id, action, reason });
   }
 
-  async function manageUser(id: string, action: "deactivate" | "delete") {
+  function updateUser(id: string, action: "ban") {
     setLoading(true);
     setMessage(`${action} user...`);
-    try {
-      await apiFetch(`/admin/users/${id}/${action}`, { method: "POST" });
-      setMessage(`User ${action}d.`);
-      await loadUsers();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to update user.");
-    } finally {
-      setLoading(false);
-    }
+    updateUserMutation.mutate({ id, action });
   }
 
-  async function sendMeetLink() {
+  function manageUser(id: string, action: "deactivate" | "delete") {
+    setLoading(true);
+    setMessage(`${action} user...`);
+    manageUserMutation.mutate({ id, action });
+  }
+
+  function sendMeetLink() {
     if (!meetModalUser) return;
     if (!meetUrl.trim().startsWith("https://meet.google.com/")) {
       setMessage("Meet link must start with https://meet.google.com/");
@@ -126,20 +150,7 @@ export default function AdminUsersPage() {
     }
     setLoading(true);
     setMessage("Sending meet link...");
-    try {
-      await apiFetch(`/admin/verifications/${meetModalUser.id}/meet-link`, {
-        method: "POST",
-        body: JSON.stringify({ meetUrl: meetUrl.trim() })
-      });
-      setMessage("Meet link sent.");
-      setMeetModalUser(null);
-      setMeetUrl("");
-      await loadUsers();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to send meet link.");
-    } finally {
-      setLoading(false);
-    }
+    meetLinkMutation.mutate({ id: meetModalUser.id, meetUrl: meetUrl.trim() });
   }
 
   async function confirmReject() {
@@ -148,10 +159,12 @@ export default function AdminUsersPage() {
       setMessage("Rejection reason is required.");
       return;
     }
-    await updateUserVerification(rejectModalUser.id, "reject", rejectReason.trim());
+    updateUserVerification(rejectModalUser.id, "reject", rejectReason.trim());
     setRejectModalUser(null);
     setRejectReason("");
   }
+
+  const users = usersQuery.data?.users ?? [];
 
   return (
     <div className="card">

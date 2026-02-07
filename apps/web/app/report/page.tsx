@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api";
 import RouteGuard from "../components/RouteGuard";
 
@@ -13,20 +14,26 @@ export default function ReportPage() {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
 
-  async function submitReport() {
-    setStatus("loading");
-    setMessage("Submitting report...");
-    try {
-      await apiFetch("/reports", {
+  const reportMutation = useMutation({
+    mutationFn: (payload: { reportedUserId: string; reason: string; details: string }) =>
+      apiFetch("/reports", {
         method: "POST",
-        body: JSON.stringify({ reportedUserId, reason, details })
-      });
+        body: JSON.stringify(payload)
+      }),
+    onSuccess: () => {
       setStatus("success");
       setMessage("Report submitted. Our trust team will follow up.");
-    } catch (error) {
+    },
+    onError: (error) => {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to submit report.");
     }
+  });
+
+  function submitReport() {
+    setStatus("loading");
+    setMessage("Submitting report...");
+    reportMutation.mutate({ reportedUserId, reason, details });
   }
 
   return (

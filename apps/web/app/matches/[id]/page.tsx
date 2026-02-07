@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../../lib/api";
+import { queryKeys } from "../../../lib/queryKeys";
 import RouteGuard from "../../components/RouteGuard";
 import AppShellLayout from "../../components/ui/AppShellLayout";
 import Button from "../../components/ui/Button";
@@ -11,42 +13,65 @@ import PageHeader from "../../components/ui/PageHeader";
 
 type Status = "idle" | "loading" | "success" | "error";
 
+type PhoneUnlockResponse = {
+  users?: Array<{ id: string; phone: string }>;
+};
+
 export default function MatchDetailPage() {
   const params = useParams();
   const matchId = params?.id as string;
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
-  const [phones, setPhones] = useState<any>(null);
 
-  async function respond(response: "YES" | "NO") {
-    setStatus("loading");
-    setMessage("Submitting your response...");
-    try {
-      await apiFetch("/consent/respond", {
+  const phoneQuery = useQuery({
+    queryKey: queryKeys.phoneUnlock(matchId),
+    queryFn: () => apiFetch<PhoneUnlockResponse>(`/phone-unlock/${matchId}`),
+    enabled: false,
+    staleTime: 30000
+  });
+
+  const consentMutation = useMutation({
+    mutationFn: (response: "YES" | "NO") =>
+      apiFetch("/consent/respond", {
         method: "POST",
         body: JSON.stringify({ matchId, response })
-      });
-      setStatus("success");
-      setMessage(response === "YES" ? "Consent recorded. Awaiting match." : "Consent declined.");
-    } catch (error) {
+      }),
+    onSuccess: (_data, response) =>
+      setMessage(response === "YES" ? "Consent recorded. Awaiting match." : "Consent declined."),
+    onError: (error) => {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to send consent.");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.matches });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notificationsCount });
     }
+  });
+
+  function respond(response: "YES" | "NO") {
+    setStatus("loading");
+    setMessage("Submitting your response...");
+    consentMutation.mutate(response, {
+      onSuccess: () => setStatus("success")
+    });
   }
 
-  async function unlockPhones() {
+  function unlockPhones() {
     setStatus("loading");
     setMessage("Checking phone exchange status...");
-    try {
-      const data = await apiFetch(`/phone-unlock/${matchId}`);
-      setPhones(data);
+    void phoneQuery.refetch().then((result) => {
+      if (result.isError) {
+        setStatus("error");
+        setMessage(result.error instanceof Error ? result.error.message : "Unable to unlock phone numbers.");
+        return;
+      }
       setStatus("success");
       setMessage("Phone numbers unlocked!");
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to unlock phone numbers.");
-    }
+    });
   }
+
+  const phones = phoneQuery.data;
 
   return (
     <RouteGuard requireActive>
@@ -77,7 +102,7 @@ export default function MatchDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {phones.users?.map((user: any) => (
+                    {phones.users?.map((user) => (
                       <tr key={user.id}>
                         <td>Member {user.id.slice(0, 6)}</td>
                         <td>{user.phone}</td>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api";
 import { clearAccessToken } from "../../lib/authToken";
+import { queryKeys } from "../../lib/queryKeys";
 import { useSession } from "../../lib/session";
 import RouteGuard from "../components/RouteGuard";
 import AppShellLayout from "../components/ui/AppShellLayout";
@@ -15,18 +16,22 @@ import ThemeToggle from "../components/ThemeToggle";
 export default function SettingsPage() {
   const router = useRouter();
   const { refresh } = useSession();
-  const [logoutStatus, setLogoutStatus] = useState<"idle" | "loading">("idle");
+  const queryClient = useQueryClient();
 
-  async function handleLogout() {
-    setLogoutStatus("loading");
-    try {
-      await apiFetch("/auth/logout", { method: "POST" });
+  const logoutMutation = useMutation({
+    mutationFn: () => apiFetch("/auth/logout", { method: "POST" }),
+    onSuccess: () => {
       clearAccessToken();
+    },
+    onSettled: async () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.me });
       await refresh();
       router.push("/");
-    } finally {
-      setLogoutStatus("idle");
     }
+  });
+
+  function handleLogout() {
+    logoutMutation.mutate();
   }
 
   return (
@@ -65,8 +70,13 @@ export default function SettingsPage() {
             <h3>Account access</h3>
             <p className="text-muted">Manage sessions and account lifecycle.</p>
             <div className="page-header__actions">
-              <Button variant="secondary" type="button" onClick={handleLogout} disabled={logoutStatus === "loading"}>
-                {logoutStatus === "loading" ? "Logging out..." : "Log out"}
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={handleLogout}
+                disabled={logoutMutation.isPending}
+              >
+                {logoutMutation.isPending ? "Logging out..." : "Log out"}
               </Button>
               <Button variant="ghost" type="button" disabled>
                 Delete account (contact support)

@@ -1,26 +1,27 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "../../../lib/api";
+import { queryKeys } from "../../../lib/queryKeys";
 
 export default function AdminReportsPage() {
-  const [reports, setReports] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function loadReports() {
+  const reportsQuery = useQuery({
+    queryKey: queryKeys.adminReports,
+    queryFn: () => apiFetch("/admin/reports"),
+    staleTime: 15000
+  });
+
+  function loadReports() {
     setLoading(true);
     setMessage("Loading reports...");
-    try {
-      const data = await apiFetch("/admin/reports");
-      setReports(data.reports ?? []);
-      setMessage("Reports loaded.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to load reports.");
-    } finally {
-      setLoading(false);
-    }
+    void reportsQuery.refetch().finally(() => setLoading(false));
   }
+
+  const reports = reportsQuery.data?.reports ?? [];
 
   return (
     <div className="card">
@@ -30,7 +31,7 @@ export default function AdminReportsPage() {
       </button>
       {message ? <p className="message">{message}</p> : null}
       <ul className="list">
-        {reports.map((report) => (
+        {reports.map((report: any) => (
           <li key={report.id} className="list-item">
             <div>
               <strong>{report.reason}</strong>
