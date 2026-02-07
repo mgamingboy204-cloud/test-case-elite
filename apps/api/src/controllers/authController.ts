@@ -73,6 +73,7 @@ export async function verifyOtp(req: Request, res: Response) {
     const user = await verifyOtpAndGetUser(phone, code);
 
     req.session.otpVerifiedPhone = phone;
+    req.session.userId = user.id;
 
     applySessionLifetime(req, {
       rememberDevice30Days: req.session.pendingRememberDevice30Days ?? false,
@@ -106,16 +107,24 @@ export async function verifyOtp(req: Request, res: Response) {
 
     return res.json({
       ok: true,
-      token: accessToken, // keep for backward compatibility
       accessToken,
       user: {
         id: user.id,
         phone: user.phone,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        displayName: user.displayName,
+        gender: user.gender,
         role: user.role,
         isAdmin: user.isAdmin,
+        status: user.status,
+        verifiedAt: user.verifiedAt,
+        phoneVerifiedAt: user.phoneVerifiedAt,
         onboardingStep: user.onboardingStep,
         videoVerificationStatus: user.videoVerificationStatus,
-        paymentStatus: user.paymentStatus
+        paymentStatus: user.paymentStatus,
+        profileCompletedAt: user.profileCompletedAt
       }
     });
   } catch (error) {
@@ -135,7 +144,7 @@ export async function register(req: Request, res: Response) {
   req.session.pendingPhone = phone;
 
   await saveSession(req);
-  return res.json({ phone, otpRequired: true });
+  return res.json({ ok: true, otpRequired: true });
 }
 
 export async function login(req: Request, res: Response) {
@@ -150,6 +159,16 @@ export async function login(req: Request, res: Response) {
   const rememberDevice30DaysValue = rememberDevice30Days ?? rememberDevice ?? false;
 
   const result = await validateLogin({ phone, password });
+
+  if (result.otpRequired) {
+    req.session.pendingUserId = result.user.id;
+    req.session.pendingPhone = phone;
+    req.session.pendingRememberDevice30Days = rememberDevice30DaysValue;
+    req.session.pendingRememberMe = rememberMe ?? false;
+    await requestOtp(phone);
+    await saveSession(req);
+    return res.json({ ok: true, otpRequired: true });
+  }
 
   applySessionLifetime(req, {
     rememberDevice30Days: rememberDevice30DaysValue,
@@ -172,15 +191,26 @@ export async function login(req: Request, res: Response) {
   logSessionEvent("login", { userId: result.user.id });
 
   return res.json({
-    id: result.user.id,
-    phone: result.user.phone,
-    status: result.user.status,
-    role: result.user.role,
-    isAdmin: result.user.isAdmin,
-    onboardingStep: result.onboardingStep ?? resolveOnboardingStep(result.user),
-    token: accessToken, // keep for backward compatibility
+    ok: true,
     accessToken,
-    otpRequired: false
+    user: {
+      id: result.user.id,
+      phone: result.user.phone,
+      email: result.user.email,
+      firstName: result.user.firstName,
+      lastName: result.user.lastName,
+      displayName: result.user.displayName,
+      gender: result.user.gender,
+      role: result.user.role,
+      isAdmin: result.user.isAdmin,
+      status: result.user.status,
+      verifiedAt: result.user.verifiedAt,
+      phoneVerifiedAt: result.user.phoneVerifiedAt,
+      onboardingStep: result.onboardingStep ?? resolveOnboardingStep(result.user),
+      videoVerificationStatus: result.user.videoVerificationStatus,
+      paymentStatus: result.user.paymentStatus,
+      profileCompletedAt: result.user.profileCompletedAt
+    }
   });
 }
 
@@ -230,7 +260,7 @@ export async function refreshAccessToken(req: Request, res: Response) {
   const refreshTtlDays = rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
   res.cookie(refreshCookieName, nextRefreshToken, buildRefreshCookieOptions(refreshTtlDays));
 
-  return res.json({ accessToken });
+  return res.json({ ok: true, accessToken });
 }
 
 export async function whoAmI(req: Request, res: Response) {

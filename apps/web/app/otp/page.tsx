@@ -76,7 +76,7 @@ export default function OtpPage() {
     setVerifyStatus("loading");
     setVerifyMessage("Verifying OTP...");
     try {
-      const response = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", {
+      const response = await apiFetch<{ ok: boolean; accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         auth: "omit",
         body: JSON.stringify({ phone: verifyPhone, code: otpCode, rememberMe })

@@ -1,17 +1,18 @@
 # API Routes Snapshot (pre-refactor)
 
-This snapshot captures existing routes and their response shapes prior to refactor. All responses must remain identical after refactor.
+This snapshot captures the production-ready auth response shapes and core routes.
 
 ## Auth
 - `POST /auth/otp/send` → `{ ok: true }` or `{ error: string }`
 - `POST /auth/otp/verify` →
   ```json
-  {"ok": true, "user": {"id": "...", "phone": "...", "role": "...", "isAdmin": true, "onboardingStep": "...", "videoVerificationStatus": "...", "paymentStatus": "..."}}
+  {"ok": true, "accessToken": "...", "user": {"id": "...", "phone": "...", "email": "...", "role": "...", "isAdmin": true, "status": "...", "verifiedAt": "...", "phoneVerifiedAt": "...", "onboardingStep": "...", "videoVerificationStatus": "...", "paymentStatus": "...", "profileCompletedAt": "..."}}
   ```
   Errors: `{ error: string }`
-- `POST /auth/register` → `{ phone: string, otpRequired: true }` or `{ error: string }`
-- `POST /auth/login` → `{ otpRequired: true, phone: string }` or `{ id, phone, status, role, isAdmin, onboardingStep, otpRequired: false }` or `{ error: string }`
+- `POST /auth/register` → `{ ok: true, otpRequired: true }` or `{ error: string }`
+- `POST /auth/login` → `{ ok: true, accessToken: "...", user: {...} }` or `{ ok: true, otpRequired: true }` or `{ error: string }`
 - `POST /auth/logout` → `{ ok: true }`
+- `POST /auth/token/refresh` → `{ ok: true, accessToken: "..." }`
 - `GET /me` → `{ id, phone, email, role, isAdmin, status, verifiedAt, phoneVerifiedAt, onboardingStep, videoVerificationStatus, paymentStatus, profileCompletedAt }`
 - `GET /dev/whoami` (dev only) →
   ```json
