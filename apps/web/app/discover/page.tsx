@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api";
 import { queryKeys } from "../../lib/queryKeys";
 import RouteGuard from "../components/RouteGuard";
@@ -14,7 +14,11 @@ import ErrorState from "../components/ui/ErrorState";
 import LoadingState from "../components/ui/LoadingState";
 import DiscoverCard from "./components/DiscoverCard";
 import DiscoverFilters from "./components/DiscoverFilters";
-import { type DiscoverFilters as DiscoverFiltersState, useDiscoverFeed } from "./useDiscoverFeed";
+import {
+  type DiscoverFilters as DiscoverFiltersState,
+  type DiscoverFeedResponse,
+  useDiscoverFeed
+} from "./useDiscoverFeed";
 
 const defaultFilters: DiscoverFiltersState = {
   gender: "all",
@@ -69,12 +73,15 @@ export default function DiscoverPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+
   const initialFilters = useMemo(() => parseFilters(searchParams), [searchParams]);
   const [filters, setFilters] = useState<DiscoverFiltersState>(initialFilters);
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [cycleOrder, setCycleOrder] = useState<string[]>([]);
   const [cycleIndex, setCycleIndex] = useState(0);
   const [lastSwipedId, setLastSwipedId] = useState<string | null>(null);
+
   const [isAnimating, setIsAnimating] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
 
@@ -100,11 +107,17 @@ export default function DiscoverPage() {
   }, [filtersKey]);
 
   const discoverQuery = useDiscoverFeed(filters);
-  const feedItems = useMemo(
-    () => discoverQuery.data?.pages.flatMap((page) => page.items ?? []) ?? [],
-    [discoverQuery.data]
+
+  const feedItems = useMemo(() => {
+    const data = discoverQuery.data as InfiniteData<DiscoverFeedResponse> | undefined;
+    return data?.pages.flatMap((page) => page.items ?? []) ?? [];
+  }, [discoverQuery.data]);
+
+  const profileMap = useMemo(
+    () => new Map(feedItems.map((profile) => [profile.userId, profile])),
+    [feedItems]
   );
-  const profileMap = useMemo(() => new Map(feedItems.map((profile) => [profile.userId, profile])), [feedItems]);
+
   const hasNextPage = Boolean(discoverQuery.hasNextPage);
   const shouldCycle = !hasNextPage && feedItems.length > 0;
 
@@ -128,7 +141,7 @@ export default function DiscoverPage() {
     if (!shouldCycle) return;
     if (cycleIndex < cycleOrder.length) return;
     if (!cycleOrder.length) return;
-    const nextOrder = shuffleIds(cycleOrder, lastSwipedId);
+    const nextOrder = shuffleIds(cycleOrder, lastSwipeds
     setCycleOrder(nextOrder);
     setCycleIndex(0);
   }, [cycleIndex, cycleOrder, shouldCycle, lastSwipedId]);
@@ -155,14 +168,17 @@ export default function DiscoverPage() {
 
   function advanceQueue(swipedId: string) {
     setLastSwipedId(swipedId);
+
     if (activeIndex < feedItems.length - 1) {
       setActiveIndex((prev) => prev + 1);
       return;
     }
+
     if (activeIndex < feedItems.length) {
       setActiveIndex(feedItems.length);
       return;
     }
+
     if (cycleOrder.length) {
       setCycleIndex((prev) => prev + 1);
     }
@@ -170,9 +186,12 @@ export default function DiscoverPage() {
 
   function handleSwipe(action: "LIKE" | "PASS") {
     if (!activeProfile || isAnimating) return;
+
     setIsAnimating(true);
     setSwipeDirection(action === "LIKE" ? "right" : "left");
+
     likeMutation.mutate({ targetUserId: activeProfile.userId, action });
+
     window.setTimeout(() => {
       advanceQueue(activeProfile.userId);
       setSwipeDirection(null);
@@ -182,11 +201,15 @@ export default function DiscoverPage() {
 
   function getProfileAt(offset: number) {
     const index = activeIndex + offset;
+
     if (index < feedItems.length) return feedItems[index];
+
     if (!shouldCycle || !cycleOrder.length) return undefined;
+
     const cycleOffset = index - feedItems.length;
     const cyclePos = (cycleIndex + cycleOffset) % cycleOrder.length;
     const id = cycleOrder[cyclePos];
+
     return id ? profileMap.get(id) : undefined;
   }
 
@@ -221,16 +244,13 @@ export default function DiscoverPage() {
             </div>
             <div className="discover-count">{feedItems.length} profiles loaded</div>
           </div>
+
           <div className="discover-feed">
             {isLoading && !feedItems.length ? (
               <LoadingState message="Loading curated introductions..." />
             ) : isError ? (
               <ErrorState
-                message={
-                  discoverQuery.error instanceof Error
-                    ? discoverQuery.error.message
-                    : "Unable to load profiles."
-                }
+                message={discoverQuery.error instanceof Error ? discoverQuery.error.message : "Unable to load profiles."}
                 onRetry={() => void discoverQuery.refetch()}
               />
             ) : activeProfile ? (
@@ -239,8 +259,11 @@ export default function DiscoverPage() {
                   {stackProfiles.map(({ profile, offset }) => {
                     const isTop = offset === 0;
                     const depth = Math.min(offset, 2);
-                    const placeholder = !profile && (discoverQuery.isFetchingNextPage || discoverQuery.isFetching);
+                    const placeholder =
+                      !profile && (discoverQuery.isFetchingNextPage || discoverQuery.isFetching);
+
                     if (!profile && !placeholder) return null;
+
                     return (
                       <DiscoverCard
                         key={profile?.userId ?? `placeholder-${offset}`}
@@ -251,13 +274,16 @@ export default function DiscoverPage() {
                         swipeDirection={isTop ? swipeDirection : null}
                         style={{
                           zIndex: 3 - offset,
-                          transform: isTop ? undefined : `translateY(${depth * 14}px) scale(${1 - depth * 0.02})`,
+                          transform: isTop
+                            ? undefined
+                            : `translateY(${depth * 14}px) scale(${1 - depth * 0.02})`,
                           pointerEvents: isTop ? "auto" : "none"
                         }}
                       />
                     );
                   })}
                 </div>
+
                 <div className="discover-actions">
                   <button
                     className="circle-action pass"
@@ -289,6 +315,7 @@ export default function DiscoverPage() {
             )}
           </div>
         </div>
+
         <div className="discover-theme-toggle">
           <ThemeToggle variant="switch" label="Toggle dark mode" />
         </div>
