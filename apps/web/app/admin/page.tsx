@@ -13,6 +13,7 @@ export default function AdminPage() {
     totalUsers: number;
     activeUsers: number;
     pendingVerificationRequests: number;
+    rejectedVerificationRequests: number;
   } | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "error" | "success">("idle");
@@ -36,7 +37,12 @@ export default function AdminPage() {
     setStatus("loading");
     try {
       const [statsResponse, usersResponse] = await Promise.all([
-        apiFetch<{ totalUsers: number; activeUsers: number; pendingVerificationRequests: number }>("/admin/dashboard"),
+        apiFetch<{
+          totalUsers: number;
+          activeUsers: number;
+          pendingVerificationRequests: number;
+          rejectedVerificationRequests: number;
+        }>("/admin/dashboard"),
         apiFetch<{ users: any[] }>("/admin/users")
       ]);
       setStats(statsResponse);
@@ -71,7 +77,7 @@ export default function AdminPage() {
               <p className="text-muted">Approved</p>
             </Card>
             <Card variant="muted">
-              <strong>—</strong>
+              <strong>{stats?.rejectedVerificationRequests ?? 0}</strong>
               <p className="text-muted">Rejected</p>
             </Card>
           </div>

@@ -15,6 +15,9 @@ import {
   approveVerificationRequest,
   rejectVerificationRequest,
   rejectUser,
+  approveVerificationForUser,
+  rejectVerificationForUser,
+  setVerificationMeetLink,
   startVerificationRequest,
   shiftPaymentDate
 } from "../services/adminService";
@@ -82,8 +85,8 @@ export async function listVerificationRequestsHandler(req: Request, res: Respons
 }
 
 export async function startVerificationRequestHandler(req: Request, res: Response) {
-  const { verificationLink } = req.body as { verificationLink: string };
-  const result = await startVerificationRequest(req.params.id, verificationLink, res.locals.user.id);
+  const { meetUrl } = req.body as { meetUrl: string };
+  const result = await startVerificationRequest(req.params.id, meetUrl, res.locals.user.id);
   return res.json(result);
 }
 
@@ -93,7 +96,26 @@ export async function approveVerificationRequestHandler(req: Request, res: Respo
 }
 
 export async function rejectVerificationRequestHandler(req: Request, res: Response) {
-  const result = await rejectVerificationRequest(req.params.id, res.locals.user.id);
+  const { reason } = req.body as { reason: string };
+  const result = await rejectVerificationRequest(req.params.id, res.locals.user.id, reason);
+  return res.json(result);
+}
+
+export async function setVerificationMeetLinkHandler(req: Request, res: Response) {
+  const { meetUrl } = req.body as { meetUrl: string };
+  const result = await setVerificationMeetLink(req.params.userId, meetUrl, res.locals.user.id);
+  return res.json(result);
+}
+
+export async function approveVerificationForUserHandler(req: Request, res: Response) {
+  const { reason } = req.body as { reason?: string };
+  const result = await approveVerificationForUser(req.params.userId, res.locals.user.id, reason);
+  return res.json(result);
+}
+
+export async function rejectVerificationForUserHandler(req: Request, res: Response) {
+  const { reason } = req.body as { reason: string };
+  const result = await rejectVerificationForUser(req.params.userId, res.locals.user.id, reason);
   return res.json(result);
 }
 

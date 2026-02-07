@@ -15,6 +15,9 @@ import {
   approveVerificationRequestHandler,
   rejectVerificationRequestHandler,
   rejectUserHandler,
+  approveVerificationForUserHandler,
+  rejectVerificationForUserHandler,
+  setVerificationMeetLinkHandler,
   shiftPaymentDateHandler,
   startVerificationRequestHandler
 } from "../controllers/adminController";
@@ -23,6 +26,12 @@ import { validateBody, validateParams } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 
 const router = Router();
+const meetUrlSchema = z
+  .string()
+  .url()
+  .refine((url) => url.startsWith("https://meet.google.com/"), {
+    message: "Meet link must start with https://meet.google.com/"
+  });
 
 router.post(
   "/admin/users/:id/approve",
@@ -93,7 +102,7 @@ router.post(
   requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ id: z.string() })),
-  validateBody(z.object({ verificationLink: z.string().url() })),
+  validateBody(z.object({ meetUrl: meetUrlSchema })),
   asyncHandler(startVerificationRequestHandler)
 );
 router.post(
@@ -110,7 +119,36 @@ router.post(
   requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ id: z.string() })),
+  validateBody(z.object({ reason: z.string().min(1) })),
   asyncHandler(rejectVerificationRequestHandler)
+);
+
+router.post(
+  "/admin/verifications/:userId/meet-link",
+  requireAuth,
+  requireAuthHeader,
+  requireAdmin,
+  validateParams(z.object({ userId: z.string() })),
+  validateBody(z.object({ meetUrl: meetUrlSchema })),
+  asyncHandler(setVerificationMeetLinkHandler)
+);
+router.post(
+  "/admin/verifications/:userId/approve",
+  requireAuth,
+  requireAuthHeader,
+  requireAdmin,
+  validateParams(z.object({ userId: z.string() })),
+  validateBody(z.object({ reason: z.string().optional() })),
+  asyncHandler(approveVerificationForUserHandler)
+);
+router.post(
+  "/admin/verifications/:userId/reject",
+  requireAuth,
+  requireAuthHeader,
+  requireAdmin,
+  validateParams(z.object({ userId: z.string() })),
+  validateBody(z.object({ reason: z.string().min(1) })),
+  asyncHandler(rejectVerificationForUserHandler)
 );
 
 router.post(

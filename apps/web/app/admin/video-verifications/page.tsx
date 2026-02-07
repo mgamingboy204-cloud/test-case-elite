@@ -8,7 +8,7 @@ type Status = "idle" | "loading" | "success" | "error";
 type VerificationRequest = {
   id: string;
   status: "REQUESTED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED";
-  verificationLink?: string | null;
+  meetUrl?: string | null;
   linkExpiresAt?: string | null;
   createdAt?: string;
   user?: { phone?: string; email?: string | null };
@@ -50,7 +50,7 @@ export default function AdminVideoVerificationsPage() {
     try {
       await apiFetch(`/admin/verification-requests/${id}/start`, {
         method: "POST",
-        body: JSON.stringify({ verificationLink: links[id] })
+        body: JSON.stringify({ meetUrl: links[id] })
       });
       await loadRequests(filter);
       setStatus("success");
@@ -65,7 +65,19 @@ export default function AdminVideoVerificationsPage() {
     setStatus("loading");
     setMessage(`${action === "approve" ? "Approving" : "Rejecting"} request...`);
     try {
-      await apiFetch(`/admin/verification-requests/${id}/${action}`, { method: "POST" });
+      const payload =
+        action === "reject"
+          ? { reason: window.prompt("Reason for rejection?")?.trim() || "" }
+          : {};
+      if (action === "reject" && !payload.reason) {
+        setStatus("error");
+        setMessage("Rejection reason is required.");
+        return;
+      }
+      await apiFetch(`/admin/verification-requests/${id}/${action}`, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
       await loadRequests(filter);
       setStatus("success");
       setMessage(`Request ${action}d.`);
