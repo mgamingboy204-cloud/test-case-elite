@@ -35,6 +35,11 @@ export default function VideoVerificationPage() {
     refetchInterval: (result) => {
       if (!result || typeof result !== "object" || !("data" in result)) return false;
       const data = (result as { data?: VerificationStatusResponse }).data;
+  const statusQuery = useQuery({
+    queryKey: queryKeys.userVerificationStatus,
+    queryFn: () => apiFetch<VerificationStatusResponse>("/me/verification-status"),
+    staleTime: 5000,
+    refetchInterval: (data) => {
       const shouldPoll = data?.status === "REQUESTED" || data?.status === "IN_PROGRESS";
       return shouldPoll ? 7000 : false;
     }

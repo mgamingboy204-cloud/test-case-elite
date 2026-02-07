@@ -82,8 +82,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useSession() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useSession must be used within AuthProvider");
-  }
+  if (!context) throw new Error("useSession must be used within AuthProvider");
   return context;
 }
