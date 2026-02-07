@@ -2245,7 +2245,7 @@ textarea:focus {
 
   .payment-plan,
   .payment-checkout {
-    padding: 20px;
+    padding: 16px;
   }
 
   .status-banner {
@@ -2257,8 +2257,12 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 
+  .coupon-row button {
+    width: 100%;
+  }
+
   .premium-payment {
-    padding-bottom: 120px;
+    padding-bottom: 32px;
   }
 
   .mobile-sticky-bar {

@@ -168,11 +168,9 @@ function CheckoutCard({
               <span className="coupon-applied">Applied: {appliedCoupon.code}</span>
             ) : null}
           </div>
-          {!isMobile ? (
-            <button type="button" className="text-button" onClick={onToggleCoupon} aria-expanded={isCouponOpen}>
-              {isCouponOpen ? "Hide" : "Add"}
-            </button>
-          ) : null}
+          <button type="button" className="text-button" onClick={onToggleCoupon} aria-expanded={isCouponOpen}>
+            {isCouponOpen ? "Hide" : "Add"}
+          </button>
         </div>
         {isCouponOpen ? (
           <>
@@ -301,7 +299,7 @@ export default function PaymentPage() {
   useEffect(() => {
     if (isMobile) {
       setShowBenefits(true);
-      setShowCoupon(true);
+      setShowCoupon(false);
     } else {
       setShowBenefits(true);
       setShowCoupon(false);
@@ -472,7 +470,7 @@ export default function PaymentPage() {
   const isPaid = normalizedStatus === "PAID";
   const isFailed = normalizedStatus === "FAILED";
   const benefitsExpanded = isMobile ? showBenefits : true;
-  const couponExpanded = isMobile ? true : showCoupon;
+  const couponExpanded = showCoupon;
 
   const primaryCtaLabel = showMobileConfirm
     ? "Confirm & proceed"
@@ -583,7 +581,7 @@ export default function PaymentPage() {
           </CheckoutCard>
         </div>
       </div>
-      {isMobile ? (
+      {isMobile ? null : (
         <MobileStickyCheckoutBar
           totalAmount={totalAmount}
           formatCurrency={formatCurrency}
@@ -591,7 +589,7 @@ export default function PaymentPage() {
           onPrimaryAction={primaryCtaAction}
           isActionLoading={isActionLoading}
         />
-      ) : null}
+      )}
     </div>
   );
 }
