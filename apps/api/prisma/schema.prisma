@@ -306,6 +306,7 @@ model VerificationRequest {
   id        String @id @default(uuid())
   userId    String
   status    VerificationRequestStatus @default(REQUESTED)
+  // Nullable while requests are in progress or finalized.
   verificationLink String?
   meetUrl   String?
   linkExpiresAt DateTime?

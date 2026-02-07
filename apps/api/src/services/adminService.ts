@@ -383,7 +383,7 @@ export async function setVerificationMeetLink(userId: string, meetUrl: string, a
   return { request: updated };
 }
 
-export async function approveVerificationForUser(userId: string, actorUserId: string, reason?: string) {
+export async function approveVerificationForUser(userId: string, actorUserId: string, reason?: string | null) {
   const request = await findOrCreateVerificationRequest(userId);
   const now = new Date();
   const updated = await prisma.verificationRequest.update({

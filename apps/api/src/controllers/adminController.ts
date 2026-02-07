@@ -108,7 +108,7 @@ export async function setVerificationMeetLinkHandler(req: Request, res: Response
 }
 
 export async function approveVerificationForUserHandler(req: Request, res: Response) {
-  const { reason } = req.body as { reason?: string };
+  const { reason } = req.body as { reason?: string | null };
   const result = await approveVerificationForUser(req.params.userId, res.locals.user.id, reason);
   return res.json(result);
 }

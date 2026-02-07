@@ -1,0 +1,5 @@
+ALTER TABLE "VerificationRequest"
+ALTER COLUMN "verificationLink" DROP NOT NULL,
+ALTER COLUMN "meetUrl" DROP NOT NULL,
+ALTER COLUMN "linkExpiresAt" DROP NOT NULL,
+ALTER COLUMN "reason" DROP NOT NULL;
