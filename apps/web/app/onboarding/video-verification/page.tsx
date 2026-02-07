@@ -34,7 +34,6 @@ export default function VideoVerificationPage() {
     staleTime: 5000,
     refetchInterval: (result) => {
       if (!result || typeof result !== "object" || !("data" in result)) return false;
-
       const data = (result as { data?: VerificationStatusResponse }).data;
       const shouldPoll = data?.status === "REQUESTED" || data?.status === "IN_PROGRESS";
       return shouldPoll ? 7000 : false;
@@ -68,9 +67,7 @@ export default function VideoVerificationPage() {
     }
     if (statusQuery.isError) {
       setStatus("error");
-      setMessage(
-        statusQuery.error instanceof Error ? statusQuery.error.message : "Unable to load verification status."
-      );
+      setMessage(statusQuery.error instanceof Error ? statusQuery.error.message : "Unable to load verification status.");
       return;
     }
     if (statusQuery.isSuccess) {
@@ -80,7 +77,6 @@ export default function VideoVerificationPage() {
 
   useEffect(() => {
     if (statusQuery.data?.status !== "COMPLETED") return;
-
     const timer = setTimeout(async () => {
       const user = await refresh();
       if (user?.onboardingStep === "VIDEO_VERIFIED" || user?.paymentStatus === "NOT_STARTED") {
@@ -131,15 +127,13 @@ export default function VideoVerificationPage() {
               }
             }
           : { label: "Refresh status", onClick: loadStatus };
-
   const showSecondaryRefresh = Boolean(hasRequest && linkReady && derivedStatus === "IN_PROGRESS");
 
   const steps = [
     { key: "REQUESTED", label: "Requested", copy: "We received your request." },
     { key: "IN_PROGRESS", label: "Scheduled", copy: "A verification call is ready." },
     { key: "COMPLETED", label: "Approved", copy: "Payment is now unlocked." }
-  ] as const;
-
+  ];
   const activeStepIndex = Math.max(
     0,
     steps.findIndex((step) => step.key === (derivedStatus === "REJECTED" ? "REQUESTED" : derivedStatus))
@@ -199,7 +193,6 @@ export default function VideoVerificationPage() {
             Refresh status
           </button>
         ) : null}
-
         {derivedStatus === "COMPLETED" ? <p className="message success">Approved — payment is now unlocked.</p> : null}
         {message ? <p className={`message ${status}`}>{message}</p> : null}
 
