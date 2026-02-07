@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import { getAssetUrl } from "../../../lib/assets";
 import type { DiscoverProfile } from "../useDiscoverFeed";
+import styles from "../discover.module.css";
 
 const fallbackTags = ["Local", "Serious"];
 
@@ -22,7 +23,7 @@ function buildTags(profile?: DiscoverProfile) {
   const distanceTag = profile.preferences?.distance ? formatTag(profile.preferences.distance) : null;
   if (distanceTag) tags.add(distanceTag);
   fallbackTags.forEach((tag) => tags.add(tag));
-  return Array.from(tags).slice(0, 4);
+  return Array.from(tags);
 }
 
 type DiscoverCardProps = {
@@ -43,57 +44,63 @@ export default function DiscoverCard({
   style
 }: DiscoverCardProps) {
   const tags = buildTags(profile);
+  const visibleTags = tags.slice(0, 6);
+  const extraTagCount = Math.max(0, tags.length - visibleTags.length);
   const photoUrlRaw = profile?.primaryPhotoUrl;
   const photoUrl = getAssetUrl(photoUrlRaw);
-  const swipeClass = isAnimating && swipeDirection ? `discover-card--swipe-${swipeDirection}` : "";
+  const swipeClass =
+    isAnimating && swipeDirection ? styles[`cardSwipe${swipeDirection === "left" ? "Left" : "Right"}`] : "";
 
   return (
     <article
-      className={`discover-card ${isActive ? "discover-card--active" : ""} ${
-        isPlaceholder ? "discover-card--skeleton" : ""
+      className={`${styles.card} ${isActive ? styles.cardActive : ""} ${
+        isPlaceholder ? styles.cardSkeleton : ""
       } ${swipeClass}`}
       style={style}
       tabIndex={isPlaceholder ? -1 : 0}
       aria-label={profile ? `${profile.name}, ${profile.age}` : "Loading profile"}
     >
-      <div className="discover-card__media">
+      <div className={styles.cardMedia}>
         {isPlaceholder ? (
-          <div className="discover-card__media-skeleton" />
+          <div className={styles.mediaSkeleton} />
         ) : photoUrl ? (
           <img src={photoUrl} alt={`${profile?.name ?? "Profile"} photo`} />
         ) : (
-          <div className="discover-card__media-fallback">{profile?.name?.slice(0, 1) ?? "?"}</div>
+          <div className={styles.mediaFallback}>{profile?.name?.slice(0, 1) ?? "?"}</div>
         )}
       </div>
-      <div className="discover-card__details">
+      <div className={styles.cardDetails}>
         {isPlaceholder ? (
           <>
-            <div className="skeleton-line" />
-            <div className="skeleton-line short" />
-            <div className="skeleton-pill-row">
-              <span className="skeleton-pill" />
-              <span className="skeleton-pill" />
-              <span className="skeleton-pill" />
+            <div className={styles.skeletonLine} />
+            <div className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+            <div className={styles.skeletonPillRow}>
+              <span className={styles.skeletonPill} />
+              <span className={styles.skeletonPill} />
+              <span className={styles.skeletonPill} />
             </div>
-            <div className="skeleton-line" />
-            <div className="skeleton-line" />
+            <div className={styles.skeletonLine} />
+            <div className={styles.skeletonLine} />
           </>
         ) : (
           <>
-            <div className="discover-card__header">
+            <div className={styles.cardHeader}>
               <h2>
                 {profile?.name} <span>{profile?.age}</span>
               </h2>
-              <p className="text-muted">{profile?.city ?? ""}</p>
+              <p className={styles.cardLocation}>{profile?.city ?? ""}</p>
             </div>
-            <div className="chip-row">
-              {tags.map((tag) => (
-                <span key={tag} className="chip">
+            <div className={styles.chipRow}>
+              {visibleTags.map((tag) => (
+                <span key={tag} className={styles.chip}>
                   {tag}
                 </span>
               ))}
+              {extraTagCount > 0 ? (
+                <span className={`${styles.chip} ${styles.chipMuted}`}>+{extraTagCount}</span>
+              ) : null}
             </div>
-            <p className="discover-card__bio">{profile?.bioShort ?? ""}</p>
+            <p className={styles.cardBio}>{profile?.bioShort ?? ""}</p>
           </>
         )}
       </div>

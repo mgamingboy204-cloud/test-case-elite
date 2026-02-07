@@ -17,6 +17,7 @@ import LoadingState from "../components/ui/LoadingState";
 
 import DiscoverCard from "./components/DiscoverCard";
 import DiscoverFilters from "./components/DiscoverFilters";
+import styles from "./discover.module.css";
 import {
   type DiscoverFilters as DiscoverFiltersState,
   type DiscoverFeedResponse,
@@ -192,23 +193,14 @@ export default function DiscoverClient() {
 
   return (
     <RouteGuard requireActive>
-      <AppShellLayout
-        rightPanel={
-          <Card>
-            <h3>Filters</h3>
-            <DiscoverFilters
-              filters={filters}
-              onChange={setFilters}
-              onRefresh={() => discoverQuery.refetch()}
-              isRefreshing={discoverQuery.isFetching}
-            />
-          </Card>
-        }
-      >
-        <div className="discover-page">
-          <div className="discover-feed">
+      <AppShellLayout>
+        <div className={styles.page}>
+          <section className={styles.feedColumn}>
             {discoverQuery.isLoading && !feedItems.length ? (
-              <LoadingState message="Loading profiles…" />
+              <div className={styles.feedStack} aria-hidden="true">
+                <DiscoverCard isPlaceholder />
+                <DiscoverCard isPlaceholder style={{ transform: "translateY(12px) scale(0.98)" }} />
+              </div>
             ) : discoverQuery.isError ? (
               <ErrorState
                 message="Unable to load profiles"
@@ -216,22 +208,71 @@ export default function DiscoverClient() {
               />
             ) : activeProfile ? (
               <>
-                <DiscoverCard
-                  profile={activeProfile}
-                  isActive
-                  isAnimating={isAnimating}
-                  swipeDirection={swipeDirection}
-                />
-                <div className="discover-actions">
-                  <button onClick={() => handleSwipe("PASS")}>✕</button>
-                  <button onClick={() => handleSwipe("LIKE")}>❤</button>
+                <div className={styles.feedStack}>
+                  {[activeProfile, feedItems[activeIndex + 1], feedItems[activeIndex + 2]].map(
+                    (profile, index) => {
+                      if (!profile) return null;
+                      const offset = index * 10;
+                      const scale = 1 - index * 0.03;
+                      const stackStyle = index
+                        ? { transform: `translateY(${offset}px) scale(${scale})` }
+                        : undefined;
+                      return (
+                        <DiscoverCard
+                          key={`${profile.userId}-${index}`}
+                          profile={profile}
+                          isActive={index === 0}
+                          isAnimating={index === 0 ? isAnimating : false}
+                          swipeDirection={index === 0 ? swipeDirection : null}
+                          style={stackStyle}
+                        />
+                      );
+                    }
+                  )}
+                </div>
+                <div className={styles.actions}>
+                  <button
+                    className={`${styles.actionButton} ${styles.actionButtonPass}`}
+                    onClick={() => handleSwipe("PASS")}
+                    aria-label="Pass"
+                    type="button"
+                  >
+                    ✕
+                  </button>
+                  <button
+                    className={`${styles.actionButton} ${styles.actionButtonLike}`}
+                    onClick={() => handleSwipe("LIKE")}
+                    aria-label="Like"
+                    type="button"
+                  >
+                    ❤
+                  </button>
                 </div>
               </>
             ) : (
               <EmptyState title="No profiles" message="Check back later." />
             )}
-          </div>
+            {discoverQuery.isFetching && feedItems.length ? (
+              <LoadingState message="Loading more…" />
+            ) : null}
+          </section>
 
+          <aside className={styles.filtersColumn}>
+            <Card className={styles.filtersCard}>
+              <div className={styles.filtersHeader}>
+                <h3>Filters</h3>
+              </div>
+              <DiscoverFilters
+                filters={filters}
+                onChange={setFilters}
+                onRefresh={() => discoverQuery.refetch()}
+                isRefreshing={discoverQuery.isFetching}
+              />
+            </Card>
+          </aside>
+        </div>
+
+        <div className={styles.themeToggle}>
           <ThemeToggle variant="switch" label="Toggle dark mode" />
         </div>
       </AppShellLayout>

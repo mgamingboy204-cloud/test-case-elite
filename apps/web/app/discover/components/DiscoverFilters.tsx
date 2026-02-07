@@ -1,6 +1,7 @@
 "use client";
 
 import type { DiscoverFilters } from "../useDiscoverFeed";
+import styles from "../discover.module.css";
 
 const genderOptions: Array<{ label: string; value: DiscoverFilters["gender"] }> = [
   { label: "All", value: "all" },
@@ -22,16 +23,33 @@ type DiscoverFiltersProps = {
 };
 
 export default function DiscoverFilters({ filters, onChange, onRefresh, isRefreshing }: DiscoverFiltersProps) {
+  const minAge = Math.max(18, Number.isFinite(filters.ageMin) ? filters.ageMin : 18);
+  const maxAge = Math.max(18, Number.isFinite(filters.ageMax) ? filters.ageMax : 18);
+
+  function handleAgeChange(type: "min" | "max", value: number) {
+    const sanitized = Number.isFinite(value) ? value : type === "min" ? minAge : maxAge;
+    const nextValue = Math.min(99, Math.max(18, sanitized));
+    if (type === "min") {
+      const nextMax = Math.max(nextValue, maxAge);
+      onChange({ ...filters, ageMin: nextValue, ageMax: nextMax });
+      return;
+    }
+    const nextMin = Math.min(minAge, nextValue);
+    onChange({ ...filters, ageMin: nextMin, ageMax: nextValue });
+  }
+
   return (
-    <div className="discover-filters">
-      <div className="filter-group">
-        <span className="filter-label">Gender</span>
-        <div className="segmented" role="group" aria-label="Gender">
+    <div className={styles.filters}>
+      <div className={styles.filterGroup}>
+        <span className={styles.filterLabel}>Gender</span>
+        <div className={styles.segmented} role="group" aria-label="Gender">
           {genderOptions.map((option) => (
             <button
               key={option.value}
               type="button"
-              className={filters.gender === option.value ? "segmented__button active" : "segmented__button"}
+              className={`${styles.segmentButton} ${
+                filters.gender === option.value ? styles.segmentButtonActive : ""
+              }`}
               onClick={() => onChange({ ...filters, gender: option.value })}
               aria-pressed={filters.gender === option.value}
             >
@@ -41,14 +59,16 @@ export default function DiscoverFilters({ filters, onChange, onRefresh, isRefres
         </div>
       </div>
 
-      <div className="filter-group">
-        <span className="filter-label">Intent</span>
-        <div className="segmented" role="group" aria-label="Intent">
+      <div className={styles.filterGroup}>
+        <span className={styles.filterLabel}>Intent</span>
+        <div className={styles.segmented} role="group" aria-label="Intent">
           {intentOptions.map((option) => (
             <button
               key={option.value}
               type="button"
-              className={filters.intent === option.value ? "segmented__button active" : "segmented__button"}
+              className={`${styles.segmentButton} ${
+                filters.intent === option.value ? styles.segmentButtonActive : ""
+              }`}
               onClick={() => onChange({ ...filters, intent: option.value })}
               aria-pressed={filters.intent === option.value}
             >
@@ -58,9 +78,9 @@ export default function DiscoverFilters({ filters, onChange, onRefresh, isRefres
         </div>
       </div>
 
-      <div className="filter-row">
-        <div className="filter-group">
-          <label className="filter-label" htmlFor="age-min">
+      <div className={styles.filterRow}>
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel} htmlFor="age-min">
             Age min
           </label>
           <input
@@ -68,16 +88,16 @@ export default function DiscoverFilters({ filters, onChange, onRefresh, isRefres
             type="number"
             min={18}
             max={99}
-            value={filters.ageMin}
+            value={minAge}
             onChange={(event) => {
               const value = Number(event.target.value);
-              onChange({ ...filters, ageMin: Number.isFinite(value) ? value : filters.ageMin });
+              handleAgeChange("min", value);
             }}
-            className="filter-input"
+            className={styles.filterInput}
           />
         </div>
-        <div className="filter-group">
-          <label className="filter-label" htmlFor="age-max">
+        <div className={styles.filterGroup}>
+          <label className={styles.filterLabel} htmlFor="age-max">
             Age max
           </label>
           <input
@@ -85,18 +105,18 @@ export default function DiscoverFilters({ filters, onChange, onRefresh, isRefres
             type="number"
             min={18}
             max={99}
-            value={filters.ageMax}
+            value={maxAge}
             onChange={(event) => {
               const value = Number(event.target.value);
-              onChange({ ...filters, ageMax: Number.isFinite(value) ? value : filters.ageMax });
+              handleAgeChange("max", value);
             }}
-            className="filter-input"
+            className={styles.filterInput}
           />
         </div>
       </div>
 
-      <div className="filter-group">
-        <label className="filter-label" htmlFor="distance">
+      <div className={styles.filterGroup}>
+        <label className={styles.filterLabel} htmlFor="distance">
           Distance (miles)
         </label>
         <input
@@ -107,12 +127,18 @@ export default function DiscoverFilters({ filters, onChange, onRefresh, isRefres
           step={5}
           value={filters.distance}
           onChange={(event) => onChange({ ...filters, distance: Number(event.target.value) })}
+          className={styles.filterRangeInput}
         />
-        <span className="filter-range">Within {filters.distance} miles</span>
+        <span className={styles.filterRange}>Within {filters.distance} miles</span>
       </div>
 
       {onRefresh ? (
-        <button type="button" className="filter-refresh" onClick={onRefresh} disabled={isRefreshing}>
+        <button
+          type="button"
+          className={styles.filterRefresh}
+          onClick={onRefresh}
+          disabled={isRefreshing}
+        >
           {isRefreshing ? "Refreshing..." : "Refresh feed"}
         </button>
       ) : null}
