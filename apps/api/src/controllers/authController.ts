@@ -120,7 +120,7 @@ export async function verifyOtp(req: Request, res: Response) {
     if (error instanceof HttpError) {
       throw error;
     }
-    return res.status(500).json({ error: "OTP verification failed. Please try again." });
+    return res.status(500).json({ message: "OTP verification failed. Please try again." });
   }
 }
 
@@ -148,6 +148,7 @@ export async function login(req: Request, res: Response) {
     rememberDevice30Days: rememberDevice30DaysValue,
     rememberMe: rememberMe ?? false
   });
+  req.session.userId = result.user.id;
   const resolvedRememberMe = rememberMe ?? false;
   const accessToken = signAccessToken(result.user.id, { rememberMe: resolvedRememberMe });
   const refreshToken = signRefreshToken(result.user.id, { rememberMe: resolvedRememberMe });
@@ -188,7 +189,7 @@ export async function refreshAccessToken(req: Request, res: Response) {
   const cookies = parseCookies(req.headers.cookie);
   const refreshToken = refreshTokenFromBody ?? cookies[refreshCookieName];
   if (!refreshToken) {
-    return res.status(401).json({ error: "Missing refresh token" });
+    return res.status(401).json({ message: "Missing refresh token" });
   }
   let userId: string;
   let rememberMe = false;
@@ -197,20 +198,20 @@ export async function refreshAccessToken(req: Request, res: Response) {
     userId = verification.userId;
     rememberMe = verification.rememberMe;
   } catch (error) {
-    return res.status(401).json({ error: "Invalid refresh token" });
+    return res.status(401).json({ message: "Invalid refresh token" });
   }
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
-    return res.status(401).json({ error: "Invalid refresh token" });
+    return res.status(401).json({ message: "Invalid refresh token" });
   }
   if (user.deletedAt) {
-    return res.status(403).json({ error: "Account deleted" });
+    return res.status(403).json({ message: "Account deleted" });
   }
   if (user.deactivatedAt) {
-    return res.status(403).json({ error: "Account deactivated" });
+    return res.status(403).json({ message: "Account deactivated" });
   }
   if (user.status === "BANNED") {
-    return res.status(403).json({ error: "Banned" });
+    return res.status(403).json({ message: "Banned" });
   }
   const accessToken = signAccessToken(user.id, { rememberMe });
   const nextRefreshToken = signRefreshToken(user.id, { rememberMe });
@@ -222,7 +223,7 @@ export async function refreshAccessToken(req: Request, res: Response) {
 export async function whoAmI(req: Request, res: Response) {
   const userId = req.userId;
   if (!userId) {
-    return res.status(401).json({ error: "Invalid token" });
+    return res.status(401).json({ message: "Invalid token" });
   }
   const user =
     res.locals.user ??
@@ -230,7 +231,7 @@ export async function whoAmI(req: Request, res: Response) {
       where: { id: userId }
     }));
   if (!user) {
-    return res.status(401).json({ error: "Invalid token" });
+    return res.status(401).json({ message: "Invalid token" });
   }
   return res.json({
     id: user.id,
