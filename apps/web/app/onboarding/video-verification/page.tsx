@@ -34,12 +34,8 @@ export default function VideoVerificationPage() {
     staleTime: 5000,
     refetchInterval: (result) => {
       if (!result || typeof result !== "object" || !("data" in result)) return false;
+
       const data = (result as { data?: VerificationStatusResponse }).data;
-  const statusQuery = useQuery({
-    queryKey: queryKeys.userVerificationStatus,
-    queryFn: () => apiFetch<VerificationStatusResponse>("/me/verification-status"),
-    staleTime: 5000,
-    refetchInterval: (data) => {
       const shouldPoll = data?.status === "REQUESTED" || data?.status === "IN_PROGRESS";
       return shouldPoll ? 7000 : false;
     }
@@ -72,7 +68,9 @@ export default function VideoVerificationPage() {
     }
     if (statusQuery.isError) {
       setStatus("error");
-      setMessage(statusQuery.error instanceof Error ? statusQuery.error.message : "Unable to load verification status.");
+      setMessage(
+        statusQuery.error instanceof Error ? statusQuery.error.message : "Unable to load verification status."
+      );
       return;
     }
     if (statusQuery.isSuccess) {
@@ -82,12 +80,14 @@ export default function VideoVerificationPage() {
 
   useEffect(() => {
     if (statusQuery.data?.status !== "COMPLETED") return;
+
     const timer = setTimeout(async () => {
       const user = await refresh();
       if (user?.onboardingStep === "VIDEO_VERIFIED" || user?.paymentStatus === "NOT_STARTED") {
         router.replace("/onboarding/payment");
       }
     }, 2000);
+
     return () => clearTimeout(timer);
   }, [statusQuery.data?.status, refresh, router]);
 
@@ -105,7 +105,8 @@ export default function VideoVerificationPage() {
 
   const verificationStatus = statusQuery.data ?? null;
   const joinUrl = verificationStatus?.meetUrl ?? "";
-  const derivedStatus = useMemo(() => {
+
+  const derivedStatus = useMemo<VerificationStatus>(() => {
     if (!verificationStatus) return "NOT_REQUESTED";
     return verificationStatus.status;
   }, [verificationStatus]);
@@ -114,6 +115,7 @@ export default function VideoVerificationPage() {
   const linkReady = Boolean(joinUrl);
   const statusLabel =
     derivedStatus === "IN_PROGRESS" && linkReady ? (hasJoinedCall ? "IN_CALL" : "SCHEDULED") : derivedStatus;
+
   const primaryAction = !hasRequest
     ? { label: "Start verification", onClick: submitRequest }
     : derivedStatus === "COMPLETED"
@@ -129,13 +131,15 @@ export default function VideoVerificationPage() {
               }
             }
           : { label: "Refresh status", onClick: loadStatus };
+
   const showSecondaryRefresh = Boolean(hasRequest && linkReady && derivedStatus === "IN_PROGRESS");
 
   const steps = [
     { key: "REQUESTED", label: "Requested", copy: "We received your request." },
     { key: "IN_PROGRESS", label: "Scheduled", copy: "A verification call is ready." },
     { key: "COMPLETED", label: "Approved", copy: "Payment is now unlocked." }
-  ];
+  ] as const;
+
   const activeStepIndex = Math.max(
     0,
     steps.findIndex((step) => step.key === (derivedStatus === "REJECTED" ? "REQUESTED" : derivedStatus))
@@ -150,6 +154,7 @@ export default function VideoVerificationPage() {
         <h2>Quick identity check</h2>
         <p className="text-muted">A short private call with our team. We never store recordings.</p>
       </div>
+
       <section className="card verification-card">
         <div className="verification-card__intro">
           <span className="verification-pill">Video verification</span>
@@ -165,6 +170,7 @@ export default function VideoVerificationPage() {
               <p className="text-muted">Quick and guided by our verification team.</p>
             </div>
           </div>
+
           <div className="verification-icon-row">
             <span>🪪</span>
             <div>
@@ -172,6 +178,7 @@ export default function VideoVerificationPage() {
               <p className="text-muted">We’ll verify identity in real time.</p>
             </div>
           </div>
+
           <div className="verification-icon-row">
             <span>🔓</span>
             <div>
@@ -186,13 +193,16 @@ export default function VideoVerificationPage() {
         <button className="primary-confirm" onClick={primaryAction.onClick} disabled={status === "loading"}>
           {status === "loading" ? "Updating..." : primaryAction.label}
         </button>
+
         {showSecondaryRefresh ? (
           <button className="text-button" type="button" onClick={loadStatus}>
             Refresh status
           </button>
         ) : null}
+
         {derivedStatus === "COMPLETED" ? <p className="message success">Approved — payment is now unlocked.</p> : null}
         {message ? <p className={`message ${status}`}>{message}</p> : null}
+
         {linkReady && derivedStatus === "IN_PROGRESS" ? (
           <p className="helper-text">Join the call in a new tab, then return here for status updates.</p>
         ) : null}
@@ -215,14 +225,14 @@ export default function VideoVerificationPage() {
             <div className="skeleton-line short" />
           </div>
         ) : null}
-        {!hasRequest && status !== "loading" ? (
-          <p className="card-subtitle">Start verification to schedule your call.</p>
-        ) : null}
+
+        {!hasRequest && status !== "loading" ? <p className="card-subtitle">Start verification to schedule your call.</p> : null}
 
         <div className="status-stepper">
           {steps.map((step, index) => {
             const isComplete = index < activeStepIndex;
             const isActive = index === activeStepIndex;
+
             return (
               <div key={step.key} className={`status-step ${isComplete ? "complete" : ""} ${isActive ? "active" : ""}`}>
                 <span className="status-dot" />
@@ -236,6 +246,7 @@ export default function VideoVerificationPage() {
         </div>
 
         {isPolling ? <p className="helper-text">Refreshing automatically every few seconds.</p> : null}
+
         {status === "error" ? (
           <div className="message error">
             <strong>We couldn’t refresh your status.</strong>
