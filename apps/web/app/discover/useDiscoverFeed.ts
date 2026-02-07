@@ -35,7 +35,10 @@ export type DiscoverFeedResponse = {
 
 const DEFAULT_LIMIT = 24;
 
-function buildDiscoverParams(filters: DiscoverFilters, cursor?: string | number) {
+// Cursor in your API is a STRING (nextCursor?: string)
+type DiscoverCursor = string | undefined;
+
+function buildDiscoverParams(filters: DiscoverFilters, cursor?: string) {
   const params = new URLSearchParams();
   if (filters.gender !== "all") params.set("gender", filters.gender);
   if (filters.intent !== "all") params.set("intent", filters.intent);
@@ -44,19 +47,25 @@ function buildDiscoverParams(filters: DiscoverFilters, cursor?: string | number)
   if (filters.distance) params.set("distance", String(filters.distance));
   params.set("limit", String(DEFAULT_LIMIT));
   params.set("mode", filters.intent === "friends" ? "friends" : "dating");
-  if (cursor !== undefined && cursor !== null && cursor !== "") params.set("cursor", String(cursor));
+  if (cursor) params.set("cursor", cursor);
   return params;
 }
 
 export function useDiscoverFeed(filters: DiscoverFilters) {
-  return useInfiniteQuery<DiscoverFeedResponse>({
+  return useInfiniteQuery<
+    DiscoverFeedResponse,                 // TQueryFnData
+    Error,                               // TError
+    DiscoverFeedResponse,                // TData
+    ReturnType<typeof queryKeys.discoverFeed>, // TQueryKey
+    DiscoverCursor                       // TPageParam
+  >({
     queryKey: queryKeys.discoverFeed(filters),
+    initialPageParam: undefined, // IMPORTANT: matches cursor type
     queryFn: ({ pageParam }) => {
       const params = buildDiscoverParams(filters, pageParam);
       return apiFetch<DiscoverFeedResponse>(`/discover?${params.toString()}`);
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    initialPageParam: 0,
     staleTime: 15000
   });
 }
