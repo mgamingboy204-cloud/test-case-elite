@@ -1,7 +1,11 @@
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 
-export async function startMockPayment(user: { id: string; videoVerificationStatus: string; onboardingStep: string }) {
+export async function startMockPayment(
+  user: { id: string; videoVerificationStatus: string; onboardingStep: string },
+  couponCode?: string | null
+) {
+  void couponCode;
   if (user.videoVerificationStatus !== "APPROVED") {
     throw new HttpError(403, {
       error: "Verification required",
