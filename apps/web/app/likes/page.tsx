@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api";
+import { queryKeys } from "../../lib/queryKeys";
 import RouteGuard from "../components/RouteGuard";
 import AppShellLayout from "../components/ui/AppShellLayout";
 import Button from "../components/ui/Button";
@@ -14,45 +16,61 @@ import PageHeader from "../components/ui/PageHeader";
 
 type Status = "idle" | "loading" | "success" | "error";
 
+type IncomingResponse = { incoming: any[] };
+
 export default function LikesPage() {
   const router = useRouter();
-  const [incoming, setIncoming] = useState<any[]>([]);
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    void loadIncoming();
-  }, []);
+  const incomingQuery = useQuery({
+    queryKey: queryKeys.likes,
+    queryFn: () => apiFetch<IncomingResponse>("/likes/incoming"),
+    staleTime: 10000
+  });
 
-  async function loadIncoming() {
-    setStatus("loading");
-    setMessage("Loading incoming likes...");
-    try {
-      const data = await apiFetch<{ incoming: any[] }>("/likes/incoming");
-      setIncoming(data.incoming ?? []);
-      setStatus("success");
-      setMessage(data.incoming?.length ? "Review your incoming likes." : "No new requests yet.");
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to load requests.");
-    }
-  }
-
-  async function respond(toUserId: string, type: "LIKE" | "PASS") {
-    setStatus("loading");
-    setMessage(type === "LIKE" ? "Approving..." : "Rejecting...");
-    try {
-      await apiFetch("/likes", {
+  const respondMutation = useMutation({
+    mutationFn: ({ toUserId, type }: { toUserId: string; type: "LIKE" | "PASS" }) =>
+      apiFetch("/likes", {
         method: "POST",
         body: JSON.stringify({ toUserId, type })
-      });
+      }),
+    onSuccess: (_data, variables) => {
       setStatus("success");
-      setMessage(type === "LIKE" ? "Match approved!" : "Request rejected.");
-      await loadIncoming();
-    } catch (error) {
+      setMessage(variables.type === "LIKE" ? "Match approved!" : "Request rejected.");
+      queryClient.invalidateQueries({ queryKey: queryKeys.likes });
+      queryClient.invalidateQueries({ queryKey: queryKeys.matches });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notificationsCount });
+      queryClient.invalidateQueries({ queryKey: queryKeys.discoverFeed("dating") });
+      queryClient.invalidateQueries({ queryKey: queryKeys.discoverFeed("friends") });
+    },
+    onError: (error) => {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to respond.");
     }
+  });
+
+  const incoming = incomingQuery.data?.incoming ?? [];
+
+  function loadIncoming() {
+    setStatus("loading");
+    setMessage("Loading incoming likes...");
+    void incomingQuery.refetch().then((result) => {
+      if (result.data?.incoming?.length) {
+        setStatus("success");
+        setMessage("Review your incoming likes.");
+      } else if (result.isSuccess) {
+        setStatus("success");
+        setMessage("No new requests yet.");
+      }
+    });
+  }
+
+  function respond(toUserId: string, type: "LIKE" | "PASS") {
+    setStatus("loading");
+    setMessage(type === "LIKE" ? "Approving..." : "Rejecting...");
+    respondMutation.mutate({ toUserId, type });
   }
 
   return (
@@ -68,10 +86,16 @@ export default function LikesPage() {
               </Button>
             }
           />
-          {status === "loading" && !incoming.length ? (
+          {incomingQuery.isLoading && !incoming.length ? (
             <LoadingState message="Loading incoming likes..." />
-          ) : status === "error" ? (
-            <ErrorState message={message || "Unable to load likes."} onRetry={loadIncoming} />
+          ) : incomingQuery.isError ? (
+            <ErrorState
+              message={
+                message ||
+                (incomingQuery.error instanceof Error ? incomingQuery.error.message : "Unable to load likes.")
+              }
+              onRetry={loadIncoming}
+            />
           ) : incoming.length ? (
             <div className="list-grid">
               {incoming.map((like) => (

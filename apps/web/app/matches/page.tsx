@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api";
 import { getAssetUrl } from "../../lib/assets";
+import { queryKeys } from "../../lib/queryKeys";
 import RouteGuard from "../components/RouteGuard";
 import AppShellLayout from "../components/ui/AppShellLayout";
 import Button from "../components/ui/Button";
@@ -16,28 +18,33 @@ import PageHeader from "../components/ui/PageHeader";
 
 type Status = "idle" | "loading" | "success" | "error";
 
+type MatchesResponse = { matches: any[] };
+
 export default function MatchesPage() {
   const router = useRouter();
-  const [matches, setMatches] = useState<any[]>([]);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    void loadMatches();
-  }, []);
+  const matchesQuery = useQuery({
+    queryKey: queryKeys.matches,
+    queryFn: () => apiFetch<MatchesResponse>("/matches"),
+    staleTime: 10000
+  });
 
-  async function loadMatches() {
+  const matches = matchesQuery.data?.matches ?? [];
+
+  function loadMatches() {
     setStatus("loading");
     setMessage("Fetching your matches...");
-    try {
-      const data = await apiFetch<{ matches: any[] }>("/matches");
-      setMatches(data.matches ?? []);
-      setStatus("success");
-      setMessage(data.matches?.length ? "Matches ready." : "No matches yet.");
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to load matches.");
-    }
+    void matchesQuery.refetch().then((result) => {
+      if (result.data?.matches?.length) {
+        setStatus("success");
+        setMessage("Matches ready.");
+      } else if (result.isSuccess) {
+        setStatus("success");
+        setMessage("No matches yet.");
+      }
+    });
   }
 
   return (
@@ -53,10 +60,16 @@ export default function MatchesPage() {
               </Button>
             }
           />
-          {status === "loading" && !matches.length ? (
+          {matchesQuery.isLoading && !matches.length ? (
             <LoadingState message="Fetching your matches..." />
-          ) : status === "error" ? (
-            <ErrorState message={message || "Unable to load matches."} onRetry={loadMatches} />
+          ) : matchesQuery.isError ? (
+            <ErrorState
+              message={
+                message ||
+                (matchesQuery.error instanceof Error ? matchesQuery.error.message : "Unable to load matches.")
+              }
+              onRetry={loadMatches}
+            />
           ) : matches.length ? (
             <div className="list-grid">
               {matches.map((match) => (
@@ -76,8 +89,7 @@ export default function MatchesPage() {
                       <div>
                         <strong>{match.user?.name ?? "Match"}</strong>
                         <p className="text-muted">
-                          {match.user?.city ?? "Location"}{" "}
-                          {match.user?.profession ? `• ${match.user.profession}` : ""}
+                          {match.user?.city ?? "Location"} {match.user?.profession ? `• ${match.user.profession}` : ""}
                         </p>
                         <p className="text-muted">Status: {match.consentStatus ?? "PENDING"}</p>
                       </div>

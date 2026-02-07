@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api";
 import { setAccessToken } from "../../lib/authToken";
 import { useSession } from "../../lib/session";
@@ -10,6 +11,8 @@ import OtpInput from "../components/OtpInput";
 import Button from "../components/ui/Button";
 
 type Status = "idle" | "loading" | "success" | "error";
+
+type OtpVerifyResponse = { ok: boolean; accessToken?: string };
 
 const phoneRegex = /^\d{10}$/;
 const otpRegex = /^\d{6}$/;
@@ -32,6 +35,45 @@ export default function SignupPage() {
   const [account, setAccount] = useState({ phone: "", email: "", password: "" });
   const [otpCode, setOtpCode] = useState("");
 
+  const registerMutation = useMutation({
+    mutationFn: (payload: { phone: string; email?: string | null; password: string }) =>
+      apiFetch("/auth/register", {
+        method: "POST",
+        auth: "omit",
+        body: JSON.stringify(payload)
+      }),
+    onError: (error) => {
+      setStatus("error");
+      setMessage(getErrorMessage(error));
+    }
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: (payload: { phone: string }) =>
+      apiFetch("/auth/otp/send", {
+        method: "POST",
+        auth: "omit",
+        body: JSON.stringify(payload)
+      }),
+    onError: (error) => {
+      setStatus("error");
+      setMessage(getErrorMessage(error));
+    }
+  });
+
+  const verifyMutation = useMutation({
+    mutationFn: (payload: { phone: string; code: string; rememberMe: boolean }) =>
+      apiFetch<OtpVerifyResponse>("/auth/otp/verify", {
+        method: "POST",
+        auth: "omit",
+        body: JSON.stringify(payload)
+      }),
+    onError: (error) => {
+      setStatus("error");
+      setMessage(getErrorMessage(error));
+    }
+  });
+
   useEffect(() => {
     if (otpCountdown <= 0) return;
     const timer = setTimeout(() => setOtpCountdown((prev) => Math.max(prev - 1, 0)), 1000);
@@ -51,24 +93,15 @@ export default function SignupPage() {
     }
     setStatus("loading");
     setMessage("Creating your account...");
-    try {
-      await apiFetch("/auth/register", {
-        method: "POST",
-        auth: "omit",
-        body: JSON.stringify({
-          phone: account.phone,
-          email: account.email || null,
-          password: account.password
-        })
-      });
-      setStatus("success");
-      setMessage("Account created! OTP sent to your phone.");
-      setOtpCountdown(30);
-      setStep(1);
-    } catch (error) {
-      setStatus("error");
-      setMessage(getErrorMessage(error));
-    }
+    await registerMutation.mutateAsync({
+      phone: account.phone,
+      email: account.email || null,
+      password: account.password
+    });
+    setStatus("success");
+    setMessage("Account created! OTP sent to your phone.");
+    setOtpCountdown(30);
+    setStep(1);
   }
 
   async function resendOtp() {
@@ -79,19 +112,10 @@ export default function SignupPage() {
     }
     setStatus("loading");
     setMessage("Sending OTP...");
-    try {
-      await apiFetch("/auth/otp/send", {
-        method: "POST",
-        auth: "omit",
-        body: JSON.stringify({ phone: account.phone })
-      });
-      setOtpCountdown(30);
-      setStatus("success");
-      setMessage("OTP sent. Check your device or dev logs.");
-    } catch (error) {
-      setStatus("error");
-      setMessage(getErrorMessage(error));
-    }
+    await resendMutation.mutateAsync({ phone: account.phone });
+    setOtpCountdown(30);
+    setStatus("success");
+    setMessage("OTP sent. Check your device or dev logs.");
   }
 
   async function verifyOtp() {
@@ -102,24 +126,19 @@ export default function SignupPage() {
     }
     setStatus("loading");
     setMessage("Verifying OTP...");
-    try {
-      const response = await apiFetch<{ ok: boolean; accessToken?: string }>("/auth/otp/verify", {
-        method: "POST",
-        auth: "omit",
-        body: JSON.stringify({ phone: account.phone, code: otpCode, rememberMe })
-      });
-      setStatus("success");
-      setMessage("OTP verified. Redirecting to onboarding...");
-      if (response.accessToken) {
-        setAccessToken(response.accessToken);
-      }
-      const user = await refresh();
-      const destination = getDefaultRoute(user);
-      setTimeout(() => router.push(destination), 200);
-    } catch (error) {
-      setStatus("error");
-      setMessage(getErrorMessage(error));
+    const response = await verifyMutation.mutateAsync({
+      phone: account.phone,
+      code: otpCode,
+      rememberMe
+    });
+    setStatus("success");
+    setMessage("OTP verified. Redirecting to onboarding...");
+    if (response.accessToken) {
+      setAccessToken(response.accessToken);
     }
+    const user = await refresh();
+    const destination = getDefaultRoute(user);
+    setTimeout(() => router.push(destination), 200);
   }
 
   return (
@@ -190,11 +209,7 @@ export default function SignupPage() {
                 </Button>
               </div>
               <label className="checkbox">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                />
+                <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
                 Remember me on this device
               </label>
             </div>
@@ -206,9 +221,7 @@ export default function SignupPage() {
               Log in
             </button>
           </div>
-          <footer className="auth-footer">
-            By continuing, you agree to our Terms and Privacy Policy.
-          </footer>
+          <footer className="auth-footer">By continuing, you agree to our Terms and Privacy Policy.</footer>
         </div>
       </section>
     </div>
