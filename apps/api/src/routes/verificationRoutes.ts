@@ -1,5 +1,10 @@
 import { Router } from "express";
-import { createVerificationRequestHandler, getMyVerificationRequestHandler, getVerificationStatusHandler } from "../controllers/verificationController";
+import {
+  createVerificationRequestHandler,
+  getMyVerificationRequestHandler,
+  getMyVerificationStatusHandler,
+  getVerificationStatusHandler
+} from "../controllers/verificationController";
 import { requireAuth, requireAuthHeader } from "../middlewares/auth";
 import { asyncHandler } from "../utils/asyncHandler";
 
@@ -13,5 +18,6 @@ router.post(
 );
 router.get("/verification-requests/me", requireAuth, asyncHandler(getMyVerificationRequestHandler));
 router.get("/verification/status", requireAuth, asyncHandler(getVerificationStatusHandler));
+router.get("/me/verification-status", requireAuth, asyncHandler(getMyVerificationStatusHandler));
 
 export default router;

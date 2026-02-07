@@ -307,9 +307,14 @@ model VerificationRequest {
   userId    String
   status    VerificationRequestStatus @default(REQUESTED)
   verificationLink String?
+  meetUrl   String?
   linkExpiresAt DateTime?
   createdAt DateTime @default(now())
   completedAt DateTime?
+  decidedAt DateTime?
+  decidedBy String?
+  reason    String?
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
 }

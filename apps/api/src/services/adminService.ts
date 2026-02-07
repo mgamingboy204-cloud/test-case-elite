@@ -1,5 +1,10 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
+
+type VerificationRequestListItem = Prisma.VerificationRequestGetPayload<{
+  include: { user: { select: { id: true; phone: true; email: true } } };
+}>;
 
 export async function approveUser(userId: string, actorUserId: string) {
   const user = await prisma.user.update({
@@ -64,15 +69,17 @@ export async function listUsers(status?: string) {
 }
 
 export async function getDashboard() {
-  const [totalUsers, activeUsers, pendingVerification] = await Promise.all([
+  const [totalUsers, activeUsers, pendingVerification, rejectedVerification] = await Promise.all([
     prisma.user.count({ where: { deletedAt: null } }),
     prisma.user.count({ where: { onboardingStep: "ACTIVE", deletedAt: null } }),
-    prisma.verificationRequest.count({ where: { status: "REQUESTED" } })
+    prisma.verificationRequest.count({ where: { status: "REQUESTED" } }),
+    prisma.verificationRequest.count({ where: { status: "REJECTED" } })
   ]);
   return {
     totalUsers,
     activeUsers,
-    pendingVerificationRequests: pendingVerification
+    pendingVerificationRequests: pendingVerification,
+    rejectedVerificationRequests: rejectedVerification
   };
 }
 
@@ -160,8 +167,8 @@ export async function denyRefund(refundId: string, actorUserId: string) {
   return { refund };
 }
 
-export async function listVerificationRequests(statusFilter?: string) {
-  const requests = await prisma.verificationRequest.findMany({
+export async function listVerificationRequests(statusFilter?: string): Promise<{ requests: VerificationRequestListItem[] }> {
+  const requests: VerificationRequestListItem[] = await prisma.verificationRequest.findMany({
     where: statusFilter && statusFilter !== "ALL" ? { status: statusFilter as any } : {},
     include: { user: { select: { id: true, phone: true, email: true } } },
     orderBy: { createdAt: "desc" }
@@ -169,13 +176,14 @@ export async function listVerificationRequests(statusFilter?: string) {
   return { requests };
 }
 
-export async function startVerificationRequest(requestId: string, verificationLink: string, actorUserId: string) {
+export async function startVerificationRequest(requestId: string, meetUrl: string, actorUserId: string) {
   const now = new Date();
   const request = await prisma.verificationRequest.update({
     where: { id: requestId },
     data: {
       status: "IN_PROGRESS",
-      verificationLink,
+      verificationLink: meetUrl,
+      meetUrl,
       linkExpiresAt: new Date(now.getTime() + 10 * 60 * 1000)
     }
   });
@@ -189,7 +197,28 @@ export async function startVerificationRequest(requestId: string, verificationLi
       action: "verification_link_set",
       targetType: "VerificationRequest",
       targetId: request.id,
-      metadata: { verificationLink }
+      metadata: { meetUrl }
+    }
+  });
+  await prisma.notification.upsert({
+    where: {
+      userId_type_actorUserId_matchId: {
+        userId: request.userId,
+        type: "VIDEO_VERIFICATION_UPDATE",
+        actorUserId,
+        matchId: null
+      }
+    },
+    update: {
+      metadata: { meetUrl, cta: "Join verification call" },
+      createdAt: now,
+      isRead: false
+    },
+    create: {
+      userId: request.userId,
+      actorUserId,
+      type: "VIDEO_VERIFICATION_UPDATE",
+      metadata: { meetUrl, cta: "Join verification call" }
     }
   });
   return { request };
@@ -203,7 +232,10 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
       status: "COMPLETED",
       completedAt: now,
       verificationLink: null,
-      linkExpiresAt: null
+      meetUrl: null,
+      linkExpiresAt: null,
+      decidedAt: now,
+      decidedBy: actorUserId
     }
   });
   await prisma.user.update({
@@ -227,7 +259,7 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
   return { request };
 }
 
-export async function rejectVerificationRequest(requestId: string, actorUserId: string) {
+export async function rejectVerificationRequest(requestId: string, actorUserId: string, reason: string) {
   const now = new Date();
   const request = await prisma.verificationRequest.update({
     where: { id: requestId },
@@ -235,7 +267,11 @@ export async function rejectVerificationRequest(requestId: string, actorUserId: 
       status: "REJECTED",
       completedAt: now,
       verificationLink: null,
-      linkExpiresAt: null
+      meetUrl: null,
+      linkExpiresAt: null,
+      decidedAt: now,
+      decidedBy: actorUserId,
+      reason: reason.trim()
     }
   });
   await prisma.user.update({
@@ -252,10 +288,143 @@ export async function rejectVerificationRequest(requestId: string, actorUserId: 
       action: "verification_rejected",
       targetType: "VerificationRequest",
       targetId: request.id,
-      metadata: {}
+      metadata: { reason: reason.trim() }
     }
   });
   return { request };
+}
+
+async function findOrCreateVerificationRequest(userId: string) {
+  const existing = await prisma.verificationRequest.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" }
+  });
+  if (existing) return existing;
+  return prisma.verificationRequest.create({
+    data: { userId, status: "REQUESTED" }
+  });
+}
+
+export async function setVerificationMeetLink(userId: string, meetUrl: string, actorUserId: string) {
+  const now = new Date();
+  const request = await findOrCreateVerificationRequest(userId);
+  const updated = await prisma.verificationRequest.update({
+    where: { id: request.id },
+    data: {
+      status: "IN_PROGRESS",
+      meetUrl,
+      verificationLink: meetUrl,
+      linkExpiresAt: new Date(now.getTime() + 10 * 60 * 1000)
+    }
+  });
+  await prisma.user.update({
+    where: { id: userId },
+    data: { videoVerificationStatus: "IN_PROGRESS", onboardingStep: "VIDEO_VERIFICATION_PENDING" }
+  });
+  await prisma.auditLog.create({
+    data: {
+      actorUserId,
+      action: "verification_link_set",
+      targetType: "VerificationRequest",
+      targetId: updated.id,
+      metadata: { meetUrl }
+    }
+  });
+  await prisma.notification.upsert({
+    where: {
+      userId_type_actorUserId_matchId: {
+        userId,
+        type: "VIDEO_VERIFICATION_UPDATE",
+        actorUserId,
+        matchId: null
+      }
+    },
+    update: {
+      metadata: { meetUrl, cta: "Join verification call" },
+      createdAt: now,
+      isRead: false
+    },
+    create: {
+      userId,
+      actorUserId,
+      type: "VIDEO_VERIFICATION_UPDATE",
+      metadata: { meetUrl, cta: "Join verification call" }
+    }
+  });
+  return { request: updated };
+}
+
+export async function approveVerificationForUser(userId: string, actorUserId: string, reason?: string) {
+  const request = await findOrCreateVerificationRequest(userId);
+  const now = new Date();
+  const updated = await prisma.verificationRequest.update({
+    where: { id: request.id },
+    data: {
+      status: "COMPLETED",
+      completedAt: now,
+      meetUrl: null,
+      verificationLink: null,
+      linkExpiresAt: null,
+      decidedAt: now,
+      decidedBy: actorUserId,
+      reason: reason?.trim() || null
+    }
+  });
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      status: "APPROVED",
+      verifiedAt: now,
+      videoVerificationStatus: "APPROVED",
+      onboardingStep: "VIDEO_VERIFIED"
+    }
+  });
+  await prisma.auditLog.create({
+    data: {
+      actorUserId,
+      action: "verification_approved",
+      targetType: "VerificationRequest",
+      targetId: updated.id,
+      metadata: { reason: reason?.trim() || null }
+    }
+  });
+  return { request: updated };
+}
+
+export async function rejectVerificationForUser(userId: string, actorUserId: string, reason: string) {
+  const request = await findOrCreateVerificationRequest(userId);
+  const now = new Date();
+  const updated = await prisma.verificationRequest.update({
+    where: { id: request.id },
+    data: {
+      status: "REJECTED",
+      completedAt: now,
+      meetUrl: null,
+      verificationLink: null,
+      linkExpiresAt: null,
+      decidedAt: now,
+      decidedBy: actorUserId,
+      reason: reason.trim()
+    }
+  });
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      status: "REJECTED",
+      videoVerificationStatus: "REJECTED",
+      onboardingStep: "VIDEO_VERIFICATION_PENDING"
+    }
+  });
+  await prisma.auditLog.create({
+    data: {
+      actorUserId,
+      action: "verification_rejected",
+      targetType: "VerificationRequest",
+      targetId: updated.id,
+      metadata: { reason: reason.trim() }
+    }
+  });
+  return { request: updated };
 }
 
 export async function shiftPaymentDate(options: { userId: string; daysBack: number }) {
