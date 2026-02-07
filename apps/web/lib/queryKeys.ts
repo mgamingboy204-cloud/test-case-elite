@@ -1,0 +1,22 @@
+export const queryKeys = {
+  me: ["me"] as const,
+  profile: (id?: string | null) => ["profile", id ?? "me"] as const,
+  uploads: ["uploads"] as const,
+  adminQueues: ["adminQueues"] as const,
+  adminVideoQueue: (status?: string | null) => ["adminVideoQueue", status ?? "all"] as const,
+  adminRefunds: ["adminRefunds"] as const,
+  adminReports: ["adminReports"] as const,
+  adminUsers: ["adminUsers"] as const,
+  notificationsCount: ["notificationsCount"] as const,
+  discoverFeed: (mode: string) => ["discoverFeed", mode] as const,
+  matches: ["matches"] as const,
+  likes: ["likes"] as const,
+  inbox: ["inbox"] as const,
+  unreadCount: ["unreadCount"] as const,
+  conversation: (id?: string | null) => ["conversation", id ?? "unknown"] as const,
+  phoneUnlock: (id?: string | null) => ["phoneUnlock", id ?? "unknown"] as const,
+  userVerificationStatus: ["userVerificationStatus"] as const,
+  paymentStatus: ["paymentStatus"] as const,
+  refunds: ["refunds"] as const,
+  refundEligibility: ["refundEligibility"] as const
+};

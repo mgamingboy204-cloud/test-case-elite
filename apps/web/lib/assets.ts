@@ -1,4 +1,4 @@
-import { API_URL } from "./api";
+import { API_URL } from "./apiClient";
 
 export function getAssetUrl(path?: string | null) {
   if (!path) return null;

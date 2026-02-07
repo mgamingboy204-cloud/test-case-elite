@@ -13,6 +13,10 @@
     "db:migrate": "npm run db:migrate -w apps/api",
     "db:seed": "npm run db:seed -w apps/api"
   },
+  "dependencies": {
+    "@tanstack/react-query": "^5.62.0",
+    "@tanstack/react-query-devtools": "^5.62.0"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2"
   }
