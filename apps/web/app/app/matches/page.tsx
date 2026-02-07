@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function MatchesRedirectPage() {
-  const router = useRouter();
+  const router = useRouter(); 
 
   useEffect(() => {
     router.replace("/matches");
