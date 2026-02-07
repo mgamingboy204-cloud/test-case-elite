@@ -3,7 +3,8 @@ import {
   confirmMockPaymentHandler,
   getMyPaymentHandler,
   mockPaymentUnsupported,
-  startMockPaymentHandler
+  startMockPaymentHandler,
+  validateCouponHandler
 } from "../controllers/paymentController";
 import { requireAuth, requireAuthHeader } from "../middlewares/auth";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -11,6 +12,7 @@ import { asyncHandler } from "../utils/asyncHandler";
 const router = Router();
 
 router.get("/payments/me", requireAuth, asyncHandler(getMyPaymentHandler));
+router.post("/payments/coupon/validate", requireAuth, requireAuthHeader, asyncHandler(validateCouponHandler));
 router.post("/payments/mock", requireAuth, requireAuthHeader, asyncHandler(mockPaymentUnsupported));
 router.post("/payments/mock/start", requireAuth, requireAuthHeader, asyncHandler(startMockPaymentHandler));
 router.post("/payments/mock/confirm", requireAuth, requireAuthHeader, asyncHandler(confirmMockPaymentHandler));
