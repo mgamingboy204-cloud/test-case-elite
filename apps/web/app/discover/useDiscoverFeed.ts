@@ -36,7 +36,7 @@ type DiscoverCursor = string | undefined;
 
 function buildDiscoverParams(filters: DiscoverFilters, cursor?: string) {
   const params = new URLSearchParams();
-  if (filters.intent !== "all") params.set("intent", filters.intent);
+  params.set("intent", filters.intent);
   if (filters.distance) params.set("distance", String(filters.distance));
   params.set("limit", String(DEFAULT_LIMIT));
   if (cursor) params.set("cursor", cursor);
