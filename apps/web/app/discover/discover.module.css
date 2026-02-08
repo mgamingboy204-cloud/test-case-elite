@@ -556,7 +556,7 @@
   }
 
   .filtersColumn {
-    display: none;
+    margin-top: 24px;
   }
 
   .mobileHeader {
