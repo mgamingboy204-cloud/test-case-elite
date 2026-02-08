@@ -47,8 +47,9 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
-
 a {
   color: inherit;
 }
