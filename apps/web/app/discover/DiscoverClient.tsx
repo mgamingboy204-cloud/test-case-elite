@@ -251,19 +251,6 @@ export default function DiscoverClient() {
           <header className={styles.mobileHeader}>
             <div className={styles.mobileHeaderLeft}>
               <span className={styles.mobileLogo}>ELITE MATCH</span>
-              <button
-                type="button"
-                className={styles.mobileIconButton}
-                aria-label="Filters"
-                onClick={() => setIsFilterSheetOpen(true)}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    d="M4 6.5a1 1 0 0 1 1-1h14a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1Zm3 5a1 1 0 0 1 1-1h8a1 1 0 1 1 0 2H8a1 1 0 0 1-1-1Zm3 5a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2h-2a1 1 0 0 1-1-1Z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
             </div>
             <span className={styles.mobileTitle}>Discover</span>
             <Link href="/settings" className={styles.mobileIconButton} aria-label="Settings">
