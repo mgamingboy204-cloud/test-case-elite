@@ -630,10 +630,10 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
     padding: 10px 12px;
-    background: var(--bg-elevated);
+    background: color-mix(in srgb, var(--bg-elevated) 92%, #ffffff);
     border-radius: 999px;
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow-soft);
+    border: 1px solid color-mix(in srgb, var(--border) 70%, #ffffff);
+    box-shadow: 0 12px 30px rgba(20, 18, 30, 0.12);
     z-index: 40;
   }
 
@@ -673,4 +673,10 @@
 
 [data-theme="dark"] .page {
   background: radial-gradient(circle at top, rgba(255, 123, 134, 0.08) 0%, transparent 45%), var(--bg);
+}
+
+[data-theme="dark"] .mobileBottomNav {
+  background: color-mix(in srgb, var(--bg-elevated) 80%, #000000);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 }

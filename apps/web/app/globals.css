@@ -2048,10 +2048,10 @@ textarea:focus {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   padding: 10px 12px;
-  background: var(--bg-elevated);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, #ffffff);
   border-radius: 999px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-soft);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, #ffffff);
+  box-shadow: 0 12px 30px rgba(20, 18, 30, 0.12);
   z-index: 30;
 }
 
@@ -2076,6 +2076,12 @@ textarea:focus {
 .mobile-shell__tab.active {
   color: #ffffff;
   background: rgba(255, 92, 122, 0.2);
+}
+
+[data-theme="dark"] .mobile-shell__tabs {
+  background: color-mix(in srgb, var(--bg-elevated) 80%, #000000);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 }
 
 .mobile-gate-header {
