@@ -312,6 +312,20 @@ export default function DiscoverClient() {
                             swipeDirection={index === 0 ? swipeDirection : null}
                             isExpanded={index === 0 ? isDetailsOpen : false}
                             isDragging={index === 0 ? isDragging : false}
+                            onPass={
+                              index === 0
+                                ? () => {
+                                    handleSwipe("PASS");
+                                  }
+                                : undefined
+                            }
+                            onLike={
+                              index === 0
+                                ? () => {
+                                    handleSwipe("LIKE");
+                                  }
+                                : undefined
+                            }
                             onPointerDown={index === 0 ? handlePointerDown : undefined}
                             onPointerMove={index === 0 ? handlePointerMove : undefined}
                             onPointerUp={index === 0 ? handlePointerEnd : undefined}
