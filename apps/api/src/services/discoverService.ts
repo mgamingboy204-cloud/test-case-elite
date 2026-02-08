@@ -36,7 +36,6 @@ function normalizePhotoUrl(url: string | null | undefined, baseUrl?: string) {
 
 function buildDiscoverWhere(options: DiscoverFilterOptions) {
   const resolvedGender = resolveIntentGender(options.intent, options.viewerGender);
-  const normalizedIntent = options.intent?.toLowerCase();
 
   const where: any = {
     userId: { not: options.userId },
@@ -77,10 +76,6 @@ function buildDiscoverWhere(options: DiscoverFilterOptions) {
   }
 
   if (options.city) where.city = options.city;
-
-  if (normalizedIntent === "all" && "gender" in where) {
-    throw new Error("Discover intent=all must not apply gender filtering.");
-  }
 
   return where;
 }
