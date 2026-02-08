@@ -12,8 +12,7 @@ export type DiscoverFilters = {
 export type DiscoverProfile = {
   userId: string;
   name: string;
-  gender: string;
-  age: number;
+  age?: number | null;
   city: string;
   bioShort: string;
   primaryPhotoUrl?: string | null;
@@ -37,10 +36,9 @@ type DiscoverCursor = string | undefined;
 
 function buildDiscoverParams(filters: DiscoverFilters, cursor?: string) {
   const params = new URLSearchParams();
-  if (filters.intent !== "all") params.set("intent", filters.intent);
+  params.set("intent", filters.intent);
   if (filters.distance) params.set("distance", String(filters.distance));
   params.set("limit", String(DEFAULT_LIMIT));
-  params.set("mode", filters.intent === "friends" ? "friends" : "dating");
   if (cursor) params.set("cursor", cursor);
   return params;
 }

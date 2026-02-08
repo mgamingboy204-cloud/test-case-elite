@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, PointerEvent } from "react";
-import { getAssetUrl } from "../../../lib/assets";
+import { getAssetUrl, isValidImageUrl } from "../../../lib/assets";
 import type { DiscoverProfile } from "../useDiscoverFeed";
 import styles from "../discover.module.css";
 
@@ -63,7 +63,9 @@ export default function DiscoverCard({
   const visibleTags = tags.slice(0, 6);
   const extraTagCount = Math.max(0, tags.length - visibleTags.length);
   const photoUrlRaw = profile?.primaryPhotoUrl;
-  const photoUrl = getAssetUrl(photoUrlRaw);
+  const photoUrlCandidate = getAssetUrl(photoUrlRaw);
+  const photoUrl = isValidImageUrl(photoUrlCandidate) ? photoUrlCandidate : null;
+  const fallbackInitial = profile?.name?.slice(0, 1)?.toUpperCase() ?? "?";
   const swipeClass =
     isAnimating && swipeDirection ? styles[`cardSwipe${swipeDirection === "left" ? "Left" : "Right"}`] : "";
   const ageValue = typeof profile?.age === "number" ? profile.age : null;
@@ -92,7 +94,7 @@ export default function DiscoverCard({
         ) : photoUrl ? (
           <img src={photoUrl} alt={`${profile?.name ?? "Profile"} photo`} />
         ) : (
-          <div className={styles.mediaFallback}>{profile?.name?.slice(0, 1) ?? "?"}</div>
+          <div className={styles.mediaFallback}>{fallbackInitial}</div>
         )}
         {!isPlaceholder && profile ? (
           <div className={styles.cardOverlay}>
@@ -150,7 +152,8 @@ export default function DiscoverCard({
           <>
             <div className={styles.cardHeader}>
               <h2>
-                {profile?.name} <span>{profile?.age}</span>
+                {profile?.name}
+                {ageValue !== null ? <span>{ageValue}</span> : null}
               </h2>
               <p className={styles.cardLocation}>{profile?.city ?? ""}</p>
             </div>
