@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient, type InfiniteData } from "@tanstack/react-query";
@@ -229,7 +229,16 @@ export default function DiscoverClient() {
               {discoverQuery.isLoading && !feedItems.length ? (
                 <div className={styles.feedStack} aria-hidden="true">
                   <DiscoverCard isPlaceholder />
-                  <DiscoverCard isPlaceholder style={{ transform: "translateY(12px) scale(0.98)" }} />
+                  <DiscoverCard
+                    isPlaceholder
+                    style={
+                      {
+                        "--stack-offset": "12px",
+                        "--stack-scale": "0.98",
+                        "--stack-rotate-mobile": "-4deg"
+                      } as CSSProperties
+                    }
+                  />
                 </div>
               ) : discoverQuery.isError ? (
                 <ErrorState
@@ -245,7 +254,11 @@ export default function DiscoverClient() {
                         const offset = index * 10;
                         const scale = 1 - index * 0.03;
                         const stackStyle = index
-                          ? { transform: `translateY(${offset}px) scale(${scale})` }
+                          ? ({
+                              "--stack-offset": `${offset}px`,
+                              "--stack-scale": `${scale}`,
+                              "--stack-rotate-mobile": index === 1 ? "-6deg" : "4deg"
+                            } as CSSProperties)
                           : undefined;
                         return (
                           <DiscoverCard
