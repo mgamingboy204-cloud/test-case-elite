@@ -2307,7 +2307,7 @@ textarea:focus {
   left: 0;
   right: 0;
   bottom: 0;
-  display: grid;
+  display: none;
   grid-template-columns: 1fr 1.5fr;
   gap: 12px;
   padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
@@ -2363,6 +2363,10 @@ textarea:focus {
 
   .wizard-actions {
     display: none;
+  }
+
+  .wizard-mobile-actions {
+    display: grid;
   }
 
   .app-shell-layout {
