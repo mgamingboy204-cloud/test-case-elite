@@ -958,42 +958,52 @@ export default function OnboardingProfilePage() {
   }
 
   return (
-    <div className="wizard-shell">
-      <div className="wizard-sidebar">
-        <span className="wizard-badge">Step {stepIndex + 1} of {steps.length}</span>
-        <h2>{currentStep.title}</h2>
-        <p className="text-muted">{currentStep.subtitle}</p>
-        <div className="wizard-progress">
-          <div className="wizard-progress__bar" style={{ width: `${progressValue}%` }} />
+    <>
+      <div className="wizard-shell">
+        <div className="wizard-sidebar">
+          <span className="wizard-badge">Step {stepIndex + 1} of {steps.length}</span>
+          <h2>{currentStep.title}</h2>
+          <p className="text-muted">{currentStep.subtitle}</p>
+          <div className="wizard-progress">
+            <div className="wizard-progress__bar" style={{ width: `${progressValue}%` }} />
+          </div>
+          {saveState === "saving" ? <p className="text-muted">Saving draft…</p> : null}
+          {saveState === "saved" ? <p className="text-muted">Draft saved.</p> : null}
         </div>
-        {saveState === "saving" ? <p className="text-muted">Saving draft…</p> : null}
-        {saveState === "saved" ? <p className="text-muted">Draft saved.</p> : null}
-      </div>
-      <div className="wizard-main">
-        {!isLoaded ? (
-          <div className="card">
-            <p className="text-muted">Loading profile…</p>
-          </div>
-        ) : (
-          <div className="card wizard-card">
-            <div className="wizard-header">
-              <span className="wizard-step">Step {stepIndex + 1} of {steps.length}</span>
-              <h3>{currentStep.title}</h3>
-              <p className="card-subtitle">{currentStep.subtitle}</p>
+        <div className="wizard-main">
+          {!isLoaded ? (
+            <div className="card">
+              <p className="text-muted">Loading profile…</p>
             </div>
-            {errorMessage ? <p className="message error">{errorMessage}</p> : null}
-            {renderStep()}
-            <div className="wizard-actions">
-              <button type="button" className="secondary" onClick={handleBack} disabled={stepIndex === 0 || isSaving}>
-                Back
-              </button>
-              <button type="button" className="primary" onClick={handleNext} disabled={isSaving}>
-                {currentStep.key === "done" ? "Finish" : "Continue"}
-              </button>
+          ) : (
+            <div className="card wizard-card">
+              <div className="wizard-header">
+                <span className="wizard-step">Step {stepIndex + 1} of {steps.length}</span>
+                <h3>{currentStep.title}</h3>
+                <p className="card-subtitle">{currentStep.subtitle}</p>
+              </div>
+              {errorMessage ? <p className="message error">{errorMessage}</p> : null}
+              {renderStep()}
+              <div className="wizard-actions">
+                <button type="button" className="secondary" onClick={handleBack} disabled={stepIndex === 0 || isSaving}>
+                  Back
+                </button>
+                <button type="button" className="primary" onClick={handleNext} disabled={isSaving}>
+                  {currentStep.key === "done" ? "Finish" : "Continue"}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+      <div className="wizard-mobile-actions">
+        <button type="button" className="btn btn-secondary" onClick={handleBack} disabled={stepIndex === 0 || isSaving}>
+          Back
+        </button>
+        <button type="button" className="btn" onClick={handleNext} disabled={isSaving}>
+          {currentStep.key === "done" ? "Finish" : "Continue"}
+        </button>
+      </div>
+    </>
   );
 }

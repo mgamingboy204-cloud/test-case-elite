@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient, type InfiniteData } from "@tanstack/react-query";
@@ -84,6 +84,14 @@ export default function DiscoverClient() {
   const [filters, setFilters] = useState(initialFilters);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ pointerId: number | null; x: number; y: number }>({
+    pointerId: null,
+    x: 0,
+    y: 0
+  });
 
   useEffect(() => {
     setFilters(initialFilters);
@@ -127,6 +135,9 @@ export default function DiscoverClient() {
     setCycleOrder([]);
     setCycleIndex(0);
     setLastSwipedId(null);
+    setIsDetailsOpen(false);
+    setDragOffset({ x: 0, y: 0 });
+    setIsDragging(false);
   }, [JSON.stringify(filters)]);
 
   useEffect(() => {
@@ -183,6 +194,9 @@ export default function DiscoverClient() {
     if (!activeProfile || isAnimating) return;
     setIsAnimating(true);
     setSwipeDirection(action === "LIKE" ? "right" : "left");
+    setIsDetailsOpen(false);
+    setDragOffset({ x: 0, y: 0 });
+    setIsDragging(false);
 
     likeMutation.mutate({ targetUserId: activeProfile.userId, action });
 
@@ -193,6 +207,41 @@ export default function DiscoverClient() {
     }, 320);
   }
 
+  function toggleDetails() {
+    setIsDetailsOpen((prev) => !prev);
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLElement>) {
+    if (!activeProfile || isAnimating) return;
+    dragStartRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    setIsDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLElement>) {
+    if (!isDragging || dragStartRef.current.pointerId !== event.pointerId) return;
+    const dx = event.clientX - dragStartRef.current.x;
+    const dy = event.clientY - dragStartRef.current.y;
+    setDragOffset({ x: dx, y: dy });
+  }
+
+  function handlePointerEnd(event: PointerEvent<HTMLElement>) {
+    if (dragStartRef.current.pointerId !== event.pointerId) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    dragStartRef.current.pointerId = null;
+    const { x, y } = dragOffset;
+    const threshold = 90;
+    setIsDragging(false);
+    setDragOffset({ x: 0, y: 0 });
+    if (Math.abs(x) >= threshold) {
+      handleSwipe(x > 0 ? "LIKE" : "PASS");
+      return;
+    }
+    if (Math.abs(x) < 6 && Math.abs(y) < 6) {
+      toggleDetails();
+    }
+  }
+
   /* -------------------- RENDER -------------------- */
 
   return (
@@ -200,28 +249,18 @@ export default function DiscoverClient() {
       <AppShellLayout showMobileShell={false}>
         <div className={styles.page}>
           <header className={styles.mobileHeader}>
-            <Link href="/profile" className={styles.mobileIconButton} aria-label="Profile">
+            <div className={styles.mobileHeaderLeft}>
+              <span className={styles.mobileLogo}>ELITE MATCH</span>
+            </div>
+            <span className={styles.mobileTitle}>Discover</span>
+            <Link href="/settings" className={styles.mobileIconButton} aria-label="Settings">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path
-                  d="M12 12.2a4.3 4.3 0 1 0-4.3-4.3 4.3 4.3 0 0 0 4.3 4.3Zm0 2c-3.8 0-7 2.1-7 4.6 0 1 .8 1.7 1.9 1.7h10.2c1 0 1.9-.7 1.9-1.7 0-2.5-3.2-4.6-7-4.6Z"
+                  d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Zm8.1 3.2c0-.4-.1-.8-.2-1.2l2-1.6-2-3.4-2.4.9a7.6 7.6 0 0 0-2.1-1.2L13 1h-4l-.4 3.9c-.7.3-1.4.7-2.1 1.2l-2.4-.9-2 3.4 2 1.6c-.1.4-.2.8-.2 1.2s.1.8.2 1.2l-2 1.6 2 3.4 2.4-.9c.7.5 1.3.9 2.1 1.2L9 23h4l.4-3.9c.7-.3 1.4-.7 2.1-1.2l2.4.9 2-3.4-2-1.6c.1-.4.2-.8.2-1.2Z"
                   fill="currentColor"
                 />
               </svg>
             </Link>
-            <span className={styles.mobileTitle}>Discover</span>
-            <button
-              type="button"
-              className={styles.mobileIconButton}
-              aria-label="Filters"
-              onClick={() => setIsFilterSheetOpen(true)}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M4 6.5a1 1 0 0 1 1-1h14a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1Zm3 5a1 1 0 0 1 1-1h8a1 1 0 1 1 0 2H8a1 1 0 0 1-1-1Zm3 5a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2h-2a1 1 0 0 1-1-1Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </button>
           </header>
 
           <section className={styles.feedColumn}>
@@ -229,7 +268,16 @@ export default function DiscoverClient() {
               {discoverQuery.isLoading && !feedItems.length ? (
                 <div className={styles.feedStack} aria-hidden="true">
                   <DiscoverCard isPlaceholder />
-                  <DiscoverCard isPlaceholder style={{ transform: "translateY(12px) scale(0.98)" }} />
+                  <DiscoverCard
+                    isPlaceholder
+                    style={
+                      {
+                        "--stack-offset": "12px",
+                        "--stack-scale": "0.98",
+                        "--stack-rotate-mobile": "-4deg"
+                      } as CSSProperties
+                    }
+                  />
                 </div>
               ) : discoverQuery.isError ? (
                 <ErrorState
@@ -245,8 +293,16 @@ export default function DiscoverClient() {
                         const offset = index * 10;
                         const scale = 1 - index * 0.03;
                         const stackStyle = index
-                          ? { transform: `translateY(${offset}px) scale(${scale})` }
-                          : undefined;
+                          ? ({
+                              "--stack-offset": `${offset}px`,
+                              "--stack-scale": `${scale}`,
+                              "--stack-rotate-mobile": index === 1 ? "-6deg" : "4deg"
+                            } as CSSProperties)
+                          : ({
+                              "--drag-x": `${dragOffset.x}px`,
+                              "--drag-y": `${dragOffset.y}px`,
+                              "--drag-rotate": `${dragOffset.x / 12}deg`
+                            } as CSSProperties);
                         return (
                           <DiscoverCard
                             key={`${profile.userId}-${index}`}
@@ -254,6 +310,12 @@ export default function DiscoverClient() {
                             isActive={index === 0}
                             isAnimating={index === 0 ? isAnimating : false}
                             swipeDirection={index === 0 ? swipeDirection : null}
+                            isExpanded={index === 0 ? isDetailsOpen : false}
+                            isDragging={index === 0 ? isDragging : false}
+                            onPointerDown={index === 0 ? handlePointerDown : undefined}
+                            onPointerMove={index === 0 ? handlePointerMove : undefined}
+                            onPointerUp={index === 0 ? handlePointerEnd : undefined}
+                            onPointerCancel={index === 0 ? handlePointerEnd : undefined}
                             style={stackStyle}
                           />
                         );
@@ -263,23 +325,21 @@ export default function DiscoverClient() {
                   <div className={styles.actions}>
                     <button
                       className={`${styles.actionButton} ${styles.actionButtonPass}`}
-                      onClick={() => handleSwipe("PASS")}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleSwipe("PASS");
+                      }}
                       aria-label="Pass"
                       type="button"
                     >
                       ✕
                     </button>
                     <button
-                      className={`${styles.actionButton} ${styles.actionButtonStar}`}
-                      onClick={() => handleSwipe("LIKE")}
-                      aria-label="Star"
-                      type="button"
-                    >
-                      ★
-                    </button>
-                    <button
                       className={`${styles.actionButton} ${styles.actionButtonLike}`}
-                      onClick={() => handleSwipe("LIKE")}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleSwipe("LIKE");
+                      }}
                       aria-label="Like"
                       type="button"
                     >
@@ -329,9 +389,42 @@ export default function DiscoverClient() {
           showRefresh
         />
         <nav className={styles.mobileBottomNav} aria-label="Discover navigation">
-          <Link href="/likes">Likes</Link>
-          <span className={styles.mobileBottomNavActive}>Discover</span>
-          <Link href="/profile">Profile</Link>
+          <Link href="/likes" className={styles.mobileNavItem}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 20.3c-4.3-3-7.6-6.2-7.6-10.1A4.4 4.4 0 0 1 8.9 5c1.4 0 2.7.6 3.1 1.7C12.4 5.6 13.7 5 15.1 5a4.4 4.4 0 0 1 4.5 5.2c0 3.9-3.3 7-7.6 10.1Z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>Likes</span>
+          </Link>
+          <span className={`${styles.mobileNavItem} ${styles.mobileBottomNavActive}`} aria-current="page">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 2a10 10 0 1 0 10 10h-2.4a7.6 7.6 0 1 1-2.2-5.4l-3 3H22V2l-2.5 2.5A9.9 9.9 0 0 0 12 2Z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>Discover</span>
+          </span>
+          <Link href="/matches" className={styles.mobileNavItem}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M7 6.5a4.5 4.5 0 1 0 4.5 4.5A4.5 4.5 0 0 0 7 6.5Zm10 0a4 4 0 1 0 4 4 4 4 0 0 0-4-4ZM7 13a7 7 0 0 0-7 6.5c0 .8.7 1.5 1.6 1.5h10.8c.9 0 1.6-.7 1.6-1.5A7 7 0 0 0 7 13Zm10 0a6.2 6.2 0 0 0-4.2 1.6 8.6 8.6 0 0 1 2.2 5.4h6.4c.9 0 1.6-.7 1.6-1.5A6.2 6.2 0 0 0 17 13Z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>Matches</span>
+          </Link>
+          <Link href="/profile" className={styles.mobileNavItem}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 12.2a4.3 4.3 0 1 0-4.3-4.3 4.3 4.3 0 0 0 4.3 4.3Zm0 2c-3.8 0-7 2.1-7 4.6 0 1 .8 1.7 1.9 1.7h10.2c1 0 1.9-.7 1.9-1.7 0-2.5-3.2-4.6-7-4.6Z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>Profile</span>
+          </Link>
         </nav>
       </AppShellLayout>
     </RouteGuard>
