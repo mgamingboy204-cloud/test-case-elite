@@ -1714,9 +1714,9 @@ textarea:focus {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: rgba(10, 10, 14, 0.95);
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
   backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border);
   z-index: 30;
 }
 
@@ -1724,13 +1724,13 @@ textarea:focus {
   font-weight: 700;
   font-size: 12px;
   letter-spacing: 0.16em;
-  color: #ff5c7a;
+  color: var(--accent-strong);
 }
 
 .mobile-shell__title {
   font-weight: 600;
   font-size: 16px;
-  color: #ffffff;
+  color: var(--text);
 }
 
 .mobile-shell__icon {
@@ -2048,10 +2048,10 @@ textarea:focus {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   padding: 10px 12px;
-  background: #17171f;
+  background: var(--bg-elevated);
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
   z-index: 30;
 }
 

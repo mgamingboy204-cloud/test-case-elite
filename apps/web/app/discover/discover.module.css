@@ -450,7 +450,7 @@
     padding: 84px 16px 110px;
     grid-template-columns: minmax(0, 1fr);
     max-width: 100%;
-    background: linear-gradient(180deg, #0b0b0f 0%, #14141b 55%, #0b0b0f 100%);
+    background: linear-gradient(180deg, var(--bg) 0%, var(--bg-elevated) 55%, var(--bg) 100%);
   }
 
   .feedStage {
@@ -546,13 +546,13 @@
     width: 56px;
     height: 56px;
     font-size: 18px;
-    background: #17171f;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 14px 24px rgba(0, 0, 0, 0.35);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-soft);
   }
 
   .actionButtonPass {
-    color: #f97373;
+    color: var(--danger);
   }
 
   .actionButtonStar {
@@ -560,7 +560,7 @@
   }
 
   .actionButtonLike {
-    background: #ff5c7a;
+    background: var(--accent);
     color: #ffffff;
     border: none;
   }
@@ -579,9 +579,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: rgba(10, 10, 14, 0.95);
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
     backdrop-filter: blur(14px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--border);
     z-index: 40;
   }
 
@@ -595,13 +595,13 @@
     font-weight: 700;
     font-size: 12px;
     letter-spacing: 0.16em;
-    color: #ff5c7a;
+    color: var(--accent-strong);
   }
 
   .mobileTitle {
     font-weight: 600;
     font-size: 16px;
-    color: #ffffff;
+    color: var(--text);
   }
 
   .mobileIconButton {
@@ -630,10 +630,10 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
     padding: 10px 12px;
-    background: #17171f;
+    background: var(--bg-elevated);
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-soft);
     z-index: 40;
   }
 
@@ -669,4 +669,8 @@
   .filterSheetPanel {
     padding-bottom: calc(20px + env(safe-area-inset-bottom));
   }
+}
+
+[data-theme="dark"] .page {
+  background: radial-gradient(circle at top, rgba(255, 123, 134, 0.08) 0%, transparent 45%), var(--bg);
 }
