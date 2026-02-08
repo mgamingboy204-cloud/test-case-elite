@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { prisma } from "../db/prisma";
 
 type DiscoverFilterOptions = {
@@ -29,7 +30,8 @@ function buildDiscoverWhere(options: DiscoverFilterOptions) {
         user: {
           likesReceived: {
             some: {
-              fromUserId: options.userId
+              fromUserId: options.userId,
+              type: "LIKE"
             }
           }
         }
@@ -70,6 +72,58 @@ function buildDiscoverWhere(options: DiscoverFilterOptions) {
   }
 
   return where;
+}
+
+type DiscoverCursorState = {
+  offset: number;
+  seed: string;
+};
+
+function decodeCursor(cursor?: string): DiscoverCursorState | null {
+  if (!cursor) return null;
+  if (/^\d+$/.test(cursor)) {
+    return { offset: Number(cursor), seed: crypto.randomUUID() };
+  }
+  try {
+    const decoded = Buffer.from(cursor, "base64url").toString("utf8");
+    const parsed = JSON.parse(decoded) as Partial<DiscoverCursorState>;
+    if (typeof parsed.offset === "number" && typeof parsed.seed === "string") {
+      return { offset: parsed.offset, seed: parsed.seed };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function encodeCursor(state: DiscoverCursorState) {
+  return Buffer.from(JSON.stringify(state), "utf8").toString("base64url");
+}
+
+function createSeededRng(seed: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  let state = hash >>> 0;
+  return () => {
+    state += 0x6d2b79f5;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleWithSeed<T>(items: T[], seed: string) {
+  const rng = createSeededRng(seed);
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
 }
 
 export async function getDiscoverProfiles(options: {
@@ -164,11 +218,12 @@ export async function getDiscoverFeed(options: {
   maxAge?: number;
   mode?: string;
   intent?: string;
-  cursor?: number;
+  cursor?: string;
   limit?: number;
 }) {
   const take = options.limit ?? 24;
-  const offset = options.cursor ?? 0;
+  const cursorState = decodeCursor(options.cursor) ?? { offset: 0, seed: crypto.randomUUID() };
+  const offset = cursorState.offset;
   const profile = await prisma.profile.findUnique({ where: { userId: options.userId } });
   const modeValue = options.mode === "friends" ? "friends" : "dating";
   const normalizedGender = profile?.gender?.toString().toLowerCase();
@@ -198,9 +253,7 @@ export async function getDiscoverFeed(options: {
 
   const profiles = await prisma.profile.findMany({
     where,
-    orderBy: [{ user: { profileCompletedAt: "desc" } }, { userId: "asc" }],
-    skip: offset,
-    take,
+    orderBy: [{ userId: "asc" }],
     select: {
       userId: true,
       name: true,
@@ -224,7 +277,10 @@ export async function getDiscoverFeed(options: {
     }
   });
 
-  const formatted = profiles.map((profile) => ({
+  const shuffledProfiles = shuffleWithSeed(profiles, cursorState.seed);
+  const pageProfiles = shuffledProfiles.slice(offset, offset + take);
+
+  const formatted = pageProfiles.map((profile) => ({
     userId: profile.userId,
     name: profile.name,
     gender: profile.gender,
@@ -236,7 +292,8 @@ export async function getDiscoverFeed(options: {
     primaryPhotoUrl: profile.user?.photos?.[0]?.url ?? null
   }));
 
-  const nextCursor = profiles.length === take ? String(offset + take) : undefined;
+  const nextCursor =
+    offset + take < shuffledProfiles.length ? encodeCursor({ offset: offset + take, seed: cursorState.seed }) : undefined;
 
   return { items: formatted, nextCursor };
 }

@@ -1,3 +1,5 @@
+import { env } from "./env";
+
 export const deviceCookieName = "em_device";
 
 export const deviceCookieOptions = {
@@ -14,7 +16,8 @@ export const sessionCookieOptions = {
   httpOnly: true,
   sameSite: "none" as const,
   secure: true,
-  path: "/"
+  path: "/",
+  maxAge: 1000 * 60 * 60 * 24 * env.REFRESH_TOKEN_TTL_DAYS
 };
 
 export const refreshCookieName = "em_refresh";

@@ -2,8 +2,8 @@
 
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "./api";
-import { clearAccessToken } from "./authToken";
+import { apiFetch, refreshAccessToken } from "./api";
+import { clearAccessToken, getAccessToken } from "./authToken";
 import { queryKeys } from "./queryKeys";
 
 export type SessionStatus = "loading" | "logged-in" | "logged-out";
@@ -44,6 +44,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     staleTime: 15000,
     refetchOnWindowFocus: true
   });
+
+  useEffect(() => {
+    if (getAccessToken()) return;
+    void refreshAccessToken().then((token) => {
+      if (token) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      }
+    });
+  }, [queryClient]);
 
   useEffect(() => {
     if (!meQuery.isError) {

@@ -52,19 +52,6 @@ function buildFilterSearch(filters: DiscoverFiltersState) {
   return params.toString();
 }
 
-function shuffleIds(ids: string[], avoid?: string | null) {
-  const arr = [...ids];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  if (avoid && arr[0] === avoid && arr.length > 1) {
-    const idx = arr.findIndex((id) => id !== avoid);
-    if (idx > 0) [arr[0], arr[idx]] = [arr[idx], arr[0]];
-  }
-  return arr;
-}
-
 /* -------------------- COMPONENT -------------------- */
 
 export default function DiscoverClient() {
@@ -123,24 +110,12 @@ export default function DiscoverClient() {
     return data?.pages.flatMap((p) => p.items ?? []) ?? [];
   }, [discoverQuery.data]);
 
-  const profileMap = useMemo(
-    () => new Map(feedItems.map((p) => [p.userId, p])),
-    [feedItems]
-  );
-
   const [activeIndex, setActiveIndex] = useState(0);
-  const [cycleOrder, setCycleOrder] = useState<string[]>([]);
-  const [cycleIndex, setCycleIndex] = useState(0);
-  const [lastSwipedId, setLastSwipedId] = useState<string | null>(null);
 
   const hasNextPage = Boolean(discoverQuery.hasNextPage);
-  const shouldCycle = !hasNextPage && feedItems.length > 0;
 
   useEffect(() => {
     setActiveIndex(0);
-    setCycleOrder([]);
-    setCycleIndex(0);
-    setLastSwipedId(null);
     setIsQuickProfileOpen(false);
     setQuickProfile(null);
     setDragOffset({ x: 0, y: 0 });
@@ -155,24 +130,16 @@ export default function DiscoverClient() {
   }, [activeIndex, feedItems.length, hasNextPage, discoverQuery]);
 
   useEffect(() => {
-    if (shouldCycle && activeIndex >= feedItems.length && !cycleOrder.length) {
-      setCycleOrder(shuffleIds(feedItems.map((p) => p.userId), lastSwipedId));
-      setCycleIndex(0);
+    if (!hasNextPage && feedItems.length > 0 && activeIndex >= feedItems.length && !discoverQuery.isFetching) {
+      queryClient.removeQueries({ queryKey: queryKeys.discoverFeed(filters) });
+      setActiveIndex(0);
     }
-  }, [shouldCycle, activeIndex, feedItems, cycleOrder.length, lastSwipedId]);
-
-  useEffect(() => {
-    if (shouldCycle && cycleIndex >= cycleOrder.length && cycleOrder.length) {
-      setCycleOrder(shuffleIds(cycleOrder, lastSwipedId));
-      setCycleIndex(0);
-    }
-  }, [cycleIndex, cycleOrder, shouldCycle, lastSwipedId]);
+  }, [activeIndex, discoverQuery.isFetching, feedItems.length, filters, hasNextPage, queryClient]);
 
   const activeProfile = useMemo(() => {
     if (activeIndex < feedItems.length) return feedItems[activeIndex];
-    if (!shouldCycle) return undefined;
-    return profileMap.get(cycleOrder[cycleIndex]);
-  }, [activeIndex, feedItems, shouldCycle, cycleOrder, cycleIndex, profileMap]);
+    return undefined;
+  }, [activeIndex, feedItems]);
 
   /* ---------- SWIPE ---------- */
 
@@ -193,10 +160,8 @@ export default function DiscoverClient() {
   });
   const isSwipeLocked = isAnimating || likeMutation.isPending || isQuickProfileOpen;
 
-  function advance(swipedId: string) {
-    setLastSwipedId(swipedId);
+  function advance() {
     if (activeIndex < feedItems.length) setActiveIndex((i) => i + 1);
-    else setCycleIndex((i) => i + 1);
   }
 
   function handleSwipe(action: "LIKE" | "PASS") {
@@ -211,7 +176,7 @@ export default function DiscoverClient() {
     likeMutation.mutate({ targetUserId: activeProfile.userId, action });
 
     setTimeout(() => {
-      advance(activeProfile.userId);
+      advance();
       setSwipeDirection(null);
       setIsAnimating(false);
     }, 320);
