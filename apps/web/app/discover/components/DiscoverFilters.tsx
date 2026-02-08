@@ -29,21 +29,6 @@ function FiltersBody({
   filters: DiscoverFilters;
   onChange: (filters: DiscoverFilters) => void;
 }) {
-  const minAge = Math.max(18, Number.isFinite(filters.ageMin) ? filters.ageMin : 18);
-  const maxAge = Math.max(18, Number.isFinite(filters.ageMax) ? filters.ageMax : 18);
-
-  function handleAgeChange(type: "min" | "max", value: number) {
-    const sanitized = Number.isFinite(value) ? value : type === "min" ? minAge : maxAge;
-    const nextValue = Math.min(99, Math.max(18, sanitized));
-    if (type === "min") {
-      const nextMax = Math.max(nextValue, maxAge);
-      onChange({ ...filters, ageMin: nextValue, ageMax: nextMax });
-      return;
-    }
-    const nextMin = Math.min(minAge, nextValue);
-    onChange({ ...filters, ageMin: nextMin, ageMax: nextValue });
-  }
-
   return (
     <div className={styles.filters}>
       <div className={styles.filterGroup}>
@@ -62,43 +47,6 @@ function FiltersBody({
               {option.label}
             </button>
           ))}
-        </div>
-      </div>
-
-      <div className={styles.filterRow}>
-        <div className={styles.filterGroup}>
-          <label className={styles.filterLabel} htmlFor="age-min">
-            Age min
-          </label>
-          <input
-            id="age-min"
-            type="number"
-            min={18}
-            max={99}
-            value={minAge}
-            onChange={(event) => {
-              const value = Number(event.target.value);
-              handleAgeChange("min", value);
-            }}
-            className={styles.filterInput}
-          />
-        </div>
-        <div className={styles.filterGroup}>
-          <label className={styles.filterLabel} htmlFor="age-max">
-            Age max
-          </label>
-          <input
-            id="age-max"
-            type="number"
-            min={18}
-            max={99}
-            value={maxAge}
-            onChange={(event) => {
-              const value = Number(event.target.value);
-              handleAgeChange("max", value);
-            }}
-            className={styles.filterInput}
-          />
         </div>
       </div>
 

@@ -51,7 +51,7 @@
   position: absolute;
   inset: 0;
   background: var(--bg-elevated);
-  border-radius: 28px;
+  border-radius: 30px;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
   overflow: hidden;
   display: grid;
@@ -73,6 +73,10 @@
 .cardDragging {
   transition: none;
   cursor: grabbing;
+}
+
+.cardInteractionDisabled {
+  pointer-events: none;
 }
 
 .cardSwipeLeft {
@@ -120,10 +124,6 @@
   display: none;
 }
 
-.cardExpanded .cardOverlay {
-  opacity: 0;
-}
-
 .cardDetails {
   padding: 32px 28px;
   display: grid;
@@ -135,6 +135,13 @@
   margin: 0;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+}
+
+.cardBioLine {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cardActions {
@@ -142,8 +149,8 @@
 }
 
 .cardActionButton {
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   background: rgba(15, 23, 42, 0.35);
@@ -271,27 +278,12 @@
   gap: 8px;
 }
 
-.filterRow {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .filterLabel {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-}
-
-.filterInput {
-  width: 100%;
-  border-radius: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
 }
 
 .filterRangeInput {
@@ -381,6 +373,176 @@
   display: grid;
   gap: 18px;
   box-shadow: 0 -16px 40px rgba(15, 23, 42, 0.2);
+}
+
+.quickProfileSheet {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.quickProfileSheetOpen {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.quickProfileBackdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.quickProfilePanel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 85vh;
+  background: var(--bg);
+  border-radius: 24px 24px 0 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  box-shadow: 0 -20px 50px rgba(15, 23, 42, 0.35);
+  transition: transform 0.25s ease;
+}
+
+.quickProfilePanelDragging {
+  transition: none;
+}
+
+.quickProfileHandle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px 8px;
+  position: relative;
+}
+
+.quickProfileHandleBar {
+  width: 42px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.quickProfileClose {
+  position: absolute;
+  right: 16px;
+  top: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.quickProfileContent {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+}
+
+.quickProfileHeader {
+  width: 100%;
+  height: clamp(220px, 32vh, 320px);
+  background: var(--bg-muted);
+}
+
+.quickProfileHeader img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.quickProfilePhotoFallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-size: 52px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.quickProfileBody {
+  padding: 16px 20px calc(24px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.quickProfileBody h2 {
+  margin: 0;
+  font-size: 24px;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.quickProfileBody h2 span {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.quickProfileCity {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.quickProfileBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quickProfileBadges span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.quickProfileBio {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.quickProfileSection h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.quickProfileInterests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quickProfileInterests span {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--bg-muted);
+  font-size: 12px;
+  color: var(--text);
 }
 
 .filterSheetHeader {
@@ -492,7 +654,7 @@
 
 @media (max-width: 768px) {
   .page {
-    padding: 76px 16px 140px;
+    padding: 76px 16px calc(140px + env(safe-area-inset-bottom));
     grid-template-columns: minmax(0, 1fr);
     max-width: 100%;
     background: linear-gradient(180deg, var(--bg) 0%, var(--bg-elevated) 55%, var(--bg) 100%);
@@ -530,41 +692,30 @@
     display: grid;
     gap: 6px;
     position: absolute;
-    left: 20px;
-    bottom: 20px;
-    color: #fff;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 18px 18px 20px;
+    color: #ffffff;
     z-index: 2;
-  }
-
-  .cardOverlay::before {
-    content: "";
-    position: absolute;
-    left: -18px;
-    right: -18px;
-    bottom: -18px;
-    height: 150px;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.7) 100%);
-    z-index: -1;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.65) 100%);
+    pointer-events: none;
   }
 
   .cardOverlay h2 {
     margin: 0;
     font-size: 22px;
     font-weight: 700;
+    line-height: 1.2;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
   }
 
   .cardOverlay h2 span {
     font-weight: 500;
     font-size: 18px;
     color: rgba(255, 255, 255, 0.85);
-  }
-
-  .cardExpanded .cardDetails {
-    display: none;
-  }
-
-  .cardExpanded .cardOverlay {
-    opacity: 1;
   }
 
   .actions {
@@ -574,8 +725,8 @@
   .cardActions {
     position: absolute;
     right: 16px;
-    top: 50%;
-    transform: translateY(-40%);
+    top: 55%;
+    transform: translateY(-50%);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -607,6 +758,7 @@
 
   .filtersColumn {
     margin-top: 24px;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
   }
 
   .mobileHeader {

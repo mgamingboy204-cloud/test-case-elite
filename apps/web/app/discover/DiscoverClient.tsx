@@ -17,10 +17,12 @@ import LoadingState from "../components/ui/LoadingState";
 
 import DiscoverCard from "./components/DiscoverCard";
 import DiscoverFilters from "./components/DiscoverFilters";
+import QuickProfileSheet from "./components/QuickProfileSheet";
 import styles from "./discover.module.css";
 import {
   type DiscoverFilters as DiscoverFiltersState,
   type DiscoverFeedResponse,
+  type DiscoverProfile,
   useDiscoverFeed
 } from "./useDiscoverFeed";
 
@@ -28,8 +30,6 @@ import {
 
 const defaultFilters: DiscoverFiltersState = {
   intent: "dating",
-  ageMin: 24,
-  ageMax: 38,
   distance: 25
 };
 
@@ -37,14 +37,10 @@ const defaultFilters: DiscoverFiltersState = {
 
 function parseFilters(params: URLSearchParams): DiscoverFiltersState {
   const intent = params.get("intent");
-  const ageMin = Number(params.get("ageMin"));
-  const ageMax = Number(params.get("ageMax"));
   const distance = Number(params.get("distance"));
 
   return {
     intent: intent === "friends" || intent === "all" ? intent : "dating",
-    ageMin: Number.isFinite(ageMin) && ageMin >= 18 ? ageMin : defaultFilters.ageMin,
-    ageMax: Number.isFinite(ageMax) && ageMax >= 18 ? ageMax : defaultFilters.ageMax,
     distance: Number.isFinite(distance) && distance > 0 ? distance : defaultFilters.distance
   };
 }
@@ -52,8 +48,6 @@ function parseFilters(params: URLSearchParams): DiscoverFiltersState {
 function buildFilterSearch(filters: DiscoverFiltersState) {
   const params = new URLSearchParams();
   if (filters.intent !== "dating") params.set("intent", filters.intent);
-  if (filters.ageMin !== defaultFilters.ageMin) params.set("ageMin", String(filters.ageMin));
-  if (filters.ageMax !== defaultFilters.ageMax) params.set("ageMax", String(filters.ageMax));
   if (filters.distance !== defaultFilters.distance) params.set("distance", String(filters.distance));
   return params.toString();
 }
@@ -84,9 +78,12 @@ export default function DiscoverClient() {
   const [filters, setFilters] = useState(initialFilters);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isQuickProfileOpen, setIsQuickProfileOpen] = useState(false);
+  const [quickProfile, setQuickProfile] = useState<DiscoverProfile | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const dragRafRef = useRef<number | null>(null);
   const dragStartRef = useRef<{ pointerId: number | null; x: number; y: number }>({
     pointerId: null,
     x: 0,
@@ -107,6 +104,15 @@ export default function DiscoverClient() {
       setDraftFilters(filters);
     }
   }, [filters, isFilterSheetOpen]);
+
+  useEffect(
+    () => () => {
+      if (dragRafRef.current !== null) {
+        cancelAnimationFrame(dragRafRef.current);
+      }
+    },
+    []
+  );
 
   /* ---------- FEED STATE ---------- */
 
@@ -135,8 +141,10 @@ export default function DiscoverClient() {
     setCycleOrder([]);
     setCycleIndex(0);
     setLastSwipedId(null);
-    setIsDetailsOpen(false);
+    setIsQuickProfileOpen(false);
+    setQuickProfile(null);
     setDragOffset({ x: 0, y: 0 });
+    dragOffsetRef.current = { x: 0, y: 0 };
     setIsDragging(false);
   }, [JSON.stringify(filters)]);
 
@@ -183,6 +191,7 @@ export default function DiscoverClient() {
       queryClient.invalidateQueries({ queryKey: queryKeys.notificationsCount });
     }
   });
+  const isSwipeLocked = isAnimating || likeMutation.isPending || isQuickProfileOpen;
 
   function advance(swipedId: string) {
     setLastSwipedId(swipedId);
@@ -191,11 +200,12 @@ export default function DiscoverClient() {
   }
 
   function handleSwipe(action: "LIKE" | "PASS") {
-    if (!activeProfile || isAnimating) return;
+    if (!activeProfile || isSwipeLocked) return;
     setIsAnimating(true);
     setSwipeDirection(action === "LIKE" ? "right" : "left");
-    setIsDetailsOpen(false);
+    setIsQuickProfileOpen(false);
     setDragOffset({ x: 0, y: 0 });
+    dragOffsetRef.current = { x: 0, y: 0 };
     setIsDragging(false);
 
     likeMutation.mutate({ targetUserId: activeProfile.userId, action });
@@ -207,14 +217,20 @@ export default function DiscoverClient() {
     }, 320);
   }
 
-  function toggleDetails() {
-    setIsDetailsOpen((prev) => !prev);
+  function openQuickProfile() {
+    if (!activeProfile || isSwipeLocked) return;
+    setQuickProfile(activeProfile);
+    setIsQuickProfileOpen(true);
+    setIsDragging(false);
+    setDragOffset({ x: 0, y: 0 });
+    dragOffsetRef.current = { x: 0, y: 0 };
   }
 
   function handlePointerDown(event: PointerEvent<HTMLElement>) {
-    if (!activeProfile || isAnimating) return;
+    if (!activeProfile || isSwipeLocked) return;
     dragStartRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
     setIsDragging(true);
+    dragOffsetRef.current = { x: 0, y: 0 };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
@@ -222,25 +238,34 @@ export default function DiscoverClient() {
     if (!isDragging || dragStartRef.current.pointerId !== event.pointerId) return;
     const dx = event.clientX - dragStartRef.current.x;
     const dy = event.clientY - dragStartRef.current.y;
-    setDragOffset({ x: dx, y: dy });
+    dragOffsetRef.current = { x: dx, y: dy };
+    if (dragRafRef.current === null) {
+      dragRafRef.current = requestAnimationFrame(() => {
+        dragRafRef.current = null;
+        setDragOffset(dragOffsetRef.current);
+      });
+    }
   }
 
   function handlePointerEnd(event: PointerEvent<HTMLElement>) {
     if (dragStartRef.current.pointerId !== event.pointerId) return;
     event.currentTarget.releasePointerCapture(event.pointerId);
     dragStartRef.current.pointerId = null;
-    const { x, y } = dragOffset;
-    const threshold = 90;
+    const { x, y } = dragOffsetRef.current;
+    const threshold = 110;
     setIsDragging(false);
     setDragOffset({ x: 0, y: 0 });
+    dragOffsetRef.current = { x: 0, y: 0 };
     if (Math.abs(x) >= threshold) {
       handleSwipe(x > 0 ? "LIKE" : "PASS");
       return;
     }
     if (Math.abs(x) < 6 && Math.abs(y) < 6) {
-      toggleDetails();
+      openQuickProfile();
     }
   }
+
+  const canInteract = Boolean(activeProfile && !isSwipeLocked);
 
   /* -------------------- RENDER -------------------- */
 
@@ -268,16 +293,6 @@ export default function DiscoverClient() {
               {discoverQuery.isLoading && !feedItems.length ? (
                 <div className={styles.feedStack} aria-hidden="true">
                   <DiscoverCard isPlaceholder />
-                  <DiscoverCard
-                    isPlaceholder
-                    style={
-                      {
-                        "--stack-offset": "12px",
-                        "--stack-scale": "0.98",
-                        "--stack-rotate-mobile": "-4deg"
-                      } as CSSProperties
-                    }
-                  />
                 </div>
               ) : discoverQuery.isError ? (
                 <ErrorState
@@ -287,54 +302,32 @@ export default function DiscoverClient() {
               ) : activeProfile ? (
                 <>
                   <div className={styles.feedStack}>
-                    {[activeProfile, feedItems[activeIndex + 1], feedItems[activeIndex + 2]].map(
-                      (profile, index) => {
-                        if (!profile) return null;
-                        const offset = index * 10;
-                        const scale = 1 - index * 0.03;
-                        const stackStyle = index
-                          ? ({
-                              "--stack-offset": `${offset}px`,
-                              "--stack-scale": `${scale}`,
-                              "--stack-rotate-mobile": index === 1 ? "-6deg" : "4deg"
-                            } as CSSProperties)
-                          : ({
-                              "--drag-x": `${dragOffset.x}px`,
-                              "--drag-y": `${dragOffset.y}px`,
-                              "--drag-rotate": `${dragOffset.x / 12}deg`
-                            } as CSSProperties);
-                        return (
-                          <DiscoverCard
-                            key={`${profile.userId}-${index}`}
-                            profile={profile}
-                            isActive={index === 0}
-                            isAnimating={index === 0 ? isAnimating : false}
-                            swipeDirection={index === 0 ? swipeDirection : null}
-                            isExpanded={index === 0 ? isDetailsOpen : false}
-                            isDragging={index === 0 ? isDragging : false}
-                            onPass={
-                              index === 0
-                                ? () => {
-                                    handleSwipe("PASS");
-                                  }
-                                : undefined
-                            }
-                            onLike={
-                              index === 0
-                                ? () => {
-                                    handleSwipe("LIKE");
-                                  }
-                                : undefined
-                            }
-                            onPointerDown={index === 0 ? handlePointerDown : undefined}
-                            onPointerMove={index === 0 ? handlePointerMove : undefined}
-                            onPointerUp={index === 0 ? handlePointerEnd : undefined}
-                            onPointerCancel={index === 0 ? handlePointerEnd : undefined}
-                            style={stackStyle}
-                          />
-                        );
+                    <DiscoverCard
+                      key={activeProfile.userId}
+                      profile={activeProfile}
+                      isActive
+                      isAnimating={isAnimating}
+                      swipeDirection={swipeDirection}
+                      isDragging={isDragging}
+                      isInteractionDisabled={!canInteract}
+                      onPass={() => {
+                        handleSwipe("PASS");
+                      }}
+                      onLike={() => {
+                        handleSwipe("LIKE");
+                      }}
+                      onPointerDown={canInteract ? handlePointerDown : undefined}
+                      onPointerMove={canInteract ? handlePointerMove : undefined}
+                      onPointerUp={canInteract ? handlePointerEnd : undefined}
+                      onPointerCancel={canInteract ? handlePointerEnd : undefined}
+                      style={
+                        {
+                          "--drag-x": `${dragOffset.x}px`,
+                          "--drag-y": `${dragOffset.y}px`,
+                          "--drag-rotate": `${dragOffset.x / 12}deg`
+                        } as CSSProperties
                       }
-                    )}
+                    />
                   </div>
                   <div className={styles.actions}>
                     <button
@@ -345,7 +338,7 @@ export default function DiscoverClient() {
                       }}
                       aria-label="Pass"
                       type="button"
-                      disabled={isAnimating}
+                      disabled={!canInteract}
                     >
                       ✕
                     </button>
@@ -357,7 +350,7 @@ export default function DiscoverClient() {
                       }}
                       aria-label="Like"
                       type="button"
-                      disabled={isAnimating}
+                      disabled={!canInteract}
                     >
                       ❤
                     </button>
@@ -403,6 +396,11 @@ export default function DiscoverClient() {
           onRefresh={() => discoverQuery.refetch()}
           isRefreshing={discoverQuery.isFetching}
           showRefresh
+        />
+        <QuickProfileSheet
+          isOpen={isQuickProfileOpen}
+          profile={quickProfile}
+          onClose={() => setIsQuickProfileOpen(false)}
         />
         <nav className={styles.mobileBottomNav} aria-label="Discover navigation">
           <Link href="/likes" className={styles.mobileNavItem}>
