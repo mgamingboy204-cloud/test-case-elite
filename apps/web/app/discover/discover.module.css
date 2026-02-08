@@ -130,6 +130,51 @@
   gap: 16px;
 }
 
+.cardCity,
+.cardBioLine {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.cardActions {
+  display: none;
+}
+
+.cardActionButton {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.35);
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.25);
+  backdrop-filter: blur(10px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  transition: transform var(--transition), background var(--transition), opacity var(--transition);
+}
+
+.cardActionButton:active {
+  transform: scale(0.94);
+}
+
+.cardActionButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cardActionPass {
+  color: #f87171;
+}
+
+.cardActionLike {
+  color: #22c55e;
+}
+
 .cardHeader h2 {
   font-size: 28px;
   margin: 0;
@@ -447,24 +492,28 @@
 
 @media (max-width: 768px) {
   .page {
-    padding: 84px 16px 110px;
+    padding: 76px 16px 140px;
     grid-template-columns: minmax(0, 1fr);
     max-width: 100%;
     background: linear-gradient(180deg, var(--bg) 0%, var(--bg-elevated) 55%, var(--bg) 100%);
   }
 
   .feedStage {
-    padding-top: 12px;
+    padding-top: 8px;
   }
 
   .feedStack {
-    height: clamp(420px, 64vh, 540px);
+    height: clamp(520px, 72vh, 640px);
+    display: grid;
+    place-items: center;
   }
 
   .card {
     grid-template-columns: 1fr;
-    border-radius: 32px;
-    box-shadow: 0 22px 50px rgba(15, 23, 42, 0.18);
+    border-radius: 30px;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.22);
+    width: min(92vw, 380px);
+    height: clamp(520px, 72vh, 640px);
     transform: translate3d(var(--drag-x), calc(var(--stack-offset) + var(--drag-y)), 0) scale(var(--stack-scale))
       rotate(calc(var(--stack-rotate-mobile) + var(--drag-rotate)));
   }
@@ -479,10 +528,10 @@
 
   .cardOverlay {
     display: grid;
-    gap: 4px;
+    gap: 6px;
     position: absolute;
     left: 20px;
-    bottom: 22px;
+    bottom: 20px;
     color: #fff;
     z-index: 2;
   }
@@ -490,56 +539,47 @@
   .cardOverlay::before {
     content: "";
     position: absolute;
-    inset: -80px -24px -24px -24px;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.7) 70%);
+    left: -18px;
+    right: -18px;
+    bottom: -18px;
+    height: 150px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.7) 100%);
     z-index: -1;
   }
 
   .cardOverlay h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: 22px;
+    font-weight: 700;
   }
 
   .cardOverlay h2 span {
     font-weight: 500;
     font-size: 18px;
-  }
-
-  .cardOverlay p {
-    margin: 0;
-    font-size: 13px;
     color: rgba(255, 255, 255, 0.85);
   }
 
   .cardExpanded .cardDetails {
-    display: grid;
-    position: absolute;
-    left: 16px;
-    right: 16px;
-    bottom: 16px;
-    padding: 18px;
-    gap: 12px;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+    display: none;
   }
 
-  .cardExpanded .cardDetails h2 {
-    font-size: 20px;
-  }
-
-  .cardExpanded .cardDetails h2 span {
-    font-size: 16px;
+  .cardExpanded .cardOverlay {
+    opacity: 1;
   }
 
   .actions {
+    display: none;
+  }
+
+  .cardActions {
     position: absolute;
-    left: 50%;
-    bottom: 18px;
-    transform: translateX(-50%);
-    flex-direction: row;
-    gap: 18px;
-    margin-top: 0;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-40%);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 3;
   }
 
   .actionButton {
@@ -574,11 +614,11 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 56px;
-    padding: calc(env(safe-area-inset-top) + 8px) 16px 8px;
-    display: flex;
+    height: calc(56px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 16px 0;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
     background: color-mix(in srgb, var(--bg) 90%, transparent);
     backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--border);
@@ -589,6 +629,7 @@
     display: inline-flex;
     align-items: center;
     gap: 10px;
+    justify-self: start;
   }
 
   .mobileLogo {
@@ -602,18 +643,20 @@
     font-weight: 600;
     font-size: 16px;
     color: var(--text);
+    justify-self: center;
   }
 
   .mobileIconButton {
     width: 40px;
     height: 40px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: #17171f;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #ffffff;
+    color: var(--text);
+    justify-self: end;
   }
 
   .mobileIconButton svg {
@@ -625,15 +668,15 @@
     position: fixed;
     left: 16px;
     right: 16px;
-    bottom: calc(12px + env(safe-area-inset-bottom));
+    bottom: calc(10px + env(safe-area-inset-bottom));
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
-    padding: 10px 12px;
-    background: color-mix(in srgb, var(--bg-elevated) 92%, #ffffff);
-    border-radius: 999px;
+    gap: 6px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--bg-elevated) 96%, #ffffff);
+    border-radius: 22px;
     border: 1px solid color-mix(in srgb, var(--border) 70%, #ffffff);
-    box-shadow: 0 12px 30px rgba(20, 18, 30, 0.12);
+    box-shadow: 0 10px 24px rgba(20, 18, 30, 0.14);
     z-index: 40;
   }
 
@@ -643,7 +686,7 @@
     text-align: center;
     font-size: 13px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-muted);
     text-decoration: none;
     padding: 8px 12px;
     border-radius: 999px;
@@ -662,8 +705,8 @@
   }
 
   .mobileBottomNavActive {
-    color: #ffffff;
-    background: rgba(255, 92, 122, 0.2);
+    color: var(--text);
+    background: rgba(15, 23, 42, 0.08);
   }
 
   .filterSheetPanel {

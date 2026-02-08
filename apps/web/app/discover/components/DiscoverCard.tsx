@@ -34,6 +34,8 @@ type DiscoverCardProps = {
   isAnimating?: boolean;
   isExpanded?: boolean;
   isDragging?: boolean;
+  onLike?: () => void;
+  onPass?: () => void;
   onPointerDown?: (event: PointerEvent<HTMLElement>) => void;
   onPointerMove?: (event: PointerEvent<HTMLElement>) => void;
   onPointerUp?: (event: PointerEvent<HTMLElement>) => void;
@@ -49,6 +51,8 @@ export default function DiscoverCard({
   isAnimating,
   isExpanded,
   isDragging,
+  onLike,
+  onPass,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -87,9 +91,38 @@ export default function DiscoverCard({
         {!isPlaceholder && profile ? (
           <div className={styles.cardOverlay}>
             <h2>
-              {profile.name}
+              {profile.name} <span>{profile.age}</span>
             </h2>
-            <p>{profile.bioShort || profile.city || ""}</p>
+            {profile.city ? <p className={styles.cardCity}>{profile.city}</p> : null}
+            {profile.bioShort ? <p className={styles.cardBioLine}>{profile.bioShort}</p> : null}
+          </div>
+        ) : null}
+        {!isPlaceholder && isActive ? (
+          <div className={styles.cardActions}>
+            <button
+              className={`${styles.cardActionButton} ${styles.cardActionPass}`}
+              type="button"
+              aria-label="Pass"
+              onClick={(event) => {
+                event.stopPropagation();
+                onPass?.();
+              }}
+              disabled={Boolean(isAnimating)}
+            >
+              ✕
+            </button>
+            <button
+              className={`${styles.cardActionButton} ${styles.cardActionLike}`}
+              type="button"
+              aria-label="Like"
+              onClick={(event) => {
+                event.stopPropagation();
+                onLike?.();
+              }}
+              disabled={Boolean(isAnimating)}
+            >
+              ❤
+            </button>
           </div>
         ) : null}
       </div>
