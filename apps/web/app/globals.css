@@ -1714,26 +1714,35 @@ textarea:focus {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
+  background: rgba(10, 10, 14, 0.95);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 30;
+}
+
+.mobile-shell__logo {
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: #ff5c7a;
 }
 
 .mobile-shell__title {
   font-weight: 600;
   font-size: 16px;
+  color: #ffffff;
 }
 
 .mobile-shell__icon {
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #17171f;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--text);
+  color: #ffffff;
 }
 
 .mobile-shell__icon svg {
@@ -2032,31 +2041,41 @@ textarea:focus {
 
 .mobile-shell__tabs {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 16px;
+  right: 16px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-  background: var(--bg);
-  border-top: 1px solid var(--border);
+  padding: 10px 12px;
+  background: #17171f;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
   z-index: 30;
 }
 
 .mobile-shell__tab {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
   text-align: center;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
   padding: 8px 12px;
   border-radius: 999px;
 }
 
+.mobile-shell__tab svg {
+  width: 18px;
+  height: 18px;
+}
+
 .mobile-shell__tab.active {
-  color: var(--accent-strong);
-  background: var(--accent-soft);
+  color: #ffffff;
+  background: rgba(255, 92, 122, 0.2);
 }
 
 .mobile-gate-header {
@@ -2307,7 +2326,7 @@ textarea:focus {
   left: 0;
   right: 0;
   bottom: 0;
-  display: grid;
+  display: none;
   grid-template-columns: 1fr 1.5fr;
   gap: 12px;
   padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
@@ -2363,6 +2382,10 @@ textarea:focus {
 
   .wizard-actions {
     display: none;
+  }
+
+  .wizard-mobile-actions {
+    display: grid;
   }
 
   .app-shell-layout {
