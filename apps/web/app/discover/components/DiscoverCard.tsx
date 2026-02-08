@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, PointerEvent } from "react";
 import { getAssetUrl } from "../../../lib/assets";
 import type { DiscoverProfile } from "../useDiscoverFeed";
 import styles from "../discover.module.css";
@@ -32,6 +32,12 @@ type DiscoverCardProps = {
   isPlaceholder?: boolean;
   swipeDirection?: "left" | "right" | null;
   isAnimating?: boolean;
+  isExpanded?: boolean;
+  isDragging?: boolean;
+  onPointerDown?: (event: PointerEvent<HTMLElement>) => void;
+  onPointerMove?: (event: PointerEvent<HTMLElement>) => void;
+  onPointerUp?: (event: PointerEvent<HTMLElement>) => void;
+  onPointerCancel?: (event: PointerEvent<HTMLElement>) => void;
   style?: CSSProperties;
 };
 
@@ -41,6 +47,12 @@ export default function DiscoverCard({
   isPlaceholder,
   swipeDirection,
   isAnimating,
+  isExpanded,
+  isDragging,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
   style
 }: DiscoverCardProps) {
   const tags = buildTags(profile);
@@ -55,8 +67,12 @@ export default function DiscoverCard({
     <article
       className={`${styles.card} ${isActive ? styles.cardActive : ""} ${
         isPlaceholder ? styles.cardSkeleton : ""
-      } ${swipeClass}`}
+      } ${swipeClass} ${isExpanded ? styles.cardExpanded : ""} ${isDragging ? styles.cardDragging : ""}`}
       style={style}
+      onPointerDown={isPlaceholder ? undefined : onPointerDown}
+      onPointerMove={isPlaceholder ? undefined : onPointerMove}
+      onPointerUp={isPlaceholder ? undefined : onPointerUp}
+      onPointerCancel={isPlaceholder ? undefined : onPointerCancel}
       tabIndex={isPlaceholder ? -1 : 0}
       aria-label={profile ? `${profile.name}, ${profile.age}` : "Loading profile"}
     >
@@ -71,7 +87,7 @@ export default function DiscoverCard({
         {!isPlaceholder && profile ? (
           <div className={styles.cardOverlay}>
             <h2>
-              {profile.name} <span>{profile.age}</span>
+              {profile.name}
             </h2>
             <p>{profile.bioShort || profile.city || ""}</p>
           </div>
