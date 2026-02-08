@@ -34,8 +34,11 @@ type DiscoverCardProps = {
   isAnimating?: boolean;
   isDragging?: boolean;
   isInteractionDisabled?: boolean;
+  isFlipped?: boolean;
   onLike?: () => void;
   onPass?: () => void;
+  onInfo?: () => void;
+  onFlipBack?: () => void;
   onPointerDown?: (event: PointerEvent<HTMLElement>) => void;
   onPointerMove?: (event: PointerEvent<HTMLElement>) => void;
   onPointerUp?: (event: PointerEvent<HTMLElement>) => void;
@@ -51,8 +54,11 @@ export default function DiscoverCard({
   isAnimating,
   isDragging,
   isInteractionDisabled,
+  isFlipped,
   onLike,
   onPass,
+  onInfo,
+  onFlipBack,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -72,6 +78,7 @@ export default function DiscoverCard({
   const ariaLabel = profile
     ? `${profile.name}${ageValue !== null ? `, ${ageValue}` : ""}`
     : "Loading profile";
+  const interests = profile?.preferences?.interests ?? [];
 
   return (
     <article
@@ -79,7 +86,7 @@ export default function DiscoverCard({
         isPlaceholder ? styles.cardSkeleton : ""
       } ${swipeClass} ${isDragging ? styles.cardDragging : ""} ${
         isInteractionDisabled ? styles.cardInteractionDisabled : ""
-      }`}
+      } ${isFlipped ? styles.cardFlipped : ""}`}
       style={style}
       onPointerDown={isPlaceholder ? undefined : onPointerDown}
       onPointerMove={isPlaceholder ? undefined : onPointerMove}
@@ -88,88 +95,146 @@ export default function DiscoverCard({
       tabIndex={isPlaceholder ? -1 : 0}
       aria-label={ariaLabel}
     >
-      <div className={styles.cardMedia}>
-        {isPlaceholder ? (
-          <div className={styles.mediaSkeleton} />
-        ) : photoUrl ? (
-          <img src={photoUrl} alt={`${profile?.name ?? "Profile"} photo`} />
-        ) : (
-          <div className={styles.mediaFallback}>{fallbackInitial}</div>
-        )}
-        {!isPlaceholder && profile ? (
-          <div className={styles.cardOverlay}>
-            <h2>
-              {profile.name}
-              {ageValue !== null ? <span>{ageValue}</span> : null}
-            </h2>
-            {profile.city ? <p className={styles.cardCity}>{profile.city}</p> : null}
-            {profile.bioShort ? <p className={styles.cardBioLine}>{profile.bioShort}</p> : null}
+      <div className={styles.cardInner}>
+        <div className={`${styles.cardFace} ${styles.cardFaceFront}`}>
+          <div className={styles.cardMedia}>
+            {isPlaceholder ? (
+              <div className={styles.mediaSkeleton} />
+            ) : photoUrl ? (
+              <img src={photoUrl} alt={`${profile?.name ?? "Profile"} photo`} />
+            ) : (
+              <div className={styles.mediaFallback}>{fallbackInitial}</div>
+            )}
+            {!isPlaceholder && profile ? (
+              <div className={styles.cardOverlay}>
+                <h2>
+                  {profile.name}
+                  {ageValue !== null ? <span>{ageValue}</span> : null}
+                </h2>
+                {profile.city ? <p className={styles.cardCity}>{profile.city}</p> : null}
+                {profile.bioShort ? <p className={styles.cardBioLine}>{profile.bioShort}</p> : null}
+              </div>
+            ) : null}
+            {!isPlaceholder && isActive ? (
+              <div className={styles.cardActions}>
+                <button
+                  className={`${styles.cardActionButton} ${styles.cardActionPass}`}
+                  type="button"
+                  aria-label="Pass"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onPass?.();
+                  }}
+                  disabled={Boolean(isAnimating || isInteractionDisabled)}
+                >
+                  ✕
+                </button>
+                <button
+                  className={`${styles.cardActionButton} ${styles.cardActionInfo}`}
+                  type="button"
+                  aria-label="Profile info"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onInfo?.();
+                  }}
+                  disabled={Boolean(isAnimating || isInteractionDisabled)}
+                >
+                  i
+                </button>
+                <button
+                  className={`${styles.cardActionButton} ${styles.cardActionLike}`}
+                  type="button"
+                  aria-label="Like"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onLike?.();
+                  }}
+                  disabled={Boolean(isAnimating || isInteractionDisabled)}
+                >
+                  ❤
+                </button>
+              </div>
+            ) : null}
           </div>
-        ) : null}
-        {!isPlaceholder && isActive ? (
-          <div className={styles.cardActions}>
-            <button
-              className={`${styles.cardActionButton} ${styles.cardActionPass}`}
-              type="button"
-              aria-label="Pass"
-              onClick={(event) => {
-                event.stopPropagation();
-                onPass?.();
-              }}
-              disabled={Boolean(isAnimating || isInteractionDisabled)}
-            >
-              ✕
-            </button>
-            <button
-              className={`${styles.cardActionButton} ${styles.cardActionLike}`}
-              type="button"
-              aria-label="Like"
-              onClick={(event) => {
-                event.stopPropagation();
-                onLike?.();
-              }}
-              disabled={Boolean(isAnimating || isInteractionDisabled)}
-            >
-              ❤
-            </button>
+          <div className={styles.cardDetails}>
+            {isPlaceholder ? (
+              <>
+                <div className={styles.skeletonLine} />
+                <div className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
+                <div className={styles.skeletonPillRow}>
+                  <span className={styles.skeletonPill} />
+                  <span className={styles.skeletonPill} />
+                  <span className={styles.skeletonPill} />
+                </div>
+                <div className={styles.skeletonLine} />
+                <div className={styles.skeletonLine} />
+              </>
+            ) : (
+              <>
+                <div className={styles.cardHeader}>
+                  <h2>
+                    {profile?.name}
+                    {ageValue !== null ? <span>{ageValue}</span> : null}
+                  </h2>
+                  <p className={styles.cardLocation}>{profile?.city ?? ""}</p>
+                </div>
+                <div className={styles.chipRow}>
+                  {visibleTags.map((tag) => (
+                    <span key={tag} className={styles.chip}>
+                      {tag}
+                    </span>
+                  ))}
+                  {extraTagCount > 0 ? (
+                    <span className={`${styles.chip} ${styles.chipMuted}`}>+{extraTagCount}</span>
+                  ) : null}
+                </div>
+                <p className={styles.cardBio}>{profile?.bioShort ?? ""}</p>
+              </>
+            )}
           </div>
-        ) : null}
-      </div>
-      <div className={styles.cardDetails}>
-        {isPlaceholder ? (
-          <>
-            <div className={styles.skeletonLine} />
-            <div className={`${styles.skeletonLine} ${styles.skeletonLineShort}`} />
-            <div className={styles.skeletonPillRow}>
-              <span className={styles.skeletonPill} />
-              <span className={styles.skeletonPill} />
-              <span className={styles.skeletonPill} />
-            </div>
-            <div className={styles.skeletonLine} />
-            <div className={styles.skeletonLine} />
-          </>
-        ) : (
-          <>
-            <div className={styles.cardHeader}>
+        </div>
+        <div className={`${styles.cardFace} ${styles.cardFaceBack}`} aria-hidden={!isFlipped}>
+          <div className={styles.cardBackHeader}>
+            <div>
               <h2>
                 {profile?.name}
                 {ageValue !== null ? <span>{ageValue}</span> : null}
               </h2>
-              <p className={styles.cardLocation}>{profile?.city ?? ""}</p>
+              {profile?.city ? <p>{profile.city}</p> : null}
             </div>
-            <div className={styles.chipRow}>
-              {visibleTags.map((tag) => (
-                <span key={tag} className={styles.chip}>
-                  {tag}
-                </span>
-              ))}
-              {extraTagCount > 0 ? (
-                <span className={`${styles.chip} ${styles.chipMuted}`}>+{extraTagCount}</span>
-              ) : null}
-            </div>
-            <p className={styles.cardBio}>{profile?.bioShort ?? ""}</p>
-          </>
-        )}
+            <button
+              type="button"
+              className={styles.cardBackClose}
+              aria-label="Back to profile photo"
+              onClick={(event) => {
+                event.stopPropagation();
+                onFlipBack?.();
+              }}
+            >
+              ✕
+            </button>
+          </div>
+          <div className={styles.cardBackContent}>
+            {visibleTags.length ? (
+              <div className={styles.cardBackBadges}>
+                {visibleTags.map((tag) => (
+                  <span key={tag}>{tag}</span>
+                ))}
+              </div>
+            ) : null}
+            {profile?.bioShort ? <p className={styles.cardBackBio}>{profile.bioShort}</p> : null}
+            {interests.length ? (
+              <div className={styles.cardBackSection}>
+                <h3>Interests</h3>
+                <div className={styles.cardBackInterests}>
+                  {interests.map((interest) => (
+                    <span key={interest}>{interest}</span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
       </div>
     </article>
   );
