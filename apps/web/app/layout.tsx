@@ -1,3 +1,4 @@
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "./providers";
 
@@ -12,9 +13,30 @@ const themeScript = `
   })();
 `;
 
-export const metadata = {
-  title: "ELITE MATCH",
-  description: "Premium, verified matchmaking experience."
+export const metadata: Metadata = {
+  title: "Elite Match",
+  description: "Premium, verified matchmaking experience.",
+  applicationName: "Elite Match",
+  manifest: "/manifest.webmanifest",
+  themeColor: "#f26b76",
+  appleWebApp: {
+    capable: true,
+    title: "Elite Match",
+    statusBarStyle: "black-translucent"
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" }
+    ],
+    apple: "/icons/apple-touch-icon.png"
+  }
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
