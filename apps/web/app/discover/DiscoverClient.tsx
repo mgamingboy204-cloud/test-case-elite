@@ -331,6 +331,7 @@ export default function DiscoverClient() {
                       }}
                       aria-label="Pass"
                       type="button"
+                      disabled={isAnimating}
                     >
                       ✕
                     </button>
@@ -342,6 +343,7 @@ export default function DiscoverClient() {
                       }}
                       aria-label="Like"
                       type="button"
+                      disabled={isAnimating}
                     >
                       ❤
                     </button>
