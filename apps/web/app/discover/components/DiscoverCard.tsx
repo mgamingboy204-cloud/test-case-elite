@@ -32,8 +32,8 @@ type DiscoverCardProps = {
   isPlaceholder?: boolean;
   swipeDirection?: "left" | "right" | null;
   isAnimating?: boolean;
-  isExpanded?: boolean;
   isDragging?: boolean;
+  isInteractionDisabled?: boolean;
   onLike?: () => void;
   onPass?: () => void;
   onPointerDown?: (event: PointerEvent<HTMLElement>) => void;
@@ -49,8 +49,8 @@ export default function DiscoverCard({
   isPlaceholder,
   swipeDirection,
   isAnimating,
-  isExpanded,
   isDragging,
+  isInteractionDisabled,
   onLike,
   onPass,
   onPointerDown,
@@ -66,19 +66,25 @@ export default function DiscoverCard({
   const photoUrl = getAssetUrl(photoUrlRaw);
   const swipeClass =
     isAnimating && swipeDirection ? styles[`cardSwipe${swipeDirection === "left" ? "Left" : "Right"}`] : "";
+  const ageValue = typeof profile?.age === "number" ? profile.age : null;
+  const ariaLabel = profile
+    ? `${profile.name}${ageValue !== null ? `, ${ageValue}` : ""}`
+    : "Loading profile";
 
   return (
     <article
       className={`${styles.card} ${isActive ? styles.cardActive : ""} ${
         isPlaceholder ? styles.cardSkeleton : ""
-      } ${swipeClass} ${isExpanded ? styles.cardExpanded : ""} ${isDragging ? styles.cardDragging : ""}`}
+      } ${swipeClass} ${isDragging ? styles.cardDragging : ""} ${
+        isInteractionDisabled ? styles.cardInteractionDisabled : ""
+      }`}
       style={style}
       onPointerDown={isPlaceholder ? undefined : onPointerDown}
       onPointerMove={isPlaceholder ? undefined : onPointerMove}
       onPointerUp={isPlaceholder ? undefined : onPointerUp}
       onPointerCancel={isPlaceholder ? undefined : onPointerCancel}
       tabIndex={isPlaceholder ? -1 : 0}
-      aria-label={profile ? `${profile.name}, ${profile.age}` : "Loading profile"}
+      aria-label={ariaLabel}
     >
       <div className={styles.cardMedia}>
         {isPlaceholder ? (
@@ -91,7 +97,8 @@ export default function DiscoverCard({
         {!isPlaceholder && profile ? (
           <div className={styles.cardOverlay}>
             <h2>
-              {profile.name} <span>{profile.age}</span>
+              {profile.name}
+              {ageValue !== null ? <span>{ageValue}</span> : null}
             </h2>
             {profile.city ? <p className={styles.cardCity}>{profile.city}</p> : null}
             {profile.bioShort ? <p className={styles.cardBioLine}>{profile.bioShort}</p> : null}
@@ -107,7 +114,7 @@ export default function DiscoverCard({
                 event.stopPropagation();
                 onPass?.();
               }}
-              disabled={Boolean(isAnimating)}
+              disabled={Boolean(isAnimating || isInteractionDisabled)}
             >
               ✕
             </button>
@@ -119,7 +126,7 @@ export default function DiscoverCard({
                 event.stopPropagation();
                 onLike?.();
               }}
-              disabled={Boolean(isAnimating)}
+              disabled={Boolean(isAnimating || isInteractionDisabled)}
             >
               ❤
             </button>

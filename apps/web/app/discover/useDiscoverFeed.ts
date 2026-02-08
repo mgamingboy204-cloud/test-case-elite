@@ -6,8 +6,6 @@ import { queryKeys } from "../../lib/queryKeys";
 
 export type DiscoverFilters = {
   intent: "all" | "dating" | "friends";
-  ageMin: number;
-  ageMax: number;
   distance: number;
 };
 
@@ -40,8 +38,6 @@ type DiscoverCursor = string | undefined;
 function buildDiscoverParams(filters: DiscoverFilters, cursor?: string) {
   const params = new URLSearchParams();
   if (filters.intent !== "all") params.set("intent", filters.intent);
-  if (filters.ageMin) params.set("minAge", String(filters.ageMin));
-  if (filters.ageMax) params.set("maxAge", String(filters.ageMax));
   if (filters.distance) params.set("distance", String(filters.distance));
   params.set("limit", String(DEFAULT_LIMIT));
   params.set("mode", filters.intent === "friends" ? "friends" : "dating");
