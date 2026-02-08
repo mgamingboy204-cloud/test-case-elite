@@ -20,3 +20,22 @@ User authentication now relies on short-lived access tokens (JWT) sent via the `
 - Profile photos are limited to **5MB** and support **JPEG, PNG, or WebP** only. Uploads overwrite the existing profile photo. 【F:apps/api/src/services/photoService.ts†L7-L147】
 - `STORAGE_PROVIDER` controls where profile photos are stored (`local` for development, `supabase` recommended for production). 【F:apps/api/src/config/env.ts†L8-L67】
 - Remember-me sessions change token lifetimes: 60-minute access + 30-day refresh when enabled, 30-minute access + 7-day refresh otherwise. 【F:apps/api/src/utils/jwt.ts†L9-L34】
+
+
+
+## PWA verification (apps/web)
+
+**Chrome DevTools checks**
+- Run the web app in Chrome and open DevTools → **Application** → **Manifest** to verify the manifest loads and icons render.
+- In DevTools → **Application** → **Service Workers**, confirm the service worker is active and the app can be installed.
+
+**Clear service worker cache during debugging**
+- DevTools → **Application** → **Service Workers** → **Unregister**.
+- DevTools → **Application** → **Storage** → **Clear site data** to remove caches and storage entries.
+
+**Known iOS limitations**
+- iOS PWAs do not support all Web Push features and may pause background sync.
+- Home screen PWAs can be evicted under storage pressure; users may need to re-open to restore caches.
+
+**Branding note**
+- Placeholder PWA icons live in `apps/web/public/icons` and should be replaced with final brand assets before launch.
