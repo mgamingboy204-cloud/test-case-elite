@@ -42,6 +42,9 @@
 }
 
 .card {
+  --stack-offset: 0px;
+  --stack-scale: 1;
+  --stack-rotate-mobile: 0deg;
   position: absolute;
   inset: 0;
   background: var(--bg-elevated);
@@ -52,6 +55,7 @@
   grid-template-columns: 0.68fr 0.32fr;
   transition: transform 0.32s ease, opacity 0.32s ease;
   will-change: transform;
+  transform: translateY(var(--stack-offset)) scale(var(--stack-scale));
 }
 
 .cardActive {
@@ -433,6 +437,7 @@
     padding: 84px 16px 110px;
     grid-template-columns: minmax(0, 1fr);
     max-width: 100%;
+    background: linear-gradient(180deg, var(--accent-soft) 0%, rgba(255, 255, 255, 0.96) 45%, var(--bg) 100%);
   }
 
   .feedStack {
@@ -441,7 +446,9 @@
 
   .card {
     grid-template-columns: 1fr;
-    border-radius: 32px;
+    border-radius: 36px;
+    box-shadow: 0 22px 50px rgba(15, 23, 42, 0.18);
+    transform: translateY(var(--stack-offset)) scale(var(--stack-scale)) rotate(var(--stack-rotate-mobile));
   }
 
   .cardDetails {
@@ -454,10 +461,10 @@
 
   .cardOverlay {
     display: grid;
-    gap: 6px;
+    gap: 4px;
     position: absolute;
-    left: 16px;
-    bottom: 16px;
+    left: 20px;
+    bottom: 22px;
     color: #fff;
     z-index: 2;
   }
@@ -472,7 +479,7 @@
 
   .cardOverlay h2 {
     margin: 0;
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .cardOverlay h2 span {
@@ -488,23 +495,39 @@
 
   .actions {
     position: absolute;
-    right: 18px;
+    right: 16px;
     top: 50%;
     transform: translateY(-50%);
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     margin-top: 0;
   }
 
   .actionButton {
-    width: 46px;
-    height: 46px;
+    width: 48px;
+    height: 48px;
     font-size: 18px;
-    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.25);
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 14px 24px rgba(15, 23, 42, 0.18);
+  }
+
+  .actionButtonPass {
+    color: #ef4444;
+  }
+
+  .actionButtonStar {
+    color: #f59e0b;
+  }
+
+  .actionButtonLike {
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
   }
 
   .filtersColumn {
-    display: none;
+    margin-top: 24px;
   }
 
   .mobileHeader {
@@ -517,8 +540,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
+    background: rgba(255, 245, 247, 0.94);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(242, 107, 118, 0.18);
     z-index: 40;
   }
 
@@ -531,8 +555,8 @@
     width: 40px;
     height: 40px;
     border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--bg-elevated);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: #ffffff;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -546,15 +570,17 @@
 
   .mobileBottomNav {
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 16px;
+    right: 16px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
-    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-    background: var(--bg);
-    border-top: 1px solid var(--border);
+    padding: 10px 12px;
+    background: #ffffff;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
     z-index: 40;
   }
 
