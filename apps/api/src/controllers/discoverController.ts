@@ -27,7 +27,7 @@ export async function discoverFeed(req: Request, res: Response) {
     city: typeof city === "string" ? city : undefined,
     minAge: typeof minAge === "number" ? minAge : undefined,
     maxAge: typeof maxAge === "number" ? maxAge : undefined,
-    cursor: typeof cursor === "number" ? cursor : undefined,
+    cursor: typeof cursor === "string" ? cursor : undefined,
     limit: typeof limit === "number" ? limit : undefined,
     mode: typeof mode === "string" ? mode : undefined,
     intent: typeof intent === "string" ? intent : undefined

@@ -31,7 +31,7 @@ const DiscoverFeedQuerySchema = z.object({
   minAge: toOptionalNumber,
   maxAge: toOptionalNumber,
   distance: toOptionalNumber,
-  cursor: toOptionalNumber,
+  cursor: z.string().optional(),
   limit: toOptionalNumber,
   mode: z.string().optional()
 });
