@@ -1737,12 +1737,12 @@ textarea:focus {
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #17171f;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--text);
+  color: #ffffff;
 }
 
 .mobile-shell__icon svg {
@@ -2048,10 +2048,10 @@ textarea:focus {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   padding: 10px 12px;
-  background: #ffffff;
+  background: color-mix(in srgb, var(--bg-elevated) 92%, #ffffff);
   border-radius: 999px;
-  border: 1px solid #efe7ee;
-  box-shadow: 0 12px 30px rgba(20, 18, 30, 0.16);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, #ffffff);
+  box-shadow: 0 12px 30px rgba(20, 18, 30, 0.12);
   z-index: 30;
 }
 
@@ -2062,7 +2062,7 @@ textarea:focus {
   text-align: center;
   font-size: 11px;
   font-weight: 600;
-  color: #6b6474;
+  color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
   padding: 8px 12px;
   border-radius: 999px;
@@ -2075,7 +2075,7 @@ textarea:focus {
 
 .mobile-shell__tab.active {
   color: #ffffff;
-  background: var(--accent);
+  background: rgba(255, 92, 122, 0.2);
 }
 
 [data-theme="dark"] .mobile-shell__tabs {

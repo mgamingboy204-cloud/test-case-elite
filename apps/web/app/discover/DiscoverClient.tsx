@@ -250,14 +250,7 @@ export default function DiscoverClient() {
         <div className={styles.page}>
           <header className={styles.mobileHeader}>
             <div className={styles.mobileHeaderLeft}>
-              <Link href="/profile" className={styles.mobileIconButton} aria-label="Profile">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    d="M12 12.2a4.3 4.3 0 1 0-4.3-4.3 4.3 4.3 0 0 0 4.3 4.3Zm0 2c-3.8 0-7 2.1-7 4.6 0 1 .8 1.7 1.9 1.7h10.2c1 0 1.9-.7 1.9-1.7 0-2.5-3.2-4.6-7-4.6Z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </Link>
+              <span className={styles.mobileLogo}>ELITE MATCH</span>
             </div>
             <span className={styles.mobileTitle}>Discover</span>
             <Link href="/settings" className={styles.mobileIconButton} aria-label="Settings">
