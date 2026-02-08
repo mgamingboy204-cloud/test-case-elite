@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, PointerEvent } from "react";
 import { getAssetUrl } from "../../../lib/assets";
 import type { DiscoverProfile } from "../useDiscoverFeed";
 import styles from "../discover.module.css";
@@ -33,7 +33,11 @@ type DiscoverCardProps = {
   swipeDirection?: "left" | "right" | null;
   isAnimating?: boolean;
   isExpanded?: boolean;
-  onToggleExpanded?: () => void;
+  isDragging?: boolean;
+  onPointerDown?: (event: PointerEvent<HTMLElement>) => void;
+  onPointerMove?: (event: PointerEvent<HTMLElement>) => void;
+  onPointerUp?: (event: PointerEvent<HTMLElement>) => void;
+  onPointerCancel?: (event: PointerEvent<HTMLElement>) => void;
   style?: CSSProperties;
 };
 
@@ -44,7 +48,11 @@ export default function DiscoverCard({
   swipeDirection,
   isAnimating,
   isExpanded,
-  onToggleExpanded,
+  isDragging,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
   style
 }: DiscoverCardProps) {
   const tags = buildTags(profile);
@@ -59,9 +67,12 @@ export default function DiscoverCard({
     <article
       className={`${styles.card} ${isActive ? styles.cardActive : ""} ${
         isPlaceholder ? styles.cardSkeleton : ""
-      } ${swipeClass} ${isExpanded ? styles.cardExpanded : ""}`}
+      } ${swipeClass} ${isExpanded ? styles.cardExpanded : ""} ${isDragging ? styles.cardDragging : ""}`}
       style={style}
-      onClick={isPlaceholder ? undefined : onToggleExpanded}
+      onPointerDown={isPlaceholder ? undefined : onPointerDown}
+      onPointerMove={isPlaceholder ? undefined : onPointerMove}
+      onPointerUp={isPlaceholder ? undefined : onPointerUp}
+      onPointerCancel={isPlaceholder ? undefined : onPointerCancel}
       tabIndex={isPlaceholder ? -1 : 0}
       aria-label={profile ? `${profile.name}, ${profile.age}` : "Loading profile"}
     >

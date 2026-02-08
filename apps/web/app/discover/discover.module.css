@@ -45,6 +45,9 @@
   --stack-offset: 0px;
   --stack-scale: 1;
   --stack-rotate-mobile: 0deg;
+  --drag-x: 0px;
+  --drag-y: 0px;
+  --drag-rotate: 0deg;
   position: absolute;
   inset: 0;
   background: var(--bg-elevated);
@@ -55,7 +58,8 @@
   grid-template-columns: 0.68fr 0.32fr;
   transition: transform 0.32s ease, opacity 0.32s ease;
   will-change: transform;
-  transform: translateY(var(--stack-offset)) scale(var(--stack-scale));
+  transform: translate3d(var(--drag-x), calc(var(--stack-offset) + var(--drag-y)), 0) scale(var(--stack-scale))
+    rotate(var(--drag-rotate));
 }
 
 .cardActive {
@@ -64,6 +68,11 @@
 
 .cardSkeleton {
   background: var(--bg-muted);
+}
+
+.cardDragging {
+  transition: none;
+  cursor: grabbing;
 }
 
 .cardSwipeLeft {
@@ -456,7 +465,8 @@
     grid-template-columns: 1fr;
     border-radius: 36px;
     box-shadow: 0 22px 50px rgba(15, 23, 42, 0.18);
-    transform: translateY(var(--stack-offset)) scale(var(--stack-scale)) rotate(var(--stack-rotate-mobile));
+    transform: translate3d(var(--drag-x), calc(var(--stack-offset) + var(--drag-y)), 0) scale(var(--stack-scale))
+      rotate(calc(var(--stack-rotate-mobile) + var(--drag-rotate)));
   }
 
   .cardDetails {
@@ -573,6 +583,19 @@
     backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(242, 107, 118, 0.18);
     z-index: 40;
+  }
+
+  .mobileHeaderLeft {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mobileLogo {
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    color: var(--accent-strong);
   }
 
   .mobileTitle {

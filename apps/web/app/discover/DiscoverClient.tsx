@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient, type InfiniteData } from "@tanstack/react-query";
@@ -85,6 +85,13 @@ export default function DiscoverClient() {
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ pointerId: number | null; x: number; y: number }>({
+    pointerId: null,
+    x: 0,
+    y: 0
+  });
 
   useEffect(() => {
     setFilters(initialFilters);
@@ -129,6 +136,8 @@ export default function DiscoverClient() {
     setCycleIndex(0);
     setLastSwipedId(null);
     setIsDetailsOpen(false);
+    setDragOffset({ x: 0, y: 0 });
+    setIsDragging(false);
   }, [JSON.stringify(filters)]);
 
   useEffect(() => {
@@ -186,6 +195,8 @@ export default function DiscoverClient() {
     setIsAnimating(true);
     setSwipeDirection(action === "LIKE" ? "right" : "left");
     setIsDetailsOpen(false);
+    setDragOffset({ x: 0, y: 0 });
+    setIsDragging(false);
 
     likeMutation.mutate({ targetUserId: activeProfile.userId, action });
 
@@ -200,6 +211,37 @@ export default function DiscoverClient() {
     setIsDetailsOpen((prev) => !prev);
   }
 
+  function handlePointerDown(event: PointerEvent<HTMLElement>) {
+    if (!activeProfile || isAnimating) return;
+    dragStartRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    setIsDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLElement>) {
+    if (!isDragging || dragStartRef.current.pointerId !== event.pointerId) return;
+    const dx = event.clientX - dragStartRef.current.x;
+    const dy = event.clientY - dragStartRef.current.y;
+    setDragOffset({ x: dx, y: dy });
+  }
+
+  function handlePointerEnd(event: PointerEvent<HTMLElement>) {
+    if (dragStartRef.current.pointerId !== event.pointerId) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    dragStartRef.current.pointerId = null;
+    const { x, y } = dragOffset;
+    const threshold = 90;
+    setIsDragging(false);
+    setDragOffset({ x: 0, y: 0 });
+    if (Math.abs(x) >= threshold) {
+      handleSwipe(x > 0 ? "LIKE" : "PASS");
+      return;
+    }
+    if (Math.abs(x) < 6 && Math.abs(y) < 6) {
+      toggleDetails();
+    }
+  }
+
   /* -------------------- RENDER -------------------- */
 
   return (
@@ -207,19 +249,22 @@ export default function DiscoverClient() {
       <AppShellLayout showMobileShell={false}>
         <div className={styles.page}>
           <header className={styles.mobileHeader}>
-            <button
-              type="button"
-              className={styles.mobileIconButton}
-              aria-label="Filters"
-              onClick={() => setIsFilterSheetOpen(true)}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M4 6.5a1 1 0 0 1 1-1h14a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1Zm3 5a1 1 0 0 1 1-1h8a1 1 0 1 1 0 2H8a1 1 0 0 1-1-1Zm3 5a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2h-2a1 1 0 0 1-1-1Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </button>
+            <div className={styles.mobileHeaderLeft}>
+              <span className={styles.mobileLogo}>ELITE MATCH</span>
+              <button
+                type="button"
+                className={styles.mobileIconButton}
+                aria-label="Filters"
+                onClick={() => setIsFilterSheetOpen(true)}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M4 6.5a1 1 0 0 1 1-1h14a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1Zm3 5a1 1 0 0 1 1-1h8a1 1 0 1 1 0 2H8a1 1 0 0 1-1-1Zm3 5a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2h-2a1 1 0 0 1-1-1Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </button>
+            </div>
             <span className={styles.mobileTitle}>Discover</span>
             <Link href="/settings" className={styles.mobileIconButton} aria-label="Settings">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -266,7 +311,11 @@ export default function DiscoverClient() {
                               "--stack-scale": `${scale}`,
                               "--stack-rotate-mobile": index === 1 ? "-6deg" : "4deg"
                             } as CSSProperties)
-                          : undefined;
+                          : ({
+                              "--drag-x": `${dragOffset.x}px`,
+                              "--drag-y": `${dragOffset.y}px`,
+                              "--drag-rotate": `${dragOffset.x / 12}deg`
+                            } as CSSProperties);
                         return (
                           <DiscoverCard
                             key={`${profile.userId}-${index}`}
@@ -275,7 +324,11 @@ export default function DiscoverClient() {
                             isAnimating={index === 0 ? isAnimating : false}
                             swipeDirection={index === 0 ? swipeDirection : null}
                             isExpanded={index === 0 ? isDetailsOpen : false}
-                            onToggleExpanded={index === 0 ? toggleDetails : undefined}
+                            isDragging={index === 0 ? isDragging : false}
+                            onPointerDown={index === 0 ? handlePointerDown : undefined}
+                            onPointerMove={index === 0 ? handlePointerMove : undefined}
+                            onPointerUp={index === 0 ? handlePointerEnd : undefined}
+                            onPointerCancel={index === 0 ? handlePointerEnd : undefined}
                             style={stackStyle}
                           />
                         );
