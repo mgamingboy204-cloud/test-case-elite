@@ -32,6 +32,8 @@ type DiscoverCardProps = {
   isPlaceholder?: boolean;
   swipeDirection?: "left" | "right" | null;
   isAnimating?: boolean;
+  isExpanded?: boolean;
+  onToggleExpanded?: () => void;
   style?: CSSProperties;
 };
 
@@ -41,6 +43,8 @@ export default function DiscoverCard({
   isPlaceholder,
   swipeDirection,
   isAnimating,
+  isExpanded,
+  onToggleExpanded,
   style
 }: DiscoverCardProps) {
   const tags = buildTags(profile);
@@ -55,8 +59,9 @@ export default function DiscoverCard({
     <article
       className={`${styles.card} ${isActive ? styles.cardActive : ""} ${
         isPlaceholder ? styles.cardSkeleton : ""
-      } ${swipeClass}`}
+      } ${swipeClass} ${isExpanded ? styles.cardExpanded : ""}`}
       style={style}
+      onClick={isPlaceholder ? undefined : onToggleExpanded}
       tabIndex={isPlaceholder ? -1 : 0}
       aria-label={profile ? `${profile.name}, ${profile.age}` : "Loading profile"}
     >
@@ -71,7 +76,7 @@ export default function DiscoverCard({
         {!isPlaceholder && profile ? (
           <div className={styles.cardOverlay}>
             <h2>
-              {profile.name} <span>{profile.age}</span>
+              {profile.name}
             </h2>
             <p>{profile.bioShort || profile.city || ""}</p>
           </div>

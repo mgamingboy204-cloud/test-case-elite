@@ -84,6 +84,7 @@ export default function DiscoverClient() {
   const [filters, setFilters] = useState(initialFilters);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   useEffect(() => {
     setFilters(initialFilters);
@@ -127,6 +128,7 @@ export default function DiscoverClient() {
     setCycleOrder([]);
     setCycleIndex(0);
     setLastSwipedId(null);
+    setIsDetailsOpen(false);
   }, [JSON.stringify(filters)]);
 
   useEffect(() => {
@@ -183,6 +185,7 @@ export default function DiscoverClient() {
     if (!activeProfile || isAnimating) return;
     setIsAnimating(true);
     setSwipeDirection(action === "LIKE" ? "right" : "left");
+    setIsDetailsOpen(false);
 
     likeMutation.mutate({ targetUserId: activeProfile.userId, action });
 
@@ -193,6 +196,10 @@ export default function DiscoverClient() {
     }, 320);
   }
 
+  function toggleDetails() {
+    setIsDetailsOpen((prev) => !prev);
+  }
+
   /* -------------------- RENDER -------------------- */
 
   return (
@@ -200,15 +207,6 @@ export default function DiscoverClient() {
       <AppShellLayout showMobileShell={false}>
         <div className={styles.page}>
           <header className={styles.mobileHeader}>
-            <Link href="/profile" className={styles.mobileIconButton} aria-label="Profile">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M12 12.2a4.3 4.3 0 1 0-4.3-4.3 4.3 4.3 0 0 0 4.3 4.3Zm0 2c-3.8 0-7 2.1-7 4.6 0 1 .8 1.7 1.9 1.7h10.2c1 0 1.9-.7 1.9-1.7 0-2.5-3.2-4.6-7-4.6Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </Link>
-            <span className={styles.mobileTitle}>Discover</span>
             <button
               type="button"
               className={styles.mobileIconButton}
@@ -222,6 +220,15 @@ export default function DiscoverClient() {
                 />
               </svg>
             </button>
+            <span className={styles.mobileTitle}>Discover</span>
+            <Link href="/settings" className={styles.mobileIconButton} aria-label="Settings">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Zm8.1 3.2c0-.4-.1-.8-.2-1.2l2-1.6-2-3.4-2.4.9a7.6 7.6 0 0 0-2.1-1.2L13 1h-4l-.4 3.9c-.7.3-1.4.7-2.1 1.2l-2.4-.9-2 3.4 2 1.6c-.1.4-.2.8-.2 1.2s.1.8.2 1.2l-2 1.6 2 3.4 2.4-.9c.7.5 1.3.9 2.1 1.2L9 23h4l.4-3.9c.7-.3 1.4-.7 2.1-1.2l2.4.9 2-3.4-2-1.6c.1-.4.2-.8.2-1.2Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </Link>
           </header>
 
           <section className={styles.feedColumn}>
@@ -267,6 +274,8 @@ export default function DiscoverClient() {
                             isActive={index === 0}
                             isAnimating={index === 0 ? isAnimating : false}
                             swipeDirection={index === 0 ? swipeDirection : null}
+                            isExpanded={index === 0 ? isDetailsOpen : false}
+                            onToggleExpanded={index === 0 ? toggleDetails : undefined}
                             style={stackStyle}
                           />
                         );
@@ -276,23 +285,21 @@ export default function DiscoverClient() {
                   <div className={styles.actions}>
                     <button
                       className={`${styles.actionButton} ${styles.actionButtonPass}`}
-                      onClick={() => handleSwipe("PASS")}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleSwipe("PASS");
+                      }}
                       aria-label="Pass"
                       type="button"
                     >
                       ✕
                     </button>
                     <button
-                      className={`${styles.actionButton} ${styles.actionButtonStar}`}
-                      onClick={() => handleSwipe("LIKE")}
-                      aria-label="Star"
-                      type="button"
-                    >
-                      ★
-                    </button>
-                    <button
                       className={`${styles.actionButton} ${styles.actionButtonLike}`}
-                      onClick={() => handleSwipe("LIKE")}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleSwipe("LIKE");
+                      }}
                       aria-label="Like"
                       type="button"
                     >
@@ -342,9 +349,42 @@ export default function DiscoverClient() {
           showRefresh
         />
         <nav className={styles.mobileBottomNav} aria-label="Discover navigation">
-          <Link href="/likes">Likes</Link>
-          <span className={styles.mobileBottomNavActive}>Discover</span>
-          <Link href="/profile">Profile</Link>
+          <Link href="/likes" className={styles.mobileNavItem}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 20.3c-4.3-3-7.6-6.2-7.6-10.1A4.4 4.4 0 0 1 8.9 5c1.4 0 2.7.6 3.1 1.7C12.4 5.6 13.7 5 15.1 5a4.4 4.4 0 0 1 4.5 5.2c0 3.9-3.3 7-7.6 10.1Z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>Likes</span>
+          </Link>
+          <span className={`${styles.mobileNavItem} ${styles.mobileBottomNavActive}`} aria-current="page">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 2a10 10 0 1 0 10 10h-2.4a7.6 7.6 0 1 1-2.2-5.4l-3 3H22V2l-2.5 2.5A9.9 9.9 0 0 0 12 2Z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>Discover</span>
+          </span>
+          <Link href="/matches" className={styles.mobileNavItem}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M7 6.5a4.5 4.5 0 1 0 4.5 4.5A4.5 4.5 0 0 0 7 6.5Zm10 0a4 4 0 1 0 4 4 4 4 0 0 0-4-4ZM7 13a7 7 0 0 0-7 6.5c0 .8.7 1.5 1.6 1.5h10.8c.9 0 1.6-.7 1.6-1.5A7 7 0 0 0 7 13Zm10 0a6.2 6.2 0 0 0-4.2 1.6 8.6 8.6 0 0 1 2.2 5.4h6.4c.9 0 1.6-.7 1.6-1.5A6.2 6.2 0 0 0 17 13Z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>Matches</span>
+          </Link>
+          <Link href="/profile" className={styles.mobileNavItem}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 12.2a4.3 4.3 0 1 0-4.3-4.3 4.3 4.3 0 0 0 4.3 4.3Zm0 2c-3.8 0-7 2.1-7 4.6 0 1 .8 1.7 1.9 1.7h10.2c1 0 1.9-.7 1.9-1.7 0-2.5-3.2-4.6-7-4.6Z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>Profile</span>
+          </Link>
         </nav>
       </AppShellLayout>
     </RouteGuard>
