@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
-import { getAssetUrl } from "../../../lib/assets";
+import { getAssetUrl, isValidImageUrl } from "../../../lib/assets";
 import type { DiscoverProfile } from "../useDiscoverFeed";
 import styles from "../discover.module.css";
 
@@ -36,7 +36,8 @@ export default function QuickProfileSheet({ isOpen, profile, onClose }: QuickPro
 
   const badges = useMemo(() => buildBadges(profile), [profile]);
   const interests = profile?.preferences?.interests ?? [];
-  const photoUrl = getAssetUrl(profile?.primaryPhotoUrl);
+  const photoUrlCandidate = getAssetUrl(profile?.primaryPhotoUrl);
+  const photoUrl = isValidImageUrl(photoUrlCandidate) ? photoUrlCandidate : null;
   const ageValue = typeof profile?.age === "number" ? profile.age : null;
 
   useEffect(() => {

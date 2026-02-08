@@ -48,6 +48,10 @@
   --drag-x: 0px;
   --drag-y: 0px;
   --drag-rotate: 0deg;
+  --overlay-height: 42%;
+  --action-size: 56px;
+  --action-gap: 12px;
+  --action-stack-height: calc(var(--action-size) * 2 + var(--action-gap));
   position: absolute;
   inset: 0;
   background: var(--bg-elevated);
@@ -98,7 +102,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;
+  object-position: 50% 50%;
   display: block;
 }
 
@@ -109,7 +113,9 @@
   place-items: center;
   font-size: 56px;
   font-weight: 700;
-  color: var(--text);
+  color: #ffffff;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(59, 130, 246, 0.6));
 }
 
 .mediaSkeleton {
@@ -133,9 +139,16 @@
 .cardCity,
 .cardBioLine {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.cardCity {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.cardBioLine {
   color: rgba(255, 255, 255, 0.85);
-  line-height: 1.4;
 }
 
 .cardBioLine {
@@ -149,8 +162,8 @@
 }
 
 .cardActionButton {
-  width: 56px;
-  height: 56px;
+  width: var(--action-size);
+  height: var(--action-size);
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   background: rgba(15, 23, 42, 0.35);
@@ -654,7 +667,7 @@
 
 @media (max-width: 768px) {
   .page {
-    padding: 76px 16px calc(140px + env(safe-area-inset-bottom));
+    padding: 76px 16px calc(92px + env(safe-area-inset-bottom));
     grid-template-columns: minmax(0, 1fr);
     max-width: 100%;
     background: linear-gradient(180deg, var(--bg) 0%, var(--bg-elevated) 55%, var(--bg) 100%);
@@ -688,17 +701,24 @@
     height: 100%;
   }
 
+  .cardMedia img {
+    object-position: 50% 35%;
+  }
+
   .cardOverlay {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 6px;
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
+    height: var(--overlay-height);
     padding: 18px 18px 20px;
     color: #ffffff;
     z-index: 2;
     background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.65) 100%);
+    justify-content: flex-end;
     pointer-events: none;
   }
 
@@ -725,11 +745,13 @@
   .cardActions {
     position: absolute;
     right: 16px;
-    top: 55%;
-    transform: translateY(-50%);
+    top: min(
+      calc(50% + 24px - (var(--action-stack-height) / 2)),
+      calc(100% - var(--overlay-height) - var(--action-stack-height) - 16px)
+    );
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--action-gap);
     z-index: 3;
   }
 
