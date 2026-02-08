@@ -15,25 +15,17 @@ const toOptionalNumber = z.preprocess((value) => {
 }, z.number().optional());
 
 const DiscoverQuerySchema = z.object({
-  gender: z.string().optional(),
   city: z.string().optional(),
-  minAge: toOptionalNumber,
-  maxAge: toOptionalNumber,
   page: toOptionalNumber,
-  pageSize: toOptionalNumber,
-  mode: z.string().optional()
+  pageSize: toOptionalNumber
 });
 
 const DiscoverFeedQuerySchema = z.object({
-  gender: z.string().optional(),
   intent: z.string().optional(),
   city: z.string().optional(),
-  minAge: toOptionalNumber,
-  maxAge: toOptionalNumber,
   distance: toOptionalNumber,
   cursor: z.string().optional(),
-  limit: toOptionalNumber,
-  mode: z.string().optional()
+  limit: toOptionalNumber
 });
 
 router.get("/profiles", requireAuth, requireActive, validateQuery(DiscoverQuerySchema), asyncHandler(discoverProfiles));

@@ -3,17 +3,39 @@ import { prisma } from "../db/prisma";
 
 type DiscoverFilterOptions = {
   userId: string;
-  gender?: string;
+  viewerGender?: string | null;
   city?: string;
-  minAge?: number;
-  maxAge?: number;
-  mode?: string;
   intent?: string;
 };
 
+const imageExtensionPattern = /\.(png|jpe?g|webp|gif|avif)(\?.*)?$/i;
+
+function resolveIntentGender(intent: string | undefined, viewerGender: string | null | undefined) {
+  const normalizedIntent = intent?.toLowerCase() ?? "dating";
+  const normalizedGender = viewerGender?.toUpperCase();
+  if (normalizedIntent === "all") return undefined;
+  if (!normalizedGender) return undefined;
+  if (normalizedIntent === "friends") {
+    return normalizedGender;
+  }
+  if (normalizedIntent === "dating") {
+    if (normalizedGender === "MALE") return "FEMALE";
+    if (normalizedGender === "FEMALE") return "MALE";
+    return undefined;
+  }
+  return undefined;
+}
+
+function normalizePhotoUrl(url: string | null | undefined, baseUrl?: string) {
+  if (!url) return null;
+  const resolved = url.startsWith("/") && baseUrl ? new URL(url, baseUrl).toString() : url;
+  if (!/^https?:\/\//i.test(resolved)) return null;
+  if (!imageExtensionPattern.test(resolved)) return null;
+  return resolved;
+}
+
 function buildDiscoverWhere(options: DiscoverFilterOptions) {
-  const modeValue = options.mode === "friends" ? "friends" : "dating";
-  const normalizedGender = options.gender ? options.gender.toUpperCase() : undefined;
+  const resolvedGender = resolveIntentGender(options.intent, options.viewerGender);
 
   const where: any = {
     userId: { not: options.userId },
@@ -49,27 +71,11 @@ function buildDiscoverWhere(options: DiscoverFilterOptions) {
     }
   ];
 
-  if (normalizedGender) {
-    where.gender = normalizedGender;
-  } else if (modeValue === "dating") {
-    where.gender = undefined;
+  if (resolvedGender) {
+    where.gender = resolvedGender;
   }
 
   if (options.city) where.city = options.city;
-  if (options.minAge !== undefined || options.maxAge !== undefined) {
-    where.age = {};
-    if (options.minAge !== undefined) where.age.gte = options.minAge;
-    if (options.maxAge !== undefined) where.age.lte = options.maxAge;
-  }
-
-  if (options.intent) {
-    const intent = options.intent.toLowerCase();
-    if (intent === "friends") {
-      where.preferences = { path: ["intent"], equals: "friends" };
-    } else if (intent === "dating") {
-      where.NOT = { preferences: { path: ["intent"], equals: "friends" } };
-    }
-  }
 
   return where;
 }
@@ -128,42 +134,21 @@ function shuffleWithSeed<T>(items: T[], seed: string) {
 
 export async function getDiscoverProfiles(options: {
   userId: string;
-  gender?: string;
   city?: string;
-  minAge?: number;
-  maxAge?: number;
   page?: number;
   pageSize?: number;
-  mode?: string;
   intent?: string;
+  baseUrl?: string;
 }) {
   const pageNum = options.page ? options.page : 1;
   const take = options.pageSize ? options.pageSize : 10;
   const profile = await prisma.profile.findUnique({ where: { userId: options.userId } });
-  const modeValue = options.mode === "friends" ? "friends" : "dating";
-  const normalizedGender = profile?.gender?.toString().toLowerCase();
-  const defaultGender =
-    modeValue === "friends"
-      ? undefined
-      : normalizedGender === "male"
-        ? "FEMALE"
-        : normalizedGender === "female"
-          ? "MALE"
-          : undefined;
-  const requestGender = options.gender ? options.gender.toUpperCase() : undefined;
-  const preference =
-    modeValue === "friends"
-      ? requestGender
-      : requestGender ?? (profile?.genderPreference === "ALL" ? undefined : profile?.genderPreference);
 
   const where = buildDiscoverWhere({
     userId: options.userId,
-    gender: preference ?? defaultGender,
     city: options.city,
-    minAge: options.minAge,
-    maxAge: options.maxAge,
-    mode: options.mode,
-    intent: options.intent
+    intent: options.intent,
+    viewerGender: profile?.gender
   });
 
   const profiles = await prisma.profile.findMany({
@@ -174,7 +159,6 @@ export async function getDiscoverProfiles(options: {
     select: {
       userId: true,
       name: true,
-      gender: true,
       age: true,
       city: true,
       bioShort: true,
@@ -197,13 +181,12 @@ export async function getDiscoverProfiles(options: {
   const formatted = profiles.map((profile) => ({
     userId: profile.userId,
     name: profile.name,
-    gender: profile.gender,
     age: profile.age,
     city: profile.city,
     bioShort: profile.bioShort,
     preferences: profile.preferences,
     videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,
-    primaryPhotoUrl: profile.user?.photos?.[0]?.url ?? null,
+    primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl),
     photos: []
   }));
 
@@ -212,43 +195,22 @@ export async function getDiscoverProfiles(options: {
 
 export async function getDiscoverFeed(options: {
   userId: string;
-  gender?: string;
   city?: string;
-  minAge?: number;
-  maxAge?: number;
-  mode?: string;
   intent?: string;
   cursor?: string;
   limit?: number;
+  baseUrl?: string;
 }) {
   const take = options.limit ?? 24;
   const cursorState = decodeCursor(options.cursor) ?? { offset: 0, seed: crypto.randomUUID() };
   const offset = cursorState.offset;
   const profile = await prisma.profile.findUnique({ where: { userId: options.userId } });
-  const modeValue = options.mode === "friends" ? "friends" : "dating";
-  const normalizedGender = profile?.gender?.toString().toLowerCase();
-  const defaultGender =
-    modeValue === "friends"
-      ? undefined
-      : normalizedGender === "male"
-        ? "FEMALE"
-        : normalizedGender === "female"
-          ? "MALE"
-          : undefined;
-  const requestGender = options.gender ? options.gender.toUpperCase() : undefined;
-  const preference =
-    modeValue === "friends"
-      ? requestGender
-      : requestGender ?? (profile?.genderPreference === "ALL" ? undefined : profile?.genderPreference);
 
   const where = buildDiscoverWhere({
     userId: options.userId,
-    gender: preference ?? defaultGender,
     city: options.city,
-    minAge: options.minAge,
-    maxAge: options.maxAge,
-    mode: options.mode,
-    intent: options.intent
+    intent: options.intent,
+    viewerGender: profile?.gender
   });
 
   const profiles = await prisma.profile.findMany({
@@ -257,7 +219,6 @@ export async function getDiscoverFeed(options: {
     select: {
       userId: true,
       name: true,
-      gender: true,
       age: true,
       city: true,
       bioShort: true,
@@ -283,13 +244,12 @@ export async function getDiscoverFeed(options: {
   const formatted = pageProfiles.map((profile) => ({
     userId: profile.userId,
     name: profile.name,
-    gender: profile.gender,
     age: profile.age,
     city: profile.city,
     bioShort: profile.bioShort,
     preferences: profile.preferences,
     videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,
-    primaryPhotoUrl: profile.user?.photos?.[0]?.url ?? null
+    primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl)
   }));
 
   const nextCursor =
@@ -298,7 +258,7 @@ export async function getDiscoverFeed(options: {
   return { items: formatted, nextCursor };
 }
 
-export async function getDiscoverProfileDetail(options: { userId: string; targetUserId: string }) {
+export async function getDiscoverProfileDetail(options: { userId: string; targetUserId: string; baseUrl?: string }) {
   const profile = await prisma.profile.findUnique({
     where: { userId: options.targetUserId },
     include: {
@@ -324,7 +284,7 @@ export async function getDiscoverProfileDetail(options: { userId: string; target
     profession: profile.profession,
     bioShort: profile.bioShort,
     preferences: profile.preferences,
-    primaryPhotoUrl: profile.user?.photos?.[0]?.url ?? null,
+    primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl),
     verifiedAt: profile.user?.verifiedAt ?? null,
     videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,
     status: profile.user?.status ?? null
