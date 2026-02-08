@@ -69,6 +69,7 @@ export default function DiscoverClient() {
   const [quickProfile, setQuickProfile] = useState<DiscoverProfile | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isCardFlipped, setIsCardFlipped] = useState(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const dragRafRef = useRef<number | null>(null);
   const dragStartRef = useRef<{ pointerId: number | null; x: number; y: number }>({
@@ -121,6 +122,7 @@ export default function DiscoverClient() {
     setDragOffset({ x: 0, y: 0 });
     dragOffsetRef.current = { x: 0, y: 0 };
     setIsDragging(false);
+    setIsCardFlipped(false);
   }, [JSON.stringify(filters)]);
 
   useEffect(() => {
@@ -158,7 +160,7 @@ export default function DiscoverClient() {
       queryClient.invalidateQueries({ queryKey: queryKeys.notificationsCount });
     }
   });
-  const isSwipeLocked = isAnimating || likeMutation.isPending || isQuickProfileOpen;
+  const isSwipeLocked = isAnimating || likeMutation.isPending || isQuickProfileOpen || isCardFlipped;
 
   function advance() {
     if (activeIndex < feedItems.length) setActiveIndex((i) => i + 1);
@@ -172,6 +174,7 @@ export default function DiscoverClient() {
     setDragOffset({ x: 0, y: 0 });
     dragOffsetRef.current = { x: 0, y: 0 };
     setIsDragging(false);
+    setIsCardFlipped(false);
 
     likeMutation.mutate({ targetUserId: activeProfile.userId, action });
 
@@ -189,6 +192,7 @@ export default function DiscoverClient() {
     setIsDragging(false);
     setDragOffset({ x: 0, y: 0 });
     dragOffsetRef.current = { x: 0, y: 0 };
+    setIsCardFlipped(false);
   }
 
   function handlePointerDown(event: PointerEvent<HTMLElement>) {
@@ -275,12 +279,15 @@ export default function DiscoverClient() {
                       swipeDirection={swipeDirection}
                       isDragging={isDragging}
                       isInteractionDisabled={!canInteract}
+                      isFlipped={isCardFlipped}
                       onPass={() => {
                         handleSwipe("PASS");
                       }}
                       onLike={() => {
                         handleSwipe("LIKE");
                       }}
+                      onInfo={() => setIsCardFlipped(true)}
+                      onFlipBack={() => setIsCardFlipped(false)}
                       onPointerDown={canInteract ? handlePointerDown : undefined}
                       onPointerMove={canInteract ? handlePointerMove : undefined}
                       onPointerUp={canInteract ? handlePointerEnd : undefined}
