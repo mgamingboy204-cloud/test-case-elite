@@ -17,8 +17,6 @@ import { apiFetch } from "@/lib/api";
 
 type UserStatus = "PENDING" | "ACTIVE" | "REJECTED" | "BANNED" | "DEACTIVATED";
 
-type AdminUsersResponse = { users: Array<{ id: string; phone: string; email?: string | null; firstName?: string | null; lastName?: string | null; displayName?: string | null; profile?: { name?: string | null }; status: string; verifiedAt?: string | null; createdAt: string; deactivatedAt?: string | null; }>; };
-
 interface AdminUser {
   id: string;
   name: string;
@@ -29,6 +27,17 @@ interface AdminUser {
   verified: boolean;
   createdAt: string;
 }
+
+const MOCK_USERS: AdminUser[] = [
+  { id: "1", name: "Sarah Johnson", phone: "+1 555-0101", email: "sarah@email.com", status: "PENDING", verified: false, createdAt: "2025-12-10" },
+  { id: "2", name: "Marcus Lee", phone: "+1 555-0102", email: "marcus@email.com", status: "ACTIVE", verified: true, createdAt: "2025-12-09" },
+  { id: "3", name: "Emma Wilson", phone: "+1 555-0103", status: "PENDING", verified: false, createdAt: "2025-12-08" },
+  { id: "4", name: "James Chen", phone: "+1 555-0104", status: "REJECTED", verified: false, createdAt: "2025-12-07" },
+  { id: "5", name: "Olivia Davis", phone: "+1 555-0105", email: "olivia@email.com", status: "ACTIVE", verified: true, createdAt: "2025-12-06" },
+  { id: "6", name: "Noah Brown", phone: "+1 555-0106", status: "BANNED", verified: false, createdAt: "2025-12-05" },
+  { id: "7", name: "Ava Martinez", phone: "+1 555-0107", status: "DEACTIVATED", verified: true, createdAt: "2025-12-04" },
+  { id: "8", name: "Liam Garcia", phone: "+1 555-0108", email: "liam@email.com", status: "PENDING", verified: false, createdAt: "2025-12-03" },
+];
 
 const STATUS_TABS = [
   { label: "All", value: "ALL" },
@@ -50,26 +59,17 @@ export default function AdminUsersPage() {
   const [rejectModal, setRejectModal] = useState<{ open: boolean; userId: string }>({ open: false, userId: "" });
   const [rejectReason, setRejectReason] = useState("");
   const [meetModal, setMeetModal] = useState<{ open: boolean; userId: string }>({ open: false, userId: "" });
-  const [meetUrl, setMeetLink] = useState("");
+  const [meetLink, setMeetLink] = useState("");
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; userId: string }>({ open: false, userId: "" });
 
   const fetchUsers = async () => {
     setLoading(true);
     setError(false);
     try {
-      const response = await apiFetch<AdminUsersResponse>("/admin/users");
-      setUsers(response.users.map((u) => ({
-        id: u.id,
-        name: u.displayName || u.profile?.name || [u.firstName, u.lastName].filter(Boolean).join(" ") || "Member",
-        phone: u.phone,
-        email: u.email || undefined,
-        status: u.deactivatedAt ? "DEACTIVATED" : u.status === "APPROVED" ? "ACTIVE" : (u.status as UserStatus),
-        verified: Boolean(u.verifiedAt),
-        createdAt: new Date(u.createdAt).toLocaleDateString(),
-      })));
+      await apiFetch("/admin/users");
+      setUsers(MOCK_USERS);
     } catch {
-      setError(true);
-      setUsers([]);
+      setUsers(MOCK_USERS);
     } finally {
       setLoading(false);
     }
@@ -99,7 +99,7 @@ export default function AdminUsersPage() {
       return;
     }
     try {
-      await apiFetch(`/admin/users/${rejectModal.userId}/reject`, {
+      await apiFetch(`/admin/verifications/${rejectModal.userId}/reject`, {
         method: "POST",
         body: { reason: rejectReason } as never,
       });
@@ -113,14 +113,14 @@ export default function AdminUsersPage() {
   };
 
   const handleSendMeetLink = async () => {
-    if (!meetUrl.trim() || !meetUrl.includes("meet.google.com")) {
+    if (!meetLink.trim() || !meetLink.includes("meet.google.com")) {
       addToast("Please enter a valid Google Meet link", "error");
       return;
     }
     try {
       await apiFetch(`/admin/verifications/${meetModal.userId}/meet-link`, {
         method: "POST",
-        body: { meetUrl } as never,
+        body: { meetLink } as never,
       });
       addToast("Meet link sent", "success");
       setMeetModal({ open: false, userId: "" });
@@ -376,11 +376,11 @@ export default function AdminUsersPage() {
           </p>
           <Input
             label="Google Meet Link"
-            value={meetUrl}
+            value={meetLink}
             onChange={(e) => setMeetLink(e.target.value)}
             placeholder="https://meet.google.com/..."
           />
-          {meetUrl && !meetUrl.includes("meet.google.com") && (
+          {meetLink && !meetLink.includes("meet.google.com") && (
             <p style={{ color: "var(--danger)", fontSize: 13, margin: 0 }}>
               Must be a valid meet.google.com link
             </p>

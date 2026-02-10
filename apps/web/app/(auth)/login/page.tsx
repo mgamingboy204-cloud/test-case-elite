@@ -9,7 +9,6 @@ import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
-import { setAccessToken } from "@/lib/authToken";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,7 +29,7 @@ export default function LoginPage() {
     const errs: Record<string, string> = {};
     if (!/^\d{10}$/.test(phone.replace(/\D/g, "")))
       errs.phone = "Enter a valid 10-digit phone number";
-    if (password.length < 8) errs.password = "Password must be at least 8 characters";
+    if (password.length < 6) errs.password = "Password must be at least 6 characters";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -39,22 +38,11 @@ export default function LoginPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      const loginResponse = await apiFetch<{ accessToken?: string; otpRequired?: boolean }>("/auth/login", {
+      await apiFetch("/auth/login", {
         method: "POST",
-        body: {
-          phone: phone.replace(/\D/g, ""),
-          password,
-          rememberMe: remember,
-          rememberDevice30Days: rememberDevice,
-        } as never,
+        body: { phone: phone.replace(/\D/g, ""), password, remember, rememberDevice } as never,
         auth: "omit",
       });
-      if (loginResponse.otpRequired) {
-        setOtpRequired(true);
-        addToast("OTP sent to your phone", "info");
-        return;
-      }
-      if (loginResponse.accessToken) setAccessToken(loginResponse.accessToken);
       addToast("Logged in successfully!", "success");
       router.push("/discover");
     } catch (err: unknown) {
@@ -86,12 +74,11 @@ export default function LoginPage() {
   const handleVerifyOtp = async (code: string) => {
     setLoading(true);
     try {
-      const verifyResponse = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", {
+      await apiFetch("/auth/otp/verify", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, ""), code } as never,
         auth: "omit",
       });
-      if (verifyResponse.accessToken) setAccessToken(verifyResponse.accessToken);
       addToast("Verified!", "success");
       router.push("/discover");
     } catch {

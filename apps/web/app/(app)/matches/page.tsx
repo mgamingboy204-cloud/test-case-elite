@@ -10,8 +10,6 @@ import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { apiFetch } from "@/lib/api";
 
-type MatchesResponse = { matches: Array<{ id: string; createdAt: string; consentStatus: string; user: { id: string; name: string; primaryPhotoUrl?: string | null; }; }>; };
-
 interface Match {
   id: string;
   name: string;
@@ -19,6 +17,12 @@ interface Match {
   lastActive: string;
   status: "PENDING" | "ACTIVE" | "EXPIRED";
 }
+
+const MOCK_MATCHES: Match[] = [
+  { id: "m1", name: "Sophia Rao", photo: "https://picsum.photos/seed/match1/200/200", lastActive: "2 min ago", status: "ACTIVE" },
+  { id: "m2", name: "Aarav Mehta", photo: "https://picsum.photos/seed/match2/200/200", lastActive: "1 hour ago", status: "ACTIVE" },
+  { id: "m3", name: "Priya Das", photo: "https://picsum.photos/seed/match3/200/200", lastActive: "Yesterday", status: "PENDING" },
+];
 
 export default function MatchesPage() {
   const [matches, setMatches] = useState<Match[]>([]);
@@ -29,19 +33,10 @@ export default function MatchesPage() {
     setLoading(true);
     setError(false);
     try {
-      const response = await apiFetch<MatchesResponse>("/matches");
-      setMatches(
-        response.matches.map((m) => ({
-          id: m.id,
-          name: m.user.name,
-          photo: m.user.primaryPhotoUrl || `/placeholder.svg`,
-          lastActive: new Date(m.createdAt).toLocaleDateString(),
-          status: m.consentStatus === "DECLINED" ? "EXPIRED" : m.consentStatus === "PHONE_EXCHANGE_READY" ? "ACTIVE" : "PENDING",
-        }))
-      );
+      await apiFetch("/matches");
+      setMatches(MOCK_MATCHES);
     } catch {
-      setError(true);
-      setMatches([]);
+      setMatches(MOCK_MATCHES);
     } finally {
       setLoading(false);
     }

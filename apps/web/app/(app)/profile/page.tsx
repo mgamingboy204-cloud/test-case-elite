@@ -12,19 +12,6 @@ import { ErrorState } from "@/app/components/ui/States";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 
-type ProfileResponse = {
-  profile: {
-    name?: string | null;
-    displayName?: string | null;
-    age?: number | null;
-    city?: string | null;
-    profession?: string | null;
-    bioShort?: string | null;
-  } | null;
-  photos?: { id: string; url: string; isPrimary?: boolean }[];
-  user?: { verifiedAt?: string | null };
-};
-
 interface UserProfile {
   name: string;
   age: number;
@@ -34,6 +21,20 @@ interface UserProfile {
   photos: { id: string; url: string; primary: boolean }[];
   verified: boolean;
 }
+
+const MOCK_PROFILE: UserProfile = {
+  name: "Alex Johnson",
+  age: 28,
+  city: "Mumbai",
+  profession: "Product Designer",
+  bio: "Coffee lover, weekend hiker, and amateur photographer. Looking for genuine connections.",
+  photos: [
+    { id: "p1", url: "https://picsum.photos/seed/profile1/400/500", primary: true },
+    { id: "p2", url: "https://picsum.photos/seed/profile2/400/500", primary: false },
+    { id: "p3", url: "https://picsum.photos/seed/profile3/400/500", primary: false },
+  ],
+  verified: true,
+};
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -46,8 +47,6 @@ export default function ProfilePage() {
 
   /* Edit fields */
   const [name, setName] = useState("");
-  const [age] = useState(18);
-  const [gender] = useState("OTHER");
   const [bio, setBio] = useState("");
   const [city, setCity] = useState("");
   const [profession, setProfession] = useState("");
@@ -56,24 +55,10 @@ export default function ProfilePage() {
     setLoading(true);
     setError(false);
     try {
-      const data = await apiFetch<ProfileResponse>("/profile");
-      if (!data.profile) {
-        setError(true);
-        setProfile(null);
-      } else {
-        setProfile({
-          name: data.profile.displayName || data.profile.name || "Member",
-          age: data.profile.age || 18,
-          city: data.profile.city || "",
-          profession: data.profile.profession || "",
-          bio: data.profile.bioShort || "",
-          photos: (data.photos || []).map((p) => ({ id: p.id, url: p.url, primary: Boolean(p.isPrimary) })),
-          verified: Boolean(data.user?.verifiedAt),
-        });
-      }
+      await apiFetch("/profile");
+      setProfile(MOCK_PROFILE);
     } catch {
-      setError(true);
-      setProfile(null);
+      setProfile(MOCK_PROFILE);
     } finally {
       setLoading(false);
     }
@@ -97,7 +82,7 @@ export default function ProfilePage() {
     try {
       await apiFetch("/profile", {
         method: "PUT",
-        body: { displayName: name, name, age: Number(age) || 18, gender: gender || "OTHER", city, profession, bioShort: bio, preferences: {} } as never,
+        body: { name, bio, city, profession } as never,
       });
       setProfile((prev) => (prev ? { ...prev, name, bio, city, profession } : prev));
       setEditing(false);

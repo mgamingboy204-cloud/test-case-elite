@@ -9,7 +9,6 @@ import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
-import { setAccessToken } from "@/lib/authToken";
 
 export default function OtpPage() {
   const router = useRouter();
@@ -45,12 +44,11 @@ export default function OtpPage() {
   const handleVerify = async (code: string) => {
     setLoading(true);
     try {
-      const verifyResponse = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", {
+      await apiFetch("/auth/otp/verify", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, ""), code } as never,
         auth: "omit",
       });
-      if (verifyResponse.accessToken) setAccessToken(verifyResponse.accessToken);
       addToast("Verified!", "success");
       router.push("/discover");
     } catch {

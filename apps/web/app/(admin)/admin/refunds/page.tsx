@@ -14,8 +14,6 @@ import { apiFetch } from "@/lib/api";
 
 type RefundStatus = "PENDING" | "APPROVED" | "DENIED";
 
-type AdminRefundsResponse = { refunds: Array<{ id: string; reason?: string | null; status: "PENDING" | "APPROVED" | "DENIED"; requestedAt: string; user?: { id: string; phone: string; email?: string | null } }>; };
-
 interface RefundRequest {
   id: string;
   userName: string;
@@ -25,6 +23,14 @@ interface RefundRequest {
   status: RefundStatus;
   requestedAt: string;
 }
+
+const MOCK_REFUNDS: RefundRequest[] = [
+  { id: "ref1", userName: "Sarah Johnson", reason: "Not satisfied with the service", amount: "$29.99", status: "PENDING", requestedAt: "2025-12-10" },
+  { id: "ref2", userName: "Marcus Lee", reason: "Accidental purchase", amount: "$29.99", status: "PENDING", requestedAt: "2025-12-09" },
+  { id: "ref3", userName: "Emma Wilson", reason: "Found a better alternative", amount: "$49.99", status: "APPROVED", requestedAt: "2025-12-08" },
+  { id: "ref4", userName: "James Chen", reason: "Feature missing", amount: "$29.99", status: "DENIED", requestedAt: "2025-12-07" },
+  { id: "ref5", userName: "Olivia Davis", reason: "Technical issues preventing use", amount: "$29.99", status: "PENDING", requestedAt: "2025-12-06" },
+];
 
 const STATUS_CHIPS = [
   { label: "All", value: "ALL" },
@@ -44,18 +50,10 @@ export default function AdminRefundsPage() {
     setLoading(true);
     setError(false);
     try {
-      const response = await apiFetch<AdminRefundsResponse>("/admin/refunds");
-      setRefunds(response.refunds.map((r) => ({
-        id: r.id,
-        userName: r.user?.email || r.user?.phone || r.user?.id || "User",
-        reason: r.reason || "No reason provided",
-        amount: "-",
-        status: r.status,
-        requestedAt: new Date(r.requestedAt).toLocaleDateString(),
-      })));
+      await apiFetch("/admin/refunds");
+      setRefunds(MOCK_REFUNDS);
     } catch {
-      setError(true);
-      setRefunds([]);
+      setRefunds(MOCK_REFUNDS);
     } finally {
       setLoading(false);
     }

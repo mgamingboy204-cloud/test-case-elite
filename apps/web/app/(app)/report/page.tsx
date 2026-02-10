@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Input } from "@/app/components/ui/Input";
+import { useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/Card";
 import { Select } from "@/app/components/ui/Select";
 import { Textarea } from "@/app/components/ui/Textarea";
@@ -22,18 +21,12 @@ const REASONS = [
 
 export default function ReportPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { addToast } = useToast();
-  const [reportedUserId, setReportedUserId] = useState(searchParams.get("userId") ?? "");
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!reportedUserId.trim()) {
-      addToast("Reported user ID is required", "error");
-      return;
-    }
     if (!reason) {
       addToast("Please select a reason", "error");
       return;
@@ -42,7 +35,7 @@ export default function ReportPage() {
     try {
       await apiFetch("/reports", {
         method: "POST",
-        body: { reportedUserId: reportedUserId.trim(), reason, details } as never,
+        body: { reason, details } as never,
       });
       addToast("Report submitted. Thank you.", "success");
       router.push("/discover");
@@ -59,12 +52,6 @@ export default function ReportPage() {
 
       <Card style={{ padding: 24 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <Input
-            label="Reported User ID"
-            value={reportedUserId}
-            onChange={(e) => setReportedUserId(e.target.value)}
-            placeholder="UUID of the user"
-          />
           <Select
             label="Reason"
             value={reason}

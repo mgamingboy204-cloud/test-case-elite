@@ -96,16 +96,7 @@ export default function ProfileWizardPage() {
     try {
       await apiFetch("/profile", {
         method: "PUT",
-        body: {
-          name,
-          displayName: name,
-          age: Number(age),
-          gender: gender === "male" ? "MALE" : gender === "female" ? "FEMALE" : gender === "non-binary" ? "NON_BINARY" : "OTHER",
-          city,
-          profession,
-          bioShort: bio,
-          preferences: { interests, intent, distance },
-        } as never,
+        body: { name, age, gender, city, profession, bio, interests, intent, distance } as never,
       });
       await apiFetch("/profile/complete", { method: "POST" });
       addToast("Profile complete!", "success");

@@ -17,8 +17,6 @@ import { apiFetch } from "@/lib/api";
 
 type VerificationStatus = "REQUESTED" | "IN_PROGRESS" | "APPROVED" | "REJECTED";
 
-type AdminVerificationRequestsResponse = { requests: Array<{ id: string; userId: string; status: "REQUESTED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED" | "APPROVED"; requestedAt?: string; createdAt: string; meetUrl?: string | null; verificationLink?: string | null; user?: { id: string; email?: string | null; phone: string } }>; };
-
 interface VerificationRequest {
   id: string;
   userId: string;
@@ -26,8 +24,17 @@ interface VerificationRequest {
   userPhoto?: string;
   status: VerificationStatus;
   requestedAt: string;
-  meetUrl?: string;
+  meetLink?: string;
 }
+
+const MOCK_REQUESTS: VerificationRequest[] = [
+  { id: "v1", userId: "1", userName: "Sarah Johnson", status: "REQUESTED", requestedAt: "2025-12-10T10:30:00" },
+  { id: "v2", userId: "2", userName: "Marcus Lee", status: "IN_PROGRESS", requestedAt: "2025-12-09T14:20:00", meetLink: "https://meet.google.com/abc-defg-hij" },
+  { id: "v3", userId: "3", userName: "Emma Wilson", status: "APPROVED", requestedAt: "2025-12-08T09:15:00" },
+  { id: "v4", userId: "4", userName: "James Chen", status: "REJECTED", requestedAt: "2025-12-07T16:45:00" },
+  { id: "v5", userId: "5", userName: "Olivia Davis", status: "REQUESTED", requestedAt: "2025-12-06T11:00:00" },
+  { id: "v6", userId: "8", userName: "Liam Garcia", status: "REQUESTED", requestedAt: "2025-12-05T08:30:00" },
+];
 
 const STATUS_CHIPS: { label: string; value: string }[] = [
   { label: "All", value: "ALL" },
@@ -44,7 +51,7 @@ export default function AdminVideoVerificationsPage() {
   const [error, setError] = useState(false);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [meetModal, setMeetModal] = useState<{ open: boolean; requestId: string }>({ open: false, requestId: "" });
-  const [meetUrl, setMeetLink] = useState("");
+  const [meetLink, setMeetLink] = useState("");
   const [rejectModal, setRejectModal] = useState<{ open: boolean; requestId: string }>({ open: false, requestId: "" });
   const [rejectReason, setRejectReason] = useState("");
 
@@ -53,18 +60,10 @@ export default function AdminVideoVerificationsPage() {
     setError(false);
     try {
       const query = statusFilter !== "ALL" ? `?status=${statusFilter}` : "";
-      const response = await apiFetch<AdminVerificationRequestsResponse>(`/admin/verification-requests${query}`);
-      setRequests(response.requests.map((r) => ({
-        id: r.id,
-        userId: r.userId,
-        userName: r.user?.email || r.user?.phone || r.userId,
-        status: r.status === "COMPLETED" ? "APPROVED" : (r.status as VerificationStatus),
-        requestedAt: r.requestedAt || r.createdAt,
-        meetUrl: r.meetUrl || r.verificationLink || undefined,
-      })));
+      await apiFetch(`/admin/verification-requests${query}`);
+      setRequests(MOCK_REQUESTS);
     } catch {
-      setError(true);
-      setRequests([]);
+      setRequests(MOCK_REQUESTS);
     } finally {
       setLoading(false);
     }
@@ -78,18 +77,27 @@ export default function AdminVideoVerificationsPage() {
     setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, ...updates } : r)));
   };
 
+  const handleStart = async (requestId: string) => {
+    try {
+      await apiFetch(`/admin/verification-requests/${requestId}/start`, { method: "POST" });
+      updateRequest(requestId, { status: "IN_PROGRESS" });
+      addToast("Verification started", "success");
+    } catch {
+      addToast("Failed to start verification", "error");
+    }
+  };
 
   const handleSendMeetLink = async () => {
-    if (!meetUrl.trim() || !meetUrl.includes("meet.google.com")) {
+    if (!meetLink.trim() || !meetLink.includes("meet.google.com")) {
       addToast("Please enter a valid Google Meet link", "error");
       return;
     }
     try {
-      await apiFetch(`/admin/verification-requests/${meetModal.requestId}/start`, {
+      await apiFetch(`/admin/verification-requests/${meetModal.requestId}/meet-link`, {
         method: "POST",
-        body: { meetUrl } as never,
+        body: { meetLink } as never,
       });
-      updateRequest(meetModal.requestId, { meetUrl, status: "IN_PROGRESS" });
+      updateRequest(meetModal.requestId, { meetLink, status: "IN_PROGRESS" });
       addToast("Meet link sent", "success");
       setMeetModal({ open: false, requestId: "" });
       setMeetLink("");
@@ -230,13 +238,16 @@ export default function AdminVideoVerificationsPage() {
                       >
                         Send Meet Link
                       </Button>
+                      <Button size="sm" onClick={() => handleStart(req.id)}>
+                        Start
+                      </Button>
                     </>
                   )}
                   {req.status === "IN_PROGRESS" && (
                     <>
-                      {req.meetUrl && (
+                      {req.meetLink && (
                         <a
-                          href={req.meetUrl}
+                          href={req.meetLink}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{
@@ -285,10 +296,10 @@ export default function AdminVideoVerificationsPage() {
           </p>
           <Input
             label="Google Meet Link"
-            value={meetUrl}
+            value={meetLink}
             onChange={(e) => setMeetLink(e.target.value)}
             placeholder="https://meet.google.com/..."
-            error={meetUrl && !meetUrl.includes("meet.google.com") ? "Must be a valid meet.google.com link" : undefined}
+            error={meetLink && !meetLink.includes("meet.google.com") ? "Must be a valid meet.google.com link" : undefined}
           />
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <Button

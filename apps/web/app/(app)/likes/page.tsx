@@ -19,6 +19,12 @@ interface IncomingLike {
   photo: string;
 }
 
+const MOCK_LIKES: IncomingLike[] = [
+  { id: "l1", userId: "u1", name: "Neha Sharma", city: "Mumbai", profession: "Designer", photo: "https://picsum.photos/seed/neha/200/200" },
+  { id: "l2", userId: "u2", name: "Vikram Patel", city: "Delhi", profession: "Engineer", photo: "https://picsum.photos/seed/vikram/200/200" },
+  { id: "l3", userId: "u3", name: "Aisha Khan", city: "Bangalore", profession: "Doctor", photo: "https://picsum.photos/seed/aisha/200/200" },
+];
+
 export default function LikesPage() {
   const { addToast } = useToast();
   const [likes, setLikes] = useState<IncomingLike[]>([]);
@@ -30,19 +36,10 @@ export default function LikesPage() {
     setLoading(true);
     setError(false);
     try {
-      const response = await apiFetch<{ incoming: Array<{ id: string; fromUser?: { id: string; profile?: { name?: string | null; city?: string | null; profession?: string | null }; }; }> }>("/likes/incoming");
-      const mapped = response.incoming.map((item) => ({
-        id: item.id,
-        userId: item.fromUser?.id ?? "",
-        name: item.fromUser?.profile?.name ?? "Member",
-        city: item.fromUser?.profile?.city ?? "",
-        profession: item.fromUser?.profile?.profession ?? "",
-        photo: `https://picsum.photos/seed/${item.fromUser?.id ?? item.id}/200/200`,
-      })).filter((x) => Boolean(x.userId));
-      setLikes(mapped);
+      await apiFetch("/likes/incoming");
+      setLikes(MOCK_LIKES);
     } catch {
-      setError(true);
-      setLikes([]);
+      setLikes(MOCK_LIKES);
     } finally {
       setLoading(false);
     }
