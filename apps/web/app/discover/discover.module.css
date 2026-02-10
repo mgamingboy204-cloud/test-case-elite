@@ -749,6 +749,39 @@
   display: none;
 }
 
+
+.mobileHeaderCenter {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+
+.mobileIntentTabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+}
+
+.mobileIntentTab {
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+}
+
+.mobileIntentTabActive {
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: var(--shadow-soft);
+}
+
+
 .skeletonLine {
   height: 12px;
   border-radius: 999px;
@@ -785,7 +818,7 @@
 
 @media (max-width: 768px) {
   .page {
-    padding: 76px 16px calc(92px + env(safe-area-inset-bottom));
+    padding: 86px 16px calc(186px + env(safe-area-inset-bottom));
     grid-template-columns: minmax(0, 1fr);
     max-width: 100%;
     background: linear-gradient(180deg, var(--bg) 0%, var(--bg-elevated) 55%, var(--bg) 100%);
@@ -793,6 +826,8 @@
 
   .feedStage {
     padding-top: 4px;
+    display: grid;
+    place-items: center;
   }
 
   .feedStack {
@@ -865,20 +900,21 @@
   }
 
   .actions {
-    display: none;
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    z-index: 45;
+    display: flex;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg-elevated) 96%, #ffffff);
+    box-shadow: var(--shadow-soft);
   }
 
   .cardActions {
-    position: absolute;
-    right: 14px;
-    top: min(
-      calc(50% + 24px - (var(--action-stack-height) / 2)),
-      calc(100% - var(--overlay-height) - var(--action-stack-height) - 16px)
-    );
-    display: flex;
-    flex-direction: column;
-    gap: var(--action-gap);
-    z-index: 3;
+    display: none;
   }
 
   .cardActionButton {
@@ -934,8 +970,7 @@
   }
 
   .filtersColumn {
-    margin-top: 24px;
-    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    display: none;
   }
 
   .mobileHeader {
@@ -946,7 +981,7 @@
     height: calc(56px + env(safe-area-inset-top));
     padding: env(safe-area-inset-top) 16px 0;
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
     background: color-mix(in srgb, var(--bg) 90%, transparent);
     backdrop-filter: blur(14px);

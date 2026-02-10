@@ -29,7 +29,7 @@ import {
 /* -------------------- DEFAULT FILTERS -------------------- */
 
 const defaultFilters: DiscoverFiltersState = {
-  intent: "dating",
+  intent: "all",
   distance: 25
 };
 
@@ -40,7 +40,7 @@ function parseFilters(params: URLSearchParams): DiscoverFiltersState {
   const distance = Number(params.get("distance"));
 
   return {
-    intent: intent === "friends" || intent === "all" ? intent : "dating",
+    intent: intent === "friends" || intent === "dating" || intent === "all" ? intent : "all",
     distance: Number.isFinite(distance) && distance > 0 ? distance : defaultFilters.distance
   };
 }
@@ -246,15 +246,42 @@ export default function DiscoverClient() {
             <div className={styles.mobileHeaderLeft}>
               <span className={styles.mobileLogo}>ELITE MATCH</span>
             </div>
-            <span className={styles.mobileTitle}>Discover</span>
-            <Link href="/settings" className={styles.mobileIconButton} aria-label="Settings">
+            <div className={styles.mobileHeaderCenter}>
+              <span className={styles.mobileTitle}>Discover</span>
+              <div className={styles.mobileIntentTabs} role="tablist" aria-label="Intent">
+                {[
+                  { label: "All", value: "all" },
+                  { label: "Dating", value: "dating" },
+                  { label: "Friends", value: "friends" }
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={filters.intent === option.value}
+                    className={`${styles.mobileIntentTab} ${
+                      filters.intent === option.value ? styles.mobileIntentTabActive : ""
+                    }`}
+                    onClick={() => setFilters({ ...filters, intent: option.value as DiscoverFiltersState["intent"] })}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              type="button"
+              className={styles.mobileIconButton}
+              aria-label="Open filters"
+              onClick={() => setIsFilterSheetOpen(true)}
+            >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path
-                  d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Zm8.1 3.2c0-.4-.1-.8-.2-1.2l2-1.6-2-3.4-2.4.9a7.6 7.6 0 0 0-2.1-1.2L13 1h-4l-.4 3.9c-.7.3-1.4.7-2.1 1.2l-2.4-.9-2 3.4 2 1.6c-.1.4-.2.8-.2 1.2s.1.8.2 1.2l-2 1.6 2 3.4 2.4-.9c.7.5 1.3.9 2.1 1.2L9 23h4l.4-3.9c.7-.3 1.4-.7 2.1-1.2l2.4.9 2-3.4-2-1.6c.1-.4.2-.8.2-1.2Z"
+                  d="M4 6h16v2H4V6Zm3 5h10v2H7v-2Zm3 5h4v2h-4v-2Z"
                   fill="currentColor"
                 />
               </svg>
-            </Link>
+            </button>
           </header>
 
           <section className={styles.feedColumn}>
