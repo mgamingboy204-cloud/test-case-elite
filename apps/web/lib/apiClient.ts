@@ -5,8 +5,8 @@ const rawApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 if (!rawApiUrl) {
   throw new Error("NEXT_PUBLIC_API_BASE_URL is required.");
 }
-if (rawApiUrl.startsWith("http://")) {
-  throw new Error("NEXT_PUBLIC_API_BASE_URL must be https.");
+if (rawApiUrl.startsWith("http://") && !/http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(rawApiUrl)) {
+  throw new Error("NEXT_PUBLIC_API_BASE_URL must be https unless using localhost.");
 }
 
 export const API_URL = rawApiUrl.replace(/\/$/, "");
@@ -54,7 +54,9 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
 
 async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, hasRetried: boolean) {
   const headers = new Headers(options.headers);
-  if (options.method && options.method !== "GET" && !headers.has("Content-Type")) {
+  const method = (options.method ?? "GET").toUpperCase();
+  const hasBody = options.body !== undefined && options.body !== null;
+  if (hasBody && !headers.has("Content-Type") && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
   const authMode = options.auth ?? "include";
@@ -62,14 +64,18 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, hasR
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  const res = await fetch(`${API_URL}${path}`,
-    {
-      ...options,
-      headers,
-      credentials: "include",
-      cache: "no-store"
-    }
-  );
+  const resolvedBody = hasBody && options.body && typeof options.body === "object" && !(options.body instanceof FormData) && !(options.body instanceof Blob) && !(options.body instanceof ArrayBuffer)
+    ? JSON.stringify(options.body)
+    : options.body;
+
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    method,
+    body: resolvedBody,
+    headers,
+    credentials: "include",
+    cache: "no-store"
+  });
   const contentType = res.headers.get("content-type") ?? "";
   const payload = contentType.includes("application/json") ? await res.json() : await res.text();
   if (res.status === 401 && options.retryOnUnauthorized && !hasRetried) {
