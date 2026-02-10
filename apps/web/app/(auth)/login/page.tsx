@@ -9,6 +9,7 @@ import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { setAccessToken } from "@/lib/authToken";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,11 +39,19 @@ export default function LoginPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await apiFetch("/auth/login", {
+      const loginResult = await apiFetch<{ ok: boolean; otpRequired?: boolean; accessToken?: string }>("/auth/login", {
         method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), password, remember, rememberDevice } as never,
+        body: { phone: phone.replace(/\D/g, ""), password, rememberMe: remember, rememberDevice30Days: rememberDevice } as never,
         auth: "omit",
       });
+      if (loginResult.otpRequired) {
+        setOtpRequired(true);
+        addToast("OTP verification is required.", "info");
+        return;
+      }
+      if (loginResult.accessToken) {
+        setAccessToken(loginResult.accessToken);
+      }
       addToast("Logged in successfully!", "success");
       router.push("/discover");
     } catch (err: unknown) {
@@ -74,11 +83,14 @@ export default function LoginPage() {
   const handleVerifyOtp = async (code: string) => {
     setLoading(true);
     try {
-      await apiFetch("/auth/otp/verify", {
+      const verifyResult = await apiFetch<{ ok: boolean; accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, ""), code } as never,
         auth: "omit",
       });
+      if (verifyResult.accessToken) {
+        setAccessToken(verifyResult.accessToken);
+      }
       addToast("Verified!", "success");
       router.push("/discover");
     } catch {

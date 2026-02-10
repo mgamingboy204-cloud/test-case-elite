@@ -9,6 +9,7 @@ import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { setAccessToken } from "@/lib/authToken";
 
 type Step = "register" | "otp";
 
@@ -62,11 +63,14 @@ export default function SignupPage() {
   const handleVerifyOtp = async (code: string) => {
     setLoading(true);
     try {
-      await apiFetch("/auth/otp/verify", {
+      const verifyResult = await apiFetch<{ ok: boolean; accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, ""), code } as never,
         auth: "omit",
       });
+      if (verifyResult.accessToken) {
+        setAccessToken(verifyResult.accessToken);
+      }
       addToast("Phone verified!", "success");
       router.push("/onboarding/video-verification");
     } catch {
