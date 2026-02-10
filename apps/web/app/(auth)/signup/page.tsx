@@ -9,6 +9,7 @@ import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { setAccessToken } from "@/lib/authToken";
 
 type Step = "register" | "otp";
 
@@ -20,6 +21,7 @@ export default function SignupPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -27,6 +29,7 @@ export default function SignupPage() {
     const errs: Record<string, string> = {};
     if (!/^\d{10}$/.test(phone.replace(/\D/g, "")))
       errs.phone = "Enter a valid 10-digit phone number";
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) errs.email = "Enter a valid email";
     if (password.length < 8) errs.password = "Minimum 8 characters";
     if (password !== confirmPassword) errs.confirmPassword = "Passwords don't match";
     setErrors(errs);
@@ -39,7 +42,7 @@ export default function SignupPage() {
     try {
       await apiFetch("/auth/register", {
         method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), password } as never,
+        body: { phone: phone.replace(/\D/g, ""), email: email || undefined, password } as never,
         auth: "omit",
       });
 
@@ -62,11 +65,14 @@ export default function SignupPage() {
   const handleVerifyOtp = async (code: string) => {
     setLoading(true);
     try {
-      await apiFetch("/auth/otp/verify", {
+      const verifyResult = await apiFetch<{ ok: boolean; accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, ""), code } as never,
         auth: "omit",
       });
+      if (verifyResult.accessToken) {
+        setAccessToken(verifyResult.accessToken);
+      }
       addToast("Phone verified!", "success");
       router.push("/onboarding/video-verification");
     } catch {
@@ -136,6 +142,14 @@ export default function SignupPage() {
                 error={errors.phone}
                 maxLength={10}
                 inputMode="numeric"
+              />
+              <Input
+                label="Email (optional)"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                error={errors.email}
               />
               <Input
                 label="Password"

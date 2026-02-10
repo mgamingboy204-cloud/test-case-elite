@@ -22,16 +22,19 @@ interface Profile {
   bio: string;
   photo: string;
   verified: boolean;
-  premium: boolean;
 }
 
-const MOCK_PROFILES: Profile[] = [
-  { id: "1", name: "Sophia", age: 27, city: "Mumbai", bio: "Coffee addict & bookworm", photo: "https://picsum.photos/seed/sophia/400/600", verified: true, premium: true },
-  { id: "2", name: "Aarav", age: 29, city: "Delhi", bio: "Traveler | Photographer", photo: "https://picsum.photos/seed/aarav/400/600", verified: true, premium: false },
-  { id: "3", name: "Priya", age: 25, city: "Bangalore", bio: "Yoga & wellness enthusiast", photo: "https://picsum.photos/seed/priya/400/600", verified: true, premium: true },
-  { id: "4", name: "Rahul", age: 31, city: "Pune", bio: "Startup founder, dog lover", photo: "https://picsum.photos/seed/rahul/400/600", verified: false, premium: false },
-  { id: "5", name: "Ananya", age: 26, city: "Chennai", bio: "Music and mountains", photo: "https://picsum.photos/seed/ananya/400/600", verified: true, premium: true },
-];
+type DiscoverResponse = {
+  items: Array<{
+    userId: string;
+    name: string;
+    age: number;
+    city: string;
+    bioShort?: string | null;
+    primaryPhotoUrl?: string | null;
+    videoVerificationStatus?: string | null;
+  }>;
+};
 
 const ALL_INTERESTS = ["Travel", "Fitness", "Music", "Cooking", "Reading", "Photography", "Movies", "Art", "Hiking", "Gaming", "Yoga", "Dancing"];
 
@@ -59,11 +62,23 @@ export default function DiscoverPage() {
     setLoading(true);
     setError(false);
     try {
-      await apiFetch(`/discover?intent=${intent}&distanceKm=${distance}&interests=${selectedInterests.join(",")}`);
-      setProfiles(MOCK_PROFILES);
+      const query = new URLSearchParams({ intent, limit: "24" });
+      const response = await apiFetch<DiscoverResponse>(`/discover?${query.toString()}`);
+      setProfiles(
+        (response.items ?? []).map((item) => ({
+          id: item.userId,
+          name: item.name || "Member",
+          age: item.age,
+          city: item.city || "",
+          bio: item.bioShort || "",
+          photo: item.primaryPhotoUrl || "/placeholder.svg",
+          verified: item.videoVerificationStatus === "COMPLETED",
+        }))
+      );
       setCurrentIndex(0);
     } catch {
-      setProfiles(MOCK_PROFILES);
+      setError(true);
+      setProfiles([]);
       setCurrentIndex(0);
     } finally {
       setLoading(false);
@@ -87,10 +102,10 @@ export default function DiscoverPage() {
       try {
         await apiFetch("/likes", {
           method: "POST",
-          body: { toUserId: currentProfile.id, type } as never,
+          body: { toUserId: currentProfile.id, type: type === "SUPERLIKE" ? "LIKE" : type } as never,
         });
       } catch {
-        /* stub */
+        addToast("Could not submit action.", "error");
       }
 
       const feedbackMessages: Record<string, string> = {
@@ -373,9 +388,7 @@ export default function DiscoverPage() {
                 {currentProfile.verified && (
                   <Badge variant="success" style={{ fontSize: 11 }}>Verified</Badge>
                 )}
-                {currentProfile.premium && (
-                  <Badge variant="primary" style={{ fontSize: 11 }}>Premium</Badge>
-                )}
+                
               </div>
               <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, marginBottom: 4 }}>
                 {currentProfile.city}

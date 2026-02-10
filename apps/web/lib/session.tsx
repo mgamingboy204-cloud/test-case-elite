@@ -91,6 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useSession() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useSession must be used within AuthProvider");
+  if (!context) {
+    return { status: "logged-out" as const, user: null, refresh: async () => null };
+  }
   return context;
 }

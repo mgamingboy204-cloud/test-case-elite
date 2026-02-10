@@ -11,6 +11,7 @@ import { Skeleton } from "@/app/components/ui/Skeleton";
 import { ErrorState } from "@/app/components/ui/States";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { clearAccessToken } from "@/lib/authToken";
 
 interface UserProfile {
   name: string;
@@ -18,23 +19,10 @@ interface UserProfile {
   city: string;
   profession: string;
   bio: string;
+  gender: "MALE" | "FEMALE" | "NON_BINARY" | "OTHER";
   photos: { id: string; url: string; primary: boolean }[];
   verified: boolean;
 }
-
-const MOCK_PROFILE: UserProfile = {
-  name: "Alex Johnson",
-  age: 28,
-  city: "Mumbai",
-  profession: "Product Designer",
-  bio: "Coffee lover, weekend hiker, and amateur photographer. Looking for genuine connections.",
-  photos: [
-    { id: "p1", url: "https://picsum.photos/seed/profile1/400/500", primary: true },
-    { id: "p2", url: "https://picsum.photos/seed/profile2/400/500", primary: false },
-    { id: "p3", url: "https://picsum.photos/seed/profile3/400/500", primary: false },
-  ],
-  verified: true,
-};
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -45,36 +33,47 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  /* Edit fields */
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [city, setCity] = useState("");
   const [profession, setProfession] = useState("");
+  const [age, setAge] = useState("18");
+  const [gender, setGender] = useState<UserProfile["gender"]>("OTHER");
 
   const fetchProfile = async () => {
     setLoading(true);
     setError(false);
     try {
-      await apiFetch("/profile");
-      setProfile(MOCK_PROFILE);
+      const data = await apiFetch<{ profile?: any; photos?: Array<{ id: string; url: string }> }>("/profile");
+      const p = data.profile;
+      const mapped: UserProfile = {
+        name: p?.name || "",
+        age: p?.age || 18,
+        city: p?.city || "",
+        profession: p?.profession || "",
+        bio: p?.bioShort || "",
+        gender: p?.gender || "OTHER",
+        verified: true,
+        photos: (data.photos || []).map((photo, index) => ({ id: photo.id, url: photo.url, primary: index === 0 }))
+      };
+      setProfile(mapped);
     } catch {
-      setProfile(MOCK_PROFILE);
+      setError(true);
+      setProfile(null);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => { void fetchProfile(); }, []);
   useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  useEffect(() => {
-    if (profile) {
-      setName(profile.name);
-      setBio(profile.bio);
-      setCity(profile.city);
-      setProfession(profile.profession);
-    }
+    if (!profile) return;
+    setName(profile.name);
+    setBio(profile.bio);
+    setCity(profile.city);
+    setProfession(profile.profession);
+    setAge(String(profile.age));
+    setGender(profile.gender);
   }, [profile]);
 
   const handleSave = async () => {
@@ -82,139 +81,58 @@ export default function ProfilePage() {
     try {
       await apiFetch("/profile", {
         method: "PUT",
-        body: { name, bio, city, profession } as never,
+        body: {
+          displayName: name,
+          age: Number(age),
+          city,
+          profession,
+          bioShort: bio,
+          gender,
+          genderPreference: "ALL",
+          preferences: {}
+        } as never,
       });
-      setProfile((prev) => (prev ? { ...prev, name, bio, city, profession } : prev));
+      await fetchProfile();
       setEditing(false);
       addToast("Profile updated!", "success");
-    } catch {
-      addToast("Failed to save", "error");
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Failed to save", "error");
     } finally {
       setSaving(false);
     }
   };
 
   const handleLogout = async () => {
-    try {
-      await apiFetch("/auth/logout", { method: "POST" });
-    } catch {
-      /* stub */
-    }
+    try { await apiFetch("/auth/logout", { method: "POST" }); } catch {}
+    clearAccessToken();
     addToast("Logged out", "info");
     router.push("/login");
   };
 
-  const handleAddPhoto = () => {
-    const id = Math.random().toString(36).slice(2, 8);
-    if (profile && profile.photos.length < 6) {
-      setProfile({
-        ...profile,
-        photos: [
-          ...profile.photos,
-          { id, url: `https://picsum.photos/seed/${id}/400/500`, primary: false },
-        ],
-      });
-      addToast("Photo added!", "success");
-    }
-  };
-
-  if (loading) {
-    return (
-      <div style={{ padding: "24px 0" }}>
-        <Skeleton height={200} radius="var(--radius-lg)" style={{ marginBottom: 16 }} />
-        <Skeleton height={120} radius="var(--radius-lg)" />
-      </div>
-    );
-  }
-
+  if (loading) return <div style={{ padding: "24px 0" }}><Skeleton height={200} radius="var(--radius-lg)" style={{ marginBottom: 16 }} /><Skeleton height={120} radius="var(--radius-lg)" /></div>;
   if (error || !profile) return <ErrorState onRetry={fetchProfile} />;
 
   return (
     <div className="fade-in" style={{ padding: "24px 0" }}>
-      {/* Photos */}
       <Card style={{ padding: 20, marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 16,
-          }}
-        >
-          <h3 style={{ margin: 0 }}>Photos</h3>
-          {profile.photos.length < 6 && (
-            <Button variant="ghost" size="sm" onClick={handleAddPhoto}>
-              + Add
-            </Button>
-          )}
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 8,
-          }}
-        >
+        <h3 style={{ marginTop: 0 }}>Photos</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
           {profile.photos.map((photo) => (
-            <div
-              key={photo.id}
-              style={{
-                aspectRatio: "3/4",
-                borderRadius: "var(--radius-md)",
-                overflow: "hidden",
-                position: "relative",
-                border: photo.primary ? "2px solid var(--primary)" : "1px solid var(--border)",
-              }}
-            >
-              <img
-                src={photo.url || "/placeholder.svg"}
-                alt="Profile"
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                crossOrigin="anonymous"
-              />
-              {photo.primary && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 4,
-                    left: 4,
-                    fontSize: 9,
-                    fontWeight: 700,
-                    padding: "2px 6px",
-                    background: "var(--primary)",
-                    color: "#fff",
-                    borderRadius: "var(--radius-full)",
-                  }}
-                >
-                  PRIMARY
-                </span>
-              )}
+            <div key={photo.id} style={{ aspectRatio: "3/4", borderRadius: "var(--radius-md)", overflow: "hidden", border: photo.primary ? "2px solid var(--primary)" : "1px solid var(--border)" }}>
+              <img src={photo.url || "/placeholder.svg"} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
           ))}
         </div>
       </Card>
 
-      {/* Profile info */}
       <Card style={{ padding: 24, marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 20,
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <h2 style={{ margin: 0 }}>{profile.name}</h2>
+            <h2 style={{ margin: 0 }}>{profile.name || "Your Profile"}</h2>
             {profile.verified && <Badge variant="success">Verified</Badge>}
           </div>
-          {!editing && (
-            <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-              Edit
-            </Button>
-          )}
+          {!editing && <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>Edit</Button>}
         </div>
-
         {!editing ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <InfoRow label="Age" value={String(profile.age)} />
@@ -225,52 +143,26 @@ export default function ProfilePage() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input label="Age" type="number" value={age} onChange={(e) => setAge(e.target.value)} />
             <Input label="City" value={city} onChange={(e) => setCity(e.target.value)} />
             <Input label="Profession" value={profession} onChange={(e) => setProfession(e.target.value)} />
-            <Textarea
-              label="Bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              maxLength={300}
-              charCount={{ current: bio.length, max: 300 }}
-            />
+            <Textarea label="Bio" value={bio} onChange={(e) => setBio(e.target.value)} maxLength={300} charCount={{ current: bio.length, max: 300 }} />
             <div style={{ display: "flex", gap: 12 }}>
-              <Button variant="secondary" fullWidth onClick={() => setEditing(false)}>
-                Cancel
-              </Button>
-              <Button fullWidth loading={saving} onClick={handleSave}>
-                Save
-              </Button>
+              <Button variant="secondary" fullWidth onClick={() => setEditing(false)}>Cancel</Button>
+              <Button fullWidth loading={saving} onClick={handleSave}>Save</Button>
             </div>
           </div>
         )}
       </Card>
 
-      {/* Actions */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <Button variant="secondary" fullWidth onClick={() => router.push("/settings")}>
-          Settings
-        </Button>
-        <Button variant="danger" fullWidth onClick={handleLogout}>
-          Log Out
-        </Button>
+        <Button variant="secondary" fullWidth onClick={() => router.push("/settings")}>Settings</Button>
+        <Button variant="danger" fullWidth onClick={handleLogout}>Log Out</Button>
       </div>
     </div>
   );
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        padding: "8px 0",
-        borderBottom: "1px solid var(--border)",
-      }}
-    >
-      <span style={{ fontSize: 14, color: "var(--muted)" }}>{label}</span>
-      <span style={{ fontSize: 14, fontWeight: 500 }}>{value}</span>
-    </div>
-  );
+  return <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--border)" }}><span style={{ fontSize: 14, color: "var(--muted)" }}>{label}</span><span style={{ fontSize: 14, fontWeight: 500 }}>{value || "-"}</span></div>;
 }

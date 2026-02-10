@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/app/components/ui/Card";
@@ -7,6 +8,7 @@ import { Button } from "@/app/components/ui/Button";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { useTheme, useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { clearAccessToken } from "@/lib/authToken";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -19,6 +21,7 @@ export default function SettingsPage() {
     } catch {
       /* stub */
     }
+    clearAccessToken();
     addToast("Logged out", "info");
     router.push("/login");
   };
@@ -179,6 +182,3 @@ function SettingLink({ href, label }: { href: string; label: string }) {
     </Link>
   );
 }
-
-/* Need useState for ToggleSetting */
-import { useState } from "react";
