@@ -1,16 +1,39 @@
-"use client";
+'use client';
 
-import type { HTMLAttributes, ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
-type CardProps = HTMLAttributes<HTMLDivElement> & {
-  variant?: "default" | "muted" | "outline";
+interface CardProps {
   children: ReactNode;
-};
+  style?: CSSProperties;
+  className?: string;
+  onClick?: () => void;
+}
 
-export default function Card({ variant = "default", className = "", children, ...props }: CardProps) {
-  const classes = `ui-card ui-card--${variant}${className ? ` ${className}` : ""}`;
+export function Card({ children, style, className, onClick }: CardProps) {
   return (
-    <div className={classes} {...props}>
+    <div
+      className={className}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      style={{
+        background: "var(--panel)",
+        borderRadius: "var(--radius-lg)",
+        border: "1px solid var(--border)",
+        boxShadow: "var(--shadow)",
+        overflow: "hidden",
+        transition: "box-shadow 200ms ease, transform 200ms ease",
+        cursor: onClick ? "pointer" : undefined,
+        ...style,
+      }}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") onClick();
+            }
+          : undefined
+      }
+    >
       {children}
     </div>
   );

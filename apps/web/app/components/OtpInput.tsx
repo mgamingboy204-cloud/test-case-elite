@@ -1,79 +1,151 @@
 "use client";
 
-import type { ClipboardEvent, KeyboardEvent } from "react";
-import { useEffect, useMemo, useRef } from "react";
+import React from "react"
 
-type Props = {
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
+import { useState, useRef, useCallback, useEffect, type CSSProperties } from "react";
+
+interface OtpInputProps {
   length?: number;
-  idPrefix?: string;
-};
+  onComplete: (code: string) => void;
+  disabled?: boolean;
+}
 
-export default function OtpInput({ value, onChange, disabled = false, length = 6, idPrefix = "otp" }: Props) {
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
-  const digits = useMemo(() => {
-    const sanitized = value.replace(/\D/g, "").slice(0, length);
-    const result = Array.from({ length }).map((_, index) => sanitized[index] ?? "");
-    return result;
-  }, [value, length]);
+export function OtpInput({ length = 6, onComplete, disabled = false }: OtpInputProps) {
+  const [values, setValues] = useState<string[]>(Array(length).fill(""));
+  const refs = useRef<(HTMLInputElement | null)[]>([]);
 
-  useEffect(() => {
-    if (!value) {
-      inputRefs.current[0]?.focus();
-    }
-  }, [value]);
+  const handleChange = useCallback(
+    (index: number, val: string) => {
+      if (!/^\d?$/.test(val)) return;
+      const next = [...values];
+      next[index] = val;
+      setValues(next);
 
-  function updateValue(next: string) {
-    onChange(next.replace(/\D/g, "").slice(0, length));
-  }
+      if (val && index < length - 1) {
+        refs.current[index + 1]?.focus();
+      }
 
-  function handleChange(index: number, nextValue: string) {
-    const digit = nextValue.replace(/\D/g, "").slice(-1);
-    const nextDigits = [...digits];
-    nextDigits[index] = digit;
-    updateValue(nextDigits.join(""));
-    if (digit && index < length - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }
+      if (next.every((v) => v !== "")) {
+        onComplete(next.join(""));
+      }
+    },
+    [values, length, onComplete]
+  );
 
-  function handleKeyDown(index: number, event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Backspace" && !digits[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  }
+  const handleKeyDown = useCallback(
+    (index: number, e: React.KeyboardEvent) => {
+      if (e.key === "Backspace" && !values[index] && index > 0) {
+        refs.current[index - 1]?.focus();
+      }
+    },
+    [values]
+  );
 
-  function handlePaste(event: ClipboardEvent<HTMLInputElement>) {
-    event.preventDefault();
-    const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, length);
-    if (pasted) {
-      updateValue(pasted);
-      const focusIndex = Math.min(pasted.length, length - 1);
-      inputRefs.current[focusIndex]?.focus();
-    }
-  }
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      e.preventDefault();
+      const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, length);
+      const next = [...values];
+      for (let i = 0; i < pasted.length; i++) {
+        next[i] = pasted[i];
+      }
+      setValues(next);
+      if (next.every((v) => v !== "")) {
+        onComplete(next.join(""));
+      }
+    },
+    [values, length, onComplete]
+  );
+
+  const cellStyle: CSSProperties = {
+    width: 48,
+    height: 56,
+    textAlign: "center",
+    fontSize: 22,
+    fontWeight: 700,
+    borderRadius: "var(--radius-md)",
+    border: "2px solid var(--border)",
+    background: "var(--panel)",
+    color: "var(--text)",
+    outline: "none",
+    transition: "border-color 200ms ease",
+  };
 
   return (
-    <div className="otp-input" role="group" aria-label="One-time password">
-      {digits.map((digit, index) => (
+    <div
+      style={{
+        display: "flex",
+        gap: 8,
+        justifyContent: "center",
+      }}
+      onPaste={handlePaste}
+    >
+      {Array.from({ length }).map((_, i) => (
         <input
-          key={index}
-          ref={(el) => {
-            inputRefs.current[index] = el;
-          }}
-          id={index === 0 ? idPrefix : `${idPrefix}-${index}`}
-          value={digit}
+          key={i}
+          ref={(el) => { refs.current[i] = el; }}
+          type="text"
           inputMode="numeric"
-          pattern="\d*"
           maxLength={1}
+          value={values[i]}
           disabled={disabled}
-          onChange={(event) => handleChange(index, event.target.value)}
-          onKeyDown={(event) => handleKeyDown(index, event)}
-          onPaste={handlePaste}
+          onChange={(e) => handleChange(i, e.target.value)}
+          onKeyDown={(e) => handleKeyDown(i, e)}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = "var(--primary)";
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "var(--border)";
+          }}
+          style={cellStyle}
+          aria-label={`Digit ${i + 1}`}
         />
       ))}
     </div>
+  );
+}
+
+/* Resend Timer */
+interface ResendTimerProps {
+  onResend: () => void;
+  seconds?: number;
+}
+
+export function ResendTimer({ onResend, seconds = 60 }: ResendTimerProps) {
+  const [remaining, setRemaining] = useState(seconds);
+
+  useEffect(() => {
+    if (remaining <= 0) return;
+    const timer = setInterval(() => setRemaining((r) => r - 1), 1000);
+    return () => clearInterval(timer);
+  }, [remaining]);
+
+  if (remaining > 0) {
+    return (
+      <p style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}>
+        Resend code in {remaining}s
+      </p>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => {
+        setRemaining(seconds);
+        onResend();
+      }}
+      style={{
+        fontSize: 14,
+        fontWeight: 600,
+        color: "var(--primary)",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        display: "block",
+        margin: "0 auto",
+      }}
+    >
+      Resend Code
+    </button>
   );
 }
