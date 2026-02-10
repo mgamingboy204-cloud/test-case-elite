@@ -30,7 +30,7 @@ export default function LoginPage() {
     const errs: Record<string, string> = {};
     if (!/^\d{10}$/.test(phone.replace(/\D/g, "")))
       errs.phone = "Enter a valid 10-digit phone number";
-    if (password.length < 6) errs.password = "Password must be at least 6 characters";
+    if (password.length < 8) errs.password = "Password must be at least 8 characters";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };

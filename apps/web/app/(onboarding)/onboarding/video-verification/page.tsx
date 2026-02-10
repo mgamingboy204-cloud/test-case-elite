@@ -34,8 +34,7 @@ export default function VideoVerificationPage() {
       const data = await apiFetch<{ status: VStatus }>("/me/verification-status");
       setStatus(data.status);
     } catch {
-      // Default to NOT_REQUESTED for stub
-      setStatus("NOT_REQUESTED");
+      setError(true);
     } finally {
       setLoading(false);
     }
