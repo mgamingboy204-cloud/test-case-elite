@@ -1,22 +1,33 @@
-"use client";
+import type { ReactNode, CSSProperties } from "react";
 
-import type { ReactNode } from "react";
-
-type PageHeaderProps = {
+interface PageHeaderProps {
   title: string;
   subtitle?: string;
-  actions?: ReactNode;
-  variant?: "default" | "marketing";
-};
+  action?: ReactNode;
+  style?: CSSProperties;
+}
 
-export default function PageHeader({ title, subtitle, actions, variant = "default" }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, action, style }: PageHeaderProps) {
   return (
-    <div className={`page-header ${variant === "marketing" ? "marketing-page-header" : ""}`.trim()}>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: 16,
+        padding: "24px 0 16px",
+        ...style,
+      }}
+    >
       <div>
-        <h1>{title}</h1>
-        {subtitle ? <p className="text-muted">{subtitle}</p> : null}
+        <h1 style={{ margin: 0, fontSize: 24 }}>{title}</h1>
+        {subtitle && (
+          <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: 15 }}>
+            {subtitle}
+          </p>
+        )}
       </div>
-      {actions ? <div className="page-header__actions">{actions}</div> : null}
+      {action && <div>{action}</div>}
     </div>
   );
 }

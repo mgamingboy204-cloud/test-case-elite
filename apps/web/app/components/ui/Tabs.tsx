@@ -1,20 +1,51 @@
 "use client";
 
-type TabsProps = {
-  tabs: { id: string; label: string }[];
-  active: string;
-  onChange: (id: string) => void;
-};
+import type { CSSProperties } from "react";
 
-export default function Tabs({ tabs, active, onChange }: TabsProps) {
+interface Tab {
+  label: string;
+  value: string;
+}
+
+interface TabsProps {
+  tabs: Tab[];
+  active: string;
+  onChange: (value: string) => void;
+  style?: CSSProperties;
+}
+
+export function Tabs({ tabs, active, onChange, style }: TabsProps) {
   return (
-    <div className="tabs">
+    <div
+      role="tablist"
+      style={{
+        display: "flex",
+        background: "var(--bg)",
+        borderRadius: "var(--radius-full)",
+        padding: 3,
+        gap: 2,
+        ...style,
+      }}
+    >
       {tabs.map((tab) => (
         <button
-          key={tab.id}
+          key={tab.value}
+          role="tab"
           type="button"
-          className={tab.id === active ? "tab active" : "tab"}
-          onClick={() => onChange(tab.id)}
+          aria-selected={active === tab.value}
+          onClick={() => onChange(tab.value)}
+          style={{
+            flex: 1,
+            padding: "8px 16px",
+            fontSize: 14,
+            fontWeight: active === tab.value ? 600 : 400,
+            borderRadius: "var(--radius-full)",
+            background: active === tab.value ? "var(--panel)" : "transparent",
+            color: active === tab.value ? "var(--text)" : "var(--muted)",
+            boxShadow: active === tab.value ? "var(--shadow)" : "none",
+            transition: "all 200ms ease",
+            whiteSpace: "nowrap",
+          }}
         >
           {tab.label}
         </button>
