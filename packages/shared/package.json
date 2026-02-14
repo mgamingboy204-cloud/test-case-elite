@@ -4,7 +4,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run build -w @elite/contracts && tsc -p tsconfig.json",
     "test": "vitest run",
     "lint": "echo 'no lint'",
     "dev": "tsc -p tsconfig.json --watch"
