@@ -16,6 +16,7 @@ import type { CSSProperties } from "react";
 
 interface Profile {
   id: string;
+  userId: string;
   name: string;
   age: number;
   city: string;
@@ -24,14 +25,6 @@ interface Profile {
   verified: boolean;
   premium: boolean;
 }
-
-const MOCK_PROFILES: Profile[] = [
-  { id: "1", name: "Sophia", age: 27, city: "Mumbai", bio: "Coffee addict & bookworm", photo: "https://picsum.photos/seed/sophia/400/600", verified: true, premium: true },
-  { id: "2", name: "Aarav", age: 29, city: "Delhi", bio: "Traveler | Photographer", photo: "https://picsum.photos/seed/aarav/400/600", verified: true, premium: false },
-  { id: "3", name: "Priya", age: 25, city: "Bangalore", bio: "Yoga & wellness enthusiast", photo: "https://picsum.photos/seed/priya/400/600", verified: true, premium: true },
-  { id: "4", name: "Rahul", age: 31, city: "Pune", bio: "Startup founder, dog lover", photo: "https://picsum.photos/seed/rahul/400/600", verified: false, premium: false },
-  { id: "5", name: "Ananya", age: 26, city: "Chennai", bio: "Music and mountains", photo: "https://picsum.photos/seed/ananya/400/600", verified: true, premium: true },
-];
 
 const ALL_INTERESTS = ["Travel", "Fitness", "Music", "Cooking", "Reading", "Photography", "Movies", "Art", "Hiking", "Gaming", "Yoga", "Dancing"];
 
@@ -52,18 +45,31 @@ export default function DiscoverPage() {
   const [swipeY, setSwipeY] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const startPos = useRef({ x: 0, y: 0 });
-  const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const [animatingOut, setAnimatingOut] = useState(false);
 
   const fetchProfiles = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
-      await apiFetch(`/discover?intent=${intent}&distanceKm=${distance}&interests=${selectedInterests.join(",")}`);
-      setProfiles(MOCK_PROFILES);
+      const params = new URLSearchParams({ intent, limit: "24" });
+      const data = await apiFetch<{ items?: Array<any> }>(`/discover/feed?${params.toString()}`);
+      const items = Array.isArray(data?.items) ? data.items : [];
+      const mapped: Profile[] = items.map((item) => ({
+        id: item.userId,
+        userId: item.userId,
+        name: item.name ?? "Member",
+        age: Number(item.age ?? 18),
+        city: item.city ?? "",
+        bio: item.bioShort ?? "",
+        photo: item.primaryPhotoUrl ?? "/placeholder.svg",
+        verified: item.videoVerificationStatus === "APPROVED",
+        premium: false,
+      }));
+      setProfiles(mapped);
       setCurrentIndex(0);
     } catch {
-      setProfiles(MOCK_PROFILES);
+      setError(true);
+      setProfiles([]);
       setCurrentIndex(0);
     } finally {
       setLoading(false);
@@ -81,13 +87,12 @@ export default function DiscoverPage() {
       if (!currentProfile || animatingOut) return;
 
       setAnimatingOut(true);
-      setSwipeDirection(direction || (type === "PASS" ? "left" : "right"));
       setSwipeX(direction === "left" || type === "PASS" ? -500 : 500);
 
       try {
         await apiFetch("/likes", {
           method: "POST",
-          body: { toUserId: currentProfile.id, type } as never,
+          body: { toUserId: currentProfile.userId, type: type === "SUPERLIKE" ? "LIKE" : type } as never,
         });
       } catch {
         /* stub */
@@ -105,7 +110,6 @@ export default function DiscoverPage() {
         setCurrentIndex((i) => i + 1);
         setSwipeX(0);
         setSwipeY(0);
-        setSwipeDirection(null);
         setAnimatingOut(false);
       }, 250);
     },

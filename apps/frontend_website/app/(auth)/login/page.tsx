@@ -9,6 +9,7 @@ import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { setAccessToken } from "@/lib/authToken";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,7 +30,7 @@ export default function LoginPage() {
     const errs: Record<string, string> = {};
     if (!/^\d{10}$/.test(phone.replace(/\D/g, "")))
       errs.phone = "Enter a valid 10-digit phone number";
-    if (password.length < 6) errs.password = "Password must be at least 6 characters";
+    if (password.length < 8) errs.password = "Password must be at least 8 characters";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -38,21 +39,28 @@ export default function LoginPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await apiFetch("/auth/login", {
+      const payload = await apiFetch<{ accessToken?: string; otpRequired?: boolean }>("/auth/login", {
         method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), password, remember, rememberDevice } as never,
+        body: {
+          phone: phone.replace(/\D/g, ""),
+          password,
+          rememberMe: remember,
+          rememberDevice30Days: rememberDevice,
+        } as never,
         auth: "omit",
       });
-      addToast("Logged in successfully!", "success");
-      router.push("/discover");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Login failed";
-      if (msg.toLowerCase().includes("otp")) {
+      if (payload.otpRequired) {
         setOtpRequired(true);
-        handleSendOtp();
+        await handleSendOtp();
       } else {
-        addToast(msg, "error");
+        if (payload.accessToken) {
+          setAccessToken(payload.accessToken);
+        }
+        addToast("Logged in successfully!", "success");
+        router.push("/discover");
       }
+    } catch (err: unknown) {
+      addToast(err instanceof Error ? err.message : "Login failed", "error");
     } finally {
       setLoading(false);
     }
@@ -74,11 +82,14 @@ export default function LoginPage() {
   const handleVerifyOtp = async (code: string) => {
     setLoading(true);
     try {
-      await apiFetch("/auth/otp/verify", {
+      const payload = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), code } as never,
+        body: { phone: phone.replace(/\D/g, ""), code, rememberMe: remember } as never,
         auth: "omit",
       });
+      if (payload.accessToken) {
+        setAccessToken(payload.accessToken);
+      }
       addToast("Verified!", "success");
       router.push("/discover");
     } catch {

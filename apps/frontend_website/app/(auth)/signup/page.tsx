@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/Card";
@@ -9,6 +9,7 @@ import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { setAccessToken } from "@/lib/authToken";
 
 type Step = "register" | "otp";
 
@@ -19,16 +20,29 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+
+  const cleanedPhone = useMemo(() => phone.replace(/\D/g, ""), [phone]);
 
   const validate = () => {
     const errs: Record<string, string> = {};
-    if (!/^\d{10}$/.test(phone.replace(/\D/g, "")))
-      errs.phone = "Enter a valid 10-digit phone number";
+
+    if (!name.trim()) errs.name = "Name is required";
+    if (!/^\d{10}$/.test(cleanedPhone)) errs.phone = "Enter a valid 10-digit phone number";
+
+    if (email.trim()) {
+      const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+      if (!isEmailValid) errs.email = "Enter a valid email";
+    }
+
     if (password.length < 8) errs.password = "Minimum 8 characters";
     if (password !== confirmPassword) errs.confirmPassword = "Passwords don't match";
+
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -39,14 +53,12 @@ export default function SignupPage() {
     try {
       await apiFetch("/auth/register", {
         method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), password } as never,
-        auth: "omit",
-      });
-
-      /* Send OTP */
-      await apiFetch("/auth/otp/send", {
-        method: "POST",
-        body: { phone: phone.replace(/\D/g, "") } as never,
+        body: {
+          name: name.trim(),
+          phone: cleanedPhone,
+          email: email.trim() || null,
+          password,
+        } as never,
         auth: "omit",
       });
 
@@ -62,13 +74,16 @@ export default function SignupPage() {
   const handleVerifyOtp = async (code: string) => {
     setLoading(true);
     try {
-      await apiFetch("/auth/otp/verify", {
+      const payload = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), code } as never,
+        body: { phone: cleanedPhone, code, rememberMe } as never,
         auth: "omit",
       });
+      if (payload.accessToken) {
+        setAccessToken(payload.accessToken);
+      }
       addToast("Phone verified!", "success");
-      router.push("/onboarding/video-verification");
+      router.push("/onboarding/profile");
     } catch {
       addToast("Invalid OTP", "error");
     } finally {
@@ -80,7 +95,7 @@ export default function SignupPage() {
     try {
       await apiFetch("/auth/otp/send", {
         method: "POST",
-        body: { phone: phone.replace(/\D/g, "") } as never,
+        body: { phone: cleanedPhone } as never,
         auth: "omit",
       });
       addToast("OTP resent", "info");
@@ -95,18 +110,11 @@ export default function SignupPage() {
         <h2 style={{ marginBottom: 4 }}>Create account</h2>
         <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
           {step === "register"
-            ? "Join the most exclusive dating community"
+            ? "Create your account with all required details"
             : "Verify your phone number"}
         </p>
 
-        {/* Step indicator */}
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            marginBottom: 24,
-          }}
-        >
+        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
           {["register", "otp"].map((s, i) => (
             <div
               key={s}
@@ -114,10 +122,7 @@ export default function SignupPage() {
                 flex: 1,
                 height: 4,
                 borderRadius: 2,
-                background:
-                  i <= (step === "register" ? 0 : 1)
-                    ? "var(--primary)"
-                    : "var(--border)",
+                background: i <= (step === "register" ? 0 : 1) ? "var(--primary)" : "var(--border)",
                 transition: "background 300ms ease",
               }}
             />
@@ -127,6 +132,7 @@ export default function SignupPage() {
         {step === "register" ? (
           <>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <Input label="Full Name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
               <Input
                 label="Phone Number"
                 type="tel"
@@ -136,6 +142,14 @@ export default function SignupPage() {
                 error={errors.phone}
                 maxLength={10}
                 inputMode="numeric"
+              />
+              <Input
+                label="Email (optional)"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                error={errors.email}
               />
               <Input
                 label="Password"
@@ -165,25 +179,24 @@ export default function SignupPage() {
               Create Account
             </Button>
 
-            <p
-              style={{
-                fontSize: 14,
-                color: "var(--muted)",
-                textAlign: "center",
-                marginTop: 20,
-              }}
-            >
-              Already have an account?{" "}
-              <Link href="/login" style={{ color: "var(--primary)", fontWeight: 600 }}>
-                Sign In
-              </Link>
+            <p style={{ fontSize: 14, color: "var(--muted)", textAlign: "center", marginTop: 20 }}>
+              Already have an account? <Link href="/login" style={{ color: "var(--primary)", fontWeight: 600 }}>Sign In</Link>
             </p>
           </>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <p style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}>
-              Enter the 6-digit code sent to your phone
+              Enter the 6-digit code sent to {cleanedPhone}
             </p>
+            <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={{ accentColor: "var(--primary)", width: 16, height: 16 }}
+              />
+              Keep me signed in on this device
+            </label>
             <OtpInput onComplete={handleVerifyOtp} disabled={loading} />
             <ResendTimer onResend={handleResendOtp} />
           </div>
