@@ -217,11 +217,14 @@ export async function login(req: Request, res: Response) {
 export async function logout(req: Request, res: Response) {
   req.session.destroy(() => undefined);
 
+  const { maxAge: _sessionMaxAge, ...sessionClearOptions } = sessionCookieOptions;
+  const { maxAge: _refreshMaxAge, ...refreshClearOptions } = buildRefreshCookieOptions(env.REFRESH_TOKEN_TTL_DAYS);
+
   // Clear session cookie
-  res.clearCookie(sessionCookieName, sessionCookieOptions);
+  res.clearCookie(sessionCookieName, sessionClearOptions);
 
   // Clear refresh cookie (must match options used when setting it)
-  res.clearCookie(refreshCookieName, buildRefreshCookieOptions(env.REFRESH_TOKEN_TTL_DAYS));
+  res.clearCookie(refreshCookieName, refreshClearOptions);
 
   return res.json({ ok: true });
 }
