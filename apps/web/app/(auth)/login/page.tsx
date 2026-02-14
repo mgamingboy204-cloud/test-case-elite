@@ -20,7 +20,7 @@ export default function LoginPage() {
 
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -33,7 +33,7 @@ export default function LoginPage() {
     const errs: Record<string, string> = {};
     if (!/^\d{10}$/.test(phone.replace(/\D/g, "")))
       errs.phone = "Enter a valid 10-digit phone number";
-    if (password.length < 6) errs.password = "Password must be at least 6 characters";
+    if (password.length < 8) errs.password = "Password must be at least 8 characters";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -60,12 +60,7 @@ export default function LoginPage() {
       router.push(getDefaultRoute(user));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Login failed";
-      if (msg.toLowerCase().includes("otp")) {
-        setOtpRequired(true);
-        handleSendOtp();
-      } else {
-        addToast(msg, "error");
-      }
+      addToast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -89,7 +84,7 @@ export default function LoginPage() {
     try {
       const verificationResponse = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), code } as never,
+        body: { phone: phone.replace(/\D/g, ""), code, rememberMe } as never,
         auth: "omit",
       });
       if (verificationResponse?.accessToken) {
@@ -170,8 +165,8 @@ export default function LoginPage() {
                 >
                   <input
                     type="checkbox"
-                    checked={remember}
-                    onChange={(e) => setRemember(e.target.checked)}
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
                     style={{ accentColor: "var(--primary)", width: 16, height: 16 }}
                   />
                   Remember me
