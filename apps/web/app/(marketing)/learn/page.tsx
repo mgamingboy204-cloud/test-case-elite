@@ -36,7 +36,7 @@ export default function LearnPage() {
 
       <div className="timeline">
         {steps.map((step, index) => (
-          <div key={step.num} className="timeline-row" style={{ animationDelay: `${index * 95}ms` }}>
+          <div key={step.num} className="timeline-row" style={{ animationDelay: `${index * 90}ms` }}>
             <div className="step-pin-wrap">
               <div className="step-line" aria-hidden="true" />
               <div className="step-pin">{step.num}</div>
@@ -60,36 +60,17 @@ export default function LearnPage() {
         h1 { margin-bottom: 12px; }
         .intro-copy { color: var(--muted); font-size: 17px; line-height: 1.6; margin-bottom: 44px; max-width: 620px; }
         .timeline { display: flex; flex-direction: column; gap: 18px; }
-        .timeline-row { display: grid; grid-template-columns: 80px 1fr; align-items: stretch; gap: 16px; opacity: 0; transform: translateY(16px); animation: slideIn 460ms ease forwards; }
+        .timeline-row { display: grid; grid-template-columns: 80px 1fr; align-items: stretch; gap: 16px; opacity: 0; transform: translateY(16px); animation: slideIn 450ms ease forwards; }
         .step-pin-wrap { position: relative; display: flex; justify-content: center; }
-        .step-line { position: absolute; left: calc(50% - 1px); top: 58px; bottom: -18px; width: 2px; background: linear-gradient(180deg, rgba(230,57,70,0.7), rgba(230,57,70,0)); }
+        .step-line { position: absolute; left: calc(50% - 1px); top: 58px; bottom: -18px; width: 2px; background: linear-gradient(180deg, rgba(230,57,70,0.6), rgba(230,57,70,0)); }
         .timeline-row:last-child .step-line { display: none; }
-        .step-pin { width: 52px; height: 52px; border-radius: 14px; background: rgba(255,255,255,0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 12px 24px rgba(0,0,0,0.24); }
-        .step-card { border-radius: 18px; border: 1px solid rgba(255,255,255,0.12); background: linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04)); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 16px 30px rgba(0,0,0,0.24); padding: 22px; transition: transform 220ms ease, box-shadow 220ms ease; }
-        .step-card:hover { transform: translateY(-5px); }
-        .step-card.active { border-color: rgba(255,99,99,0.52); box-shadow: 0 18px 36px rgba(0,0,0,0.3), 0 0 24px rgba(230,57,70,0.28); transform: scale(1.015); }
+        .step-pin { width: 52px; height: 52px; border-radius: 14px; background: rgba(255,255,255,0.08); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 12px 24px rgba(0,0,0,0.25); }
+        .step-card { border-radius: 18px; border: 1px solid rgba(255,255,255,0.12); background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04)); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 16px 30px rgba(0,0,0,0.24); padding: 22px; transition: transform 220ms ease, box-shadow 220ms ease; }
+        .step-card:hover { transform: translateY(-4px); }
+        .step-card.active { border-color: rgba(255,99,99,0.5); box-shadow: 0 18px 36px rgba(0,0,0,0.28), 0 0 24px rgba(230,57,70,0.25); transform: scale(1.015); }
         .cta { text-align: center; margin-top: 56px; }
-
-        :global([data-theme="light"]) .step-pin { background: rgba(255,255,255,0.92); border-color: rgba(230,57,70,0.25); box-shadow: 0 14px 24px rgba(192,58,76,0.16); }
-        :global([data-theme="light"]) .step-line { background: linear-gradient(180deg, rgba(230,57,70,0.8), rgba(230,57,70,0.16)); }
-        :global([data-theme="light"]) .step-card { background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,241,243,0.9)); border-color: rgba(230,57,70,0.16); box-shadow: 0 16px 28px rgba(185,49,68,0.12); }
-        :global([data-theme="light"]) .step-card.active { border-color: rgba(230,57,70,0.34); box-shadow: 0 18px 36px rgba(185,49,68,0.16), 0 0 18px rgba(230,57,70,0.2); }
-
         @keyframes slideIn { to { opacity: 1; transform: translateY(0); } }
-
-        @media (max-width: 768px) {
-          .learn-shell { padding: 42px 16px 84px; }
-          h1 { font-size: clamp(1.6rem, 7vw, 2rem); }
-          .intro-copy { font-size: 15px; margin-bottom: 24px; }
-          .timeline-row { grid-template-columns: 1fr; gap: 10px; }
-          .step-pin-wrap { justify-content: flex-start; }
-          .step-line { display: none; }
-          .step-card { border-radius: 20px; padding: 18px; }
-          .step-card:hover { transform: none; }
-          .step-card.active { transform: none; }
-          .cta { margin-top: 34px; padding: 16px 14px; border-radius: 20px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(10px); }
-          :global([data-theme="light"]) .cta { background: rgba(255,247,249,0.9); border-color: rgba(230,57,70,0.2); }
-        }
+        @media (max-width: 768px) { .learn-shell { padding: 42px 16px 84px; } .timeline-row { grid-template-columns: 1fr; gap: 10px; } .step-pin-wrap { justify-content: flex-start; } .step-line { display: none; } .step-card { border-radius: 20px; padding: 20px; } .step-card:hover { transform: none; } .cta { margin-top: 42px; padding: 18px 14px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); } }
       `}</style>
     </div>
   );
