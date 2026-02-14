@@ -44,7 +44,7 @@ export default function LoginPage() {
     try {
       const loginResponse = await apiFetch<{ accessToken?: string; otpRequired?: boolean }>("/auth/login", {
         method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), password, rememberMe: remember, rememberDevice30Days: rememberDevice } as never,
+        body: { phone: phone.replace(/\D/g, ""), password, rememberMe, rememberDevice30Days: rememberDevice } as never,
         auth: "omit",
       });
       if (loginResponse?.otpRequired) {
