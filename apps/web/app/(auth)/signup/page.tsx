@@ -10,6 +10,8 @@ import { PremiumInput } from "@/app/components/premium/PremiumInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
+import { resolvePostAuthRoute } from "@/lib/authRouting";
+import type { SessionUser } from "@/lib/session";
 
 type Step = "register" | "otp";
 
@@ -69,7 +71,7 @@ export default function SignupPage() {
         setAccessToken(verifyResult.accessToken);
       }
       addToast("Phone verified!", "success");
-      router.push("/onboarding/video-verification");
+      router.push(await resolvePostAuthRoute((verifyResult as { user?: SessionUser }).user ?? null));
     } catch {
       addToast("Invalid OTP", "error");
     } finally {

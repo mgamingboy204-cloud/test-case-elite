@@ -9,11 +9,13 @@ import { PageHeader } from "@/app/components/ui/PageHeader";
 import { useTheme, useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import { clearAccessToken } from "@/lib/authToken";
+import { useSession } from "@/lib/session";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { theme, toggle } = useTheme();
   const { addToast } = useToast();
+  const { user } = useSession();
 
   const handleLogout = async () => {
     try {
@@ -95,6 +97,7 @@ export default function SettingsPage() {
           <SettingLink href="/onboarding/video-verification" label="Verification Status" />
           <SettingLink href="/refunds" label="Refunds" />
           <SettingLink href="/report" label="Report a User" />
+          {(user?.isAdmin || user?.role === "ADMIN") && <SettingLink href="/admin" label="Admin Control" />}
         </div>
       </Card>
 

@@ -1,40 +1,68 @@
 "use client";
 
-import { SessionUser } from "./session";
+import type { SessionUser } from "./session";
 
-export type OnboardingStep =
-  | "PHONE_VERIFIED"
-  | "VIDEO_VERIFICATION_PENDING"
-  | "VIDEO_VERIFIED"
-  | "PAYMENT_PENDING"
-  | "PAID"
-  | "PROFILE_PENDING"
-  | "ACTIVE";
+export type NextRequiredStep =
+  | "AUTH_REQUIRED"
+  | "VIDEO_VERIFICATION_REQUIRED"
+  | "PAYMENT_REQUIRED"
+  | "PROFILE_SETUP_REQUIRED"
+  | "APP_READY";
 
-const onboardingRouteMap: Record<OnboardingStep, string> = {
-  PHONE_VERIFIED: "/onboarding/video-verification",
-  VIDEO_VERIFICATION_PENDING: "/onboarding/video-verification",
-  VIDEO_VERIFIED: "/onboarding/payment",
-  PAYMENT_PENDING: "/onboarding/payment",
-  PAID: "/onboarding/profile",
-  PROFILE_PENDING: "/onboarding/profile",
-  ACTIVE: "/discover"
-};
+const ONBOARDING_VIDEO_ROUTE = "/onboarding/video-verification";
+const ONBOARDING_PAYMENT_ROUTE = "/onboarding/payment";
+const ONBOARDING_PROFILE_ROUTE = "/onboarding/profile-setup";
+const APP_ENTRY_ROUTE = "/app";
 
-export function getOnboardingRoute(step?: string | null) {
-  if (!step || !(step in onboardingRouteMap)) {
-    return "/onboarding/video-verification";
+export function getNextRequiredStep(status: SessionUser | null): NextRequiredStep {
+  if (!status) return "AUTH_REQUIRED";
+
+  if (status.videoVerificationStatus !== "COMPLETED") {
+    return "VIDEO_VERIFICATION_REQUIRED";
   }
-  return onboardingRouteMap[step as OnboardingStep];
+
+  if (status.paymentStatus !== "PAID") {
+    return "PAYMENT_REQUIRED";
+  }
+
+  if (!status.profileCompletedAt) {
+    return "PROFILE_SETUP_REQUIRED";
+  }
+
+  return "APP_READY";
 }
 
-export function getDefaultRoute(user: SessionUser | null) {
-  if (!user?.onboardingStep) return "/login";
-  if (user.onboardingStep === "ACTIVE" && !user.profileCompletedAt) {
-    return "/onboarding/profile";
+export function getNextRouteFromStatus(status: SessionUser | null): string {
+  const nextStep = getNextRequiredStep(status);
+
+  switch (nextStep) {
+    case "AUTH_REQUIRED":
+      return "/login";
+    case "VIDEO_VERIFICATION_REQUIRED":
+      return ONBOARDING_VIDEO_ROUTE;
+    case "PAYMENT_REQUIRED":
+      return ONBOARDING_PAYMENT_ROUTE;
+    case "PROFILE_SETUP_REQUIRED":
+      return ONBOARDING_PROFILE_ROUTE;
+    case "APP_READY":
+      return APP_ENTRY_ROUTE;
+    default:
+      return "/login";
   }
-  if (user.onboardingStep === "ACTIVE") {
-    return "/discover";
-  }
-  return getOnboardingRoute(user.onboardingStep);
+}
+
+export function isOnboardingRoute(pathname: string) {
+  return pathname.startsWith("/onboarding");
+}
+
+export function isAuthRoute(pathname: string) {
+  return pathname === "/login" || pathname === "/signup" || pathname === "/otp";
+}
+
+export function isAdminRoute(pathname: string) {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
+}
+
+export function isMainAppRoute(pathname: string) {
+  return ["/app", "/discover", "/likes", "/matches", "/profile", "/settings", "/refunds", "/report"].some((route) => pathname === route || pathname.startsWith(`${route}/`));
 }

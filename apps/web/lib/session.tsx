@@ -1,10 +1,8 @@
 "use client";
 
-import { createContext, ReactNode, useContext, useEffect, useMemo, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { apiFetch, refreshAccessToken } from "./api";
 import { clearAccessToken, getAccessToken } from "./authToken";
-import { queryKeys } from "./queryKeys";
 
 export type SessionStatus = "loading" | "logged-in" | "logged-out";
 
@@ -25,6 +23,10 @@ export type SessionUser = {
   videoVerificationStatus?: string | null;
   paymentStatus?: string | null;
   profileCompletedAt?: string | null;
+  onboardingStatus?: {
+    nextRequiredStep?: string;
+    nextRoute?: string;
+  } | null;
 };
 
 type AuthContextValue = {
@@ -36,53 +38,63 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const queryClient = useQueryClient();
-  const logoutTriggeredRef = useRef(false);
-  const meQuery = useQuery({
-    queryKey: queryKeys.me,
-    queryFn: () => apiFetch<SessionUser>("/me", { retryOnUnauthorized: true }),
-    staleTime: 15000,
-    refetchOnWindowFocus: true
-  });
+  const [status, setStatus] = useState<SessionStatus>("loading");
+  const [user, setUser] = useState<SessionUser | null>(null);
 
-  useEffect(() => {
-    if (getAccessToken()) return;
-    void refreshAccessToken().then((token) => {
-      if (token) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.me });
-      }
-    });
-  }, [queryClient]);
-
-  useEffect(() => {
-    if (!meQuery.isError) {
-      logoutTriggeredRef.current = false;
-      return;
-    }
-    if (logoutTriggeredRef.current) return;
-    logoutTriggeredRef.current = true;
-    void apiFetch("/auth/logout", { method: "POST", auth: "omit" }).catch(() => undefined);
-    clearAccessToken();
-  }, [meQuery.isError]);
-
-  const status: SessionStatus = meQuery.isLoading
-    ? "loading"
-    : meQuery.data
-      ? "logged-in"
-      : "logged-out";
-  const user = meQuery.data ?? null;
-
-  const refresh = async () => {
+  const loadUser = useCallback(async () => {
     try {
-      const result = await queryClient.fetchQuery({
-        queryKey: queryKeys.me,
-        queryFn: () => apiFetch<SessionUser>("/me", { retryOnUnauthorized: true })
-      });
-      return result ?? null;
+      const me = await apiFetch<SessionUser>("/me", { retryOnUnauthorized: true });
+      setUser(me);
+      setStatus("logged-in");
+      return me;
     } catch {
+      setUser(null);
+      setStatus("logged-out");
       return null;
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const bootstrapSession = async () => {
+      setStatus("loading");
+
+      const hasToken = Boolean(getAccessToken());
+      if (!hasToken) {
+        const refreshed = await refreshAccessToken();
+        if (!refreshed) {
+          if (!mounted) return;
+          setUser(null);
+          setStatus("logged-out");
+          return;
+        }
+      }
+
+      if (!mounted) return;
+      try {
+        const me = await apiFetch<SessionUser>("/me", { retryOnUnauthorized: true });
+        if (!mounted) return;
+        setUser(me);
+        setStatus("logged-in");
+      } catch {
+        if (!mounted) return;
+        clearAccessToken();
+        setUser(null);
+        setStatus("logged-out");
+      }
+    };
+
+    void bootstrapSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const refresh = useCallback(async () => {
+    return loadUser();
+  }, [loadUser]);
 
   const value = useMemo(() => ({ status, user, refresh }), [status, user, refresh]);
 
