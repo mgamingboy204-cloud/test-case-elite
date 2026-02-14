@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Button from "./Button";
+import { Button } from "./Button";
 
 type EmptyStateProps = {
   icon?: ReactNode;
