@@ -40,22 +40,6 @@ export default function HomePage() {
   return (
     <div className="marketing-home">
       <section className="hero-shell">
-        <img
-          className="hero-bg"
-          src="https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?auto=format&fit=crop&w=1600&q=80"
-          alt=""
-          aria-hidden="true"
-        />
-        <div className="hero-overlay-top" />
-        <div className="hero-overlay-bottom" />
-
-        <div className="hero-head">
-          <div className="hero-brand">ELITE MATCH</div>
-          <button className="hero-menu" aria-label="Open menu">
-            ≡
-          </button>
-        </div>
-
         <div className="hero-content">
           <h1 className="fade-in">
             Where meaningful
@@ -67,23 +51,11 @@ export default function HomePage() {
             serious about finding real, lasting relationships.
           </p>
           <div className="hero-cta fade-in">
-            <Link href="/signup" className="hero-cta-link">
-              <Button size="lg" style={{ width: "100%", borderRadius: 9999, boxShadow: "0 16px 40px rgba(0,0,0,0.25)" }}>
-                Get Started
-              </Button>
+            <Link href="/signup">
+              <Button size="lg">Get Started</Button>
             </Link>
-            <Link href="/learn" className="hero-cta-link">
-              <Button
-                size="lg"
-                variant="secondary"
-                style={{
-                  width: "100%",
-                  borderRadius: 9999,
-                  border: "1px solid rgba(255,255,255,0.45)",
-                  background: "rgba(255,255,255,0.1)",
-                  color: "#fff",
-                }}
-              >
+            <Link href="/learn">
+              <Button size="lg" variant="secondary">
                 How It Works
               </Button>
             </Link>
@@ -98,20 +70,20 @@ export default function HomePage() {
             const rect = event.currentTarget.getBoundingClientRect();
             const nx = (event.clientY - rect.top) / rect.height - 0.5;
             const ny = (event.clientX - rect.left) / rect.width - 0.5;
-            setTilt({ x: -(nx * 8), y: ny * 8 });
+            setTilt({ x: -(nx * 12), y: ny * 12 });
           }}
           onMouseLeave={() => setTilt({ x: 0, y: 0 })}
         >
-          <div className="profile-card card-a" style={{ transform: `translate3d(${tilt.y * 1.05}px, ${tilt.x * -1.05}px, 30px)` }}>
+          <div className="profile-card card-a" style={{ transform: `translate3d(${tilt.y * 1.2}px, ${tilt.x * -1.2}px, 30px)` }}>
             <span className="profile-badge">\u2714 Verified Profiles</span>
             <h3>Video Verified</h3>
             <p>Safe & Private</p>
           </div>
-          <div className="profile-card card-b" style={{ transform: `translate3d(${tilt.y * -0.7}px, ${tilt.x * 0.7}px, 16px)` }}>
+          <div className="profile-card card-b" style={{ transform: `translate3d(${tilt.y * -0.9}px, ${tilt.x * 0.9}px, 14px)` }}>
             <h3>Quality Matches</h3>
             <p>Premium Experience</p>
           </div>
-          <div className="profile-card card-c" style={{ transform: `translate3d(${tilt.y * 0.4}px, ${tilt.x * -0.4}px, 22px)` }}>
+          <div className="profile-card card-c" style={{ transform: `translate3d(${tilt.y * 0.6}px, ${tilt.x * -0.6}px, 20px)` }}>
             <h3>Elite Match</h3>
             <p>Where meaningful connections begin</p>
           </div>
@@ -142,139 +114,42 @@ export default function HomePage() {
 
       <section className="cta-shell">
         <h2 style={{ marginBottom: 16 }}>Ready to find your match?</h2>
-        <p>Join thousands of verified singles on Elite Match today.</p>
+        <p>
+          Join thousands of verified singles on Elite Match today.
+        </p>
         <Link href="/signup">
           <Button size="lg">Join Now</Button>
         </Link>
       </section>
 
       <style jsx>{`
-        .marketing-home {
-          background:
-            radial-gradient(1200px 540px at 15% -12%, rgba(235, 57, 70, 0.22), transparent 68%),
-            linear-gradient(180deg, #0e0e14 0%, #151523 100%);
-        }
-        .hero-shell { position: relative; min-height: 100svh; overflow: hidden; }
-        .hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
-        .hero-overlay-top { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.58) 0%, rgba(0,0,0,0.2) 24%, rgba(0,0,0,0) 50%); }
-        .hero-overlay-bottom { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,5,8,0) 30%, rgba(5,5,8,0.64) 58%, rgba(5,5,8,0.92) 100%); }
-
-        .hero-head {
-          position: absolute;
-          top: max(18px, env(safe-area-inset-top));
-          left: 16px;
-          right: 16px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          z-index: 3;
-        }
-        .hero-brand { color: #fff; font-size: 13px; letter-spacing: 0.14em; font-weight: 700; }
-        .hero-menu {
-          width: 42px;
-          height: 42px;
-          border-radius: 999px;
-          border: 1px solid rgba(255,255,255,0.42);
-          background: rgba(0,0,0,0.28);
-          backdrop-filter: blur(8px);
-          color: #fff;
-          font-size: 21px;
-          line-height: 1;
-        }
-
-        .hero-content {
-          position: absolute;
-          left: 16px;
-          right: 16px;
-          bottom: calc(20px + env(safe-area-inset-bottom));
-          z-index: 3;
-        }
-        .hero-content h1 { font-size: clamp(2.05rem, 11vw, 3.15rem); line-height: 1.05; letter-spacing: -0.03em; margin-bottom: 12px; color: #fff; text-shadow: 0 12px 26px rgba(0,0,0,0.45); }
-        .hero-content p { color: rgba(255,255,255,0.88); font-size: 15px; line-height: 1.55; margin-bottom: 20px; max-width: 600px; }
-        .hero-cta { display: grid; gap: 10px; }
-        .hero-cta-link { width: 100%; }
-
-        .hero-visual { display: none; }
-
-        .stats-shell { display: grid; grid-template-columns: 1fr; gap: 12px; max-width: 1020px; margin: 0 auto; padding: 18px 16px 10px; }
-        .stat-item { border-radius: 24px; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); padding: 18px 20px; display: flex; align-items: baseline; justify-content: space-between; box-shadow: 0 20px 44px rgba(0,0,0,0.2); }
-        .stat-value { font-size: 34px; font-weight: 800; color: var(--primary); letter-spacing: -0.02em; }
-        .stat-label { font-size: 14px; color: var(--muted); }
-
-        .features-shell { max-width: 1080px; margin: 0 auto; padding: 42px 16px 56px; }
-        .features-shell h2 { text-align: left; margin-bottom: 18px; font-size: clamp(1.5rem, 6.2vw, 2rem); }
-        .features-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-        .feature-card {
-          border-radius: 30px;
-          background: linear-gradient(160deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
-          border: 1px solid rgba(255,255,255,0.16);
-          box-shadow: 0 18px 36px rgba(0,0,0,0.2);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-        }
+        .marketing-home { background: radial-gradient(1200px 500px at 15% -10%, rgba(230, 57, 70, 0.24), transparent 70%), radial-gradient(900px 380px at 90% 0%, rgba(186, 28, 40, 0.18), transparent 70%), linear-gradient(180deg, #09090d 0%, #111119 45%, #151520 100%); }
+        .hero-shell { max-width: 1150px; margin: 0 auto; padding: 92px 24px 70px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 48px; align-items: center; }
+        .hero-content h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 20px; }
+        .hero-content p { font-size: 18px; color: var(--muted); max-width: 480px; margin: 0 0 32px; line-height: 1.6; }
+        .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+        .hero-visual { position: relative; min-height: 330px; perspective: 1200px; transform-style: preserve-3d; transition: transform 250ms ease; }
+        .profile-card { position: absolute; width: min(340px, 88%); border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.14); padding: 22px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background: linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)); box-shadow: 0 25px 60px rgba(0, 0, 0, 0.36), 0 0 40px rgba(230, 57, 70, 0.15); transition: transform 220ms ease; }
+        .profile-card h3 { margin-bottom: 6px; }
+        .profile-card p { color: var(--muted); font-size: 14px; }
+        .profile-badge { display: inline-flex; padding: 6px 12px; border-radius: var(--radius-full); background: rgba(230, 57, 70, 0.16); border: 1px solid rgba(255, 99, 99, 0.38); margin-bottom: 16px; font-size: 12px; font-weight: 700; }
+        .card-a { top: 0; left: 0; }
+        .card-b { top: 84px; right: 8px; }
+        .card-c { bottom: 0; left: 42px; }
+        .stats-shell { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; max-width: 960px; margin: 0 auto; padding: 24px; }
+        .stat-item { text-align: center; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.06); border-radius: 18px; backdrop-filter: blur(10px); padding: 20px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 20px 40px rgba(0,0,0,0.24); }
+        .stat-value { font-size: 36px; font-weight: 800; color: var(--primary); letter-spacing: -0.02em; }
+        .stat-label { font-size: 14px; color: var(--muted); margin-top: 4px; }
+        .features-shell { max-width: 1080px; margin: 0 auto; padding: 74px 24px; }
+        .features-shell h2 { text-align: center; margin-bottom: 48px; font-size: clamp(1.5rem, 3vw, 2rem); }
+        .features-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+        .feature-card { background: linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05)); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 18px 34px rgba(0,0,0,0.24); backdrop-filter: blur(10px); transition: transform 200ms ease; }
+        .feature-card:hover { transform: translateY(-6px); }
         .feature-icon { width: 48px; height: 48px; border-radius: var(--radius-md); background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--primary); margin-bottom: 16px; }
-
-        .cta-shell { text-align: center; padding: 36px 16px calc(42px + env(safe-area-inset-bottom)); margin: 8px 14px 0; border-radius: 28px 28px 0 0; background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03)); border: 1px solid rgba(255,255,255,0.14); border-bottom: none; }
+        .cta-shell { text-align: center; padding: 72px 24px; margin-top: 8px; background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); border-top: 1px solid rgba(255, 255, 255, 0.1); }
         .cta-shell p { color: var(--muted); font-size: 16px; max-width: 400px; margin: 0 auto 28px; }
-
-        :global([data-theme="light"]) .marketing-home {
-          background:
-            radial-gradient(1200px 560px at 8% -14%, rgba(244,114,121,0.2), transparent 64%),
-            linear-gradient(180deg, #fffaf8 0%, #fff 100%);
-        }
-        :global([data-theme="light"]) .hero-overlay-top { background: linear-gradient(180deg, rgba(255,255,255,0.66) 0%, rgba(255,255,255,0.1) 24%, rgba(255,255,255,0) 52%); }
-        :global([data-theme="light"]) .hero-overlay-bottom { background: linear-gradient(180deg, rgba(255,255,255,0) 30%, rgba(255,245,246,0.68) 58%, rgba(255,245,246,0.95) 100%); }
-        :global([data-theme="light"]) .hero-brand { color: #2f1d24; }
-        :global([data-theme="light"]) .hero-menu { color: #2f1d24; border-color: rgba(62,40,48,0.2); background: rgba(255,255,255,0.55); }
-        :global([data-theme="light"]) .hero-content h1 { color: #2a171f; text-shadow: 0 9px 18px rgba(255,255,255,0.45); }
-        :global([data-theme="light"]) .hero-content p { color: #5f4a53; }
-        :global([data-theme="light"]) .hero-cta :global(button[style*="variant="]) { color: inherit; }
-        :global([data-theme="light"]) .hero-cta :global(button) { box-shadow: 0 16px 32px rgba(180,45,61,0.16) !important; }
-        :global([data-theme="light"]) .hero-cta :global(a:nth-child(2) button) { color: #2b1720 !important; background: rgba(255,255,255,0.76) !important; border-color: rgba(53,35,42,0.2) !important; }
-        :global([data-theme="light"]) .stat-item,
-        :global([data-theme="light"]) .feature-card,
-        :global([data-theme="light"]) .cta-shell {
-          border-color: rgba(230,57,70,0.18);
-          background: linear-gradient(160deg, rgba(255,255,255,0.92), rgba(255,243,245,0.82));
-          box-shadow: 0 16px 34px rgba(173,49,67,0.12);
-        }
-
-        @media (min-width: 1024px) {
-          .hero-shell {
-            min-height: 680px;
-            max-width: 1150px;
-            margin: 0 auto;
-            padding: 90px 24px 70px;
-            border-radius: 0 0 28px 28px;
-            display: grid;
-            grid-template-columns: 1.05fr 1fr;
-            gap: 48px;
-            align-items: center;
-          }
-          .hero-head { left: 28px; right: 28px; }
-          .hero-content { position: relative; left: auto; right: auto; bottom: auto; max-width: 560px; }
-          .hero-content p { margin-bottom: 30px; font-size: 17px; }
-          .hero-cta { display: flex; gap: 12px; }
-          .hero-cta-link { width: auto; }
-          .hero-cta-link :global(button) { width: auto !important; }
-          .hero-menu { display: none; }
-
-          .hero-visual { display: block; position: relative; min-height: 350px; perspective: 1200px; transform-style: preserve-3d; transition: transform 240ms ease; z-index: 3; }
-          .profile-card { position: absolute; width: min(350px, 90%); border-radius: 22px; border: 1px solid rgba(255,255,255,0.2); padding: 22px; backdrop-filter: blur(10px); background: linear-gradient(150deg, rgba(255,255,255,0.2), rgba(255,255,255,0.06)); box-shadow: 0 28px 70px rgba(0,0,0,0.34), 0 0 38px rgba(230,57,70,0.16); }
-          .profile-card h3 { margin-bottom: 6px; }
-          .profile-card p { color: rgba(255,255,255,0.8); font-size: 14px; }
-          .profile-badge { display: inline-flex; padding: 6px 12px; border-radius: var(--radius-full); background: rgba(230,57,70,0.2); border: 1px solid rgba(255,99,99,0.42); margin-bottom: 16px; font-size: 12px; font-weight: 700; }
-          .card-a { top: 0; left: 0; }
-          .card-b { top: 98px; right: 8px; }
-          .card-c { bottom: 0; left: 48px; }
-
-          .stats-shell { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 24px; }
-          .stat-item { display: block; text-align: center; }
-          .features-shell { padding: 74px 24px; }
-          .features-shell h2 { text-align: center; margin-bottom: 48px; }
-          .features-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
-          .cta-shell { margin: 8px 0 0; border-radius: 0; border-left: none; border-right: none; }
-        }
+        @media (max-width: 1024px) { .hero-shell { grid-template-columns: 1fr; gap: 24px; padding-top: 76px; } .hero-content { text-align: center; } .hero-content p { margin-left: auto; margin-right: auto; } .hero-cta { justify-content: center; } .features-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 768px) { .hero-shell { padding: 60px 16px 34px; } .hero-visual { min-height: auto; display: flex; flex-direction: column; gap: 14px; transform: none !important; } .profile-card { position: relative; width: 100%; left: auto; right: auto; top: auto; bottom: auto; transform: none !important; border-radius: 18px; } .stats-shell { grid-template-columns: 1fr; padding: 16px; } .features-shell { padding: 56px 16px; } .features-grid { grid-template-columns: 1fr; gap: 14px; } .feature-card:hover { transform: none; } .cta-shell { padding: 58px 16px 68px; border-radius: 24px 24px 0 0; } }
       `}</style>
     </div>
   );
