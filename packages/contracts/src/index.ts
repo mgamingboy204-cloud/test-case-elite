@@ -1,15 +1,5 @@
 import { z } from "zod";
 
-export const VerificationStatus = [
-  "NOT_REQUESTED",
-  "REQUESTED",
-  "IN_PROGRESS",
-  "COMPLETED",
-  "REJECTED"
-] as const;
-
-export type VerificationStatus = (typeof VerificationStatus)[number];
-
 export const PhoneSchema = z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits.");
 export const GenderSchema = z.enum(["MALE", "FEMALE", "NON_BINARY", "OTHER"]);
 export const GenderPreferenceSchema = z.enum(["MALE", "FEMALE", "NON_BINARY", "OTHER", "ALL"]);

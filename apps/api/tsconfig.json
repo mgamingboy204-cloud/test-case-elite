@@ -11,7 +11,15 @@
     ],
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "@elite/contracts": [
+        "../../packages/contracts/src"
+      ],
+      "@elite/shared": [
+        "../../packages/shared/src"
+      ]
+    }
   },
   "include": [
     "src"

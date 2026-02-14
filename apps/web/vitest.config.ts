@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "."),
+      "@elite/contracts": path.resolve(__dirname, "../../packages/contracts/src")
     }
   },
   test: {
