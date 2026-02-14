@@ -32,7 +32,7 @@ export default function VideoVerificationPage() {
   const router = useRouter();
   const { status: sessionStatus, user } = useSession();
   const { addToast } = useToast();
-  const [status, setStatus] = useState<VStatus>("NOT_REQUESTED");
+  const [status, setStatus] = useState<VStatus>(normalizeStatus(user?.videoVerificationStatus));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [requesting, setRequesting] = useState(false);
