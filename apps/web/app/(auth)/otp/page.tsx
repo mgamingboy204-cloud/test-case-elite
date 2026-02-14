@@ -40,7 +40,8 @@ export default function OtpPage() {
     setLoading(true);
     try {
       const verifyResult = await apiFetch(apiEndpoints.authOtpVerify, { body: { phone: phone.replace(/\D/g, ""), code } as never, auth: "omit" });
-      if (verifyResult.accessToken) setAccessToken(verifyResult.accessToken);
+      const authToken = verifyResult.accessToken ?? verifyResult.token ?? null;
+      setAccessToken(authToken);
       router.push(await resolvePostAuthRoute((verifyResult as { user?: SessionUser }).user ?? null));
     } catch {
       addToast("Invalid code", "error");

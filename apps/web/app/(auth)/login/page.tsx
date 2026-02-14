@@ -40,7 +40,12 @@ export default function LoginPage() {
         setOtpRequired(true);
         return;
       }
-      if ("accessToken" in loginResult) setAccessToken(loginResult.accessToken);
+      if ("accessToken" in loginResult || "token" in loginResult) {
+        const authToken = (loginResult as { accessToken?: string; token?: string }).accessToken
+          ?? (loginResult as { accessToken?: string; token?: string }).token
+          ?? null;
+        setAccessToken(authToken);
+      }
       addToast("Signed in", "success");
       router.push(await resolvePostAuthRoute((loginResult as { user?: SessionUser }).user ?? null));
     } catch (error) {
@@ -64,7 +69,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const verifyResult = await apiFetch(apiEndpoints.authOtpVerify, { body: { phone: phone.replace(/\D/g, ""), code } as never, auth: "omit" });
-      if (verifyResult.accessToken) setAccessToken(verifyResult.accessToken);
+      const authToken = verifyResult.accessToken ?? verifyResult.token ?? null;
+      setAccessToken(authToken);
       router.push(await resolvePostAuthRoute((verifyResult as { user?: SessionUser }).user ?? null));
     } catch { addToast("Invalid code", "error"); }
     finally { setLoading(false); }
