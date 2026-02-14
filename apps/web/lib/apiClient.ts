@@ -1,10 +1,16 @@
 import { getAccessToken, setAccessToken } from "./authToken";
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+const fallbackApiUrl = "http://localhost:4000";
 
-if (!rawApiUrl) {
-  throw new Error("NEXT_PUBLIC_API_BASE_URL is required.");
+if (!configuredApiUrl && process.env.NODE_ENV !== "test") {
+  console.warn(
+    `NEXT_PUBLIC_API_BASE_URL is not set; defaulting to ${fallbackApiUrl} for local development.`
+  );
 }
+
+const rawApiUrl = configuredApiUrl || fallbackApiUrl;
+
 if (rawApiUrl.startsWith("http://") && !/http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(rawApiUrl)) {
   throw new Error("NEXT_PUBLIC_API_BASE_URL must be https unless using localhost.");
 }
