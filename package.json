@@ -11,7 +11,9 @@
     "test": "npm run build -w packages/contracts && npm run build -w packages/shared && npm run prisma:generate -w apps/api && npm run test -w apps/api && npm run test -w packages/shared && npm run test -w apps/web",
     "lint": "npm run lint -w apps/api && npm run lint -w apps/web",
     "db:migrate": "npm run db:migrate -w apps/api",
-    "db:seed": "npm run db:seed -w apps/api"
+    "db:seed": "npm run db:seed -w apps/api",
+    "typecheck": "npm run build -w packages/contracts && npm run build -w packages/shared && tsc -p apps/api/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
+    "ci:verify": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",
