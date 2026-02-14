@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/Card";
+import { Input } from "@/app/components/ui/Input";
 import { Select } from "@/app/components/ui/Select";
 import { Textarea } from "@/app/components/ui/Textarea";
 import { Button } from "@/app/components/ui/Button";
@@ -22,11 +23,22 @@ const REASONS = [
 export default function ReportPage() {
   const router = useRouter();
   const { addToast } = useToast();
+  const [reportedUserId, setReportedUserId] = useState("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const value = new URLSearchParams(window.location.search).get("reportedUserId");
+    if (value) setReportedUserId(value);
+  }, []);
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
+    if (!reportedUserId.trim()) {
+      addToast("Please provide the user ID to report", "error");
+      return;
+    }
     if (!reason) {
       addToast("Please select a reason", "error");
       return;
@@ -35,7 +47,7 @@ export default function ReportPage() {
     try {
       await apiFetch("/reports", {
         method: "POST",
-        body: { reason, details } as never,
+        body: { reportedUserId: reportedUserId.trim(), reason, details } as never,
       });
       addToast("Report submitted. Thank you.", "success");
       router.push("/discover");
@@ -52,6 +64,12 @@ export default function ReportPage() {
 
       <Card style={{ padding: 24 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <Input
+            label="Reported User ID"
+            value={reportedUserId}
+            onChange={(event) => setReportedUserId(event.target.value)}
+            placeholder="Enter the user UUID"
+          />
           <Select
             label="Reason"
             value={reason}
