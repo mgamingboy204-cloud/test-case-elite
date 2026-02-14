@@ -19,7 +19,7 @@ export default function SignupPage() {
   const router = useRouter();
   const { addToast } = useToast();
   const { refresh } = useSession();
-  const [step, setStep] = useState<Step>("register");
+  const [step, setStep] = useState<Step>("account");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
