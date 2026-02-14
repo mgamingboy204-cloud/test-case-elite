@@ -9,10 +9,14 @@ import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { setAccessToken } from "@/lib/authToken";
+import { getDefaultRoute } from "@/lib/onboarding";
+import { useSession } from "@/lib/session";
 
 export default function LoginPage() {
   const router = useRouter();
   const { addToast } = useToast();
+  const { refresh } = useSession();
 
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -38,13 +42,22 @@ export default function LoginPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await apiFetch("/auth/login", {
+      const loginResponse = await apiFetch<{ accessToken?: string; otpRequired?: boolean }>("/auth/login", {
         method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), password, remember, rememberDevice } as never,
+        body: { phone: phone.replace(/\D/g, ""), password, rememberMe: remember, rememberDevice30Days: rememberDevice } as never,
         auth: "omit",
       });
+      if (loginResponse?.otpRequired) {
+        setOtpRequired(true);
+        await handleSendOtp();
+        return;
+      }
+      if (loginResponse?.accessToken) {
+        setAccessToken(loginResponse.accessToken);
+      }
+      const user = await refresh();
       addToast("Logged in successfully!", "success");
-      router.push("/discover");
+      router.push(getDefaultRoute(user));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Login failed";
       if (msg.toLowerCase().includes("otp")) {
@@ -74,13 +87,17 @@ export default function LoginPage() {
   const handleVerifyOtp = async (code: string) => {
     setLoading(true);
     try {
-      await apiFetch("/auth/otp/verify", {
+      const verificationResponse = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, ""), code } as never,
         auth: "omit",
       });
+      if (verificationResponse?.accessToken) {
+        setAccessToken(verificationResponse.accessToken);
+      }
+      const user = await refresh();
       addToast("Verified!", "success");
-      router.push("/discover");
+      router.push(getDefaultRoute(user));
     } catch {
       addToast("Invalid OTP", "error");
     } finally {

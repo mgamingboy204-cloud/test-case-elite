@@ -9,12 +9,16 @@ import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { setAccessToken } from "@/lib/authToken";
+import { getDefaultRoute } from "@/lib/onboarding";
+import { useSession } from "@/lib/session";
 
 type Step = "register" | "otp";
 
 export default function SignupPage() {
   const router = useRouter();
   const { addToast } = useToast();
+  const { refresh } = useSession();
   const [step, setStep] = useState<Step>("register");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -62,13 +66,17 @@ export default function SignupPage() {
   const handleVerifyOtp = async (code: string) => {
     setLoading(true);
     try {
-      await apiFetch("/auth/otp/verify", {
+      const verificationResponse = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, ""), code } as never,
         auth: "omit",
       });
+      if (verificationResponse?.accessToken) {
+        setAccessToken(verificationResponse.accessToken);
+      }
+      const user = await refresh();
       addToast("Phone verified!", "success");
-      router.push("/onboarding/video-verification");
+      router.push(getDefaultRoute(user));
     } catch {
       addToast("Invalid OTP", "error");
     } finally {
