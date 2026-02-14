@@ -92,8 +92,8 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         .mobile-menu-btn { display: none; color: #fff; font-size: 24px; }
         .marketing-footer { border-top: 1px solid var(--border); background: rgba(255,255,255,0.02); }
         .footer-inner { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
-        .footer-nav { display: flex; flex-wrap: wrap; gap: 16px; }
-        .footer-link { color: var(--muted); font-size: 13px; }
+        .footer-nav { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }
+        .footer-link { color: var(--muted); font-size: 13px; line-height: 1.9; padding: 4px 2px; }
         .mobile-menu-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(5,8,14,0.56); backdrop-filter: blur(12px); display: flex; align-items: flex-end; }
         .mobile-menu-sheet { width: 100%; border-radius: 22px 22px 0 0; padding: 16px 20px calc(24px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); backdrop-filter: blur(22px); display: flex; flex-direction: column; gap: 12px; }
         .sheet-handle { width: 46px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.4); margin: 0 auto 6px; }
@@ -103,6 +103,8 @@ export function MarketingShell({ children }: { children: ReactNode }) {
           .desktop-nav, .signin-btn { display: none; }
           .mobile-menu-btn { display: block; }
           .marketing-header { inset: 10px 10px auto; }
+          .footer-inner { justify-content: center; text-align: center; }
+          .footer-nav { width: 100%; gap: 12px 20px; }
         }
         :global([data-theme='light']) .marketing-header { background: rgba(255,255,255,0.62); border-color: rgba(255,255,255,0.8); }
         :global([data-theme='light']) .logo, :global([data-theme='light']) .nav-link, :global([data-theme='light']) .theme-btn { color: #22293a; }
