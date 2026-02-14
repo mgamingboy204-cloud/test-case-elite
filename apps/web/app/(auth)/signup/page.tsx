@@ -23,6 +23,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,6 +34,10 @@ export default function SignupPage() {
 
   const validateAccountStep = () => {
     const nextErrors: Record<string, string> = {};
+
+    if (!name.trim()) {
+      nextErrors.name = "Name is required";
+    }
 
     if (!/^\d{10}$/.test(cleanedPhone)) {
       nextErrors.phone = "Phone number must be exactly 10 digits";
@@ -65,6 +70,7 @@ export default function SignupPage() {
       await apiFetch("/auth/register", {
         method: "POST",
         body: {
+          name: name.trim(),
           phone: cleanedPhone,
           email: email.trim() || null,
           password
@@ -143,6 +149,13 @@ export default function SignupPage() {
         {step === "account" ? (
           <>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <Input
+                label="Full Name"
+                placeholder="Your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                error={errors.name}
+              />
               <Input
                 label="Phone Number"
                 type="tel"
