@@ -5,6 +5,7 @@ import { PremiumBadge } from "@/app/components/premium/PremiumBadge";
 import { PremiumButton } from "@/app/components/premium/PremiumButton";
 import { PremiumCard } from "@/app/components/premium/PremiumCard";
 import { SectionHeading } from "@/app/components/premium/SectionHeading";
+import { HomeBackground } from "@/app/components/marketing/HomeBackground";
 
 const features = [
   {
@@ -38,6 +39,7 @@ const stats = [
 export default function HomePage() {
   return (
     <div className="premium-landing">
+      <HomeBackground />
       <section className="hero-section">
         <div className="fade-in">
           <PremiumBadge>Private Club for Serious Relationships</PremiumBadge>

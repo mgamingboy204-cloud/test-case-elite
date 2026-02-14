@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react"
+import React from "react";
 
 import { type ButtonHTMLAttributes, forwardRef } from "react";
 
@@ -16,31 +16,34 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<Variant, React.CSSProperties> = {
   primary: {
-    background: "var(--primary)",
-    color: "#fff",
-    border: "none",
+    background: "linear-gradient(130deg, var(--primary), color-mix(in oklab, var(--primary) 72%, #2d241d))",
+    color: "var(--primary-foreground)",
+    border: "1px solid color-mix(in oklab, var(--primary) 64%, transparent)",
+    boxShadow: "0 10px 22px color-mix(in oklab, var(--primary) 28%, transparent)",
   },
   secondary: {
-    background: "var(--panel)",
+    background: "var(--surface)",
     color: "var(--text)",
     border: "1px solid var(--border)",
+    boxShadow: "var(--shadow)",
   },
   ghost: {
     background: "transparent",
     color: "var(--text)",
-    border: "none",
+    border: "1px solid var(--border)",
   },
   danger: {
     background: "var(--danger)",
     color: "#fff",
-    border: "none",
+    border: "1px solid color-mix(in oklab, var(--danger) 64%, transparent)",
+    boxShadow: "0 10px 20px color-mix(in oklab, var(--danger) 30%, transparent)",
   },
 };
 
 const sizeStyles: Record<Size, React.CSSProperties> = {
-  sm: { padding: "6px 14px", fontSize: 13, borderRadius: "var(--radius-sm)" },
-  md: { padding: "10px 20px", fontSize: 15, borderRadius: "var(--radius-md)" },
-  lg: { padding: "14px 28px", fontSize: 16, borderRadius: "var(--radius-lg)" },
+  sm: { height: 36, padding: "0 14px", fontSize: 13, borderRadius: "var(--radius-sm)" },
+  md: { height: 42, padding: "0 20px", fontSize: 15, borderRadius: "var(--radius-md)" },
+  lg: { height: 48, padding: "0 28px", fontSize: 16, borderRadius: "var(--radius-lg)" },
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -66,10 +69,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           alignItems: "center",
           justifyContent: "center",
           gap: 8,
-          fontWeight: 600,
+          fontWeight: 620,
           cursor: disabled || loading ? "not-allowed" : "pointer",
-          opacity: disabled || loading ? 0.5 : 1,
-          transition: "transform 150ms ease, opacity 150ms ease, box-shadow 150ms ease",
+          opacity: disabled || loading ? 0.56 : 1,
+          transition: "transform 160ms ease, opacity 160ms ease, box-shadow 180ms ease, filter 180ms ease",
           width: fullWidth ? "100%" : undefined,
           whiteSpace: "nowrap",
           ...variantStyles[variant],
@@ -78,14 +81,20 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         }}
         onPointerDown={(e) => {
           if (!disabled && !loading) {
-            (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.98)";
+            const button = e.currentTarget as HTMLButtonElement;
+            button.style.transform = "translateY(1px)";
+            button.style.filter = "saturate(1.05)";
           }
         }}
         onPointerUp={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+          const button = e.currentTarget as HTMLButtonElement;
+          button.style.transform = "translateY(0)";
+          button.style.filter = "none";
         }}
         onPointerLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+          const button = e.currentTarget as HTMLButtonElement;
+          button.style.transform = "translateY(0)";
+          button.style.filter = "none";
         }}
         {...props}
       >
