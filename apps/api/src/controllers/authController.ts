@@ -29,6 +29,7 @@ import {
 } from "../services/authService";
 import { HttpError } from "../utils/httpErrors";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
+import { toUserDTO } from "../serializers/userSerializer";
 
 async function saveSession(req: Request) {
   await new Promise<void>((resolve, reject) => {
@@ -50,66 +51,6 @@ function logSessionEvent(event: string, details: Record<string, unknown>) {
 
 const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
 const SIXTY_DAYS_MS = 1000 * 60 * 60 * 24 * 60;
-
-function getNextRequiredStep(user: { videoVerificationStatus: string; paymentStatus: string; profileCompletedAt: Date | null }) {
-  const isVideoVerified = user.videoVerificationStatus === "APPROVED" || user.videoVerificationStatus === "COMPLETED";
-  if (!isVideoVerified) return "VIDEO_VERIFICATION_REQUIRED";
-  if (user.paymentStatus !== "PAID") return "PAYMENT_REQUIRED";
-  if (!user.profileCompletedAt) return "PROFILE_SETUP_REQUIRED";
-  return "APP_READY";
-}
-
-function getNextRouteFromStatus(user: { videoVerificationStatus: string; paymentStatus: string; profileCompletedAt: Date | null }) {
-  const step = getNextRequiredStep(user);
-  if (step === "VIDEO_VERIFICATION_REQUIRED") return "/onboarding/video-verification";
-  if (step === "PAYMENT_REQUIRED") return "/onboarding/payment";
-  if (step === "PROFILE_SETUP_REQUIRED") return "/onboarding/profile-setup";
-  return "/app";
-}
-
-function buildSessionUserPayload(user: {
-  id: string;
-  phone: string;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  displayName: string | null;
-  gender: string | null;
-  role: string;
-  isAdmin: boolean;
-  status: string;
-  verifiedAt: Date | null;
-  phoneVerifiedAt: Date | null;
-  onboardingStep: string;
-  videoVerificationStatus: string;
-  paymentStatus: string;
-  profileCompletedAt: Date | null;
-}) {
-  const nextRequiredStep = getNextRequiredStep(user);
-
-  return {
-    id: user.id,
-    phone: user.phone,
-    email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    displayName: user.displayName,
-    gender: user.gender,
-    role: user.role,
-    isAdmin: user.isAdmin,
-    status: user.status,
-    verifiedAt: user.verifiedAt,
-    phoneVerifiedAt: user.phoneVerifiedAt,
-    onboardingStep: user.onboardingStep,
-    videoVerificationStatus: user.videoVerificationStatus,
-    paymentStatus: user.paymentStatus,
-    profileCompletedAt: user.profileCompletedAt,
-    onboardingStatus: {
-      nextRequiredStep,
-      nextRoute: getNextRouteFromStatus(user)
-    }
-  };
-}
 
 function applySessionLifetime(
   req: Request,
@@ -177,7 +118,10 @@ export async function verifyOtp(req: Request, res: Response) {
     return sendContract(res, AuthSuccessSchema, {
       ok: true,
       accessToken,
-      user: buildSessionUserPayload(user)
+      user: toUserDTO({
+        ...user,
+        onboardingStep: user.onboardingStep ?? resolveOnboardingStep(user)
+      })
     });
   } catch (error) {
     if (error instanceof HttpError) throw error;
@@ -245,7 +189,7 @@ export async function login(req: Request, res: Response) {
   return sendContract(res, AuthSuccessSchema, {
     ok: true,
     accessToken,
-    user: buildSessionUserPayload({
+    user: toUserDTO({
       ...result.user,
       onboardingStep: result.onboardingStep ?? resolveOnboardingStep(result.user)
     })
@@ -317,7 +261,7 @@ export async function whoAmI(req: Request, res: Response) {
 
   if (!user) return res.status(401).json({ message: "Invalid token" });
 
-  return sendContract(res, SessionUserSchema, buildSessionUserPayload({
+  return sendContract(res, SessionUserSchema, toUserDTO({
     ...user,
     onboardingStep: user.onboardingStep ?? resolveOnboardingStep(user)
   }));
