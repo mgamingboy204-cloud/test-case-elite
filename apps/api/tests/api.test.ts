@@ -128,6 +128,16 @@ describe("Auth routes", () => {
   });
 });
 
+describe("Discover routes", () => {
+  it("exposes discover feed on both legacy and new paths", async () => {
+    const discoverResponse = await request(app).get("/discover");
+    const feedResponse = await request(app).get("/discover/feed");
+
+    expect(discoverResponse.status).toBe(401);
+    expect(feedResponse.status).toBe(401);
+  });
+});
+
 describe("Refund eligibility logic", () => {
   it("marks refund ineligible before 90 days and eligible after shift", async () => {
     const agent = request.agent(app);

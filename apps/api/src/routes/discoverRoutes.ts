@@ -30,6 +30,7 @@ const DiscoverFeedQuerySchema = z.object({
 
 router.get("/profiles", requireAuth, requireActive, validateQuery(DiscoverQuerySchema), asyncHandler(discoverProfiles));
 router.get("/discover", requireAuth, requireActive, validateQuery(DiscoverFeedQuerySchema), asyncHandler(discoverFeed));
+router.get("/discover/feed", requireAuth, requireActive, validateQuery(DiscoverFeedQuerySchema), asyncHandler(discoverFeed));
 router.get("/profiles/:userId", requireAuth, requireActive, asyncHandler(discoverProfileDetail));
 
 export default router;
