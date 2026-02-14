@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/Card";
 import { Button } from "@/app/components/ui/Button";
 import { Badge } from "@/app/components/ui/Badge";
@@ -9,20 +10,36 @@ import { Skeleton } from "@/app/components/ui/Skeleton";
 import { ErrorState } from "@/app/components/ui/States";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { useSession } from "@/lib/session";
 
-type VStatus = "NOT_REQUESTED" | "REQUESTED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED";
+type VStatus = "NOT_REQUESTED" | "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED";
 
 const statusConfig: Record<VStatus, { label: string; variant: "default" | "primary" | "success" | "danger" | "warning"; desc: string }> = {
   NOT_REQUESTED: { label: "Not Started", variant: "default", desc: "Complete a quick video call to verify your identity." },
-  REQUESTED: { label: "Requested", variant: "warning", desc: "Your verification request is in the queue. We'll contact you soon." },
+  PENDING: { label: "Requested", variant: "warning", desc: "Your verification request is in the queue. We'll contact you soon." },
   IN_PROGRESS: { label: "In Progress", variant: "primary", desc: "Your verification is being processed." },
-  COMPLETED: { label: "Verified", variant: "success", desc: "Your identity has been verified. You can proceed!" },
+  APPROVED: { label: "Verified", variant: "success", desc: "Your identity has been verified. You can proceed!" },
   REJECTED: { label: "Rejected", variant: "danger", desc: "Your verification was not approved. Please contact support." },
 };
 
+const statusAliases: Record<string, VStatus> = {
+  REQUESTED: "PENDING",
+  COMPLETED: "APPROVED",
+};
+
+function normalizeStatus(value?: string | null): VStatus {
+  if (!value) return "NOT_REQUESTED";
+  if (value in statusConfig) {
+    return value as VStatus;
+  }
+  return statusAliases[value] ?? "NOT_REQUESTED";
+}
+
 export default function VideoVerificationPage() {
+  const router = useRouter();
+  const { status: sessionStatus, user } = useSession();
   const { addToast } = useToast();
-  const [status, setStatus] = useState<VStatus>("NOT_REQUESTED");
+  const [status, setStatus] = useState<VStatus>(normalizeStatus(user?.videoVerificationStatus));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [requesting, setRequesting] = useState(false);
@@ -31,8 +48,8 @@ export default function VideoVerificationPage() {
     setLoading(true);
     setError(false);
     try {
-      const me = await apiFetch<{ videoVerificationStatus?: VStatus }>("/me", { retryOnUnauthorized: true });
-      setStatus(me.videoVerificationStatus ?? "NOT_REQUESTED");
+      const me = await apiFetch<{ videoVerificationStatus?: string }>("/me", { retryOnUnauthorized: true });
+      setStatus(normalizeStatus(me.videoVerificationStatus));
     } catch {
       setError(true);
     } finally {
@@ -41,14 +58,24 @@ export default function VideoVerificationPage() {
   };
 
   useEffect(() => {
-    fetchStatus();
-  }, []);
+    if (sessionStatus === "logged-out") {
+      router.replace("/login");
+      return;
+    }
+
+    if (sessionStatus !== "logged-in" || !user) {
+      return;
+    }
+
+    setStatus(normalizeStatus(user.videoVerificationStatus));
+    void fetchStatus();
+  }, [router, sessionStatus, user]);
 
   const handleRequest = async () => {
     setRequesting(true);
     try {
       await apiFetch("/verification-requests", { method: "POST" });
-      setStatus("REQUESTED");
+      setStatus("PENDING");
       addToast("Verification requested!", "success");
     } catch {
       addToast("Failed to request verification", "error");
@@ -57,7 +84,7 @@ export default function VideoVerificationPage() {
     }
   };
 
-  if (loading) {
+  if (sessionStatus !== "logged-in" || !user || loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <Skeleton height={32} width={200} />
@@ -108,7 +135,7 @@ export default function VideoVerificationPage() {
             color: "var(--primary)",
           }}
         >
-          {status === "COMPLETED" ? "\u2713" : status === "REJECTED" ? "\u2717" : "\u25B6"}
+          {status === "APPROVED" ? "\u2713" : status === "REJECTED" ? "\u2717" : "\u25B6"}
         </div>
 
         <p
@@ -129,7 +156,7 @@ export default function VideoVerificationPage() {
           </Button>
         )}
 
-        {status === "COMPLETED" && (
+        {status === "APPROVED" && (
           <Link href="/onboarding/payment">
             <Button fullWidth size="lg">
               Continue to Payment
