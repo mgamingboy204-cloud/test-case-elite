@@ -68,12 +68,12 @@ export const SessionUserSchema = z.object({
   role: RoleSchema,
   isAdmin: z.boolean(),
   status: UserStatusSchema,
-  verifiedAt: z.string().nullable(),
-  phoneVerifiedAt: z.string().nullable(),
+  verifiedAt: z.string().datetime().nullable(),
+  phoneVerifiedAt: z.string().datetime().nullable(),
   onboardingStep: z.string(),
   videoVerificationStatus: VideoVerificationStatusSchema,
   paymentStatus: OnboardingPaymentStatusSchema,
-  profileCompletedAt: z.string().nullable(),
+  profileCompletedAt: z.string().datetime().nullable(),
   onboardingStatus: z.object({ nextRequiredStep: z.string(), nextRoute: z.string() })
 });
 
