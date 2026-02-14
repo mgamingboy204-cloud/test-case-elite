@@ -1,4 +1,4 @@
-import { getAccessToken, setAccessToken } from "./authToken";
+import { clearAccessToken, getAccessToken, setAccessToken } from "./authToken";
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 const fallbackApiUrl = "http://localhost:4000";
@@ -20,7 +20,22 @@ export const API_URL = rawApiUrl.replace(/\/$/, "");
 type ApiFetchOptions = RequestInit & {
   auth?: "include" | "omit";
   retryOnUnauthorized?: boolean;
+  withCredentials?: boolean;
 };
+
+let refreshInFlight: Promise<string | null> | null = null;
+
+function shouldIncludeCredentials(path: string, options: ApiFetchOptions) {
+  if (options.withCredentials) return true;
+  return path === "/auth/token/refresh" || path === "/auth/logout";
+}
+
+function handleRefreshFailure() {
+  clearAccessToken();
+  if (typeof window !== "undefined") {
+    window.location.href = "/login";
+  }
+}
 
 function extractErrorMessage(payload: any, fallback: string) {
   if (!payload) return fallback;
@@ -79,7 +94,7 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, hasR
     method,
     body: resolvedBody,
     headers,
-    credentials: "include",
+    credentials: shouldIncludeCredentials(path, options) ? "include" : "omit",
     cache: "no-store"
   });
   const contentType = res.headers.get("content-type") ?? "";
@@ -89,6 +104,7 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, hasR
     if (refreshed) {
       return apiFetchWithRetry<T>(path, options, true);
     }
+    handleRefreshFailure();
   }
   if (!res.ok) {
     const message = extractErrorMessage(payload, "Request failed. Please try again.");
@@ -99,22 +115,30 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, hasR
 }
 
 export async function refreshAccessToken() {
-  const res = await fetch(`${API_URL}/auth/token/refresh`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: "{}",
-    credentials: "include",
-    cache: "no-store"
-  });
-  if (!res.ok) {
-    return null;
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const res = await fetch(`${API_URL}/auth/token/refresh`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: "{}",
+        credentials: "include",
+        cache: "no-store"
+      });
+      if (!res.ok) {
+        return null;
+      }
+      const payload = (await res.json()) as { ok?: boolean; accessToken?: string };
+      if (payload.accessToken) {
+        setAccessToken(payload.accessToken);
+        return payload.accessToken;
+      }
+      return null;
+    })().finally(() => {
+      refreshInFlight = null;
+    });
   }
-  const payload = (await res.json()) as { ok?: boolean; accessToken?: string };
-  if (payload.accessToken) {
-    setAccessToken(payload.accessToken);
-    return payload.accessToken;
-  }
-  return null;
+
+  return refreshInFlight;
 }

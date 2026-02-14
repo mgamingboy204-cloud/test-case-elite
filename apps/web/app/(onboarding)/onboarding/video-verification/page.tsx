@@ -31,8 +31,8 @@ export default function VideoVerificationPage() {
     setLoading(true);
     setError(false);
     try {
-      const data = await apiFetch<{ status: VStatus }>("/me/verification-status");
-      setStatus(data.status);
+      const me = await apiFetch<{ videoVerificationStatus?: VStatus }>("/me", { retryOnUnauthorized: true });
+      setStatus(me.videoVerificationStatus ?? "NOT_REQUESTED");
     } catch {
       setError(true);
     } finally {
