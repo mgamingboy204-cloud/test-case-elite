@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card } from "@/app/components/ui/Card";
-import { Input } from "@/app/components/ui/Input";
-import { Button } from "@/app/components/ui/Button";
+import { PremiumCard } from "@/app/components/premium/PremiumCard";
+import { PremiumInput } from "@/app/components/premium/PremiumInput";
+import { PremiumButton } from "@/app/components/premium/PremiumButton";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
@@ -23,76 +23,38 @@ export default function OtpPage() {
 
   const handleSendOtp = async () => {
     const cleaned = phone.replace(/\D/g, "");
-    if (!/^\d{10}$/.test(cleaned)) {
-      setError("Enter a valid 10-digit phone number");
-      return;
-    }
+    if (!/^\d{10}$/.test(cleaned)) return setError("Enter a valid 10-digit phone number");
     setError("");
     setLoading(true);
     try {
-      await apiFetch("/auth/otp/send", {
-        method: "POST",
-        body: { phone: cleaned } as never,
-        auth: "omit",
-      });
+      await apiFetch("/auth/otp/send", { method: "POST", body: { phone: cleaned } as never, auth: "omit" });
       setOtpSent(true);
-      addToast("OTP sent!", "success");
+      addToast("Code sent", "success");
     } catch {
-      addToast("Failed to send OTP", "error");
-    } finally {
-      setLoading(false);
-    }
+      addToast("Unable to send code", "error");
+    } finally { setLoading(false); }
   };
 
   const handleVerify = async (code: string) => {
     setLoading(true);
     try {
-      const verifyResult = await apiFetch<{ ok: boolean; accessToken?: string }>("/auth/otp/verify", {
-        method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), code } as never,
-        auth: "omit",
-      });
-      if (verifyResult.accessToken) {
-        setAccessToken(verifyResult.accessToken);
-      }
-      addToast("Verified!", "success");
+      const verifyResult = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", { method: "POST", body: { phone: phone.replace(/\D/g, ""), code } as never, auth: "omit" });
+      if (verifyResult.accessToken) setAccessToken(verifyResult.accessToken);
       router.push(await resolvePostAuthRoute((verifyResult as { user?: SessionUser }).user ?? null));
     } catch {
       addToast("Invalid code", "error");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
-    <Card style={{ maxWidth: 420, width: "100%", padding: 0 }}>
-      <div style={{ padding: "32px 28px" }}>
-        <h2 style={{ marginBottom: 4 }}>OTP Sign In</h2>
-        <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
-          {otpSent ? "Enter the code we sent you" : "Sign in with a one-time code"}
-        </p>
-
+    <div style={{ width: "min(480px,100%)" }}>
+      <PremiumCard className="auth-card">
+        <h1 className="ds-title">One-time code access</h1>
+        <p className="auth-card__subtitle">{otpSent ? "Enter the code we sent" : "Use secure code verification"}</p>
         {!otpSent ? (
           <>
-            <Input
-              label="Phone Number"
-              type="tel"
-              placeholder="1234567890"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              error={error}
-              maxLength={10}
-              inputMode="numeric"
-            />
-            <Button
-              fullWidth
-              size="lg"
-              loading={loading}
-              onClick={handleSendOtp}
-              style={{ marginTop: 20 }}
-            >
-              Send Code
-            </Button>
+            <PremiumInput label="Phone Number" type="tel" placeholder="1234567890" value={phone} onChange={(e) => setPhone(e.target.value)} error={error} maxLength={10} inputMode="numeric" />
+            <div style={{ marginTop: 20 }}><PremiumButton fullWidth onClick={handleSendOtp} loading={loading}>Send code</PremiumButton></div>
           </>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -100,20 +62,9 @@ export default function OtpPage() {
             <ResendTimer onResend={handleSendOtp} />
           </div>
         )}
-
-        <p
-          style={{
-            fontSize: 14,
-            color: "var(--muted)",
-            textAlign: "center",
-            marginTop: 24,
-          }}
-        >
-          <Link href="/login" style={{ color: "var(--primary)", fontWeight: 600 }}>
-            Back to Sign In
-          </Link>
-        </p>
-      </div>
-    </Card>
+        <p className="auth-note">Your details stay confidential. Verification protects members.</p>
+        <p style={{ marginTop: 12, textAlign: "center" }}><Link href="/login">Back to sign in</Link></p>
+      </PremiumCard>
+    </div>
   );
 }

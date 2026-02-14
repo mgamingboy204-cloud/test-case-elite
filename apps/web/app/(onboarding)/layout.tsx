@@ -28,7 +28,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
           href="/"
           style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}
         >
-          Elite Match
+          Private Club
         </Link>
         <button
           onClick={toggle}

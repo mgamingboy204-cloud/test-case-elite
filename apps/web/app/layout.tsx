@@ -4,13 +4,13 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Elite Match - Premium Dating",
+  title: "Private Club | Secure Membership",
   description:
-    "Find meaningful connections with verified, quality singles on Elite Match.",
+    "Invite-only membership with verified profiles and confidential introductions.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#090b12",
+  themeColor: "#0b0d12",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

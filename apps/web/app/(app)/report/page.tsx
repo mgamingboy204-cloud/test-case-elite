@@ -60,7 +60,7 @@ export default function ReportPage() {
 
   return (
     <div>
-      <PageHeader title="Report User" subtitle="Help us keep Elite Match safe" />
+      <PageHeader title="Report User" subtitle="Help us keep Private Club safe" />
 
       <Card style={{ padding: 24 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

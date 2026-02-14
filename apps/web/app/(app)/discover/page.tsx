@@ -38,6 +38,10 @@ type DiscoverResponse = {
 
 const ALL_INTERESTS = ["Travel", "Fitness", "Music", "Cooking", "Reading", "Photography", "Movies", "Art", "Hiking", "Gaming", "Yoga", "Dancing"];
 
+function CardSection({ title, value }: { title: string; value: string }) {
+  return <div style={{ border: "1px solid var(--border)", borderRadius: 16, padding: 16 }}><p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>{title}</p><p>{value}</p></div>;
+}
+
 export default function DiscoverPage() {
   const { addToast } = useToast();
   const [intent, setIntent] = useState("all");
@@ -49,6 +53,7 @@ export default function DiscoverPage() {
   const [distance, setDistance] = useState(50);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [isMobile, setIsMobile] = useState(false);
+  const [openProfile, setOpenProfile] = useState<Profile | null>(null);
 
   const [swipeX, setSwipeX] = useState(0);
   const [swipeY, setSwipeY] = useState(0);
@@ -208,9 +213,9 @@ export default function DiscoverPage() {
 
   const mobileCardZoneStyle = useMemo<CSSProperties>(
     () => ({
-      height: "calc(100dvh - 56px - 60px - env(safe-area-inset-bottom, 0px) - 180px)",
-      minHeight: "500px",
-      maxHeight: "700px",
+      height: "clamp(520px, 72vh, 640px)",
+      minHeight: "520px",
+      maxHeight: "640px",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -223,14 +228,14 @@ export default function DiscoverPage() {
     <div style={isMobile ? mobileViewportStyle : { display: "flex", flexDirection: "column", minHeight: "calc(100vh - 56px - 60px)", overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 8px 8px", gap: 8 }}>
         <span style={{ fontSize: 15, fontWeight: 800, color: "var(--primary)", display: "none" }} className="discover-wordmark">
-          Elite Match
+          Private Club
         </span>
 
         <Tabs
           tabs={[
             { label: "All", value: "all" },
-            { label: "Dating", value: "dating" },
-            { label: "Friends", value: "friends" },
+            { label: "Membership", value: "dating" },
+            { label: "Introductions", value: "friends" },
           ]}
           active={intent}
           onChange={setIntent}
@@ -258,7 +263,7 @@ export default function DiscoverPage() {
         </button>
       </div>
 
-      <div style={{ ...(isMobile ? mobileCardZoneStyle : {}), flex: isMobile ? undefined : 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "8px 0", position: "relative" }}>
+      <div className="discover-content-safe" style={{ ...(isMobile ? mobileCardZoneStyle : {}), flex: isMobile ? undefined : 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "8px 0", position: "relative" }}>
         {loading ? (
           <div style={{ width: "min(92vw, 360px)", height: isMobile ? "clamp(480px, 68dvh, 610px)" : "clamp(520px, 72vh, 640px)", borderRadius: 30, overflow: "hidden" }}>
             <Skeleton width="100%" height="100%" radius={30} />
@@ -281,6 +286,7 @@ export default function DiscoverPage() {
             verified={currentProfile.verified}
             disabled={animatingOut}
             onSwipe={(direction) => handleAction(direction === "left" ? "PASS" : "LIKE", direction)}
+            onOpen={() => setOpenProfile(currentProfile)}
           />
         ) : (
           <div
@@ -370,6 +376,20 @@ export default function DiscoverPage() {
           </button>
         </div>
       ))}
+
+
+
+      <BottomSheet open={Boolean(openProfile)} onClose={() => setOpenProfile(null)} title="Profile details">
+        {openProfile ? (
+          <div style={{ display: "grid", gap: 16 }}>
+            <img src={openProfile.photo} alt={openProfile.name} style={{ width: "100%", borderRadius: 20, aspectRatio: "4/5", objectFit: "cover" }} />
+            <CardSection title="About" value={openProfile.bio || "Verified member"} />
+            <CardSection title="Lifestyle" value={openProfile.city || "Confidential"} />
+            <CardSection title="Verification status" value={openProfile.verified ? "Verified" : "Pending review"} />
+            <Button fullWidth onClick={() => setOpenProfile(null)}>Close</Button>
+          </div>
+        ) : null}
+      </BottomSheet>
 
       <BottomSheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filters">
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>

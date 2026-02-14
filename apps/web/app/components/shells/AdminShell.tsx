@@ -45,7 +45,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             href="/admin"
             style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}
           >
-            Elite Match
+            Private Club
           </Link>
           <span
             style={{

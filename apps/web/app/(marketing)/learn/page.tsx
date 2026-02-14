@@ -29,7 +29,7 @@ const steps = [
 export default function LearnPage() {
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px 80px" }}>
-      <h1 style={{ marginBottom: 12 }}>How Elite Match Works</h1>
+      <h1 style={{ marginBottom: 12 }}>How Private Club Works</h1>
       <p style={{ color: "var(--muted)", fontSize: 17, lineHeight: 1.6, marginBottom: 48 }}>
         A simple, secure process designed to help you find genuine connections.
       </p>
