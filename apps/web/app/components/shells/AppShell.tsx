@@ -116,7 +116,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             margin: "0 auto",
             padding: "0 16px",
             width: "100%",
+            paddingBottom: "calc(8px + env(safe-area-inset-bottom, 0px))",
           }}
+          className="app-main"
         >
           {children}
         </main>
@@ -131,6 +133,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         @media (max-width: 768px) {
           .app-sidebar { display: none !important; }
           .app-bottom-nav { display: block; }
+          .app-main { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important; }
         }
         @media (min-width: 769px) {
           .app-bottom-nav { display: none; }
