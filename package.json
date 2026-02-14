@@ -2,7 +2,8 @@
   "name": "elite-match-mvp",
   "private": true,
   "workspaces": [
-    "apps/*",
+    "apps/api",
+    "apps/web",
     "packages/*"
   ],
   "scripts": {

@@ -33,8 +33,16 @@ export default function MatchesPage() {
     setLoading(true);
     setError(false);
     try {
-      await apiFetch("/matches");
-      setMatches(MOCK_MATCHES);
+      const data = await apiFetch<any>("/matches");
+      const rows = Array.isArray(data?.matches) ? data.matches : [];
+      const mapped: Match[] = rows.map((row: any) => ({
+        id: row.id,
+        name: row.user?.name ?? "Member",
+        photo: row.user?.primaryPhotoUrl ?? "",
+        lastActive: row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "recently",
+        status: row.consentStatus === "DECLINED" ? "EXPIRED" : row.consentStatus === "PENDING" ? "PENDING" : "ACTIVE",
+      }));
+      setMatches(mapped);
     } catch {
       setMatches(MOCK_MATCHES);
     } finally {

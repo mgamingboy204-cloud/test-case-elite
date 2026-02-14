@@ -16,16 +16,16 @@ export default function MatchDetailPage() {
   const [loading, setLoading] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
 
-  const matchId = params.id;
+  const matchId = String(params.id);
 
-  const handleConsent = async (action: "APPROVE" | "DECLINE") => {
+  const handleConsent = async (response: "YES" | "NO") => {
     setLoading(true);
     try {
       await apiFetch("/consent/respond", {
         method: "POST",
-        body: { matchId, action } as never,
+        body: { matchId, response } as never,
       });
-      if (action === "APPROVE") {
+      if (response === "YES") {
         setConsentGiven(true);
         addToast("Consent given! Numbers exchanged.", "success");
       } else {
@@ -131,14 +131,14 @@ export default function MatchDetailPage() {
                 variant="secondary"
                 fullWidth
                 loading={loading}
-                onClick={() => handleConsent("DECLINE")}
+                onClick={() => handleConsent("NO")}
               >
                 Decline
               </Button>
               <Button
                 fullWidth
                 loading={loading}
-                onClick={() => handleConsent("APPROVE")}
+                onClick={() => handleConsent("YES")}
               >
                 Share My Number
               </Button>
