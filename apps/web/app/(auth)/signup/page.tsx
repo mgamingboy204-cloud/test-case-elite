@@ -19,8 +19,7 @@ export default function SignupPage() {
   const router = useRouter();
   const { addToast } = useToast();
   const { refresh } = useSession();
-
-  const [step, setStep] = useState<Step>("account");
+  const [step, setStep] = useState<Step>("register");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -90,16 +89,14 @@ export default function SignupPage() {
         body: { phone: cleanedPhone, code, rememberMe } as never,
         auth: "omit"
       });
-
       if (verificationResponse?.accessToken) {
         setAccessToken(verificationResponse.accessToken);
       }
-
       const user = await refresh();
       addToast("Phone verified!", "success");
       router.push(getDefaultRoute(user));
-    } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : "Invalid OTP", "error");
+    } catch {
+      addToast("Invalid OTP", "error");
     } finally {
       setLoading(false);
     }
