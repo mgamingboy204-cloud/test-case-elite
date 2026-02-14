@@ -4,8 +4,9 @@ function onboardingRedirectForStep(step: string) {
   switch (step) {
     case "PHONE_VERIFIED":
     case "VIDEO_VERIFICATION_PENDING":
-    case "VIDEO_VERIFIED":
       return "/onboarding/video-verification";
+    case "VIDEO_VERIFIED":
+      return "/onboarding/payment";
     case "PAYMENT_PENDING":
     case "PAID":
       return "/onboarding/payment";
