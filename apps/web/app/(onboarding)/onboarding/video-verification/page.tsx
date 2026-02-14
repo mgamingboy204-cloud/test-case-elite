@@ -12,13 +12,13 @@ import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import { useSession } from "@/lib/session";
 
-type VStatus = "NOT_REQUESTED" | "REQUESTED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED";
+type VStatus = "NOT_REQUESTED" | "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED";
 
 const statusConfig: Record<VStatus, { label: string; variant: "default" | "primary" | "success" | "danger" | "warning"; desc: string }> = {
   NOT_REQUESTED: { label: "Not Started", variant: "default", desc: "Complete a quick video call to verify your identity." },
-  REQUESTED: { label: "Requested", variant: "warning", desc: "Your verification request is in the queue. We'll contact you soon." },
+  PENDING: { label: "Requested", variant: "warning", desc: "Your verification request is in the queue. We'll contact you soon." },
   IN_PROGRESS: { label: "In Progress", variant: "primary", desc: "Your verification is being processed." },
-  COMPLETED: { label: "Verified", variant: "success", desc: "Your identity has been verified. You can proceed!" },
+  APPROVED: { label: "Verified", variant: "success", desc: "Your identity has been verified. You can proceed!" },
   REJECTED: { label: "Rejected", variant: "danger", desc: "Your verification was not approved. Please contact support." },
 };
 
@@ -67,7 +67,7 @@ export default function VideoVerificationPage() {
     setRequesting(true);
     try {
       await apiFetch("/verification-requests", { method: "POST" });
-      setStatus("REQUESTED");
+      setStatus("PENDING");
       addToast("Verification requested!", "success");
     } catch {
       addToast("Failed to request verification", "error");
@@ -127,7 +127,7 @@ export default function VideoVerificationPage() {
             color: "var(--primary)",
           }}
         >
-          {status === "COMPLETED" ? "\u2713" : status === "REJECTED" ? "\u2717" : "\u25B6"}
+          {status === "APPROVED" ? "\u2713" : status === "REJECTED" ? "\u2717" : "\u25B6"}
         </div>
 
         <p
@@ -148,7 +148,7 @@ export default function VideoVerificationPage() {
           </Button>
         )}
 
-        {status === "COMPLETED" && (
+        {status === "APPROVED" && (
           <Link href="/onboarding/payment">
             <Button fullWidth size="lg">
               Continue to Payment

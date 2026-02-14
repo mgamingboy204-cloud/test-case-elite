@@ -43,7 +43,8 @@ const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
 const SIXTY_DAYS_MS = 1000 * 60 * 60 * 24 * 60;
 
 function getNextRequiredStep(user: { videoVerificationStatus: string; paymentStatus: string; profileCompletedAt: Date | null }) {
-  if (user.videoVerificationStatus !== "COMPLETED") return "VIDEO_VERIFICATION_REQUIRED";
+  const isVideoVerified = user.videoVerificationStatus === "APPROVED" || user.videoVerificationStatus === "COMPLETED";
+  if (!isVideoVerified) return "VIDEO_VERIFICATION_REQUIRED";
   if (user.paymentStatus !== "PAID") return "PAYMENT_REQUIRED";
   if (!user.profileCompletedAt) return "PROFILE_SETUP_REQUIRED";
   return "APP_READY";

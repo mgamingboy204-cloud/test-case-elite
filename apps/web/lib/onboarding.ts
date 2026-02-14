@@ -17,7 +17,9 @@ const APP_ENTRY_ROUTE = "/app";
 export function getNextRequiredStep(status: SessionUser | null): NextRequiredStep {
   if (!status) return "AUTH_REQUIRED";
 
-  if (status.videoVerificationStatus !== "COMPLETED") {
+  const isVideoVerified = status.videoVerificationStatus === "APPROVED" || status.videoVerificationStatus === "COMPLETED";
+
+  if (!isVideoVerified) {
     return "VIDEO_VERIFICATION_REQUIRED";
   }
 
