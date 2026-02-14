@@ -3,10 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card } from "@/app/components/ui/Card";
-import { Input } from "@/app/components/ui/Input";
-import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
+import { PremiumButton } from "@/app/components/premium/PremiumButton";
+import { PremiumCard } from "@/app/components/premium/PremiumCard";
+import { PremiumInput } from "@/app/components/premium/PremiumInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
@@ -19,7 +19,6 @@ export default function SignupPage() {
   const [step, setStep] = useState<Step>("register");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,8 +26,7 @@ export default function SignupPage() {
 
   const validate = () => {
     const errs: Record<string, string> = {};
-    if (!/^\d{10}$/.test(phone.replace(/\D/g, "")))
-      errs.phone = "Enter a valid 10-digit phone number";
+    if (!/^\d{10}$/.test(phone.replace(/\D/g, ""))) errs.phone = "Enter a valid 10-digit phone number";
     if (email && !/^\S+@\S+\.\S+$/.test(email)) errs.email = "Enter a valid email";
     if (password.length < 8) errs.password = "Minimum 8 characters";
     if (password !== confirmPassword) errs.confirmPassword = "Passwords don't match";
@@ -43,16 +41,13 @@ export default function SignupPage() {
       await apiFetch("/auth/register", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, ""), email: email || undefined, password } as never,
-        auth: "omit",
+        auth: "omit"
       });
-
-      /* Send OTP */
       await apiFetch("/auth/otp/send", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, "") } as never,
-        auth: "omit",
+        auth: "omit"
       });
-
       addToast("Account created! Verify your phone.", "success");
       setStep("otp");
     } catch (err: unknown) {
@@ -68,7 +63,7 @@ export default function SignupPage() {
       const verifyResult = await apiFetch<{ ok: boolean; accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, ""), code } as never,
-        auth: "omit",
+        auth: "omit"
       });
       if (verifyResult.accessToken) {
         setAccessToken(verifyResult.accessToken);
@@ -87,7 +82,7 @@ export default function SignupPage() {
       await apiFetch("/auth/otp/send", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, "") } as never,
-        auth: "omit",
+        auth: "omit"
       });
       addToast("OTP resent", "info");
     } catch {
@@ -96,44 +91,23 @@ export default function SignupPage() {
   };
 
   return (
-    <Card style={{ maxWidth: 420, width: "100%", padding: 0 }}>
-      <div style={{ padding: "32px 28px" }}>
-        <h2 style={{ marginBottom: 4 }}>Create account</h2>
-        <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
-          {step === "register"
-            ? "Join the most exclusive dating community"
-            : "Verify your phone number"}
+    <div className="premium-page-enter" style={{ width: "min(460px, 100%)" }}>
+      <PremiumCard className="auth-card">
+        <h1>Create account</h1>
+        <p className="auth-card__subtitle">
+          {step === "register" ? "Join the most exclusive dating community" : "Verify your phone number"}
         </p>
 
-        {/* Step indicator */}
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            marginBottom: 24,
-          }}
-        >
-          {["register", "otp"].map((s, i) => (
-            <div
-              key={s}
-              style={{
-                flex: 1,
-                height: 4,
-                borderRadius: 2,
-                background:
-                  i <= (step === "register" ? 0 : 1)
-                    ? "var(--primary)"
-                    : "var(--border)",
-                transition: "background 300ms ease",
-              }}
-            />
+        <div className="auth-stepbar" aria-hidden="true">
+          {["register", "otp"].map((s) => (
+            <span key={s} className={step === s || (step === "otp" && s === "register") ? "is-active" : ""} />
           ))}
         </div>
 
         {step === "register" ? (
           <>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <Input
+            <div className="auth-form-fields">
+              <PremiumInput
                 label="Phone Number"
                 type="tel"
                 placeholder="1234567890"
@@ -143,7 +117,7 @@ export default function SignupPage() {
                 maxLength={10}
                 inputMode="numeric"
               />
-              <Input
+              <PremiumInput
                 label="Email (optional)"
                 type="email"
                 placeholder="you@example.com"
@@ -151,7 +125,7 @@ export default function SignupPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 error={errors.email}
               />
-              <Input
+              <PremiumInput
                 label="Password"
                 type="password"
                 placeholder="Minimum 8 characters"
@@ -159,7 +133,7 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 error={errors.password}
               />
-              <Input
+              <PremiumInput
                 label="Confirm Password"
                 type="password"
                 placeholder="Repeat your password"
@@ -169,40 +143,22 @@ export default function SignupPage() {
               />
             </div>
 
-            <Button
-              fullWidth
-              size="lg"
-              loading={loading}
-              onClick={handleRegister}
-              style={{ marginTop: 24 }}
-            >
+            <PremiumButton fullWidth onClick={handleRegister} loading={loading}>
               Create Account
-            </Button>
+            </PremiumButton>
 
-            <p
-              style={{
-                fontSize: 14,
-                color: "var(--muted)",
-                textAlign: "center",
-                marginTop: 20,
-              }}
-            >
-              Already have an account?{" "}
-              <Link href="/login" style={{ color: "var(--primary)", fontWeight: 600 }}>
-                Sign In
-              </Link>
+            <p className="auth-links auth-links--single">
+              Already have an account? <Link href="/login">Sign In</Link>
             </p>
           </>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <p style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}>
-              Enter the 6-digit code sent to your phone
-            </p>
+          <div className="auth-otp-wrap">
+            <p>Enter the 6-digit code sent to your phone</p>
             <OtpInput onComplete={handleVerifyOtp} disabled={loading} />
             <ResendTimer onResend={handleResendOtp} />
           </div>
         )}
-      </div>
-    </Card>
+      </PremiumCard>
+    </div>
   );
 }
