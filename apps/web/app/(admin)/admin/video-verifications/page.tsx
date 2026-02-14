@@ -93,9 +93,9 @@ export default function AdminVideoVerificationsPage() {
       return;
     }
     try {
-      await apiFetch(`/admin/verification-requests/${meetModal.requestId}/meet-link`, {
+      await apiFetch(`/admin/verification-requests/${meetModal.requestId}/start`, {
         method: "POST",
-        body: { meetLink } as never,
+        body: { meetUrl: meetLink } as never,
       });
       updateRequest(meetModal.requestId, { meetLink, status: "IN_PROGRESS" });
       addToast("Meet link sent", "success");

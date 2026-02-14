@@ -59,7 +59,7 @@ export default function DiscoverPage() {
     setLoading(true);
     setError(false);
     try {
-      await apiFetch(`/discover?intent=${intent}&distanceKm=${distance}&interests=${selectedInterests.join(",")}`);
+      await apiFetch(`/discover?intent=${intent}&distance=${distance}&interests=${selectedInterests.join(",")}`);
       setProfiles(MOCK_PROFILES);
       setCurrentIndex(0);
     } catch {

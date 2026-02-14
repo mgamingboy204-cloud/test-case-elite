@@ -54,9 +54,25 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
 
 async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, hasRetried: boolean) {
   const headers = new Headers(options.headers);
-  if (options.method && options.method !== "GET" && !headers.has("Content-Type")) {
+  const normalizedMethod = (options.method ?? "GET").toUpperCase();
+  const hasBody = options.body !== undefined && options.body !== null;
+  const shouldJsonEncodeBody =
+    hasBody &&
+    normalizedMethod !== "GET" &&
+    normalizedMethod !== "HEAD" &&
+    !headers.has("Content-Type") &&
+    typeof options.body !== "string" &&
+    !(options.body instanceof FormData) &&
+    !(options.body instanceof URLSearchParams) &&
+    !(options.body instanceof Blob) &&
+    !(options.body instanceof ArrayBuffer) &&
+    !(ArrayBuffer.isView(options.body as any));
+
+  if (shouldJsonEncodeBody) {
     headers.set("Content-Type", "application/json");
   }
+
+  const body = shouldJsonEncodeBody ? JSON.stringify(options.body) : options.body;
   const authMode = options.auth ?? "include";
   const token = authMode !== "omit" ? getAccessToken() : null;
   if (token) {
@@ -66,6 +82,7 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, hasR
     {
       ...options,
       headers,
+      body,
       credentials: "include",
       cache: "no-store"
     }

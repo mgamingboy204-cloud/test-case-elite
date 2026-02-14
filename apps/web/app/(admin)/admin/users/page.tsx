@@ -120,7 +120,7 @@ export default function AdminUsersPage() {
     try {
       await apiFetch(`/admin/verifications/${meetModal.userId}/meet-link`, {
         method: "POST",
-        body: { meetLink } as never,
+        body: { meetUrl: meetLink } as never,
       });
       addToast("Meet link sent", "success");
       setMeetModal({ open: false, userId: "" });
