@@ -1,8 +1,7 @@
 "use client";
 
-import React from "react";
-
-import { useState, useRef, useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { Tabs } from "@/app/components/ui/Tabs";
 import { BottomSheet } from "@/app/components/ui/BottomSheet";
 import { Chip } from "@/app/components/ui/Badge";
@@ -12,7 +11,8 @@ import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { Button } from "@/app/components/ui/Button";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
-import type { CSSProperties } from "react";
+import { PremiumSwipeCard } from "@/app/components/discover/PremiumSwipeCard";
+import { ActionDock } from "@/app/components/discover/ActionDock";
 
 interface Profile {
   id: string;
@@ -48,15 +48,21 @@ export default function DiscoverPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [distance, setDistance] = useState(50);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
 
-  /* Swipe state */
-  const cardRef = useRef<HTMLDivElement>(null);
   const [swipeX, setSwipeX] = useState(0);
   const [swipeY, setSwipeY] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const startPos = useRef({ x: 0, y: 0 });
-  const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const [animatingOut, setAnimatingOut] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+    const updateViewport = () => setIsMobile(mediaQuery.matches);
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+    return () => mediaQuery.removeEventListener("change", updateViewport);
+  }, []);
 
   const fetchProfiles = useCallback(async () => {
     setLoading(true);
@@ -96,7 +102,6 @@ export default function DiscoverPage() {
       if (!currentProfile || animatingOut) return;
 
       setAnimatingOut(true);
-      setSwipeDirection(direction || (type === "PASS" ? "left" : "right"));
       setSwipeX(direction === "left" || type === "PASS" ? -500 : 500);
 
       try {
@@ -120,14 +125,12 @@ export default function DiscoverPage() {
         setCurrentIndex((i) => i + 1);
         setSwipeX(0);
         setSwipeY(0);
-        setSwipeDirection(null);
         setAnimatingOut(false);
       }, 250);
     },
     [currentProfile, animatingOut, addToast]
   );
 
-  /* Pointer handlers for swipe */
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (animatingOut) return;
@@ -176,7 +179,6 @@ export default function DiscoverPage() {
     willChange: "transform",
   };
 
-  /* Action button style helper */
   const actionBtnStyle = (bg: string, size = 56): CSSProperties => ({
     width: size,
     height: size,
@@ -193,34 +195,34 @@ export default function DiscoverPage() {
     transition: "transform 150ms ease, box-shadow 150ms ease",
   });
 
+  const mobileViewportStyle = useMemo<CSSProperties>(
+    () => ({
+      minHeight: "calc(100dvh - 56px)",
+      paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+    }),
+    []
+  );
+
+  const mobileCardZoneStyle = useMemo<CSSProperties>(
+    () => ({
+      height: "calc(100dvh - 56px - 60px - env(safe-area-inset-bottom, 0px) - 180px)",
+      minHeight: "500px",
+      maxHeight: "700px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "10px 0",
+    }),
+    []
+  );
+
   return (
-    <div
-      className="pb-[calc(var(--bottom-nav-h,_72px)_+_env(safe-area-inset-bottom)_+_12px)] md:pb-0"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        minHeight: "calc(100vh - 56px - 60px)",
-      }}
-    >
-      {/* Top header row */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "12px 8px 8px",
-          gap: 8,
-        }}
-      >
-        <span
-          style={{
-            fontSize: 15,
-            fontWeight: 800,
-            color: "var(--primary)",
-            display: "none",
-          }}
-          className="discover-wordmark"
-        >
+    <div style={isMobile ? mobileViewportStyle : { display: "flex", flexDirection: "column", minHeight: "calc(100vh - 56px - 60px)", overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 8px 8px", gap: 8 }}>
+        <span style={{ fontSize: 15, fontWeight: 800, color: "var(--primary)", display: "none" }} className="discover-wordmark">
           Elite Match
         </span>
 
@@ -256,12 +258,9 @@ export default function DiscoverPage() {
         </button>
       </div>
 
-      {/* Card area */}
-      <div
-        className="relative flex flex-col items-center justify-center px-3 py-3 md:flex-1 md:px-0 md:py-2"
-      >
+      <div style={{ ...(isMobile ? mobileCardZoneStyle : {}), flex: isMobile ? undefined : 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "8px 0", position: "relative" }}>
         {loading ? (
-          <div className="h-[clamp(440px,60vh,560px)] w-[min(92vw,360px)] overflow-hidden rounded-[28px] md:h-[clamp(520px,72vh,640px)] md:w-[min(92vw,380px)] md:rounded-[30px]">
+          <div style={{ width: "min(92vw, 360px)", height: isMobile ? "clamp(480px, 68dvh, 610px)" : "clamp(520px, 72vh, 640px)", borderRadius: 30, overflow: "hidden" }}>
             <Skeleton width="100%" height="100%" radius={30} />
           </div>
         ) : error ? (
@@ -271,139 +270,68 @@ export default function DiscoverPage() {
             title="No more profiles"
             description="Adjust your filters or check back later for new people."
             action={{ label: "Adjust Filters", onClick: () => setFilterOpen(true) }}
-            icon={
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.5">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M16 16s-1.5-2-4-2-4 2-4 2" />
-                <line x1="9" y1="9" x2="9.01" y2="9" />
-                <line x1="15" y1="9" x2="15.01" y2="9" />
-              </svg>
-            }
+          />
+        ) : isMobile ? (
+          <PremiumSwipeCard
+            photo={currentProfile.photo}
+            name={currentProfile.name}
+            age={currentProfile.age}
+            city={currentProfile.city}
+            bio={currentProfile.bio}
+            verified={currentProfile.verified}
+            disabled={animatingOut}
+            onSwipe={(direction) => handleAction(direction === "left" ? "PASS" : "LIKE", direction)}
           />
         ) : (
-          /* Swipe Card */
           <div
-            ref={cardRef}
-            className="h-[clamp(440px,60vh,560px)] w-[min(92vw,360px)] overflow-hidden rounded-[28px] md:h-[clamp(520px,72vh,640px)] md:w-[min(92vw,380px)] md:rounded-[30px]"
             style={cardStyle}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerUp}
           >
-            {/* Photo */}
             <img
               src={currentProfile.photo || "/placeholder.svg"}
               alt={currentProfile.name}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                position: "absolute",
-                inset: 0,
-              }}
+              style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }}
               crossOrigin="anonymous"
               draggable={false}
             />
 
-            {/* Swipe indicators */}
-            {swipeX > 30 && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 40,
-                  left: 24,
-                  padding: "8px 16px",
-                  border: "3px solid var(--success)",
-                  color: "var(--success)",
-                  borderRadius: "var(--radius-md)",
-                  fontWeight: 800,
-                  fontSize: 28,
-                  transform: "rotate(-20deg)",
-                  opacity: Math.min(swipeX / 100, 1),
-                  background: "rgba(255,255,255,0.9)",
-                }}
-              >
-                LIKE
-              </div>
-            )}
-            {swipeX < -30 && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 40,
-                  right: 24,
-                  padding: "8px 16px",
-                  border: "3px solid var(--danger)",
-                  color: "var(--danger)",
-                  borderRadius: "var(--radius-md)",
-                  fontWeight: 800,
-                  fontSize: 28,
-                  transform: "rotate(20deg)",
-                  opacity: Math.min(Math.abs(swipeX) / 100, 1),
-                  background: "rgba(255,255,255,0.9)",
-                }}
-              >
-                NOPE
-              </div>
-            )}
-
-            {/* Bottom gradient overlay */}
-            <div
-              style={{
-                position: "absolute",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: "45%",
-                background: "linear-gradient(transparent, rgba(0,0,0,0.75))",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-end",
-                padding: "0 18px 18px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, maxWidth: "100%" }}>
-                <h2 style={{ color: "#fff", margin: 0, fontSize: 26, maxWidth: "75%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "45%", background: "linear-gradient(transparent, rgba(0,0,0,0.75))", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 24px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <h2 style={{ color: "#fff", margin: 0, fontSize: 26 }}>
                   {currentProfile.name}, {currentProfile.age}
                 </h2>
                 {currentProfile.verified && (
-                  <Badge variant="success" style={{ fontSize: 11 }}>Verified</Badge>
+                  <Badge variant="success" style={{ fontSize: 11 }}>
+                    Verified
+                  </Badge>
                 )}
               </div>
-              <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, marginBottom: 4, maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {currentProfile.city}
-              </p>
-              <p
-                style={{
-                  color: "rgba(255,255,255,0.7)",
-                  fontSize: 14,
-                  margin: 0,
-                  maxWidth: "100%",
-                  overflow: "hidden",
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                }}
-              >
-                {currentProfile.bio}
-              </p>
+              <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, marginBottom: 4 }}>{currentProfile.city}</p>
+              <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>{currentProfile.bio}</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Action buttons */}
-      {!loading && currentProfile && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 16,
-            padding: "12px 0 8px",
+      {!loading && currentProfile && (isMobile ? (
+        <ActionDock
+          onRewind={() => {
+            if (currentIndex > 0) {
+              setCurrentIndex((i) => i - 1);
+              addToast("Rewound", "info");
+            }
           }}
-        >
+          onPass={() => handleAction("PASS", "left")}
+          onSuperLike={() => handleAction("SUPERLIKE")}
+          onLike={() => handleAction("LIKE", "right")}
+          onBoost={() => addToast("Boost activated!", "success")}
+          canRewind={currentIndex > 0}
+        />
+      ) : (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 16, padding: "12px 0 8px" }}>
           <button
             onClick={() => {
               if (currentIndex > 0) {
@@ -415,98 +343,54 @@ export default function DiscoverPage() {
             aria-label="Rewind"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+              <path d="M1 4v6h6" />
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
             </svg>
           </button>
-          <button
-            onClick={() => handleAction("PASS", "left")}
-            style={actionBtnStyle("var(--danger)")}
-            aria-label="Pass"
-          >
+          <button onClick={() => handleAction("PASS", "left")} style={actionBtnStyle("var(--danger)")} aria-label="Pass">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
-          <button
-            onClick={() => handleAction("SUPERLIKE")}
-            style={actionBtnStyle("#00B4D8", 48)}
-            aria-label="Super Like"
-          >
+          <button onClick={() => handleAction("SUPERLIKE")} style={actionBtnStyle("#00B4D8", 48)} aria-label="Super Like">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" stroke="#fff" strokeWidth="1">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
           </button>
-          <button
-            onClick={() => handleAction("LIKE", "right")}
-            style={actionBtnStyle("var(--success)")}
-            aria-label="Like"
-          >
+          <button onClick={() => handleAction("LIKE", "right")} style={actionBtnStyle("var(--success)")} aria-label="Like">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff" stroke="#fff" strokeWidth="1">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
           </button>
-          <button
-            onClick={() => addToast("Boost activated!", "success")}
-            style={actionBtnStyle("var(--panel)", 44)}
-            aria-label="Boost"
-          >
+          <button onClick={() => addToast("Boost activated!", "success")} style={actionBtnStyle("var(--panel)", 44)} aria-label="Boost">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
             </svg>
           </button>
         </div>
-      )}
+      ))}
 
-      {/* Filter BottomSheet */}
-      <BottomSheet
-        open={filterOpen}
-        onClose={() => setFilterOpen(false)}
-        title="Filters"
-      >
+      <BottomSheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filters">
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           <div>
-            <label style={{ fontSize: 14, fontWeight: 500, display: "block", marginBottom: 12 }}>
-              Distance: {distance} km
-            </label>
-            <input
-              type="range"
-              min={5}
-              max={200}
-              value={distance}
-              onChange={(e) => setDistance(Number(e.target.value))}
-              style={{ width: "100%", accentColor: "var(--primary)" }}
-            />
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontSize: 12,
-                color: "var(--muted)",
-                marginTop: 4,
-              }}
-            >
+            <label style={{ fontSize: 14, fontWeight: 500, display: "block", marginBottom: 12 }}>Distance: {distance} km</label>
+            <input type="range" min={5} max={200} value={distance} onChange={(e) => setDistance(Number(e.target.value))} style={{ width: "100%", accentColor: "var(--primary)" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
               <span>5 km</span>
               <span>200 km</span>
             </div>
           </div>
 
           <div>
-            <label style={{ fontSize: 14, fontWeight: 500, display: "block", marginBottom: 12 }}>
-              Interests
-            </label>
+            <label style={{ fontSize: 14, fontWeight: 500, display: "block", marginBottom: 12 }}>Interests</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {ALL_INTERESTS.map((interest) => (
                 <Chip
                   key={interest}
                   label={interest}
                   selected={selectedInterests.includes(interest)}
-                  onClick={() =>
-                    setSelectedInterests((prev) =>
-                      prev.includes(interest)
-                        ? prev.filter((i) => i !== interest)
-                        : [...prev, interest]
-                    )
-                  }
+                  onClick={() => setSelectedInterests((prev) => (prev.includes(interest) ? prev.filter((i) => i !== interest) : [...prev, interest]))}
                 />
               ))}
             </div>
