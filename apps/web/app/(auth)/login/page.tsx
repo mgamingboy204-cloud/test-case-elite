@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card } from "@/app/components/ui/Card";
 import { Input } from "@/app/components/ui/Input";
 import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
@@ -101,15 +100,19 @@ export default function LoginPage() {
   };
 
   return (
-    <Card
+    <div
       style={{
-        maxWidth: 420,
         width: "100%",
-        padding: 0,
+        maxWidth: 430,
+        borderRadius: 28,
+        border: "1px solid rgba(255,255,255,0.12)",
+        backdropFilter: "blur(15px)",
+        background: "rgba(255,255,255,0.05)",
+        boxShadow: "0 24px 60px rgba(0,0,0,0.35)",
       }}
     >
-      <div style={{ padding: "32px 28px" }}>
-        <h2 style={{ marginBottom: 4 }}>Welcome back</h2>
+      <div style={{ padding: "28px 22px" }}>
+        <h2 style={{ marginBottom: 4, fontSize: "clamp(1.5rem, 4vw, 2rem)" }}>Welcome back</h2>
         <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
           Sign in to your account
         </p>
@@ -152,17 +155,8 @@ export default function LoginPage() {
                 </button>
               </div>
 
-              {/* Toggles */}
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    fontSize: 14,
-                    cursor: "pointer",
-                  }}
-                >
+                <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, cursor: "pointer" }}>
                   <input
                     type="checkbox"
                     checked={rememberMe}
@@ -171,15 +165,7 @@ export default function LoginPage() {
                   />
                   Remember me
                 </label>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    fontSize: 14,
-                    cursor: "pointer",
-                  }}
-                >
+                <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, cursor: "pointer" }}>
                   <input
                     type="checkbox"
                     checked={rememberDevice}
@@ -196,54 +182,36 @@ export default function LoginPage() {
               size="lg"
               loading={loading}
               onClick={handleLogin}
-              style={{ marginTop: 24 }}
+              style={{ marginTop: 24, borderRadius: 999, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35), 0 14px 28px rgba(230,57,70,0.35)" }}
             >
               Sign In
             </Button>
 
-            <div
-              style={{
-                textAlign: "center",
-                marginTop: 20,
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-              }}
-            >
-              <Link
-                href="/otp"
-                style={{ fontSize: 14, color: "var(--primary)", fontWeight: 500 }}
-              >
+            <div style={{ textAlign: "center", marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+              <Link href="/otp" style={{ fontSize: 14, color: "var(--primary)", fontWeight: 500 }}>
                 Sign in with OTP instead
               </Link>
               <p style={{ fontSize: 14, color: "var(--muted)" }}>
                 {"Don't have an account? "}
-                <Link
-                  href="/signup"
-                  style={{ color: "var(--primary)", fontWeight: 600 }}
-                >
+                <Link href="/signup" style={{ color: "var(--primary)", fontWeight: 600 }}>
                   Sign Up
                 </Link>
               </p>
             </div>
           </>
         ) : (
-          /* OTP verification */
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <p style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}>
               Enter the 6-digit code sent to your phone
             </p>
             <OtpInput onComplete={handleVerifyOtp} disabled={loading} />
             <ResendTimer onResend={handleSendOtp} />
-            <button
-              onClick={() => setOtpRequired(false)}
-              style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}
-            >
+            <button onClick={() => setOtpRequired(false)} style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}>
               Back to login
             </button>
           </div>
         )}
       </div>
-    </Card>
+    </div>
   );
 }

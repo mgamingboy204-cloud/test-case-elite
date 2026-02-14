@@ -1,155 +1,185 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { type MouseEvent, useMemo, useState } from "react";
 import { Button } from "@/app/components/ui/Button";
-import { Card } from "@/app/components/ui/Card";
 
 const features = [
   {
-    icon: "\u2714",
+    icon: "✓",
     title: "Video Verified",
     desc: "Every member is identity-verified through a live video call for your safety.",
   },
   {
-    icon: "\u2665",
+    icon: "♥",
     title: "Quality Matches",
     desc: "Our algorithm focuses on compatibility, not volume. Fewer, better connections.",
   },
   {
-    icon: "\u2605",
+    icon: "★",
     title: "Premium Experience",
     desc: "No ads, no bots, no games. A clean, premium dating experience you deserve.",
   },
   {
-    icon: "\u2691",
+    icon: "⚑",
     title: "Safe & Private",
     desc: "End-to-end privacy controls, instant reporting, and a dedicated safety team.",
   },
 ];
 
 const stats = [
-  { value: "50K+", label: "Verified Members" },
-  { value: "12K+", label: "Successful Matches" },
-  { value: "98%", label: "Satisfaction Rate" },
+  { value: "$50K+$", label: "Avg Member Income" },
+  { value: "$12K+$", label: "Premium Dates Booked" },
+  { value: "$98%$", label: "Satisfaction Rate" },
 ];
 
-export default function HomePage() {
+function TiltCard({ title, subtitle, className }: { title: string; subtitle: string; className?: string }) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  const transform = useMemo(() => `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`, [tilt.x, tilt.y]);
+
+  const onMove = (event: MouseEvent<HTMLDivElement>) => {
+    if (window.innerWidth < 1024) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const px = (event.clientX - rect.left) / rect.width;
+    const py = (event.clientY - rect.top) / rect.height;
+    setTilt({ x: (0.5 - py) * 14, y: (px - 0.5) * 14 });
+  };
+
+  return (
+    <div className={`glass-card ${className ?? ""}`} style={{ transform }} onMouseMove={onMove} onMouseLeave={() => setTilt({ x: 0, y: 0 })}>
+      <h3>{title}</h3>
+      <p>{subtitle}</p>
+    </div>
+  );
+}
+
+export default function HomePage() {
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   return (
     <div className="marketing-home">
       <section className="hero-shell">
-        <div className="hero-content">
-          <h1 className="fade-in">
-            Where meaningful
-            <br />
-            connections begin
-          </h1>
-          <p className="fade-in">
-            Elite Match is the premium dating platform for verified singles who are
-            serious about finding real, lasting relationships.
+        <div className="hero-overlay" />
+
+        <div className="hero-copy">
+          <p className="hero-kicker">Elite Match</p>
+          <h1>Start something epic.</h1>
+          <p className="hero-subtitle">
+            Full-bleed, premium matchmaking for ambitious singles ready for real connection.
           </p>
-          <div className="hero-cta fade-in">
+
+          <div className="desktop-cta">
             <Link href="/signup">
-              <Button size="lg">Get Started</Button>
+              <Button size="lg" style={{ borderRadius: 999, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35), 0 20px 40px rgba(230,57,70,0.35)" }}>Create Account</Button>
             </Link>
-            <Link href="/learn">
-              <Button size="lg" variant="secondary">
-                How It Works
-              </Button>
+            <Link href="/login">
+              <Button size="lg" variant="secondary" style={{ borderRadius: 999 }}>Log In</Button>
             </Link>
           </div>
         </div>
 
-        <div
-          className="hero-visual"
-          style={{ transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }}
-          onMouseMove={(event) => {
-            if (window.innerWidth < 1024) return;
-            const rect = event.currentTarget.getBoundingClientRect();
-            const nx = (event.clientY - rect.top) / rect.height - 0.5;
-            const ny = (event.clientX - rect.left) / rect.width - 0.5;
-            setTilt({ x: -(nx * 12), y: ny * 12 });
-          }}
-          onMouseLeave={() => setTilt({ x: 0, y: 0 })}
-        >
-          <div className="profile-card card-a" style={{ transform: `translate3d(${tilt.y * 1.2}px, ${tilt.x * -1.2}px, 30px)` }}>
-            <span className="profile-badge">\u2714 Verified Profiles</span>
-            <h3>Video Verified</h3>
-            <p>Safe & Private</p>
-          </div>
-          <div className="profile-card card-b" style={{ transform: `translate3d(${tilt.y * -0.9}px, ${tilt.x * 0.9}px, 14px)` }}>
-            <h3>Quality Matches</h3>
-            <p>Premium Experience</p>
-          </div>
-          <div className="profile-card card-c" style={{ transform: `translate3d(${tilt.y * 0.6}px, ${tilt.x * -0.6}px, 20px)` }}>
-            <h3>Elite Match</h3>
-            <p>Where meaningful connections begin</p>
-          </div>
+        <div className="stats-bar">
+          {stats.map((s) => (
+            <div key={s.label} className="stat-item">
+              <span>{s.value}</span>
+              <small>{s.label}</small>
+            </div>
+          ))}
         </div>
-      </section>
 
-      <section className="stats-shell">
-        {stats.map((s) => (
-          <div key={s.label} className="stat-item">
-            <div className="stat-value">{s.value}</div>
-            <div className="stat-label">{s.label}</div>
-          </div>
-        ))}
+        <div className="visual-stack">
+          <TiltCard title="Verified People" subtitle="Every profile is video screened." className="card-a" />
+          <TiltCard title="3D-Lite Motion" subtitle="Cards respond to your movement." className="card-b" />
+          <TiltCard title="Privacy First" subtitle="Built-in trust and safety controls." className="card-c" />
+        </div>
+
+        <button className="mobile-launch" onClick={() => setSheetOpen(true)}>
+          Get Started
+        </button>
       </section>
 
       <section className="features-shell">
-        <h2>Why Elite Match?</h2>
+        <h2>Why Elite Match</h2>
         <div className="features-grid">
           {features.map((f) => (
-            <Card key={f.title} className="feature-card" style={{ padding: 28 }}>
+            <article key={f.title} className="feature-card">
               <div className="feature-icon">{f.icon}</div>
-              <h4 style={{ marginBottom: 8 }}>{f.title}</h4>
-              <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.6 }}>{f.desc}</p>
-            </Card>
+              <h4>{f.title}</h4>
+              <p>{f.desc}</p>
+            </article>
           ))}
         </div>
       </section>
 
-      <section className="cta-shell">
-        <h2 style={{ marginBottom: 16 }}>Ready to find your match?</h2>
-        <p>
-          Join thousands of verified singles on Elite Match today.
-        </p>
-        <Link href="/signup">
-          <Button size="lg">Join Now</Button>
-        </Link>
-      </section>
+      {sheetOpen && (
+        <div className="mobile-sheet-wrap" onClick={() => setSheetOpen(false)}>
+          <div className="mobile-sheet" onClick={(event) => event.stopPropagation()}>
+            <div className="sheet-handle" />
+            <h3>Welcome to Elite Match</h3>
+            <p>Choose how you want to begin.</p>
+            <div className="sheet-actions">
+              <Link href="/signup" onClick={() => setSheetOpen(false)}>
+                <Button size="lg" fullWidth style={{ borderRadius: 999 }}>Create Account</Button>
+              </Link>
+              <Link href="/login" onClick={() => setSheetOpen(false)}>
+                <Button size="lg" variant="secondary" fullWidth style={{ borderRadius: 999 }}>Sign In</Button>
+              </Link>
+            </div>
+            <button className="sheet-close" onClick={() => setSheetOpen(false)}>Close</button>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
-        .marketing-home { background: radial-gradient(1200px 500px at 15% -10%, rgba(230, 57, 70, 0.24), transparent 70%), radial-gradient(900px 380px at 90% 0%, rgba(186, 28, 40, 0.18), transparent 70%), linear-gradient(180deg, #09090d 0%, #111119 45%, #151520 100%); }
-        .hero-shell { max-width: 1150px; margin: 0 auto; padding: 92px 24px 70px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 48px; align-items: center; }
-        .hero-content h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 20px; }
-        .hero-content p { font-size: 18px; color: var(--muted); max-width: 480px; margin: 0 0 32px; line-height: 1.6; }
-        .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
-        .hero-visual { position: relative; min-height: 330px; perspective: 1200px; transform-style: preserve-3d; transition: transform 250ms ease; }
-        .profile-card { position: absolute; width: min(340px, 88%); border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.14); padding: 22px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background: linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)); box-shadow: 0 25px 60px rgba(0, 0, 0, 0.36), 0 0 40px rgba(230, 57, 70, 0.15); transition: transform 220ms ease; }
-        .profile-card h3 { margin-bottom: 6px; }
-        .profile-card p { color: var(--muted); font-size: 14px; }
-        .profile-badge { display: inline-flex; padding: 6px 12px; border-radius: var(--radius-full); background: rgba(230, 57, 70, 0.16); border: 1px solid rgba(255, 99, 99, 0.38); margin-bottom: 16px; font-size: 12px; font-weight: 700; }
-        .card-a { top: 0; left: 0; }
-        .card-b { top: 84px; right: 8px; }
-        .card-c { bottom: 0; left: 42px; }
-        .stats-shell { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; max-width: 960px; margin: 0 auto; padding: 24px; }
-        .stat-item { text-align: center; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.06); border-radius: 18px; backdrop-filter: blur(10px); padding: 20px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 20px 40px rgba(0,0,0,0.24); }
-        .stat-value { font-size: 36px; font-weight: 800; color: var(--primary); letter-spacing: -0.02em; }
-        .stat-label { font-size: 14px; color: var(--muted); margin-top: 4px; }
-        .features-shell { max-width: 1080px; margin: 0 auto; padding: 74px 24px; }
-        .features-shell h2 { text-align: center; margin-bottom: 48px; font-size: clamp(1.5rem, 3vw, 2rem); }
-        .features-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
-        .feature-card { background: linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05)); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 18px 34px rgba(0,0,0,0.24); backdrop-filter: blur(10px); transition: transform 200ms ease; }
-        .feature-card:hover { transform: translateY(-6px); }
-        .feature-icon { width: 48px; height: 48px; border-radius: var(--radius-md); background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--primary); margin-bottom: 16px; }
-        .cta-shell { text-align: center; padding: 72px 24px; margin-top: 8px; background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); border-top: 1px solid rgba(255, 255, 255, 0.1); }
-        .cta-shell p { color: var(--muted); font-size: 16px; max-width: 400px; margin: 0 auto 28px; }
-        @media (max-width: 1024px) { .hero-shell { grid-template-columns: 1fr; gap: 24px; padding-top: 76px; } .hero-content { text-align: center; } .hero-content p { margin-left: auto; margin-right: auto; } .hero-cta { justify-content: center; } .features-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 768px) { .hero-shell { padding: 60px 16px 34px; } .hero-visual { min-height: auto; display: flex; flex-direction: column; gap: 14px; transform: none !important; } .profile-card { position: relative; width: 100%; left: auto; right: auto; top: auto; bottom: auto; transform: none !important; border-radius: 18px; } .stats-shell { grid-template-columns: 1fr; padding: 16px; } .features-shell { padding: 56px 16px; } .features-grid { grid-template-columns: 1fr; gap: 14px; } .feature-card:hover { transform: none; } .cta-shell { padding: 58px 16px 68px; border-radius: 24px 24px 0 0; } }
+        .marketing-home { min-height: 100vh; background: var(--bg); color: var(--text); }
+        .hero-shell { position: relative; min-height: 100vh; padding: 24px; background-image: url('https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=2000&q=80'); background-size: cover; background-position: center; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+        .hero-overlay { position: absolute; inset: 0; background: radial-gradient(circle at 50% 120%, rgba(0,0,0,0.92), rgba(0,0,0,0.35) 45%, rgba(0,0,0,0.58)); }
+        .hero-copy { position: relative; z-index: 2; margin-bottom: 110px; max-width: 620px; }
+        .hero-kicker { font-size: 12px; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(255,255,255,0.78); margin-bottom: 12px; }
+        .hero-copy h1 { font-size: clamp(2.1rem, 8vw, 5.2rem); color: #fff; line-height: 0.96; letter-spacing: -0.04em; font-weight: 800; }
+        .hero-subtitle { margin-top: 18px; font-size: clamp(1rem, 2.3vw, 1.3rem); color: rgba(255,255,255,0.86); max-width: 560px; }
+        .desktop-cta { display: flex; gap: 12px; margin-top: 28px; }
+        .stats-bar { position: absolute; left: 24px; right: 24px; bottom: 24px; z-index: 2; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(15px); border-radius: 999px; padding: 16px 22px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .stat-item { text-align: center; color: #fff; display: flex; flex-direction: column; gap: 4px; }
+        .stat-item span { font-size: clamp(1.2rem, 3.5vw, 2rem); font-weight: 800; }
+        .stat-item small { font-size: 12px; letter-spacing: 0.03em; color: rgba(255,255,255,0.78); }
+        .visual-stack { position: absolute; right: 3%; top: 18%; width: min(450px, 42vw); z-index: 2; display: none; }
+        .glass-card { border-radius: 24px; padding: 24px; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(15px); background: rgba(255,255,255,0.05); box-shadow: 0 12px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.18); }
+        .glass-card h3 { color: #fff; margin-bottom: 6px; }
+        .glass-card p { color: rgba(255,255,255,0.78); }
+        .card-b { margin-left: 26px; }
+        .card-c { margin-left: 54px; }
+        .mobile-launch { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 4; border-radius: 999px; padding: 16px; font-weight: 700; color: #fff; background: linear-gradient(120deg, #ff4d5a, #d12836); box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 18px 32px rgba(209,40,54,0.45); }
+        .features-shell { padding: 64px 20px 92px; background: linear-gradient(180deg, rgba(9,9,12,0.96), rgba(19,19,28,0.96)); }
+        :global([data-theme='light']) .features-shell { background: linear-gradient(180deg, rgba(241,245,255,0.9), rgba(228,236,250,0.95)); }
+        .features-shell h2 { text-align: center; margin-bottom: 24px; color: #fff; font-size: clamp(1.6rem, 4vw, 2.2rem); }
+        :global([data-theme='light']) .features-shell h2 { color: #202331; }
+        .features-grid { max-width: 1100px; margin: 0 auto; display: grid; gap: 16px; grid-template-columns: repeat(1, minmax(0,1fr)); }
+        .feature-card { border-radius: 18px; padding: 24px; backdrop-filter: blur(15px); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+        .feature-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,0.12); margin-bottom: 12px; }
+        .feature-card h4 { color: #fff; margin-bottom: 8px; }
+        .feature-card p { color: rgba(255,255,255,0.78); }
+        :global([data-theme='light']) .feature-card { background: rgba(255,255,255,0.58); border-color: rgba(255,255,255,0.7); }
+        :global([data-theme='light']) .feature-card h4, :global([data-theme='light']) .feature-card p { color: #1f2533; }
+        .mobile-sheet-wrap { position: fixed; inset: 0; background: rgba(3,5,8,0.55); backdrop-filter: blur(14px); z-index: 50; display: flex; align-items: flex-end; }
+        .mobile-sheet { width: 100%; border-radius: 24px 24px 0 0; padding: 18px 20px calc(28px + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.08); border-top: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(20px); }
+        .sheet-handle { width: 44px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.45); margin: 0 auto 16px; }
+        .mobile-sheet h3 { color: #fff; margin-bottom: 6px; text-align: center; }
+        .mobile-sheet p { text-align: center; color: rgba(255,255,255,0.74); margin-bottom: 18px; }
+        .sheet-actions { display: grid; gap: 10px; }
+        .sheet-close { display: block; margin: 14px auto 0; color: rgba(255,255,255,0.75); }
+        @media (min-width: 1024px) {
+          .hero-shell { padding: 38px 56px; }
+          .visual-stack { display: block; }
+          .mobile-launch { display: none; }
+          .features-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
+        }
+        @media (max-width: 767px) {
+          .desktop-cta { display: none; }
+          .hero-copy { margin-bottom: 124px; }
+          .stats-bar { border-radius: 20px; grid-template-columns: 1fr; gap: 14px; padding: 16px; }
+        }
       `}</style>
     </div>
   );
