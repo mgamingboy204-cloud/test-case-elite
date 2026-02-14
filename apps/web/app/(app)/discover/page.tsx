@@ -168,10 +168,6 @@ export default function DiscoverPage() {
   }, [swiping, swipeX, handleAction]);
 
   const cardStyle: CSSProperties = {
-    width: "min(92vw, 380px)",
-    height: "clamp(520px, 72vh, 640px)",
-    borderRadius: 30,
-    overflow: "hidden",
     boxShadow: "var(--shadow-xl)",
     position: "relative",
     margin: "0 auto",
