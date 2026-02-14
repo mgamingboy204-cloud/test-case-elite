@@ -3,10 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card } from "@/app/components/ui/Card";
-import { Input } from "@/app/components/ui/Input";
-import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
+import { PremiumButton } from "@/app/components/premium/PremiumButton";
+import { PremiumCard } from "@/app/components/premium/PremiumCard";
+import { PremiumInput } from "@/app/components/premium/PremiumInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
@@ -22,14 +22,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  /* OTP state */
   const [otpRequired, setOtpRequired] = useState(false);
 
   const validate = () => {
     const errs: Record<string, string> = {};
-    if (!/^\d{10}$/.test(phone.replace(/\D/g, "")))
-      errs.phone = "Enter a valid 10-digit phone number";
+    if (!/^\d{10}$/.test(phone.replace(/\D/g, ""))) errs.phone = "Enter a valid 10-digit phone number";
     if (password.length < 8) errs.password = "Password must be at least 8 characters";
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -42,7 +39,7 @@ export default function LoginPage() {
       const loginResult = await apiFetch<{ ok: boolean; otpRequired?: boolean; accessToken?: string }>("/auth/login", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, ""), password, rememberMe: remember, rememberDevice30Days: rememberDevice } as never,
-        auth: "omit",
+        auth: "omit"
       });
       if (loginResult.otpRequired) {
         setOtpRequired(true);
@@ -72,7 +69,7 @@ export default function LoginPage() {
       await apiFetch("/auth/otp/send", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, "") } as never,
-        auth: "omit",
+        auth: "omit"
       });
       addToast("OTP sent to your phone", "info");
     } catch {
@@ -86,7 +83,7 @@ export default function LoginPage() {
       const verifyResult = await apiFetch<{ ok: boolean; accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
         body: { phone: phone.replace(/\D/g, ""), code } as never,
-        auth: "omit",
+        auth: "omit"
       });
       if (verifyResult.accessToken) {
         setAccessToken(verifyResult.accessToken);
@@ -101,23 +98,15 @@ export default function LoginPage() {
   };
 
   return (
-    <Card
-      style={{
-        maxWidth: 420,
-        width: "100%",
-        padding: 0,
-      }}
-    >
-      <div style={{ padding: "32px 28px" }}>
-        <h2 style={{ marginBottom: 4 }}>Welcome back</h2>
-        <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
-          Sign in to your account
-        </p>
+    <div className="premium-page-enter" style={{ width: "min(460px, 100%)" }}>
+      <PremiumCard className="auth-card">
+        <h1>Welcome back</h1>
+        <p className="auth-card__subtitle">Sign in to your account</p>
 
         {!otpRequired ? (
           <>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <Input
+            <div className="auth-form-fields">
+              <PremiumInput
                 label="Phone Number"
                 type="tel"
                 placeholder="1234567890"
@@ -128,7 +117,7 @@ export default function LoginPage() {
                 inputMode="numeric"
               />
               <div style={{ position: "relative" }}>
-                <Input
+                <PremiumInput
                   label="Password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
@@ -136,114 +125,46 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   error={errors.password}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: "absolute",
-                    right: 14,
-                    top: 36,
-                    fontSize: 13,
-                    color: "var(--muted)",
-                    fontWeight: 500,
-                  }}
-                >
+                <button type="button" onClick={() => setShowPassword((s) => !s)} className="auth-toggle-password">
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
 
-              {/* Toggles */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    fontSize: 14,
-                    cursor: "pointer",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={remember}
-                    onChange={(e) => setRemember(e.target.checked)}
-                    style={{ accentColor: "var(--primary)", width: 16, height: 16 }}
-                  />
-                  Remember me
+              <div className="auth-checkboxes">
+                <label>
+                  <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+                  <span>Remember me</span>
                 </label>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    fontSize: 14,
-                    cursor: "pointer",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={rememberDevice}
-                    onChange={(e) => setRememberDevice(e.target.checked)}
-                    style={{ accentColor: "var(--primary)", width: 16, height: 16 }}
-                  />
-                  Remember this device for 30 days
+                <label>
+                  <input type="checkbox" checked={rememberDevice} onChange={(e) => setRememberDevice(e.target.checked)} />
+                  <span>Remember this device for 30 days</span>
                 </label>
               </div>
             </div>
 
-            <Button
-              fullWidth
-              size="lg"
-              loading={loading}
-              onClick={handleLogin}
-              style={{ marginTop: 24 }}
-            >
+            <PremiumButton fullWidth onClick={handleLogin} loading={loading}>
               Sign In
-            </Button>
+            </PremiumButton>
 
-            <div
-              style={{
-                textAlign: "center",
-                marginTop: 20,
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-              }}
-            >
-              <Link
-                href="/otp"
-                style={{ fontSize: 14, color: "var(--primary)", fontWeight: 500 }}
-              >
-                Sign in with OTP instead
-              </Link>
-              <p style={{ fontSize: 14, color: "var(--muted)" }}>
+            <div className="auth-links">
+              <Link href="/otp">Sign in with OTP instead</Link>
+              <p>
                 {"Don't have an account? "}
-                <Link
-                  href="/signup"
-                  style={{ color: "var(--primary)", fontWeight: 600 }}
-                >
-                  Sign Up
-                </Link>
+                <Link href="/signup">Sign Up</Link>
               </p>
             </div>
           </>
         ) : (
-          /* OTP verification */
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <p style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}>
-              Enter the 6-digit code sent to your phone
-            </p>
+          <div className="auth-otp-wrap">
+            <p>Enter the 6-digit code sent to your phone</p>
             <OtpInput onComplete={handleVerifyOtp} disabled={loading} />
             <ResendTimer onResend={handleSendOtp} />
-            <button
-              onClick={() => setOtpRequired(false)}
-              style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}
-            >
+            <button type="button" onClick={() => setOtpRequired(false)} className="auth-back-button">
               Back to login
             </button>
           </div>
         )}
-      </div>
-    </Card>
+      </PremiumCard>
+    </div>
   );
 }

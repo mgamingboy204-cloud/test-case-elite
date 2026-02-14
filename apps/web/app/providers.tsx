@@ -17,7 +17,7 @@ interface ThemeCtx {
   toggle: () => void;
 }
 
-const ThemeContext = createContext<ThemeCtx>({ theme: "light", toggle: () => {} });
+const ThemeContext = createContext<ThemeCtx>({ theme: "dark", toggle: () => {} });
 
 export function useTheme() {
   return useContext(ThemeContext);
@@ -48,7 +48,7 @@ export function useToast() {
 
 /* ── Root Provider ── */
 export function Providers({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   /* Init theme from localStorage or system preference */
