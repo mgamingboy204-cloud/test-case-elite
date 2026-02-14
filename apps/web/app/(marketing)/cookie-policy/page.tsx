@@ -1,3 +1,5 @@
+"use client";
+
 export default function CookiePolicyPage() {
   const sections = [
     { title: "What Are Cookies?", body: "Cookies are small text files stored on your device when you visit our website. They help us provide a better experience." },
