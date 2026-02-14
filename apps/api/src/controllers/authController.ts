@@ -42,6 +42,65 @@ function logSessionEvent(event: string, details: Record<string, unknown>) {
 const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
 const SIXTY_DAYS_MS = 1000 * 60 * 60 * 24 * 60;
 
+function getNextRequiredStep(user: { videoVerificationStatus: string; paymentStatus: string; profileCompletedAt: Date | null }) {
+  if (user.videoVerificationStatus !== "COMPLETED") return "VIDEO_VERIFICATION_REQUIRED";
+  if (user.paymentStatus !== "PAID") return "PAYMENT_REQUIRED";
+  if (!user.profileCompletedAt) return "PROFILE_SETUP_REQUIRED";
+  return "APP_READY";
+}
+
+function getNextRouteFromStatus(user: { videoVerificationStatus: string; paymentStatus: string; profileCompletedAt: Date | null }) {
+  const step = getNextRequiredStep(user);
+  if (step === "VIDEO_VERIFICATION_REQUIRED") return "/onboarding/video-verification";
+  if (step === "PAYMENT_REQUIRED") return "/onboarding/payment";
+  if (step === "PROFILE_SETUP_REQUIRED") return "/onboarding/profile-setup";
+  return "/app";
+}
+
+function buildSessionUserPayload(user: {
+  id: string;
+  phone: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  displayName: string | null;
+  gender: string | null;
+  role: string;
+  isAdmin: boolean;
+  status: string;
+  verifiedAt: Date | null;
+  phoneVerifiedAt: Date | null;
+  onboardingStep: string;
+  videoVerificationStatus: string;
+  paymentStatus: string;
+  profileCompletedAt: Date | null;
+}) {
+  const nextRequiredStep = getNextRequiredStep(user);
+
+  return {
+    id: user.id,
+    phone: user.phone,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    displayName: user.displayName,
+    gender: user.gender,
+    role: user.role,
+    isAdmin: user.isAdmin,
+    status: user.status,
+    verifiedAt: user.verifiedAt,
+    phoneVerifiedAt: user.phoneVerifiedAt,
+    onboardingStep: user.onboardingStep,
+    videoVerificationStatus: user.videoVerificationStatus,
+    paymentStatus: user.paymentStatus,
+    profileCompletedAt: user.profileCompletedAt,
+    onboardingStatus: {
+      nextRequiredStep,
+      nextRoute: getNextRouteFromStatus(user)
+    }
+  };
+}
+
 function applySessionLifetime(
   req: Request,
   options: { rememberDevice30Days?: boolean; rememberMe?: boolean }
@@ -108,24 +167,7 @@ export async function verifyOtp(req: Request, res: Response) {
     return res.json({
       ok: true,
       accessToken,
-      user: {
-        id: user.id,
-        phone: user.phone,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        displayName: user.displayName,
-        gender: user.gender,
-        role: user.role,
-        isAdmin: user.isAdmin,
-        status: user.status,
-        verifiedAt: user.verifiedAt,
-        phoneVerifiedAt: user.phoneVerifiedAt,
-        onboardingStep: user.onboardingStep,
-        videoVerificationStatus: user.videoVerificationStatus,
-        paymentStatus: user.paymentStatus,
-        profileCompletedAt: user.profileCompletedAt
-      }
+      user: buildSessionUserPayload(user)
     });
   } catch (error) {
     if (error instanceof HttpError) throw error;
@@ -193,24 +235,10 @@ export async function login(req: Request, res: Response) {
   return res.json({
     ok: true,
     accessToken,
-    user: {
-      id: result.user.id,
-      phone: result.user.phone,
-      email: result.user.email,
-      firstName: result.user.firstName,
-      lastName: result.user.lastName,
-      displayName: result.user.displayName,
-      gender: result.user.gender,
-      role: result.user.role,
-      isAdmin: result.user.isAdmin,
-      status: result.user.status,
-      verifiedAt: result.user.verifiedAt,
-      phoneVerifiedAt: result.user.phoneVerifiedAt,
-      onboardingStep: result.onboardingStep ?? resolveOnboardingStep(result.user),
-      videoVerificationStatus: result.user.videoVerificationStatus,
-      paymentStatus: result.user.paymentStatus,
-      profileCompletedAt: result.user.profileCompletedAt
-    }
+    user: buildSessionUserPayload({
+      ...result.user,
+      onboardingStep: result.onboardingStep ?? resolveOnboardingStep(result.user)
+    })
   });
 }
 
@@ -278,24 +306,10 @@ export async function whoAmI(req: Request, res: Response) {
 
   if (!user) return res.status(401).json({ message: "Invalid token" });
 
-  return res.json({
-    id: user.id,
-    phone: user.phone,
-    email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    displayName: user.displayName,
-    gender: user.gender,
-    role: user.role,
-    isAdmin: user.isAdmin,
-    status: user.status,
-    verifiedAt: user.verifiedAt,
-    phoneVerifiedAt: user.phoneVerifiedAt,
-    onboardingStep: user.onboardingStep,
-    videoVerificationStatus: user.videoVerificationStatus,
-    paymentStatus: user.paymentStatus,
-    profileCompletedAt: user.profileCompletedAt
-  });
+  return res.json(buildSessionUserPayload({
+    ...user,
+    onboardingStep: user.onboardingStep ?? resolveOnboardingStep(user)
+  }));
 }
 
 export async function devWhoAmI(req: Request, res: Response) {

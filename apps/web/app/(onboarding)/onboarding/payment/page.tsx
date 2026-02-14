@@ -219,7 +219,7 @@ export default function PaymentPage() {
           </p>
           <Badge variant="success">Active</Badge>
           <div style={{ marginTop: 24 }}>
-            <Link href="/onboarding/profile">
+            <Link href="/onboarding/profile-setup">
               <Button size="lg" fullWidth>
                 Set Up Your Profile
               </Button>
