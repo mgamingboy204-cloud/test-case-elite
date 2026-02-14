@@ -7,7 +7,7 @@ import { useSession } from "@/lib/session";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { status, user, refresh } = useSession();
+  const { status, refresh } = useSession();
   const [checkedAdmin, setCheckedAdmin] = useState(false);
 
   useEffect(() => {
@@ -40,7 +40,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (status === "loading" || !checkedAdmin) return null;
   if (status !== "logged-in") return null;
-  if (user?.role !== "ADMIN" && !user?.isAdmin) return null;
 
   return <AdminShell>{children}</AdminShell>;
 }

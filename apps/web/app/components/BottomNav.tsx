@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { CSSProperties } from "react";
+import { useSession } from "@/lib/session";
 
-const tabs = [
+const baseTabs = [
   {
     href: "/discover",
     label: "Discover",
@@ -48,8 +49,21 @@ const tabs = [
   },
 ];
 
+const adminTab = {
+  href: "/admin",
+  label: "Admin",
+  icon: (active: boolean) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? "var(--primary)" : "var(--muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l8 4v6c0 5-3.5 7.5-8 8-4.5-.5-8-3-8-8V7l8-4z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  ),
+};
+
 export function BottomNav() {
   const pathname = usePathname();
+  const { user } = useSession();
+  const tabs = user?.isAdmin || user?.role === "ADMIN" ? [...baseTabs, adminTab] : baseTabs;
 
   const navStyle: CSSProperties = {
     position: "fixed",

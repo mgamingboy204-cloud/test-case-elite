@@ -1,15 +1,15 @@
 import { apiFetch } from "@/lib/api";
-import { computeNextOnboardingRoute } from "@/lib/onboardingRoute";
+import { computeNextRoute } from "@/lib/onboardingRoute";
 import type { SessionUser } from "@/lib/session";
 
 export async function resolvePostAuthRoute(candidateUser?: SessionUser | null) {
   if (candidateUser) {
-    return computeNextOnboardingRoute(candidateUser);
+    return computeNextRoute(candidateUser);
   }
 
   try {
     const me = await apiFetch<SessionUser>("/me", { retryOnUnauthorized: true });
-    return computeNextOnboardingRoute(me);
+    return computeNextRoute(me);
   } catch {
     return "/login";
   }
