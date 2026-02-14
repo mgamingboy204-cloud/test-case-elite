@@ -10,9 +10,9 @@ function onboardingRedirectForStep(step: string) {
     case "PAID":
       return "/onboarding/payment";
     case "PROFILE_PENDING":
-      return "/onboarding/profile";
+      return "/onboarding/profile-setup";
     case "ACTIVE":
-      return "/app/discover";
+      return "/app";
     default:
       return "/onboarding/video-verification";
   }

@@ -10,6 +10,8 @@ import { PremiumInput } from "@/app/components/premium/PremiumInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
+import { resolvePostAuthRoute } from "@/lib/authRouting";
+import type { SessionUser } from "@/lib/session";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,7 +52,7 @@ export default function LoginPage() {
         setAccessToken(loginResult.accessToken);
       }
       addToast("Logged in successfully!", "success");
-      router.push("/discover");
+      router.push(await resolvePostAuthRoute((loginResult as { user?: SessionUser }).user ?? null));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Login failed";
       if (msg.toLowerCase().includes("otp")) {
@@ -89,7 +91,7 @@ export default function LoginPage() {
         setAccessToken(verifyResult.accessToken);
       }
       addToast("Verified!", "success");
-      router.push("/discover");
+      router.push(await resolvePostAuthRoute((verifyResult as { user?: SessionUser }).user ?? null));
     } catch {
       addToast("Invalid OTP", "error");
     } finally {
