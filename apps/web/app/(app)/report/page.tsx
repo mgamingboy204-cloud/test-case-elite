@@ -31,11 +31,16 @@ export default function ReportPage() {
       addToast("Please select a reason", "error");
       return;
     }
+    const reportedUserId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("userId") : null;
+    if (!reportedUserId) {
+      addToast("Missing user to report", "error");
+      return;
+    }
     setLoading(true);
     try {
       await apiFetch("/reports", {
         method: "POST",
-        body: { reason, details } as never,
+        body: { reportedUserId, reason, details: details || null } as never,
       });
       addToast("Report submitted. Thank you.", "success");
       router.push("/discover");

@@ -96,7 +96,7 @@ export default function ProfileWizardPage() {
     try {
       await apiFetch("/profile", {
         method: "PUT",
-        body: { name, age, gender, city, profession, bio, interests, intent, distance } as never,
+        body: { name, age: Number(age), gender: gender.toUpperCase(), city, profession, bioShort: bio, preferences: { interests, intent, distance }, genderPreference: "ALL" } as never,
       });
       await apiFetch("/profile/complete", { method: "POST" });
       addToast("Profile complete!", "success");

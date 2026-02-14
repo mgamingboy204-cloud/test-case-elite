@@ -50,13 +50,39 @@ export default function ProfilePage() {
   const [bio, setBio] = useState("");
   const [city, setCity] = useState("");
   const [profession, setProfession] = useState("");
+  const [age, setAge] = useState(18);
+  const [gender, setGender] = useState("OTHER");
+  const [genderPreference, setGenderPreference] = useState("ALL");
 
   const fetchProfile = async () => {
     setLoading(true);
     setError(false);
     try {
-      await apiFetch("/profile");
-      setProfile(MOCK_PROFILE);
+      const data = await apiFetch<any>("/profile");
+      const serverProfile = data?.profile;
+      const photos = Array.isArray(data?.photos)
+        ? data.photos.map((photo: any, index: number) => ({
+            id: photo.id ?? `${index}`,
+            url: photo.url,
+            primary: index === 0,
+          }))
+        : [];
+      if (!serverProfile) {
+        setProfile(MOCK_PROFILE);
+        return;
+      }
+      setAge(Number(serverProfile.age ?? 18));
+      setGender(String(serverProfile.gender ?? "OTHER"));
+      setGenderPreference(String(serverProfile.genderPreference ?? "ALL"));
+      setProfile({
+        name: String(serverProfile.name ?? ""),
+        age: Number(serverProfile.age ?? 18),
+        city: String(serverProfile.city ?? ""),
+        profession: String(serverProfile.profession ?? ""),
+        bio: String(serverProfile.bioShort ?? ""),
+        photos: photos.length ? photos : MOCK_PROFILE.photos,
+        verified: data?.user?.videoVerificationStatus === "APPROVED",
+      });
     } catch {
       setProfile(MOCK_PROFILE);
     } finally {
@@ -74,6 +100,7 @@ export default function ProfilePage() {
       setBio(profile.bio);
       setCity(profile.city);
       setProfession(profile.profession);
+      setAge(profile.age);
     }
   }, [profile]);
 
@@ -82,9 +109,18 @@ export default function ProfilePage() {
     try {
       await apiFetch("/profile", {
         method: "PUT",
-        body: { name, bio, city, profession } as never,
+        body: {
+          name,
+          age: Number(age),
+          gender,
+          genderPreference,
+          city,
+          profession,
+          bioShort: bio,
+          preferences: {},
+        } as never,
       });
-      setProfile((prev) => (prev ? { ...prev, name, bio, city, profession } : prev));
+      setProfile((prev) => (prev ? { ...prev, name, bio, city, profession, age: Number(age) } : prev));
       setEditing(false);
       addToast("Profile updated!", "success");
     } catch {
@@ -225,6 +261,7 @@ export default function ProfilePage() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input label="Age" type="number" min={18} value={String(age)} onChange={(e) => setAge(Number(e.target.value || 18))} />
             <Input label="City" value={city} onChange={(e) => setCity(e.target.value)} />
             <Input label="Profession" value={profession} onChange={(e) => setProfession(e.target.value)} />
             <Textarea

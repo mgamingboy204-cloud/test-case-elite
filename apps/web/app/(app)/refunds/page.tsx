@@ -30,8 +30,14 @@ export default function RefundsPage() {
     setLoading(true);
     setError(false);
     try {
-      await apiFetch("/refunds/me");
-      setRefund({ eligible: true, status: "NONE" });
+      const data = await apiFetch<any>("/refunds/me");
+      const refunds = Array.isArray(data?.refunds) ? data.refunds : [];
+      const latest = refunds[0];
+      if (!latest) {
+        setRefund({ eligible: true, status: "NONE" });
+      } else {
+        setRefund({ eligible: true, status: latest.status, reason: latest.reason ?? undefined });
+      }
     } catch {
       setRefund({ eligible: true, status: "NONE" });
     } finally {

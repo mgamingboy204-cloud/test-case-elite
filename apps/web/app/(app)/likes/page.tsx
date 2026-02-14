@@ -36,8 +36,17 @@ export default function LikesPage() {
     setLoading(true);
     setError(false);
     try {
-      await apiFetch("/likes/incoming");
-      setLikes(MOCK_LIKES);
+      const data = await apiFetch<any>("/likes/incoming");
+      const incoming = Array.isArray(data?.incoming) ? data.incoming : [];
+      const mapped: IncomingLike[] = incoming.map((item: any) => ({
+        id: item.id,
+        userId: item.fromUser?.id,
+        name: item.fromUser?.profile?.name ?? "Member",
+        city: item.fromUser?.profile?.city ?? "",
+        profession: item.fromUser?.profile?.profession ?? "",
+        photo: item.fromUser?.profile?.photos?.[0]?.url ?? "",
+      })).filter((item: IncomingLike) => Boolean(item.userId));
+      setLikes(mapped);
     } catch {
       setLikes(MOCK_LIKES);
     } finally {
