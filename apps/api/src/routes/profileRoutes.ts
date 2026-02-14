@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ProfileSchema } from "@elite/shared";
+import { ProfileSchema } from "@elite/contracts";
 import { completeProfileHandler, getProfileHandler, updateProfileHandler } from "../controllers/profileController";
 import { requireAuth, requireAuthHeader } from "../middlewares/auth";
 import { validateBody } from "../middlewares/validate";

@@ -1,5 +1,14 @@
 import { Request, Response } from "express";
 import {
+  AuthLogoutResponseSchema,
+  AuthOtpSendResponseSchema,
+  AuthRefreshResponseSchema,
+  AuthRegisterResponseSchema,
+  AuthSuccessSchema,
+  SessionUserSchema
+} from "@elite/contracts";
+import { sendContract } from "../utils/contractResponse";
+import {
   buildRefreshCookieOptions,
   deviceCookieName,
   deviceCookieOptions,
@@ -119,7 +128,7 @@ function applySessionLifetime(
 export async function sendOtp(req: Request, res: Response) {
   const { phone } = req.body as { phone: string };
   await requestOtp(phone);
-  return res.json({ ok: true });
+  return sendContract(res, AuthOtpSendResponseSchema, { ok: true });
 }
 
 export async function verifyOtp(req: Request, res: Response) {
@@ -165,7 +174,7 @@ export async function verifyOtp(req: Request, res: Response) {
     await saveSession(req);
     logSessionEvent("otp-verified", { userId: user.id, sessionId: req.sessionID });
 
-    return res.json({
+    return sendContract(res, AuthSuccessSchema, {
       ok: true,
       accessToken,
       user: buildSessionUserPayload(user)
@@ -187,7 +196,7 @@ export async function register(req: Request, res: Response) {
   req.session.pendingPhone = phone;
 
   await saveSession(req);
-  return res.json({ ok: true, otpRequired: true });
+  return sendContract(res, AuthRegisterResponseSchema, { ok: true, otpRequired: true });
 }
 
 export async function login(req: Request, res: Response) {
@@ -210,7 +219,7 @@ export async function login(req: Request, res: Response) {
     req.session.pendingRememberMe = rememberMe ?? false;
     await requestOtp(phone);
     await saveSession(req);
-    return res.json({ ok: true, otpRequired: true });
+    return sendContract(res, AuthRegisterResponseSchema, { ok: true, otpRequired: true });
   }
 
   applySessionLifetime(req, {
@@ -233,7 +242,7 @@ export async function login(req: Request, res: Response) {
 
   logSessionEvent("login", { userId: result.user.id });
 
-  return res.json({
+  return sendContract(res, AuthSuccessSchema, {
     ok: true,
     accessToken,
     user: buildSessionUserPayload({
@@ -255,7 +264,7 @@ export async function logout(req: Request, res: Response) {
   // Clear refresh cookie (must match options used when setting it)
   res.clearCookie(refreshCookieName, refreshClearOptions);
 
-  return res.json({ ok: true });
+  return sendContract(res, AuthLogoutResponseSchema, { ok: true });
 }
 
 export async function refreshAccessToken(req: Request, res: Response) {
@@ -293,7 +302,7 @@ export async function refreshAccessToken(req: Request, res: Response) {
   const refreshTtlDays = rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
   res.cookie(refreshCookieName, nextRefreshToken, buildRefreshCookieOptions(refreshTtlDays));
 
-  return res.json({ ok: true, accessToken });
+  return sendContract(res, AuthRefreshResponseSchema, { ok: true, accessToken });
 }
 
 export async function whoAmI(req: Request, res: Response) {
@@ -308,7 +317,7 @@ export async function whoAmI(req: Request, res: Response) {
 
   if (!user) return res.status(401).json({ message: "Invalid token" });
 
-  return res.json(buildSessionUserPayload({
+  return sendContract(res, SessionUserSchema, buildSessionUserPayload({
     ...user,
     onboardingStep: user.onboardingStep ?? resolveOnboardingStep(user)
   }));

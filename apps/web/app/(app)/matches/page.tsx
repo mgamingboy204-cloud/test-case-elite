@@ -9,6 +9,7 @@ import { Skeleton } from "@/app/components/ui/Skeleton";
 import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 
 interface Match {
   id: string;
@@ -37,7 +38,7 @@ export default function MatchesPage() {
     setLoading(true);
     setError(false);
     try {
-      const data = await apiFetch<MatchesResponse>("/matches");
+      const data = (await apiFetch(apiEndpoints.matches)) as MatchesResponse;
       setMatches(
         (data.matches ?? []).map((match) => ({
           id: match.id,

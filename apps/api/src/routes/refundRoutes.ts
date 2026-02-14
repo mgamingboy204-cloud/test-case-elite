@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { RefundRequestSchema } from "@elite/shared";
+import { RefundRequestSchema } from "@elite/contracts";
 import { listRefundsHandler, requestRefundHandler } from "../controllers/refundController";
 import { requireAuth, requireAuthHeader } from "../middlewares/auth";
 import { requireActive } from "../middlewares/onboarding";

@@ -9,6 +9,7 @@ import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 
 type RefundRequest = { id: string; status: "PENDING" | "APPROVED" | "DENIED"; reason?: string | null; requestedAt: string; user?: { phone?: string; email?: string | null } };
 
@@ -22,7 +23,7 @@ export default function AdminRefundsPage() {
     setLoading(true);
     setError(false);
     try {
-      const data = await apiFetch<{ refunds: RefundRequest[] }>("/admin/refunds");
+      const data = (await apiFetch(apiEndpoints.adminRefunds)) as { refunds: RefundRequest[] };
       setRefunds(data.refunds || []);
     } catch {
       setError(true);
@@ -35,7 +36,7 @@ export default function AdminRefundsPage() {
 
   const decide = async (refundId: string, action: "approve" | "deny") => {
     try {
-      await apiFetch(`/admin/refunds/${refundId}/${action}`, { method: "POST" });
+      await apiFetch(apiEndpoints.adminRefundAction, { params: { id: refundId, action } });
       addToast(`Refund ${action}d`, "success");
       await load();
     } catch (error) {

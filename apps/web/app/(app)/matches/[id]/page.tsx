@@ -8,6 +8,7 @@ import { Badge } from "@/app/components/ui/Badge";
 import { Button } from "@/app/components/ui/Button";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 
 type MatchRecord = {
   id: string;
@@ -32,7 +33,7 @@ export default function MatchDetailPage() {
 
   const loadMatch = async () => {
     try {
-      const data = await apiFetch<{ matches: MatchRecord[] }>("/matches");
+      const data = (await apiFetch(apiEndpoints.matches)) as { matches: MatchRecord[] };
       setMatch(data.matches.find((entry) => entry.id === matchId) ?? null);
     } catch {
       addToast("Failed to load match.", "error");
@@ -47,7 +48,7 @@ export default function MatchDetailPage() {
     if (!consentGiven) return;
     void (async () => {
       try {
-        const unlock = await apiFetch<{ users: Array<{ id: string; phone: string }> }>(`/phone-unlock/${matchId}`);
+        const unlock = (await apiFetch(apiEndpoints.phoneUnlock, { params: { matchId } })) as { users: Array<{ id: string; phone: string }> };
         setPhoneNumber(unlock.users[0]?.phone ?? null);
       } catch {
         // ignore until both users approve
@@ -58,7 +59,7 @@ export default function MatchDetailPage() {
   const handleConsent = async (response: "YES" | "NO") => {
     setLoading(true);
     try {
-      await apiFetch("/consent/respond", { method: "POST", body: { matchId, response } as never });
+      await apiFetch(apiEndpoints.consentRespond, { body: { matchId, response } as never });
       if (response === "YES") {
         await loadMatch();
         addToast("Consent recorded.", "success");

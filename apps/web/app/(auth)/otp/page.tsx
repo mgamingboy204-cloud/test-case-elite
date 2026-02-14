@@ -9,6 +9,7 @@ import { PremiumButton } from "@/app/components/premium/PremiumButton";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 import { setAccessToken } from "@/lib/authToken";
 import { resolvePostAuthRoute } from "@/lib/authRouting";
 import type { SessionUser } from "@/lib/session";
@@ -27,7 +28,7 @@ export default function OtpPage() {
     setError("");
     setLoading(true);
     try {
-      await apiFetch("/auth/otp/send", { method: "POST", body: { phone: cleaned } as never, auth: "omit" });
+      await apiFetch(apiEndpoints.authOtpSend, { body: { phone: cleaned } as never, auth: "omit" });
       setOtpSent(true);
       addToast("Code sent", "success");
     } catch {
@@ -38,7 +39,7 @@ export default function OtpPage() {
   const handleVerify = async (code: string) => {
     setLoading(true);
     try {
-      const verifyResult = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", { method: "POST", body: { phone: phone.replace(/\D/g, ""), code } as never, auth: "omit" });
+      const verifyResult = await apiFetch(apiEndpoints.authOtpVerify, { body: { phone: phone.replace(/\D/g, ""), code } as never, auth: "omit" });
       if (verifyResult.accessToken) setAccessToken(verifyResult.accessToken);
       router.push(await resolvePostAuthRoute((verifyResult as { user?: SessionUser }).user ?? null));
     } catch {

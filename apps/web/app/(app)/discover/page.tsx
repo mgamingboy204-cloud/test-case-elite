@@ -11,6 +11,7 @@ import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { Button } from "@/app/components/ui/Button";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 import { PremiumSwipeCard } from "@/app/components/discover/PremiumSwipeCard";
 import { ActionDock } from "@/app/components/discover/ActionDock";
 
@@ -74,7 +75,7 @@ export default function DiscoverPage() {
     setError(false);
     try {
       const query = new URLSearchParams({ intent, limit: "24" });
-      const response = await apiFetch<DiscoverResponse>(`/discover?${query.toString()}`);
+      const response = (await apiFetch(apiEndpoints.discover, { params: { query: query.toString() } })) as DiscoverResponse;
       setProfiles(
         (response.items ?? []).map((item) => ({
           id: item.userId,
@@ -110,9 +111,8 @@ export default function DiscoverPage() {
       setSwipeX(direction === "left" || type === "PASS" ? -500 : 500);
 
       try {
-        await apiFetch("/likes", {
-          method: "POST",
-          body: { toUserId: currentProfile.id, type: type === "SUPERLIKE" ? "LIKE" : type } as never,
+        await apiFetch(apiEndpoints.likes, {
+                    body: { toUserId: currentProfile.id, type: type === "SUPERLIKE" ? "LIKE" : type } as never,
         });
       } catch {
         addToast("Could not submit action.", "error");

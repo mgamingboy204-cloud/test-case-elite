@@ -1,16 +1,31 @@
 {
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
     "module": "Node16",
     "target": "ES2020",
     "moduleResolution": "node16",
     "strict": true,
     "esModuleInterop": true,
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "resolveJsonModule": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@elite/contracts": [
+        "../../packages/contracts/src"
+      ],
+      "@elite/shared": [
+        "../../packages/shared/src"
+      ]
+    }
   },
-  "include": ["src"],
-  "exclude": ["prisma", "tests"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "prisma",
+    "tests"
+  ]
 }

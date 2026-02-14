@@ -9,6 +9,7 @@ import { ErrorState } from "@/app/components/ui/States";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 
 type AdminUser = {
   id: string;
@@ -30,7 +31,7 @@ export default function AdminUsersPage() {
 
   const load = async () => {
     setLoading(true); setError(false);
-    try { const data = await apiFetch<{ users: AdminUser[] }>("/admin/users"); setUsers(data.users || []); }
+    try { const data = (await apiFetch(apiEndpoints.adminUsers)) as { users: AdminUser[] }; setUsers(data.users || []); }
     catch { setError(true); }
     finally { setLoading(false); }
   };
@@ -38,7 +39,7 @@ export default function AdminUsersPage() {
   useEffect(() => { void load(); }, []);
 
   const mutate = async (path: string, toast: string) => {
-    try { await apiFetch(path, { method: "POST" }); addToast(toast, "success"); await load(); }
+    try { await apiFetch(apiEndpoints.adminUserAction, { params: (() => { const [, id, action] = path.match(/\/admin\/users\/(.+)\/(.+)/) ?? []; return { id, action }; })() }); addToast(toast, "success"); await load(); }
     catch (error) { addToast(error instanceof Error ? error.message : "Action failed", "error"); }
   };
 

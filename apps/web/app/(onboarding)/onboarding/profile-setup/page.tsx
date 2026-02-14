@@ -10,6 +10,7 @@ import { Button } from "@/app/components/ui/Button";
 import { Chip } from "@/app/components/ui/Badge";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 
 const STEPS = ["Photos", "Basics", "About", "Interests", "Review"] as const;
 const ALL_INTERESTS = ["Travel", "Fitness", "Music", "Cooking", "Reading", "Photography", "Movies", "Art", "Hiking", "Gaming", "Yoga", "Dancing"];
@@ -36,7 +37,7 @@ export default function ProfileWizardPage() {
     const reader = new FileReader();
     reader.onload = async () => {
       try {
-        const result = await apiFetch<{ photo: { id: string; url: string } }>("/photos/upload", { method: "POST", body: { filename: file.name, dataUrl: String(reader.result ?? "") } as never });
+        const result = (await apiFetch(apiEndpoints.photosUpload, { body: { filename: file.name, dataUrl: String(reader.result ?? "") } as never })) as { photo: { id: string; url: string } };
         setPhotos((prev) => [...prev, { id: result.photo.id, url: result.photo.url, primary: prev.length === 0 }]);
       } catch { addToast("Upload failed", "error"); }
     };
@@ -48,8 +49,8 @@ export default function ProfileWizardPage() {
   const handleComplete = async () => {
     setLoading(true);
     try {
-      await apiFetch("/profile", { method: "PUT", body: { displayName: name, age: Number(age), gender, genderPreference: "ALL", city, profession, bioShort: bio, preferences: { interests } } as never });
-      await apiFetch("/profile/complete", { method: "POST" });
+      await apiFetch(apiEndpoints.profilePut, { body: { displayName: name, age: Number(age), gender, genderPreference: "ALL", city, profession, bioShort: bio, preferences: { interests } } as never });
+      await apiFetch(apiEndpoints.profileComplete);
       router.push("/app");
     } catch { addToast("Failed to save profile", "error"); } finally { setLoading(false); }
   };

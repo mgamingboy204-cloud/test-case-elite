@@ -9,6 +9,7 @@ import { PremiumCard } from "@/app/components/premium/PremiumCard";
 import { PremiumInput } from "@/app/components/premium/PremiumInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 import { setAccessToken } from "@/lib/authToken";
 import { resolvePostAuthRoute } from "@/lib/authRouting";
 import type { SessionUser } from "@/lib/session";
@@ -40,13 +41,11 @@ export default function SignupPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await apiFetch("/auth/register", {
-        method: "POST",
+      await apiFetch(apiEndpoints.authRegister, {
         body: { phone: phone.replace(/\D/g, ""), email: email || undefined, password } as never,
         auth: "omit"
       });
-      await apiFetch("/auth/otp/send", {
-        method: "POST",
+      await apiFetch(apiEndpoints.authOtpSend, {
         body: { phone: phone.replace(/\D/g, "") } as never,
         auth: "omit"
       });
@@ -62,11 +61,7 @@ export default function SignupPage() {
   const handleVerifyOtp = async (code: string) => {
     setLoading(true);
     try {
-      const verifyResult = await apiFetch<{ ok: boolean; accessToken?: string }>("/auth/otp/verify", {
-        method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), code } as never,
-        auth: "omit"
-      });
+      const verifyResult = await apiFetch(apiEndpoints.authOtpVerify, { body: { phone: phone.replace(/\D/g, ""), code } as never, auth: "omit" });
       if (verifyResult.accessToken) {
         setAccessToken(verifyResult.accessToken);
       }
@@ -81,8 +76,7 @@ export default function SignupPage() {
 
   const handleResendOtp = async () => {
     try {
-      await apiFetch("/auth/otp/send", {
-        method: "POST",
+      await apiFetch(apiEndpoints.authOtpSend, {
         body: { phone: phone.replace(/\D/g, "") } as never,
         auth: "omit"
       });

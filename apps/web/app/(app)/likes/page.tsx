@@ -9,6 +9,7 @@ import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 
 interface IncomingLike {
   id: string;
@@ -46,7 +47,7 @@ export default function LikesPage() {
     setLoading(true);
     setError(false);
     try {
-      const data = await apiFetch<IncomingLikesResponse>("/likes/incoming");
+      const data = (await apiFetch(apiEndpoints.likesIncoming)) as IncomingLikesResponse;
       setLikes(
         (data.incoming ?? []).map((like) => ({
           id: `${like.fromUserId}-${like.createdAt}`,
@@ -72,9 +73,8 @@ export default function LikesPage() {
   const handleAction = async (like: IncomingLike, type: "LIKE" | "PASS") => {
     setActioning(like.id);
     try {
-      await apiFetch("/likes", {
-        method: "POST",
-        body: { toUserId: like.userId, type } as never,
+      await apiFetch(apiEndpoints.likes, {
+                body: { toUserId: like.userId, type } as never,
       });
       setLikes((prev) => prev.filter((l) => l.id !== like.id));
       addToast(
