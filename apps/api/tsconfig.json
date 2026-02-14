@@ -14,12 +14,17 @@
     "baseUrl": ".",
     "paths": {
       "@elite/contracts": [
-        "../../packages/contracts/src"
+        "../../packages/contracts/dist/index.d.ts"
+      ],
+      "@elite/contracts/*": [
+        "../../packages/contracts/dist/*"
       ]
-    }
+    },
+    "rootDir": "src",
+    "noEmit": false
   },
   "include": [
-    "src"
+    "src/**/*.ts"
   ],
   "exclude": [
     "prisma",

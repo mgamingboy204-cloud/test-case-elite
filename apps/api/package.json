@@ -14,7 +14,8 @@
     "db:cleanup": "tsx scripts/cleanupSeedData.ts",
     "db:reset:dev": "tsx scripts/resetDevDb.ts",
     "prisma:generate": "prisma generate",
-    "prestart": "npm run build"
+    "prestart": "npm run build",
+    "postbuild": "node -e \"require('fs').accessSync('dist/server.js')\""
   },
   "dependencies": {
     "@elite/shared": "file:../../packages/shared",
