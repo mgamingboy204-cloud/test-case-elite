@@ -52,7 +52,7 @@ export default function VideoVerificationPage() {
 
   useEffect(() => {
     if (sessionStatus === "logged-out") {
-      router.replace("/login");
+      router.replace("/auth/login");
       return;
     }
 
@@ -60,7 +60,6 @@ export default function VideoVerificationPage() {
       return;
     }
 
-    setStatus(normalizeStatus(user.videoVerificationStatus));
     void fetchStatus();
   }, [router, sessionStatus, user]);
 
