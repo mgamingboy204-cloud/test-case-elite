@@ -260,8 +260,9 @@ export async function logout(req: Request, res: Response) {
 export async function refreshAccessToken(req: Request, res: Response) {
   const { refreshToken: refreshTokenFromBody } = (req.body ?? {}) as { refreshToken?: string };
 
+  const refreshTokenFromCookieParser = (req as Request & { cookies?: Record<string, string | undefined> }).cookies?.[refreshCookieName];
   const cookies = parseCookies(req.headers.cookie);
-  const refreshToken = refreshTokenFromBody ?? cookies[refreshCookieName];
+  const refreshToken = refreshTokenFromBody ?? refreshTokenFromCookieParser ?? cookies[refreshCookieName];
 
   if (!refreshToken) {
     return res.status(401).json({ message: "Missing refresh token" });
