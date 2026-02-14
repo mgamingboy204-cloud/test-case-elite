@@ -39,7 +39,7 @@ describe("Login OTP flow", () => {
       .mockResolvedValueOnce({ otpRequired: true })
       .mockResolvedValueOnce({ ok: true, accessToken: "token" })
       .mockResolvedValueOnce({
-        videoVerificationStatus: "COMPLETED",
+        videoVerificationStatus: "APPROVED",
         paymentStatus: "PENDING",
         profileCompletedAt: null
       });

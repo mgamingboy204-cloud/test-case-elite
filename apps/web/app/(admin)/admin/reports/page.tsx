@@ -7,6 +7,7 @@ import { Skeleton } from "@/app/components/ui/Skeleton";
 import { ErrorState, EmptyState } from "@/app/components/ui/States";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 
 type Report = { id: string; reason: string; details?: string | null; createdAt: string; reporter?: { phone?: string }; reportedUser?: { phone?: string } };
 
@@ -19,7 +20,7 @@ export default function AdminReportsPage() {
     setLoading(true);
     setError(false);
     try {
-      const data = await apiFetch<{ reports: Report[] }>("/admin/reports");
+      const data = (await apiFetch(apiEndpoints.adminReports)) as { reports: Report[] };
       setReports(data.reports || []);
     } catch {
       setError(true);

@@ -8,6 +8,7 @@ import { Button } from "@/app/components/ui/Button";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { useTheme, useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 import { clearAccessToken } from "@/lib/authToken";
 import { useSession } from "@/lib/session";
 
@@ -19,7 +20,7 @@ export default function SettingsPage() {
 
   const handleLogout = async () => {
     try {
-      await apiFetch("/auth/logout", { method: "POST" });
+      await apiFetch(apiEndpoints.authLogout);
     } catch {
       /* stub */
     }

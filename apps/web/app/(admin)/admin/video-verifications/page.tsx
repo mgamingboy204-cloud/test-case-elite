@@ -12,6 +12,7 @@ import { PageHeader } from "@/app/components/ui/PageHeader";
 import { Modal } from "@/app/components/ui/Modal";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 
 type VStatus = "REQUESTED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED";
 type VerificationRequest = { id: string; status: VStatus; createdAt: string; meetUrl?: string | null; verificationLink?: string | null; user: { id: string; phone: string; email?: string | null } };
@@ -33,7 +34,7 @@ export default function AdminVideoVerificationsPage() {
     setError(false);
     try {
       const query = statusFilter === "ALL" ? "" : `?status=${statusFilter}`;
-      const data = await apiFetch<{ requests: VerificationRequest[] }>(`/admin/verification-requests${query}`);
+      const data = (await apiFetch(apiEndpoints.adminVerificationRequests, { params: { query } })) as { requests: VerificationRequest[] };
       setRequests(data.requests || []);
     } catch {
       setError(true);
@@ -52,7 +53,7 @@ export default function AdminVideoVerificationsPage() {
       return;
     }
     try {
-      await apiFetch(`/admin/verification-requests/${requestId}/start`, { method: "POST", body: { meetUrl: meetLink.trim() } as never });
+      await apiFetch(apiEndpoints.adminVerificationStart, { params: { id: requestId }, body: { meetUrl: meetLink.trim() } as never });
       addToast("Verification started", "success");
       setMeetModal({ open: false, requestId: "" });
       setMeetLink("");
@@ -64,7 +65,7 @@ export default function AdminVideoVerificationsPage() {
 
   const handleApprove = async (requestId: string) => {
     try {
-      await apiFetch(`/admin/verification-requests/${requestId}/approve`, { method: "POST" });
+      await apiFetch(apiEndpoints.adminVerificationApprove, { params: { id: requestId } });
       addToast("Approved", "success");
       await load();
     } catch (error) {
@@ -74,7 +75,7 @@ export default function AdminVideoVerificationsPage() {
 
   const handleReject = async () => {
     try {
-      await apiFetch(`/admin/verification-requests/${rejectModal.requestId}/reject`, { method: "POST", body: { reason: rejectReason } as never });
+      await apiFetch(apiEndpoints.adminVerificationReject, { params: { id: rejectModal.requestId }, body: { reason: rejectReason } as never });
       addToast("Rejected", "success");
       setRejectModal({ open: false, requestId: "" });
       setRejectReason("");

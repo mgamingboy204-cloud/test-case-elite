@@ -2,32 +2,13 @@
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { apiFetch, refreshAccessToken } from "./api";
+import { apiEndpoints } from "./apiEndpoints";
 import { clearAccessToken, getAccessToken } from "./authToken";
 
 export type SessionStatus = "loading" | "logged-in" | "logged-out";
 
-export type SessionUser = {
-  id: string;
-  phone: string;
-  role: "USER" | "ADMIN";
-  isAdmin: boolean;
-  status: string;
-  email?: string | null;
-  verifiedAt?: string | null;
-  phoneVerifiedAt?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  displayName?: string | null;
-  gender?: string | null;
-  onboardingStep?: string | null;
-  videoVerificationStatus?: string | null;
-  paymentStatus?: string | null;
-  profileCompletedAt?: string | null;
-  onboardingStatus?: {
-    nextRequiredStep?: string;
-    nextRoute?: string;
-  } | null;
-};
+export type SessionUser = import("@elite/contracts").SessionUser;
+
 
 type AuthContextValue = {
   status: SessionStatus;
@@ -43,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUser = useCallback(async () => {
     try {
-      const me = await apiFetch<SessionUser>("/me", { retryOnUnauthorized: true });
+      const me = await apiFetch(apiEndpoints.me, { retryOnUnauthorized: true });
       setUser(me);
       setStatus("logged-in");
       return me;
@@ -73,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!mounted) return;
       try {
-        const me = await apiFetch<SessionUser>("/me", { retryOnUnauthorized: true });
+        const me = await apiFetch(apiEndpoints.me, { retryOnUnauthorized: true });
         if (!mounted) return;
         setUser(me);
         setStatus("logged-in");

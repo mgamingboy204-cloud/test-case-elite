@@ -11,6 +11,7 @@ import { ErrorState } from "@/app/components/ui/States";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 
 interface RefundStatus {
   eligible: boolean;
@@ -30,7 +31,7 @@ export default function RefundsPage() {
     setLoading(true);
     setError(false);
     try {
-      await apiFetch("/refunds/me");
+      await apiFetch(apiEndpoints.refundsMe);
       setRefund({ eligible: true, status: "NONE" });
     } catch {
       setRefund({ eligible: true, status: "NONE" });
@@ -50,9 +51,8 @@ export default function RefundsPage() {
     }
     setRequesting(true);
     try {
-      await apiFetch("/refunds/request", {
-        method: "POST",
-        body: { reason } as never,
+      await apiFetch(apiEndpoints.refundsRequest, {
+                body: { reason } as never,
       });
       setRefund((prev) => (prev ? { ...prev, status: "PENDING" } : prev));
       addToast("Refund requested!", "success");

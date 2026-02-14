@@ -1,18 +1,15 @@
 {
-  "name": "@elite/shared",
+  "name": "@elite/contracts",
   "version": "0.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "lint": "echo 'no lint'",
-    "dev": "tsc -p tsconfig.json --watch"
+    "lint": "echo 'no lint'"
   },
   "dependencies": {
-    "next": "14.2.35",
-    "zod": "^3.23.8",
-    "@elite/contracts": "*"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "typescript": "^5.4.5",

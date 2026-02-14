@@ -10,6 +10,7 @@ import { Button } from "@/app/components/ui/Button";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 
 const REASONS = [
   { value: "inappropriate", label: "Inappropriate behavior" },
@@ -45,9 +46,8 @@ export default function ReportPage() {
     }
     setLoading(true);
     try {
-      await apiFetch("/reports", {
-        method: "POST",
-        body: { reportedUserId: reportedUserId.trim(), reason, details } as never,
+      await apiFetch(apiEndpoints.reports, {
+                body: { reportedUserId: reportedUserId.trim(), reason, details } as never,
       });
       addToast("Report submitted. Thank you.", "success");
       router.push("/discover");

@@ -8,6 +8,7 @@ import { Button } from "@/app/components/ui/Button";
 import { Badge } from "@/app/components/ui/Badge";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 
 const benefits = [
   "Unlimited swipes and likes",
@@ -30,9 +31,8 @@ export default function PaymentPage() {
     if (!coupon.trim()) return;
     setCouponLoading(true);
     try {
-      await apiFetch("/payments/coupon/validate", {
-        method: "POST",
-        body: { code: coupon } as never,
+      await apiFetch(apiEndpoints.paymentsCouponValidate, {
+                body: { code: coupon } as never,
       });
       setCouponValid(true);
       addToast("Coupon applied!", "success");
@@ -47,7 +47,7 @@ export default function PaymentPage() {
   const handleStartPayment = async () => {
     setLoading(true);
     try {
-      await apiFetch("/payments/mock/start", { method: "POST" });
+      await apiFetch(apiEndpoints.paymentsMockStart);
       setStep("confirm");
     } catch {
       addToast("Payment initialization failed", "error");
@@ -59,7 +59,7 @@ export default function PaymentPage() {
   const handleConfirmPayment = async () => {
     setLoading(true);
     try {
-      await apiFetch("/payments/mock/confirm", { method: "POST" });
+      await apiFetch(apiEndpoints.paymentsMockConfirm);
       setStep("done");
       addToast("Payment successful!", "success");
     } catch {
