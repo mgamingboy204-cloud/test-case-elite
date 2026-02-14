@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { ConsentSchema } from "@elite/shared";
+import { ConsentSchema } from "@elite/contracts";
 import { listMatchesHandler, phoneUnlockHandler, respondConsentHandler } from "../controllers/matchController";
 import { requireAuth, requireAuthHeader } from "../middlewares/auth";
 import { requireActive } from "../middlewares/onboarding";

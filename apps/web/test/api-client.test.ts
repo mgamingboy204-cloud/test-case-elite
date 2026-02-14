@@ -1,6 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { apiEndpoints } from "../lib/apiEndpoints";
 
 const fetchMock = vi.fn();
+
+const mockSessionUser = {
+  id: "u1",
+  phone: "5551234567",
+  email: null,
+  firstName: null,
+  lastName: null,
+  displayName: null,
+  gender: null,
+  role: "USER",
+  isAdmin: false,
+  status: "PENDING",
+  verifiedAt: null,
+  phoneVerifiedAt: null,
+  onboardingStep: "PHONE_VERIFIED",
+  videoVerificationStatus: "NOT_REQUESTED",
+  paymentStatus: "NOT_STARTED",
+  profileCompletedAt: null,
+  onboardingStatus: { nextRequiredStep: "VIDEO_VERIFICATION_REQUIRED", nextRoute: "/onboarding/video-verification" }
+};
 
 describe("apiFetch client", () => {
   const originalApiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -12,7 +33,7 @@ describe("apiFetch client", () => {
     fetchMock.mockResolvedValue({
       ok: true,
       headers: { get: () => "application/json" },
-      json: async () => ({ ok: true })
+      json: async () => mockSessionUser
     });
     vi.stubGlobal("fetch", fetchMock);
   });
@@ -27,7 +48,7 @@ describe("apiFetch client", () => {
     const { setAccessToken } = await import("../lib/authToken");
 
     setAccessToken("test-token");
-    await apiFetch("/me");
+    await apiFetch(apiEndpoints.me);
 
     const call = fetchMock.mock.calls[0];
     expect(call?.[0]).toBe("https://api.example.com/me");
@@ -66,18 +87,18 @@ describe("apiFetch client", () => {
         ok: true,
         status: 200,
         headers: { get: () => "application/json" },
-        json: async () => ({ ok: true, result: "a" })
+        json: async () => mockSessionUser
       })
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
         headers: { get: () => "application/json" },
-        json: async () => ({ ok: true, result: "b" })
+        json: async () => mockSessionUser
       });
 
     await Promise.all([
-      apiFetch("/me", { retryOnUnauthorized: true }),
-      apiFetch("/me", { retryOnUnauthorized: true })
+      apiFetch(apiEndpoints.me, { retryOnUnauthorized: true }),
+      apiFetch(apiEndpoints.me, { retryOnUnauthorized: true })
     ]);
 
     const refreshCalls = fetchMock.mock.calls.filter((call) => call[0] === "https://api.example.com/auth/token/refresh");
@@ -92,8 +113,14 @@ describe("apiFetch client", () => {
 
   it("includes credentials for logout", async () => {
     const { apiFetch } = await import("../lib/api");
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: () => "application/json" },
+      json: async () => ({ ok: true })
+    });
 
-    await apiFetch("/auth/logout", { method: "POST", auth: "omit" });
+    await apiFetch(apiEndpoints.authLogout, { auth: "omit" });
 
     const call = fetchMock.mock.calls[0];
     const options = call?.[1] as RequestInit;

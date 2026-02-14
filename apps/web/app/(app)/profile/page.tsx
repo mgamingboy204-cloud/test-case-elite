@@ -11,6 +11,7 @@ import { Skeleton } from "@/app/components/ui/Skeleton";
 import { ErrorState } from "@/app/components/ui/States";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 import { clearAccessToken } from "@/lib/authToken";
 
 interface UserProfile {
@@ -44,7 +45,7 @@ export default function ProfilePage() {
     setLoading(true);
     setError(false);
     try {
-      const data = await apiFetch<{ profile?: any; photos?: Array<{ id: string; url: string }> }>("/profile");
+      const data = (await apiFetch(apiEndpoints.profileGet)) as { profile?: any; photos?: Array<{ id: string; url: string }> };
       const p = data.profile;
       const mapped: UserProfile = {
         name: p?.name || "",
@@ -79,9 +80,8 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await apiFetch("/profile", {
-        method: "PUT",
-        body: {
+      await apiFetch(apiEndpoints.profilePut, {
+                body: {
           displayName: name,
           age: Number(age),
           city,
@@ -103,7 +103,7 @@ export default function ProfilePage() {
   };
 
   const handleLogout = async () => {
-    try { await apiFetch("/auth/logout", { method: "POST" }); } catch {}
+    try { await apiFetch(apiEndpoints.authLogout); } catch {}
     clearAccessToken();
     addToast("Logged out", "info");
     router.push("/login");

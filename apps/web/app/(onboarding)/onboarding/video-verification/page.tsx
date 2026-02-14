@@ -10,9 +10,10 @@ import { Skeleton } from "@/app/components/ui/Skeleton";
 import { ErrorState } from "@/app/components/ui/States";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints, normalizeStatus } from "@/lib/apiEndpoints";
 import { useSession } from "@/lib/session";
 
-type VStatus = "NOT_REQUESTED" | "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED";
+type VStatus = import("@elite/contracts").VideoVerificationStatus;
 
 const statusConfig: Record<VStatus, { label: string; variant: "default" | "primary" | "success" | "danger" | "warning"; desc: string }> = {
   NOT_REQUESTED: { label: "Not Started", variant: "default", desc: "Complete a quick video call to verify your identity." },
@@ -22,11 +23,6 @@ const statusConfig: Record<VStatus, { label: string; variant: "default" | "prima
   REJECTED: { label: "Rejected", variant: "danger", desc: "Your verification was not approved. Please contact support." },
 };
 
-const validStatuses: VStatus[] = ["NOT_REQUESTED", "REQUESTED", "IN_PROGRESS", "COMPLETED", "REJECTED"];
-
-function normalizeStatus(value?: string | null): VStatus {
-  return validStatuses.includes(value as VStatus) ? (value as VStatus) : "NOT_REQUESTED";
-}
 
 export default function VideoVerificationPage() {
   const router = useRouter();
@@ -41,7 +37,7 @@ export default function VideoVerificationPage() {
     setLoading(true);
     setError(false);
     try {
-      const me = await apiFetch<{ videoVerificationStatus?: VStatus }>("/me", { retryOnUnauthorized: true });
+      const me = await apiFetch(apiEndpoints.me, { retryOnUnauthorized: true });
       setStatus(normalizeStatus(me.videoVerificationStatus));
     } catch {
       setError(true);
@@ -66,7 +62,7 @@ export default function VideoVerificationPage() {
   const handleRequest = async () => {
     setRequesting(true);
     try {
-      await apiFetch("/verification-requests", { method: "POST" });
+      await apiFetch(apiEndpoints.verificationCreate);
       setStatus("PENDING");
       addToast("Verification requested!", "success");
     } catch {

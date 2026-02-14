@@ -11,6 +11,7 @@ import { PageHeader } from "@/app/components/ui/PageHeader";
 import { Avatar } from "@/app/components/ui/Avatar";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { apiEndpoints } from "@/lib/apiEndpoints";
 
 type DashboardStats = { totalUsers: number; activeUsers: number; pendingVerificationRequests: number; rejectedVerificationRequests: number };
 type AdminUser = { id: string; phone: string; status: "APPROVED" | "PENDING" | "REJECTED" | "BANNED"; createdAt: string; profile?: { name?: string | null } | null; displayName?: string | null };
@@ -27,8 +28,8 @@ export default function AdminDashboardPage() {
     setError(false);
     try {
       const [dashboard, usersResult] = await Promise.all([
-        apiFetch<DashboardStats>("/admin/dashboard"),
-        apiFetch<{ users: AdminUser[] }>("/admin/users")
+        apiFetch(apiEndpoints.adminDashboard) as Promise<DashboardStats>,
+        apiFetch(apiEndpoints.adminUsers) as Promise<{ users: AdminUser[] }>
       ]);
       setStats(dashboard);
       setUsers((usersResult.users || []).slice(0, 8));
@@ -43,7 +44,7 @@ export default function AdminDashboardPage() {
 
   const updateStatus = async (userId: string, next: "approve" | "reject") => {
     try {
-      await apiFetch(`/admin/users/${userId}/${next}`, { method: "POST" });
+      await apiFetch(apiEndpoints.adminUserAction, { params: { id: userId, action: next } });
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, status: next === "approve" ? "APPROVED" : "REJECTED" } : u)));
       addToast(`User ${next}d`, "success");
     } catch (error) {

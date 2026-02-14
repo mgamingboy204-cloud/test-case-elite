@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@elite/contracts": ["packages/contracts/dist/index.d.ts"],
+      "@elite/contracts/*": ["packages/contracts/dist/*"]
+    }
+  }
+}

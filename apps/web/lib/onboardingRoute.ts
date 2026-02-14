@@ -19,7 +19,7 @@ function canonicalizeRoute(route?: string | null) {
 }
 
 function isVideoVerified(user: SessionUser) {
-  return user.videoVerificationStatus === "COMPLETED" || user.videoVerificationStatus === "APPROVED";
+  return user.videoVerificationStatus === "APPROVED";
 }
 
 export function computeNextRoute(user: SessionUser | null): string {

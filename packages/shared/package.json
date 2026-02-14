@@ -4,14 +4,15 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run build -w @elite/contracts && tsc -p tsconfig.json",
     "test": "vitest run",
     "lint": "echo 'no lint'",
     "dev": "tsc -p tsconfig.json --watch"
   },
   "dependencies": {
     "next": "14.2.35",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@elite/contracts": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.4.5",

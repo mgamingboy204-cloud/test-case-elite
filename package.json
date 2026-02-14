@@ -7,8 +7,8 @@
   ],
   "scripts": {
     "dev": "concurrently -n api,web -c blue,green \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
-    "build": "npm run build -w packages/shared && npm run build -w apps/api && npm run build -w apps/web",
-    "test": "npm run build -w packages/shared && npm run prisma:generate -w apps/api && npm run test -w apps/api && npm run test -w packages/shared",
+    "build": "npm run build -w @elite/contracts && npm run build -w @elite/shared && npm run build -w @elite/api && npm run build -w @elite/web",
+    "test": "npm run build -w packages/contracts && npm run build -w packages/shared && npm run prisma:generate -w apps/api && npm run test -w apps/api && npm run test -w packages/shared && npm run test -w apps/web",
     "lint": "npm run lint -w apps/api && npm run lint -w apps/web",
     "db:migrate": "npm run db:migrate -w apps/api",
     "db:seed": "npm run db:seed -w apps/api"
