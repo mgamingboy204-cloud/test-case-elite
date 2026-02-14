@@ -10,17 +10,28 @@ type RouteGuardProps = {
   requireAdmin?: boolean;
   requireActive?: boolean;
   allowedOnboardingSteps?: string[];
+  autoRefreshMs?: number;
 };
 
 export default function RouteGuard({
   children,
   requireAdmin = false,
   requireActive = false,
-  allowedOnboardingSteps
+  allowedOnboardingSteps,
+  autoRefreshMs = 0
 }: RouteGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { status, user } = useSession();
+  const { status, user, refresh } = useSession();
+
+
+  useEffect(() => {
+    if (!autoRefreshMs || status !== "logged-in") return;
+    const timer = window.setInterval(() => {
+      void refresh();
+    }, autoRefreshMs);
+    return () => window.clearInterval(timer);
+  }, [autoRefreshMs, status, refresh]);
 
   useEffect(() => {
     if (status === "logged-out") {

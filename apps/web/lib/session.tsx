@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, ReactNode, useContext, useEffect, useMemo, useRef } from "react";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, refreshAccessToken } from "./api";
 import { clearAccessToken, getAccessToken } from "./authToken";
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       : "logged-out";
   const user = meQuery.data ?? null;
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try {
       const result = await queryClient.fetchQuery({
         queryKey: queryKeys.me,
@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       return null;
     }
-  };
+  }, [queryClient]);
 
   const value = useMemo(() => ({ status, user, refresh }), [status, user, refresh]);
 

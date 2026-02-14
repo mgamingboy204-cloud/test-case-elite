@@ -4,6 +4,7 @@ import React from "react"
 
 import Link from "next/link";
 import { useTheme } from "@/app/providers";
+import RouteGuard from "@/app/components/RouteGuard";
 
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const { theme, toggle } = useTheme();
@@ -56,7 +57,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
           padding: "32px 24px 80px",
         }}
       >
-        {children}
+        <RouteGuard autoRefreshMs={8000} allowedOnboardingSteps={["PHONE_VERIFIED", "VIDEO_VERIFICATION_PENDING", "VIDEO_VERIFIED", "PAYMENT_PENDING", "PAID", "PROFILE_PENDING"]}>{children}</RouteGuard>
       </main>
     </div>
   );

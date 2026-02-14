@@ -9,14 +9,19 @@ import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { setAccessToken } from "@/lib/authToken";
+import { getDefaultRoute } from "@/lib/onboarding";
+import { useSession } from "@/lib/session";
 
 export default function OtpPage() {
   const router = useRouter();
   const { addToast } = useToast();
+  const { refresh } = useSession();
   const [phone, setPhone] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSendOtp = async () => {
     const cleaned = phone.replace(/\D/g, "");
@@ -44,13 +49,17 @@ export default function OtpPage() {
   const handleVerify = async (code: string) => {
     setLoading(true);
     try {
-      await apiFetch("/auth/otp/verify", {
+      const verificationResponse = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), code } as never,
+        body: { phone: phone.replace(/\D/g, ""), code, rememberMe } as never,
         auth: "omit",
       });
+      if (verificationResponse?.accessToken) {
+        setAccessToken(verificationResponse.accessToken);
+      }
+      const user = await refresh();
       addToast("Verified!", "success");
-      router.push("/discover");
+      router.push(getDefaultRoute(user));
     } catch {
       addToast("Invalid code", "error");
     } finally {
@@ -90,6 +99,15 @@ export default function OtpPage() {
           </>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={{ accentColor: "var(--primary)", width: 16, height: 16 }}
+              />
+              Keep me signed in on this device
+            </label>
             <OtpInput onComplete={handleVerify} disabled={loading} />
             <ResendTimer onResend={handleSendOtp} />
           </div>
