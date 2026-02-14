@@ -22,17 +22,10 @@ const statusConfig: Record<VStatus, { label: string; variant: "default" | "prima
   REJECTED: { label: "Rejected", variant: "danger", desc: "Your verification was not approved. Please contact support." },
 };
 
-const statusAliases: Record<string, VStatus> = {
-  REQUESTED: "PENDING",
-  COMPLETED: "APPROVED",
-};
+const validStatuses: VStatus[] = ["NOT_REQUESTED", "REQUESTED", "IN_PROGRESS", "COMPLETED", "REJECTED"];
 
 function normalizeStatus(value?: string | null): VStatus {
-  if (!value) return "NOT_REQUESTED";
-  if (value in statusConfig) {
-    return value as VStatus;
-  }
-  return statusAliases[value] ?? "NOT_REQUESTED";
+  return validStatuses.includes(value as VStatus) ? (value as VStatus) : "NOT_REQUESTED";
 }
 
 export default function VideoVerificationPage() {
@@ -48,7 +41,7 @@ export default function VideoVerificationPage() {
     setLoading(true);
     setError(false);
     try {
-      const me = await apiFetch<{ videoVerificationStatus?: string }>("/me", { retryOnUnauthorized: true });
+      const me = await apiFetch<{ videoVerificationStatus?: VStatus }>("/me", { retryOnUnauthorized: true });
       setStatus(normalizeStatus(me.videoVerificationStatus));
     } catch {
       setError(true);
@@ -59,7 +52,7 @@ export default function VideoVerificationPage() {
 
   useEffect(() => {
     if (sessionStatus === "logged-out") {
-      router.replace("/login");
+      router.replace("/auth/login");
       return;
     }
 
@@ -67,7 +60,6 @@ export default function VideoVerificationPage() {
       return;
     }
 
-    setStatus(normalizeStatus(user.videoVerificationStatus));
     void fetchStatus();
   }, [router, sessionStatus, user]);
 
