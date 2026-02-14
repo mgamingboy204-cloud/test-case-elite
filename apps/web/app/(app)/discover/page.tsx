@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react"
+import React from "react";
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Tabs } from "@/app/components/ui/Tabs";
@@ -165,10 +165,6 @@ export default function DiscoverPage() {
   }, [swiping, swipeX, handleAction]);
 
   const cardStyle: CSSProperties = {
-    width: "min(92vw, 380px)",
-    height: "clamp(520px, 72vh, 640px)",
-    borderRadius: 30,
-    overflow: "hidden",
     boxShadow: "var(--shadow-xl)",
     position: "relative",
     margin: "0 auto",
@@ -199,11 +195,11 @@ export default function DiscoverPage() {
 
   return (
     <div
+      className="pb-[calc(var(--bottom-nav-h,_72px)_+_env(safe-area-inset-bottom)_+_12px)] md:pb-0"
       style={{
         display: "flex",
         flexDirection: "column",
         minHeight: "calc(100vh - 56px - 60px)",
-        overflow: "hidden",
       }}
     >
       {/* Top header row */}
@@ -262,25 +258,10 @@ export default function DiscoverPage() {
 
       {/* Card area */}
       <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "8px 0",
-          position: "relative",
-        }}
+        className="relative flex flex-col items-center justify-center px-3 py-3 md:flex-1 md:px-0 md:py-2"
       >
         {loading ? (
-          <div
-            style={{
-              width: "min(92vw, 380px)",
-              height: "clamp(520px, 72vh, 640px)",
-              borderRadius: 30,
-              overflow: "hidden",
-            }}
-          >
+          <div className="h-[clamp(440px,60vh,560px)] w-[min(92vw,360px)] overflow-hidden rounded-[28px] md:h-[clamp(520px,72vh,640px)] md:w-[min(92vw,380px)] md:rounded-[30px]">
             <Skeleton width="100%" height="100%" radius={30} />
           </div>
         ) : error ? (
@@ -303,6 +284,7 @@ export default function DiscoverPage() {
           /* Swipe Card */
           <div
             ref={cardRef}
+            className="h-[clamp(440px,60vh,560px)] w-[min(92vw,360px)] overflow-hidden rounded-[28px] md:h-[clamp(520px,72vh,640px)] md:w-[min(92vw,380px)] md:rounded-[30px]"
             style={cardStyle}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
@@ -378,22 +360,32 @@ export default function DiscoverPage() {
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "flex-end",
-                padding: "0 24px 24px",
+                padding: "0 18px 18px",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <h2 style={{ color: "#fff", margin: 0, fontSize: 26 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, maxWidth: "100%" }}>
+                <h2 style={{ color: "#fff", margin: 0, fontSize: 26, maxWidth: "75%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {currentProfile.name}, {currentProfile.age}
                 </h2>
                 {currentProfile.verified && (
                   <Badge variant="success" style={{ fontSize: 11 }}>Verified</Badge>
                 )}
-                
               </div>
-              <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, marginBottom: 4 }}>
+              <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, marginBottom: 4, maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {currentProfile.city}
               </p>
-              <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>
+              <p
+                style={{
+                  color: "rgba(255,255,255,0.7)",
+                  fontSize: 14,
+                  margin: 0,
+                  maxWidth: "100%",
+                  overflow: "hidden",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                }}
+              >
                 {currentProfile.bio}
               </p>
             </div>

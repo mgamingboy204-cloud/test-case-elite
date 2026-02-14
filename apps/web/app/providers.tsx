@@ -8,6 +8,8 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { AuthProvider } from "@/lib/session";
+import { AppRouteGuard } from "@/app/components/auth/AppRouteGuard";
 
 /* ── Theme ── */
 type Theme = "light" | "dark";
@@ -87,7 +89,10 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeContext.Provider value={{ theme, toggle }}>
       <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
-        {children}
+        <AuthProvider>
+          <AppRouteGuard />
+          {children}
+        </AuthProvider>
         <ToastContainer toasts={toasts} removeToast={removeToast} />
       </ToastContext.Provider>
     </ThemeContext.Provider>

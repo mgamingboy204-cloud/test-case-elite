@@ -17,7 +17,7 @@ export function Card({ children, style, className, onClick }: CardProps) {
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       style={{
-        background: "var(--panel)",
+        background: "linear-gradient(160deg, var(--surface), color-mix(in oklab, var(--surface-2) 44%, transparent))",
         borderRadius: "var(--radius-lg)",
         border: "1px solid var(--border)",
         boxShadow: "var(--shadow)",

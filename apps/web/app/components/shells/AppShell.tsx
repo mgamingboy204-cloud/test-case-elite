@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/app/providers";
 import { BottomNav } from "@/app/components/BottomNav";
+import { useSession } from "@/lib/session";
 import type { ReactNode, CSSProperties } from "react";
 
 const sidebarLinks = [
@@ -17,6 +18,11 @@ const sidebarLinks = [
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
+  const { user } = useSession();
+
+  const navLinks = user?.isAdmin || user?.role === "ADMIN"
+    ? [...sidebarLinks, { href: "/admin", label: "Admin Control", icon: "\u2696" }]
+    : sidebarLinks;
 
   const headerStyle: CSSProperties = {
     height: 56,
@@ -33,12 +39,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* Top header (both mobile & desktop) */}
       <header style={headerStyle} className="app-header">
-        <Link
-          href="/discover"
-          style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}
-        >
+        <Link href="/discover" style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}>
           Elite Match
         </Link>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -64,7 +66,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <div style={{ flex: 1, display: "flex" }}>
-        {/* Desktop sidebar */}
         <aside
           className="app-sidebar"
           style={{
@@ -81,7 +82,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             overflowY: "auto",
           }}
         >
-          {sidebarLinks.map((link) => {
+          {navLinks.map((link) => {
             const active = pathname.startsWith(link.href);
             return (
               <Link
@@ -107,7 +108,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </aside>
 
-        {/* Content area */}
         <main
           style={{
             flex: 1,
@@ -116,13 +116,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             margin: "0 auto",
             padding: "0 16px",
             width: "100%",
+            paddingBottom: "calc(8px + env(safe-area-inset-bottom, 0px))",
           }}
+          className="app-main"
         >
           {children}
         </main>
       </div>
 
-      {/* Mobile bottom nav */}
       <div className="app-bottom-nav">
         <BottomNav />
       </div>
@@ -131,6 +132,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         @media (max-width: 768px) {
           .app-sidebar { display: none !important; }
           .app-bottom-nav { display: block; }
+          .app-main { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important; }
         }
         @media (min-width: 769px) {
           .app-bottom-nav { display: none; }
