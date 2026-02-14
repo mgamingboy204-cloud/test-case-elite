@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/Card";
 import { Button } from "@/app/components/ui/Button";
 import { Badge } from "@/app/components/ui/Badge";
@@ -9,6 +10,7 @@ import { Skeleton } from "@/app/components/ui/Skeleton";
 import { ErrorState } from "@/app/components/ui/States";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { useSession } from "@/lib/session";
 
 type VStatus = "NOT_REQUESTED" | "REQUESTED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED";
 
@@ -20,9 +22,17 @@ const statusConfig: Record<VStatus, { label: string; variant: "default" | "prima
   REJECTED: { label: "Rejected", variant: "danger", desc: "Your verification was not approved. Please contact support." },
 };
 
+const validStatuses: VStatus[] = ["NOT_REQUESTED", "REQUESTED", "IN_PROGRESS", "COMPLETED", "REJECTED"];
+
+function normalizeStatus(value?: string | null): VStatus {
+  return validStatuses.includes(value as VStatus) ? (value as VStatus) : "NOT_REQUESTED";
+}
+
 export default function VideoVerificationPage() {
+  const router = useRouter();
+  const { status: sessionStatus, user } = useSession();
   const { addToast } = useToast();
-  const [status, setStatus] = useState<VStatus>("NOT_REQUESTED");
+  const [status, setStatus] = useState<VStatus>(normalizeStatus(user?.videoVerificationStatus));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [requesting, setRequesting] = useState(false);
@@ -32,7 +42,7 @@ export default function VideoVerificationPage() {
     setError(false);
     try {
       const me = await apiFetch<{ videoVerificationStatus?: VStatus }>("/me", { retryOnUnauthorized: true });
-      setStatus(me.videoVerificationStatus ?? "NOT_REQUESTED");
+      setStatus(normalizeStatus(me.videoVerificationStatus));
     } catch {
       setError(true);
     } finally {
@@ -41,8 +51,18 @@ export default function VideoVerificationPage() {
   };
 
   useEffect(() => {
-    fetchStatus();
-  }, []);
+    if (sessionStatus === "logged-out") {
+      router.replace("/login");
+      return;
+    }
+
+    if (sessionStatus !== "logged-in" || !user) {
+      return;
+    }
+
+    setStatus(normalizeStatus(user.videoVerificationStatus));
+    void fetchStatus();
+  }, [router, sessionStatus, user]);
 
   const handleRequest = async () => {
     setRequesting(true);
@@ -57,7 +77,7 @@ export default function VideoVerificationPage() {
     }
   };
 
-  if (loading) {
+  if (sessionStatus !== "logged-in" || !user || loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <Skeleton height={32} width={200} />
