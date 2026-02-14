@@ -13,13 +13,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <PremiumShell variant="auth">
       <div className="auth-layout">
         <div className="auth-layout__top">
-          <Link href="/" className="auth-logo">
-            Elite Match
-          </Link>
-          <PremiumBadge>Private • Verified • Discreet</PremiumBadge>
-          <button type="button" onClick={toggle} className="theme-toggle" aria-label="Toggle theme">
-            {theme === "light" ? "☾" : "☀"}
-          </button>
+          <Link href="/" className="auth-logo">Private Club</Link>
+          <PremiumBadge>Secure • Verified • Confidential</PremiumBadge>
+          <button type="button" onClick={toggle} className="theme-toggle" aria-label="Toggle theme">{theme === "light" ? "☾" : "☀"}</button>
         </div>
         <div className="auth-layout__content">{children}</div>
       </div>

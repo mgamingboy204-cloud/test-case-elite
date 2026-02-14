@@ -4,8 +4,8 @@ import { useState } from "react";
 
 const faqs = [
   {
-    q: "What is Elite Match?",
-    a: "Elite Match is a premium dating platform designed for verified, quality singles who are serious about finding meaningful relationships.",
+    q: "What is Private Club?",
+    a: "Private Club is a premium dating platform designed for verified, quality singles who are serious about finding meaningful relationships.",
   },
   {
     q: "How does video verification work?",
@@ -13,7 +13,7 @@ const faqs = [
   },
   {
     q: "How much does it cost?",
-    a: "Elite Match offers a premium membership plan. Pricing varies by region. You can view current plans during the onboarding process.",
+    a: "Private Club offers a premium membership plan. Pricing varies by region. You can view current plans during the onboarding process.",
   },
   {
     q: "Is my data secure?",
@@ -28,7 +28,7 @@ const faqs = [
     a: "You can report a user directly from their profile or through the Report page in your account. Our safety team reviews every report.",
   },
   {
-    q: "Can I use Elite Match for friendships?",
+    q: "Can I use Private Club for friendships?",
     a: "Yes! You can set your intent to 'Friends' in the Discover filters to find platonic connections.",
   },
 ];
@@ -40,7 +40,7 @@ export default function FaqPage() {
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px 80px" }}>
       <h1 style={{ marginBottom: 12 }}>Frequently Asked Questions</h1>
       <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 40 }}>
-        Everything you need to know about Elite Match.
+        Everything you need to know about Private Club.
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>

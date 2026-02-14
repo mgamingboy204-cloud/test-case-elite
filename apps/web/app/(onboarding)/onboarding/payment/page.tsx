@@ -73,7 +73,7 @@ export default function PaymentPage() {
     <div className="fade-in">
       <h1 style={{ marginBottom: 8 }}>Membership</h1>
       <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 32 }}>
-        Unlock the full Elite Match experience.
+        Unlock the full Private Club experience.
       </p>
 
       {step === "plan" && (
@@ -182,7 +182,7 @@ export default function PaymentPage() {
           </div>
           <h3 style={{ marginBottom: 8 }}>Confirm Payment</h3>
           <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
-            You will be charged <strong>$29.00</strong> for Elite Match Premium.
+            You will be charged <strong>$29.00</strong> for Private Club Premium.
           </p>
           <div style={{ display: "flex", gap: 12 }}>
             <Button variant="secondary" fullWidth onClick={() => setStep("plan")}>

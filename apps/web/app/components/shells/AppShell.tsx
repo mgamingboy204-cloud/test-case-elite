@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <header style={headerStyle} className="app-header">
         <Link href="/discover" style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}>
-          Elite Match
+          Private Club
         </Link>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <button

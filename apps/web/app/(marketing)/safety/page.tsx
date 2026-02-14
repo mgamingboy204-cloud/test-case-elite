@@ -38,7 +38,7 @@ export default function SafetyPage() {
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px 80px" }}>
       <h1 style={{ marginBottom: 12 }}>Your Safety Matters</h1>
       <p style={{ color: "var(--muted)", fontSize: 17, lineHeight: 1.6, marginBottom: 48 }}>
-        At Elite Match, safety is not a feature - it is our foundation.
+        At Private Club, safety is not a feature - it is our foundation.
       </p>
 
       <div

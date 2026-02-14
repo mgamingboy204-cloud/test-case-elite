@@ -12,11 +12,12 @@ interface PremiumSwipeCardProps {
   verified: boolean;
   onSwipe: (direction: "left" | "right") => void;
   disabled?: boolean;
+  onOpen?: () => void;
 }
 
 const SWIPE_THRESHOLD = 110;
 
-export function PremiumSwipeCard({ photo, name, age, city, bio, verified, onSwipe, disabled = false }: PremiumSwipeCardProps) {
+export function PremiumSwipeCard({ photo, name, age, city, bio, verified, onSwipe, disabled = false, onOpen }: PremiumSwipeCardProps) {
   const [isCoarse, setIsCoarse] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [swiping, setSwiping] = useState(false);
@@ -73,9 +74,9 @@ export function PremiumSwipeCard({ photo, name, age, city, bio, verified, onSwip
 
   return (
     <div
-      className="premium-swipe-card group relative mx-auto w-[min(92vw,360px)] overflow-hidden rounded-[30px]"
+      className="premium-swipe-card group relative mx-auto w-[min(92vw,380px)] overflow-hidden rounded-[30px]"
       style={{
-        height: "clamp(480px, 68dvh, 610px)",
+        height: "clamp(520px, 72vh, 640px)",
         touchAction: "none",
         userSelect: "none",
         willChange: "transform",
@@ -106,6 +107,7 @@ export function PremiumSwipeCard({ photo, name, age, city, bio, verified, onSwip
         setTiltX(Math.max(-2.5, Math.min(2.5, relY * -4.2)));
         setTiltY(Math.max(-2.5, Math.min(2.5, relX * 4.2)));
       }}
+      onClick={() => { if (!swiping) onOpen?.(); }}
       onPointerUp={() => {
         if (!swiping) return;
         setSwiping(false);

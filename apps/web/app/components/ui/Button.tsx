@@ -16,10 +16,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<Variant, React.CSSProperties> = {
   primary: {
-    background: "linear-gradient(130deg, var(--primary), color-mix(in oklab, var(--primary) 72%, #2d241d))",
-    color: "var(--primary-foreground)",
-    border: "1px solid color-mix(in oklab, var(--primary) 64%, transparent)",
-    boxShadow: "0 10px 22px color-mix(in oklab, var(--primary) 28%, transparent)",
+    background: "linear-gradient(130deg, var(--accent), color-mix(in oklab, var(--accent) 72%, #2d241d))",
+    color: "var(--bg)",
+    border: "1px solid color-mix(in oklab, var(--accent) 64%, transparent)",
+    boxShadow: "0 10px 22px color-mix(in oklab, var(--accent) 28%, transparent)",
   },
   secondary: {
     background: "var(--surface)",
@@ -41,8 +41,8 @@ const variantStyles: Record<Variant, React.CSSProperties> = {
 };
 
 const sizeStyles: Record<Size, React.CSSProperties> = {
-  sm: { height: 36, padding: "0 14px", fontSize: 13, borderRadius: "var(--radius-sm)" },
-  md: { height: 42, padding: "0 20px", fontSize: 15, borderRadius: "var(--radius-md)" },
+  sm: { height: 40, padding: "0 16px", fontSize: 13, borderRadius: "var(--radius-md)" },
+  md: { height: 44, padding: "0 20px", fontSize: 15, borderRadius: "var(--radius-md)" },
   lg: { height: 48, padding: "0 28px", fontSize: 16, borderRadius: "var(--radius-lg)" },
 };
 
