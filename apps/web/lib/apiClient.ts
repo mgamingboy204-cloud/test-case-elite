@@ -33,7 +33,7 @@ function shouldIncludeCredentials(path: string, options: ApiFetchOptions) {
 function handleRefreshFailure() {
   clearAccessToken();
   if (typeof window !== "undefined") {
-    window.location.href = "/login";
+    window.location.href = "/auth/login";
   }
 }
 
