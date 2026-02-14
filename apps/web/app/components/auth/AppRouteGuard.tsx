@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/lib/session";
-import { isMainAppRoute, isOnboardingRoute } from "@/lib/onboarding";
+import { isAuthRoute, isMainAppRoute, isOnboardingRoute } from "@/lib/onboarding";
 import { computeNextRoute, isAppReady } from "@/lib/onboardingRoute";
 
 
@@ -33,7 +33,7 @@ export function AppRouteGuard() {
       return;
     }
 
-    if (isOnboardingRoute(pathname)) {
+    if (isOnboardingRoute(pathname) || isAuthRoute(pathname)) {
       router.replace("/app");
     }
   }, [pathname, router, status, user]);
