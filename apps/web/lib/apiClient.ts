@@ -95,6 +95,10 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, hasR
 export async function refreshAccessToken() {
   const res = await fetch(`${API_URL}/auth/token/refresh`, {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: "{}",
     credentials: "include",
     cache: "no-store"
   });

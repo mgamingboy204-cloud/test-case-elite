@@ -1,7 +1,8 @@
+import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
-import LoginPage from "../app/login/page";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import LoginPage from "../app/(auth)/login/page";
 
 const refreshMock = vi.fn();
 const pushMock = vi.fn();
@@ -36,18 +37,22 @@ describe("Login OTP flow", () => {
 
     (apiFetch as any)
       .mockResolvedValueOnce({ otpRequired: true })
-      .mockResolvedValueOnce({});
+      .mockResolvedValueOnce({ ok: true, accessToken: "token" })
+      .mockResolvedValueOnce({
+        videoVerificationStatus: "COMPLETED",
+        paymentStatus: "PENDING",
+        profileCompletedAt: null
+      });
 
     render(<LoginPage />);
 
-    await user.type(screen.getByLabelText("Phone"), "5551234567");
+    await user.type(screen.getByLabelText("Phone Number"), "5551234567");
     await user.type(screen.getByLabelText("Password"), "Password@1");
-    await user.click(screen.getByRole("button", { name: "Login" }));
+    await user.click(screen.getByRole("button", { name: "Sign In" }));
 
-    await user.type(screen.getByLabelText("OTP Code"), "123456");
-    await user.click(screen.getByRole("button", { name: "Verify OTP" }));
+    await user.type(screen.getByLabelText("Digit 1"), "123456");
 
-    expect(refreshMock).toHaveBeenCalled();
+    expect(refreshMock).not.toHaveBeenCalled();
     expect(pushMock).toHaveBeenCalledWith("/onboarding/payment");
   });
 });
