@@ -118,6 +118,7 @@ export async function verifyOtp(req: Request, res: Response) {
     return sendContract(res, AuthSuccessSchema, {
       ok: true,
       accessToken,
+      token: accessToken,
       user: toUserDTO({
         ...user,
         onboardingStep: user.onboardingStep ?? resolveOnboardingStep(user)
@@ -189,6 +190,7 @@ export async function login(req: Request, res: Response) {
   return sendContract(res, AuthSuccessSchema, {
     ok: true,
     accessToken,
+    token: accessToken,
     user: toUserDTO({
       ...result.user,
       onboardingStep: result.onboardingStep ?? resolveOnboardingStep(result.user)
@@ -246,7 +248,7 @@ export async function refreshAccessToken(req: Request, res: Response) {
   const refreshTtlDays = rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
   res.cookie(refreshCookieName, nextRefreshToken, buildRefreshCookieOptions(refreshTtlDays));
 
-  return sendContract(res, AuthRefreshResponseSchema, { ok: true, accessToken });
+  return sendContract(res, AuthRefreshResponseSchema, { ok: true, accessToken, token: accessToken });
 }
 
 export async function whoAmI(req: Request, res: Response) {

@@ -77,10 +77,15 @@ export const SessionUserSchema = z.object({
   onboardingStatus: z.object({ nextRequiredStep: z.string(), nextRoute: z.string() })
 });
 
-export const AuthSuccessSchema = z.object({ ok: z.literal(true), accessToken: z.string(), user: SessionUserSchema });
+export const AuthSuccessSchema = z.object({
+  ok: z.literal(true),
+  accessToken: z.string(),
+  token: z.string().optional(),
+  user: SessionUserSchema
+});
 export const AuthOtpSendResponseSchema = z.object({ ok: z.literal(true) });
 export const AuthRegisterResponseSchema = z.object({ ok: z.literal(true), otpRequired: z.literal(true) });
-export const AuthRefreshResponseSchema = z.object({ ok: z.literal(true), accessToken: z.string() });
+export const AuthRefreshResponseSchema = z.object({ ok: z.literal(true), accessToken: z.string(), token: z.string().optional() });
 export const AuthLogoutResponseSchema = z.object({ ok: z.literal(true) });
 
 export const VerificationRequestSchema = z.object({

@@ -111,6 +111,27 @@ describe("apiFetch client", () => {
     }
   });
 
+
+  it("includes credentials on login so refresh cookie can be set", async () => {
+    const { apiFetch } = await import("../lib/api");
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: () => "application/json" },
+      json: async () => ({ ok: true, accessToken: "a", token: "a", user: mockSessionUser })
+    });
+
+    await apiFetch(apiEndpoints.authLogin, {
+      auth: "omit",
+      body: { phone: "5551234567", password: "Password@1" }
+    });
+
+    const call = fetchMock.mock.calls[0];
+    const options = call?.[1] as RequestInit;
+    expect(options.credentials).toBe("include");
+  });
+
   it("includes credentials for logout", async () => {
     const { apiFetch } = await import("../lib/api");
     fetchMock.mockResolvedValueOnce({

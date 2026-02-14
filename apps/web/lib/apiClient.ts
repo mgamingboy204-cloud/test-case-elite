@@ -1,6 +1,6 @@
 import { ZodError } from "zod";
 import { clearAccessToken, getAccessToken, setAccessToken } from "./authToken";
-import { ApiEndpoint, apiEndpoints } from "./apiEndpoints";
+import { ApiEndpoint } from "./apiEndpoints";
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 const fallbackApiUrl = "http://localhost:4000";
@@ -29,7 +29,7 @@ let refreshInFlight: Promise<string | null> | null = null;
 
 function shouldIncludeCredentials(path: string, options: { withCredentials?: boolean }) {
   if (options.withCredentials) return true;
-  return path === "/auth/token/refresh" || path === "/auth/logout";
+  return ["/auth/login", "/auth/otp/verify", "/auth/token/refresh", "/auth/logout"].includes(path);
 }
 
 function handleRefreshFailure() {
@@ -126,16 +126,23 @@ async function apiFetchWithRetry<TReq, TRes>(endpoint: ApiEndpoint<TReq, TRes>, 
 export async function refreshAccessToken() {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
-      const payload = await apiFetch(apiEndpoints.authTokenRefresh, {
-        auth: "omit",
-        withCredentials: true,
-        body: {}
+      const response = await fetch(`${API_URL}/auth/token/refresh`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({}),
+        credentials: "include",
+        cache: "no-store"
       });
-      if (payload.accessToken) {
-        setAccessToken(payload.accessToken);
-        return payload.accessToken;
-      }
-      return null;
+
+      if (!response.ok) return null;
+      const payload = await response.json();
+      const refreshedToken = payload.accessToken ?? payload.token ?? null;
+      if (!refreshedToken) return null;
+
+      setAccessToken(refreshedToken);
+      return refreshedToken;
     })().catch(() => null).finally(() => {
       refreshInFlight = null;
     });
