@@ -24,192 +24,39 @@ export function MarketingShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* Header */}
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-          background: "var(--panel)",
-          borderBottom: "1px solid var(--border)",
-          backdropFilter: "blur(12px)",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: "0 auto",
-            padding: "0 24px",
-            height: 64,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <Link
-            href="/"
-            style={{
-              fontSize: 20,
-              fontWeight: 800,
-              color: "var(--primary)",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Elite Match
-          </Link>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
+      <header className="marketing-header">
+        <div className="nav-row">
+          <Link href="/" className="logo">Elite Match</Link>
 
-          {/* Desktop nav */}
-          <nav
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 32,
-            }}
-          >
-            <div className="desktop-nav" style={{ display: "flex", gap: 24 }}>
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 500,
-                    color: "var(--muted)",
-                    transition: "color 200ms",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.color = "var(--text)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.color = "var(--muted)";
-                  }}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <button
-                onClick={toggle}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "var(--radius-sm)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 18,
-                  border: "1px solid var(--border)",
-                  background: "var(--panel)",
-                  color: "var(--text)",
-                }}
-                aria-label="Toggle theme"
-              >
-                {theme === "light" ? "\u263E" : "\u2600"}
-              </button>
-              <Link
-                href="/login"
-                style={{
-                  padding: "8px 20px",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  borderRadius: "var(--radius-full)",
-                  background: "var(--primary)",
-                  color: "#fff",
-                  transition: "opacity 150ms",
-                }}
-              >
-                Sign In
-              </Link>
-            </div>
-            {/* Mobile hamburger */}
-            <button
-              className="mobile-menu-btn"
-              onClick={() => setMenuOpen(!menuOpen)}
-              style={{
-                display: "none",
-                width: 36,
-                height: 36,
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 22,
-              }}
-              aria-label="Toggle menu"
-            >
-              {menuOpen ? "\u2715" : "\u2630"}
-            </button>
-          </nav>
-        </div>
-
-        {/* Mobile menu */}
-        {menuOpen && (
-          <div
-            className="fade-in"
-            style={{
-              padding: "16px 24px 24px",
-              borderTop: "1px solid var(--border)",
-              display: "flex",
-              flexDirection: "column",
-              gap: 16,
-            }}
-          >
+          <nav className="desktop-nav">
             {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMenuOpen(false)}
-                style={{ fontSize: 16, fontWeight: 500, color: "var(--text)" }}
-              >
+              <Link key={link.href} href={link.href} className="nav-link">
                 {link.label}
               </Link>
             ))}
+          </nav>
+
+          <div className="actions">
+            <button onClick={toggle} className="theme-btn" aria-label="Toggle theme">
+              {theme === "light" ? "☾" : "☀"}
+            </button>
+            <Link href="/login" className="signin-btn">Sign In</Link>
+            <button className="mobile-menu-btn" onClick={() => setMenuOpen(true)} aria-label="Open menu">☰</button>
           </div>
-        )}
+        </div>
       </header>
 
-      {/* Main */}
       <main style={{ flex: 1 }}>{children}</main>
 
-      {/* Footer */}
-      <footer
-        style={{
-          borderTop: "1px solid var(--border)",
-          background: "var(--panel)",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: "0 auto",
-            padding: "32px 24px",
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 24,
-          }}
-        >
+      <footer className="marketing-footer">
+        <div className="footer-inner">
           <div style={{ fontSize: 14, color: "var(--muted)" }}>
             &copy; {new Date().getFullYear()} Elite Match. All rights reserved.
           </div>
-          <nav style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+          <nav className="footer-nav">
             {footerLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                style={{
-                  fontSize: 13,
-                  color: "var(--muted)",
-                  transition: "color 200ms",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.color = "var(--text)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.color = "var(--muted)";
-                }}
-              >
+              <Link key={link.href} href={link.href} className="footer-link">
                 {link.label}
               </Link>
             ))}
@@ -217,12 +64,49 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         </div>
       </footer>
 
-      {/* Responsive styles */}
-      <style>{`
-        @media (max-width: 768px) {
-          .desktop-nav { display: none !important; }
-          .mobile-menu-btn { display: flex !important; }
+      {menuOpen && (
+          <div className="mobile-menu-overlay" onClick={() => setMenuOpen(false)}>
+            <div className="mobile-menu-sheet" onClick={(event) => event.stopPropagation()}>
+              <div className="sheet-handle" />
+              {navLinks.map((link) => (
+                <Link key={link.href} href={link.href} className="sheet-link" onClick={() => setMenuOpen(false)}>
+                  {link.label}
+                </Link>
+              ))}
+              <Link href="/login" className="sheet-signin" onClick={() => setMenuOpen(false)}>
+                Sign In
+              </Link>
+            </div>
+          </div>
+        )}
+
+      <style jsx>{`
+        .marketing-header { position: fixed; inset: 14px 14px auto; z-index: 40; border: 1px solid rgba(255,255,255,0.1); background: rgba(10,12,18,0.45); backdrop-filter: blur(15px); border-radius: 999px; }
+        .nav-row { max-width: 1200px; margin: 0 auto; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .logo { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+        .desktop-nav { display: flex; align-items: center; gap: 20px; }
+        .nav-link { color: rgba(255,255,255,0.8); font-size: 14px; }
+        .actions { display: flex; align-items: center; gap: 10px; }
+        .theme-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.08); color: #fff; }
+        .signin-btn { padding: 9px 16px; border-radius: 999px; background: linear-gradient(120deg, #ff4d5a, #d12836); color: #fff; font-size: 14px; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255,255,255,0.4); }
+        .mobile-menu-btn { display: none; color: #fff; font-size: 24px; }
+        .marketing-footer { border-top: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+        .footer-inner { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
+        .footer-nav { display: flex; flex-wrap: wrap; gap: 16px; }
+        .footer-link { color: var(--muted); font-size: 13px; }
+        .mobile-menu-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(5,8,14,0.56); backdrop-filter: blur(12px); display: flex; align-items: flex-end; }
+        .mobile-menu-sheet { width: 100%; border-radius: 22px 22px 0 0; padding: 16px 20px calc(24px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); backdrop-filter: blur(22px); display: flex; flex-direction: column; gap: 12px; }
+        .sheet-handle { width: 46px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.4); margin: 0 auto 6px; }
+        .sheet-link { color: #fff; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 500; }
+        .sheet-signin { margin-top: 4px; text-align: center; padding: 13px; border-radius: 999px; color: #fff; background: linear-gradient(120deg, #ff4d5a, #d12836); font-weight: 700; }
+        @media (max-width: 880px) {
+          .desktop-nav, .signin-btn { display: none; }
+          .mobile-menu-btn { display: block; }
+          .marketing-header { inset: 10px 10px auto; }
         }
+        :global([data-theme='light']) .marketing-header { background: rgba(255,255,255,0.62); border-color: rgba(255,255,255,0.8); }
+        :global([data-theme='light']) .logo, :global([data-theme='light']) .nav-link, :global([data-theme='light']) .theme-btn { color: #22293a; }
+        :global([data-theme='light']) .theme-btn { background: rgba(255,255,255,0.75); border-color: rgba(20,20,30,0.1); }
       `}</style>
     </div>
   );

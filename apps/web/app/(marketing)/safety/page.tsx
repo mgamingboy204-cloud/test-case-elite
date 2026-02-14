@@ -2,185 +2,99 @@
 
 const safetyFeatures = [
   {
-    icon: "\u2714",
+    icon: "✓",
     title: "Identity Verification",
-    desc: "Every member undergoes a live video verification call to confirm their identity.",
+    desc: "Every member completes a live video verification call before full access.",
   },
   {
-    icon: "\u2691",
+    icon: "⚑",
     title: "Report & Block",
-    desc: "Instantly report or block anyone who makes you uncomfortable. Our team reviews every report.",
+    desc: "Report and block tools are available throughout the app with fast moderation response.",
   },
   {
-    icon: "\u26E8",
-    title: "Photo Moderation",
-    desc: "All photos are reviewed for appropriateness before being displayed on profiles.",
-  },
-  {
-    icon: "\u2699",
+    icon: "⚙",
     title: "Privacy Controls",
-    desc: "You decide who sees your profile, your photos, and your contact information.",
+    desc: "You choose who can see your profile details and when to reveal personal information.",
   },
 ];
 
 const tips = [
-  "Never share financial information with someone you haven't met in person.",
-  "Always meet in a public place for your first date.",
-  "Tell a friend or family member about your plans.",
-  "Trust your instincts - if something feels off, it probably is.",
-  "Use the in-app consent system before sharing personal contact info.",
+  "Always meet in a public place for first dates.",
+  "Share your plans with a trusted friend.",
+  "Never send money or share financial details.",
+  "Trust your instincts and report suspicious behavior.",
 ];
 
 export default function SafetyPage() {
   return (
-    <div className="safety-shell">
-      <h1 style={{ marginBottom: 12 }}>Your Safety Matters</h1>
-      <p className="safety-intro">
-        At Elite Match, safety is not a feature - it is our foundation.
-      </p>
+    <div className="page-bg">
+      <div className="premium-wrap">
+        <h1>Your Safety Matters</h1>
+        <p className="safety-intro">Safety is foundational to every part of the Elite Match experience.</p>
 
-      <div className="safety-grid">
-        {safetyFeatures.map((f) => (
-          <details key={f.title} className="flip-card">
-            <summary className="flip-card-inner" aria-label={f.title}>
-              <div className="flip-face front">
-                <div className="feature-icon">{f.icon}</div>
-                <h4 style={{ marginBottom: 6 }}>{f.title}</h4>
-              </div>
-              <div className="flip-face back">
-                <h4 style={{ marginBottom: 6 }}>{f.title}</h4>
-                <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.6 }}>{f.desc}</p>
-              </div>
-            </summary>
-          </details>
-        ))}
-      </div>
+        <div className="safety-grid">
+          {safetyFeatures.map((feature) => (
+            <article key={feature.title} className="feature-card">
+              <div className="feature-icon">{feature.icon}</div>
+              <h3>{feature.title}</h3>
+              <p>{feature.desc}</p>
+            </article>
+          ))}
+        </div>
 
-      <h2 style={{ marginBottom: 20 }}>Safety Tips</h2>
-      <div className="tips-wrap">
-        {tips.map((tip, i) => (
-          <div key={i} className="tip-item">
-            <span className="tip-check">{"\u2713"}</span>
-            <p style={{ color: "var(--text)", fontSize: 14, lineHeight: 1.5, margin: 0 }}>{tip}</p>
-          </div>
-        ))}
+        <h2>Safety Tips</h2>
+        <div className="tips-wrap">
+          {tips.map((tip) => (
+            <div key={tip} className="tip-item">
+              <span className="tip-check">✓</span>
+              <p>{tip}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <style jsx>{`
-        .safety-shell {
-          max-width: 940px;
+        .page-bg { padding: 2rem 1rem 5rem; }
+        .premium-wrap {
+          max-width: 920px;
           margin: 0 auto;
-          padding: 56px 24px 90px;
+          border-radius: 28px;
+          padding: 2rem;
+          border: 1px solid rgba(255,255,255,0.14);
+          background: rgba(15, 15, 15, 0.7);
+          backdrop-filter: blur(25px);
+          box-shadow: 0 22px 48px rgba(0,0,0,0.32);
         }
-        .safety-intro {
-          color: var(--muted);
-          font-size: 17px;
-          line-height: 1.6;
-          margin-bottom: 42px;
-          max-width: 620px;
-        }
-        .safety-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 20px;
-          margin-bottom: 52px;
-          perspective: 1200px;
-        }
-
-        .flip-card {
-          list-style: none;
-        }
-        .flip-card summary {
-          list-style: none;
-          cursor: pointer;
-        }
-        .flip-card summary::-webkit-details-marker {
-          display: none;
-        }
-
-        .flip-card-inner {
-          position: relative;
-          display: grid;
-          transform-style: preserve-3d;
-          min-height: 194px;
-          transition: transform 380ms ease;
-        }
-        .flip-face {
-          border-radius: 18px;
+        h1 { color: #fff; margin-bottom: 10px; }
+        h2 { color: #fff; margin: 1.8rem 0 1rem; }
+        .safety-intro { color: rgba(255,255,255,0.82); margin-bottom: 1.4rem; line-height: 1.6; }
+        .safety-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0,1fr)); }
+        .feature-card {
+          border-radius: 20px;
+          padding: 1.2rem;
           border: 1px solid rgba(255,255,255,0.12);
-          background: linear-gradient(155deg, rgba(255,255,255,0.11), rgba(255,255,255,0.05));
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          box-shadow: 0 18px 36px rgba(0,0,0,0.24);
-          padding: 24px;
-          grid-area: 1 / 1;
-          backface-visibility: hidden;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
+          background: rgba(255,255,255,0.04);
+          box-shadow: 0 12px 28px rgba(0,0,0,0.28);
         }
-        .back {
-          transform: rotateY(180deg);
-        }
-
-        @media (hover: hover) and (pointer: fine) {
-          .flip-card:hover .flip-card-inner,
-          .flip-card:focus-within .flip-card-inner {
-            transform: rotateY(180deg);
-          }
-        }
-
-        .feature-icon {
-          font-size: 24px;
-          color: var(--primary);
-          margin-bottom: 12px;
-        }
-
-        .tips-wrap { display: flex; flex-direction: column; gap: 12px; }
+        .feature-icon { color: var(--primary); font-weight: 700; margin-bottom: 8px; font-size: 1.2rem; }
+        .feature-card h3 { color: #fff; margin-bottom: 8px; }
+        .feature-card p { color: rgba(255,255,255,0.82); line-height: 1.6; }
+        .tips-wrap { display: grid; gap: 0.75rem; }
         .tip-item {
           display: flex;
-          gap: 12px;
+          gap: 10px;
           align-items: flex-start;
-          padding: 14px 16px;
-          background: rgba(255,255,255,0.05);
-          border-radius: var(--radius-md);
-          border: 1px solid rgba(255,255,255,0.12);
-          backdrop-filter: blur(8px);
+          padding: 0.9rem 1rem;
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 14px;
+          background: rgba(255,255,255,0.04);
         }
-        .tip-check {
-          color: var(--success);
-          font-weight: 700;
-          font-size: 16px;
-          flex-shrink: 0;
-        }
-
-        @media (max-width: 768px) {
-          .safety-shell {
-            padding: 42px 16px 84px;
-          }
-          .safety-grid {
-            grid-template-columns: 1fr;
-            gap: 14px;
-          }
-          .flip-card-inner {
-            min-height: auto;
-          }
-          .flip-face {
-            position: relative;
-            min-height: 156px;
-          }
-          .back {
-            transform: none;
-            display: none;
-            margin-top: 10px;
-          }
-          .flip-card[open] .back {
-            display: flex;
-          }
-          .flip-card[open] .front {
-            border-color: rgba(255,99,99,0.4);
-            box-shadow: 0 16px 30px rgba(0,0,0,0.3), 0 0 18px rgba(230,57,70,0.22);
-          }
+        .tip-check { color: var(--success); font-weight: 700; }
+        .tip-item p { color: rgba(255,255,255,0.84); }
+        @media (max-width: 900px) {
+          .safety-grid { grid-template-columns: 1fr; }
+          .premium-wrap { padding: 1.3rem; border-radius: 22px; }
+          .page-bg { padding-top: 1rem; }
         }
       `}</style>
     </div>

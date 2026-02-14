@@ -1,30 +1,46 @@
 export default function TermsPage() {
   const sections = [
-    { title: "1. Acceptance of Terms", body: "By accessing or using Elite Match, you agree to be bound by these Terms of Service. If you do not agree, do not use the platform." },
-    { title: "2. Eligibility", body: "You must be at least 18 years of age to use Elite Match. By creating an account, you represent and warrant that you meet this requirement." },
-    { title: "3. Account Registration", body: "You must provide accurate, complete information during registration. You are responsible for maintaining the confidentiality of your account credentials." },
-    { title: "4. Membership & Payments", body: "Elite Match offers paid membership plans. All payments are processed securely. Subscriptions auto-renew unless cancelled before the renewal date." },
-    { title: "5. User Conduct", body: "You agree not to: harass, abuse, or threaten other users; create fake profiles; use the platform for commercial purposes; or violate any applicable laws." },
-    { title: "6. Content", body: "You retain ownership of content you upload. By uploading, you grant Elite Match a license to display your content within the platform." },
-    { title: "7. Termination", body: "We reserve the right to suspend or terminate your account at any time for violations of these terms or for any other reason at our discretion." },
-    { title: "8. Limitation of Liability", body: "Elite Match is provided 'as is' without warranties. We are not liable for any damages arising from your use of the platform." },
-    { title: "9. Changes to Terms", body: "We may modify these terms at any time. Continued use after changes constitutes acceptance of the updated terms." },
+    { title: "1. Acceptance of Terms", body: "By using Elite Match, you agree to these terms. If you do not agree, please do not use the service." },
+    { title: "2. Eligibility", body: "You must be at least 18 years old to create and maintain an account." },
+    { title: "3. Accounts", body: "You are responsible for your account credentials and for keeping profile details accurate." },
+    { title: "4. Membership & Billing", body: "Paid memberships may auto-renew unless canceled before renewal." },
+    { title: "5. Conduct", body: "Harassment, impersonation, fraud, and illegal behavior are strictly prohibited." },
+    { title: "6. Termination", body: "We may suspend or terminate accounts for violations of these terms." },
   ];
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px 80px" }}>
-      <h1 style={{ marginBottom: 8 }}>Terms of Service</h1>
-      <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 40 }}>
-        Last updated: January 2026
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-        {sections.map((s) => (
-          <div key={s.title}>
-            <h3 style={{ marginBottom: 8 }}>{s.title}</h3>
-            <p style={{ color: "var(--muted)", fontSize: 15, lineHeight: 1.7 }}>{s.body}</p>
-          </div>
-        ))}
+    <div className="page-bg">
+      <div className="legal-wrap">
+        <h1>Terms of Service</h1>
+        <p className="updated">Last updated: January 2026</p>
+        <div className="legal-stack">
+          {sections.map((section) => (
+            <section key={section.title}>
+              <h3>{section.title}</h3>
+              <p>{section.body}</p>
+            </section>
+          ))}
+        </div>
       </div>
+
+      <style jsx>{`
+        .page-bg { padding: 2rem 1rem 5rem; }
+        .legal-wrap {
+          max-width: 860px;
+          margin: 0 auto;
+          border-radius: 28px;
+          padding: 2rem;
+          border: 1px solid rgba(255,255,255,0.14);
+          background: rgba(15, 15, 15, 0.7);
+          backdrop-filter: blur(25px);
+          box-shadow: 0 22px 48px rgba(0,0,0,0.32);
+        }
+        h1, h3 { color: #fff; }
+        .updated { color: rgba(255,255,255,0.78); margin: 0.4rem 0 1.5rem; }
+        .legal-stack { display: grid; gap: 1.2rem; }
+        p { color: rgba(255,255,255,0.82); line-height: 1.7; }
+        @media (max-width: 768px) { .legal-wrap { padding: 1.3rem; border-radius: 22px; } .page-bg { padding-top: 1rem; } }
+      `}</style>
     </div>
   );
 }
