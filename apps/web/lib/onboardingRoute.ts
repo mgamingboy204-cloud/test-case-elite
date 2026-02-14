@@ -22,7 +22,7 @@ function isVideoVerified(user: SessionUser) {
   return user.videoVerificationStatus === "COMPLETED" || user.videoVerificationStatus === "APPROVED";
 }
 
-export function computeNextOnboardingRoute(user: SessionUser | null): string {
+export function computeNextRoute(user: SessionUser | null): string {
   if (!user) return "/login";
 
   const backendRoute = canonicalizeRoute(user.onboardingStatus?.nextRoute);
@@ -46,5 +46,5 @@ export function computeNextOnboardingRoute(user: SessionUser | null): string {
 }
 
 export function isAppReady(user: SessionUser | null) {
-  return computeNextOnboardingRoute(user) === APP_ROUTE;
+  return computeNextRoute(user) === APP_ROUTE;
 }

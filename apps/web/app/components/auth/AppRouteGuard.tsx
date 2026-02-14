@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/lib/session";
 import { isMainAppRoute, isOnboardingRoute } from "@/lib/onboarding";
-import { computeNextOnboardingRoute, isAppReady } from "@/lib/onboardingRoute";
+import { computeNextRoute, isAppReady } from "@/lib/onboardingRoute";
 
 
 export function AppRouteGuard() {
@@ -24,7 +24,7 @@ export function AppRouteGuard() {
 
     if (!user) return;
 
-    const nextRoute = computeNextOnboardingRoute(user);
+    const nextRoute = computeNextRoute(user);
 
     if (!isAppReady(user)) {
       if (pathname !== nextRoute) {
