@@ -6,98 +6,92 @@ import { logger } from "../utils/logger";
 import { formatZodError } from "../utils/validation";
 
 /**
- * Supported shapes for HttpError.body across the codebase.
- * Keep this tolerant so older callers don't break builds.
+ * Domain-specific error messages for a premium experience.
  */
-type HttpErrorBody =
-  | string
-  | {
-      message?: string;
-      fieldErrors?: Record<string, string[]>;
-    }
-  | {
-      error?: string | { message?: string; fieldErrors?: Record<string, string[]> };
-      message?: string;
-      fieldErrors?: Record<string, string[]>;
-    }
-  | undefined;
-
-function normalizeHttpErrorBody(body: HttpErrorBody): {
-  message: string;
-  fieldErrors?: Record<string, string[]>;
-} {
-  if (!body) return { message: "Request failed" };
-
-  // plain string body
-  if (typeof body === "string") return { message: body };
-
-  // legacy nested error: { error: "msg" }
-  if (typeof (body as any).error === "string") {
-    const b = body as { error: string; fieldErrors?: Record<string, string[]> };
-    return { message: b.error, fieldErrors: b.fieldErrors };
-  }
-
-  // legacy nested error: { error: { message, fieldErrors } }
-  if (typeof (body as any).error === "object" && (body as any).error !== null) {
-    const e = (body as any).error as { message?: string; fieldErrors?: Record<string, string[]> };
-    return {
-      message: e.message ?? "Request failed",
-      fieldErrors: e.fieldErrors
-    };
-  }
-
-  // normal shape: { message, fieldErrors }
-  const b = body as { message?: string; fieldErrors?: Record<string, string[]> };
-  if (typeof b.message === "string") return { message: b.message, fieldErrors: b.fieldErrors };
-
-  // last resort
-  return { message: "Request failed" };
-}
+const PRISMA_ERROR_MAP: Record<string, { status: number; message: string; code: string }> = {
+  P2002: {
+    status: 409,
+    message: "This account already exists in our Elite network. Please log in instead.",
+    code: "DUPLICATE_ENTRY",
+  },
+  P2025: {
+    status: 404,
+    message: "We couldn't find the requested information in our records.",
+    code: "NOT_FOUND",
+  },
+  P2003: {
+    status: 400,
+    message: "The requested operation cannot be completed due to missing dependencies.",
+    code: "FOREIGN_KEY_FAILURE",
+  },
+};
 
 export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction) {
-  // never respond twice
   if (res.headersSent) return next(err);
 
-  // payload too large (multer / body-parser)
-  if ((err as any)?.type === "entity.too.large") {
-    return res.status(413).json({ message: "Payload too large" });
-  }
-
-  // custom HttpError
+  // 1. Handle HttpError (Explicitly thrown)
   if (err instanceof HttpError) {
-    const { message, fieldErrors } = normalizeHttpErrorBody(err.body as HttpErrorBody);
     return res.status(err.status).json({
-      message,
-      ...(fieldErrors ? { fieldErrors } : {})
+      message: err.body.message,
+      code: err.body.code ?? "HTTP_ERROR",
+      fieldErrors: err.body.fieldErrors,
     });
   }
 
-  // prisma known errors
+  // 2. Handle Prisma Client Errors (Database)
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    if (err.code === "P2002") {
-      return res.status(409).json({ message: "Duplicate value" });
+    const mapped = PRISMA_ERROR_MAP[err.code];
+    if (mapped) {
+      return res.status(mapped.status).json({
+        message: mapped.message,
+        code: mapped.code,
+      });
     }
-    if (err.code === "P2025") {
-      return res.status(404).json({ message: "Record not found" });
-    }
-    return res.status(400).json({ message: "Invalid request" });
+    // Generic DB error fallback
+    logger.warn(`Unhandled Prisma Error [${err.code}]:`, err.message);
+    return res.status(400).json({
+      message: "Our elite systems encountered a data processing issue. Please try again.",
+      code: `DB_ERROR_${err.code}`,
+    });
   }
 
-  // prisma validation errors
+  // 3. Handle Prisma Validation Errors
   if (err instanceof Prisma.PrismaClientValidationError) {
-    return res.status(400).json({ message: "Invalid request" });
+    logger.error("Prisma Validation Error:", err.message);
+    return res.status(400).json({
+      message: "The provided information does not meet our elite quality standards.",
+      code: "DATA_VALIDATION_ERROR",
+    });
   }
 
-  // zod validation errors
+  // 4. Handle Zod Validation Errors (Input)
   if (err instanceof ZodError) {
     const details = formatZodError(err);
     return res.status(400).json({
-      message: details.message ?? "Validation error",
-      ...(details.fieldErrors ? { fieldErrors: details.fieldErrors } : {})
+      message: "Some details in your request require adjustment.",
+      code: "VALIDATION_ERROR",
+      fieldErrors: details.fieldErrors,
     });
   }
 
-  // fallback
-  logger.error("Unhandled error", err);
-  return res.status(500).json({ message: "Internal server error" });
+  // 5. Handle Body Parser Errors (Payload size)
+  if ((err as any)?.type === "entity.too.large") {
+    return res.status(413).json({
+      message: "The file or information you are trying to send exceeds our size limits.",
+      code: "PAYLOAD_TOO_LARGE",
+    });
+  }
+
+  // 6. Final Fallback (Unhandled)
+  logger.error("Unhandled Global Error:", {
+    message: err.message,
+    stack: process.env.NODE_ENV === "production" ? "REDACTED" : err.stack,
+    path: req.path,
+    method: req.method,
+  });
+
+  return res.status(500).json({
+    message: "Our systems are experiencing a momentary lapse in excellence. Please refresh.",
+    code: "INTERNAL_SERVER_ERROR",
+  });
 }
