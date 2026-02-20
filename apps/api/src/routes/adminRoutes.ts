@@ -21,7 +21,7 @@ import {
   shiftPaymentDateHandler,
   startVerificationRequestHandler
 } from "../controllers/adminController";
-import { requireAdmin, requireAuth, requireAuthHeader } from "../middlewares/auth";
+import { requireAdmin, requireAuth } from "../middlewares/auth";
 import { validateBody, validateParams } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 
