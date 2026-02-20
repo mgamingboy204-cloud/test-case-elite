@@ -27,7 +27,7 @@ export function Card({
   return (
     <motion.div
       {...(isInteractive || hoverEffect ? {
-        whileHover: { y: -4, shadow: "0 20px 40px -12px rgba(0,0,0,0.5)" },
+        whileHover: { y: -4, boxShadow: "0 20px 40px -12px rgba(0,0,0,0.5)" },
         whileTap: { scale: 0.99 }
       } : {})}
       onClick={onClick}
@@ -43,8 +43,8 @@ export function Card({
       {/* Internal Premium Highlight */}
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-white/[0.03] to-transparent" />
       
-      <div className="relative z-10">
-        {children}
+      <div className="relative z-10 w-full h-full">
+        {children as React.ReactNode}
       </div>
     </motion.div>
   );

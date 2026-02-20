@@ -13,17 +13,19 @@ interface SkeletonProps {
   className?: string;
   width?: string | number;
   height?: string | number;
+  radius?: string | number;
   borderRadius?: string | number;
+  style?: React.CSSProperties;
 }
 
-export function Skeleton({ className, width, height, borderRadius }: SkeletonProps) {
+export function Skeleton({ className, width, height, radius, borderRadius }: SkeletonProps) {
   return (
     <div
       className={cn(
         "relative overflow-hidden bg-white/5 rounded-2xl",
         className
       )}
-      style={{ width, height, borderRadius }}
+      style={{ width, height, borderRadius: radius || borderRadius }}
     >
       {/* Cinematic Shimmer Effect */}
       <motion.div

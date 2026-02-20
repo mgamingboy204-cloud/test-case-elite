@@ -35,7 +35,7 @@ const statusConfig: Record<VStatus, StatusMeta> = {
   REQUESTED: { 
     label: "In Priority Queue", 
     icon: "📡", 
-    desc: "Your identity signal has been received. A dedicated verifier is currently finalizing their current session to attend to yours.",
+    desc: "Your identity signal has been received. A dedicated verifier is currently prioritizing your terminal for final authorization.",
     variant: "warning",
     technicalCode: "SIGNAL_QUEUED_P1"
   },
@@ -91,6 +91,7 @@ export default function VideoVerificationPage() {
       const refreshedUser = await refresh();
       if (refreshedUser) {
         const nextRoute = getDefaultRoute(refreshedUser);
+        // Using includes to handle optional trailing slashes
         if (!nextRoute.includes("video-verification")) {
           router.replace(nextRoute);
         }
@@ -136,7 +137,7 @@ export default function VideoVerificationPage() {
           <Skeleton className="h-12 w-64 rounded-full" />
           <Skeleton className="h-4 w-48 rounded-full" />
         </div>
-        <Skeleton className="h-[400px] w-full rounded-[3rem]" />
+        <Skeleton className="h-[400px] w-full rounded-[3.5rem]" />
       </div>
     );
   }
@@ -170,66 +171,66 @@ export default function VideoVerificationPage() {
           exit={{ opacity: 0, scale: 1.02, filter: "blur(10px)" }}
           transition={{ duration: 0.5 }}
         >
-          <Card className="glass-card !p-0 overflow-hidden border-white/10 shadow-[0_64px_128px_-32px_rgba(0,0,0,0.9)] rounded-[3rem]">
+          <Card className="glass-card !p-0 overflow-hidden border-white/10 shadow-[0_64px_128px_-32px_rgba(0,0,0,0.9)] rounded-[3.5rem]">
             {/* Identity Scanner Visualizer */}
-            <div className="relative h-[240px] w-full overflow-hidden bg-black/40 flex items-center justify-center border-b border-white/5">
+            <div className="relative h-[280px] w-full overflow-hidden bg-black/40 flex items-center justify-center border-b border-white/5">
                {/* Grid Background */}
                <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#ffffff1a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff1a_1px,transparent_1px)] bg-[size:40px_40px]" />
                
                {/* Pulsing Scan Ring */}
                <motion.div 
                  animate={{ 
-                   scale: [1, 1.2, 1],
-                   opacity: [0.3, 0.6, 0.3],
+                   scale: [1, 1.25, 1],
+                   opacity: [0.3, 0.7, 0.3],
                    rotate: 360
                  }}
-                 transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                 className="absolute w-48 h-48 border-[1px] border-primary/30 rounded-full border-dashed"
+                 transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                 className="absolute w-56 h-56 border-[1px] border-primary/30 rounded-full border-dashed"
                />
                <motion.div 
                  animate={{ 
-                   scale: [1.1, 0.9, 1.1],
-                   opacity: [0.2, 0.4, 0.2]
+                   scale: [1.15, 0.85, 1.15],
+                   opacity: [0.2, 0.5, 0.2]
                  }}
-                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                 className="absolute w-40 h-40 border-[4px] border-primary/10 rounded-full"
+                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                 className="absolute w-48 h-48 border-[4px] border-primary/10 rounded-full"
                />
 
                {/* Central Identity Icon */}
-               <div className="relative z-10 text-6xl drop-shadow-[0_0_20px_rgba(212,175,55,0.4)]">
+               <div className="relative z-10 text-7xl drop-shadow-[0_0_30px_rgba(212,175,55,0.5)]">
                  {config.icon}
                </div>
 
                {/* Scan Line Animation */}
                <motion.div 
                  animate={{ top: ["0%", "100%", "0%"] }}
-                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                 className="absolute left-0 right-0 h-[2px] bg-primary/40 z-20 shadow-[0_0_15px_rgba(212,175,55,0.8)]"
+                 transition={{ duration: 3.5, repeat: Infinity, ease: "linear" }}
+                 className="absolute left-0 right-0 h-[2px] bg-primary/40 z-20 shadow-[0_0_20px_rgba(212,175,55,0.9)]"
                />
             </div>
 
-            <div className="p-12 md:p-16">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-serif text-foreground">{config.label}</h2>
+            <div className="p-12 md:p-20">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-10 mb-12">
+                <div className="space-y-3">
+                  <h2 className="text-4xl font-serif text-foreground">{config.label}</h2>
                   <div className="flex items-center gap-3">
                     <div className="flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-primary opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                     </div>
-                    <span className="text-[10px] uppercase tracking-[0.3em] text-primary font-bold">Terminal Sync: Active</span>
+                    <span className="text-[10px] uppercase tracking-[0.4em] text-primary font-bold">Terminal Sync: Active</span>
                   </div>
                 </div>
-                <Badge variant={config.variant} className="px-6 py-2 rounded-full text-xs tracking-widest bg-white/5 border-white/10">
+                <Badge variant={config.variant} className="px-8 py-3 rounded-full text-xs tracking-[0.2em] bg-white/5 border-white/10 font-bold">
                   {config.technicalCode}
                 </Badge>
               </div>
 
-              <p className="text-muted-foreground font-light leading-relaxed text-lg mb-12 max-w-xl italic">
+              <p className="text-muted-foreground font-light leading-relaxed text-xl mb-16 max-w-2xl italic">
                 "{config.desc}"
               </p>
 
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {status === "NOT_REQUESTED" && (
                   <Button 
                     variant="premium" 
@@ -237,47 +238,48 @@ export default function VideoVerificationPage() {
                     fullWidth 
                     loading={requesting} 
                     onClick={handleRequest}
-                    className="shadow-2xl h-20"
+                    className="shadow-2xl h-24 text-xl"
                   >
                     Establish Secure Session
                   </Button>
                 )}
 
                 {(status === "REQUESTED" || status === "IN_PROGRESS") && (
-                  <div className="space-y-10">
-                    <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className="space-y-12">
+                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                        <motion.div 
                          animate={{ x: ["-100%", "100%"] }}
                          transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-                         className="h-full w-1/3 premium-gradient shadow-[0_0_15px_rgba(212,175,55,0.5)]"
+                         className="h-full w-1/3 premium-gradient shadow-[0_0_20px_rgba(212,175,55,0.6)]"
                        />
                     </div>
-                    <div className="flex justify-between items-center px-2">
-                       <span className="text-[9px] text-muted-foreground uppercase tracking-[0.4em]">Optimizing connection...</span>
-                       <span className="text-[9px] text-primary uppercase tracking-[0.4em] font-bold">Encryption Level: MIL-SPEC</span>
+                    <div className="flex justify-between items-center px-4">
+                       <span className="text-[10px] text-muted-foreground uppercase tracking-[0.5em]">Optimizing connection...</span>
+                       <span className="text-[10px] text-primary uppercase tracking-[0.5em] font-bold">MIL-SPEC Encryption</span>
                     </div>
                   </div>
                 )}
 
                 {isVerified && (
                   <Link href="/onboarding/payment">
-                    <Button variant="premium" size="xl" fullWidth className="h-20 shadow-2xl">
+                    <Button variant="premium" size="xl" fullWidth className="h-24 shadow-2xl text-xl">
                       Access Membership Vault
                     </Button>
                   </Link>
                 )}
 
                 {status === "REJECTED" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Button 
                       variant="premium" 
                       size="lg" 
                       loading={requesting} 
                       onClick={handleRequest}
+                      className="h-20"
                     >
                       Re-Initialize Scan
                     </Button>
-                    <Button variant="secondary" size="lg" asChild>
+                    <Button variant="secondary" size="lg" className="h-20 border-white/5">
                       <Link href="/support">Speak with Concierge</Link>
                     </Button>
                   </div>
@@ -286,18 +288,18 @@ export default function VideoVerificationPage() {
             </div>
 
             {/* Technical Footer Rail */}
-            <div className="bg-black/60 border-t border-white/5 p-6 flex flex-col md:flex-row justify-between items-center px-12 gap-4">
-               <div className="flex items-center gap-6">
-                 <span className="text-[10px] text-muted-foreground/40 uppercase tracking-tighter">Elite Shield v2.0.4</span>
-                 <div className="h-3 w-[1px] bg-white/10" />
-                 <span className="text-[10px] text-primary/60 font-mono">CODE: {config.technicalCode}</span>
+            <div className="bg-black/60 border-t border-white/5 p-8 flex flex-col md:flex-row justify-between items-center px-16 gap-6">
+               <div className="flex items-center gap-8">
+                 <span className="text-[10px] text-muted-foreground/40 uppercase tracking-widest font-mono">Elite Shield v2.0.4</span>
+                 <div className="h-4 w-[1px] bg-white/10" />
+                 <span className="text-[10px] text-primary/60 font-mono tracking-tighter">STATUS_CODE: {config.technicalCode}</span>
                </div>
-               <div className="flex items-center gap-4">
-                 <span className="text-[10px] text-muted-foreground/40 font-mono">LAST_SYNC: {syncTime}</span>
+               <div className="flex items-center gap-6">
+                 <span className="text-[10px] text-muted-foreground/40 font-mono uppercase tracking-widest">LAST_SYNC: {syncTime}</span>
                  <motion.div 
                    animate={{ opacity: [0.2, 1, 0.2] }}
                    transition={{ duration: 2, repeat: Infinity }}
-                   className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"
+                   className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.7)]"
                  />
                </div>
             </div>
@@ -305,8 +307,8 @@ export default function VideoVerificationPage() {
         </motion.div>
       </AnimatePresence>
 
-      <footer className="mt-16 text-center">
-         <p className="text-[10px] text-muted-foreground/30 max-w-md mx-auto leading-relaxed uppercase tracking-widest">
+      <footer className="mt-20 text-center">
+         <p className="text-[10px] text-muted-foreground/30 max-w-xl mx-auto leading-relaxed uppercase tracking-[0.3em]">
            Warning: All sessions are end-to-end encrypted and logged for audit. Identity spoofing is grounds for permanent network exclusion.
          </p>
       </footer>

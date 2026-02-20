@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
-import LoginPage from "../app/login/page";
+import { vi, describe, it, expect, afterEach } from "vitest";
+import LoginPage from "../app/(auth)/login/page";
 
 const refreshMock = vi.fn();
 const pushMock = vi.fn();

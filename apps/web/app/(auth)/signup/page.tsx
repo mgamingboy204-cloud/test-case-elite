@@ -16,7 +16,7 @@ import { useSession } from "@/lib/session";
 
 type Stage = "IDENTITY" | "SECURITY" | "VERIFICATION";
 
-const stageVariants = {
+const stageVariants: any = {
   enter: (direction: number) => ({
     x: direction > 0 ? 100 : -100,
     opacity: 0,
@@ -28,7 +28,7 @@ const stageVariants = {
     filter: "blur(0px)",
     transition: {
       duration: 0.6,
-      ease: [0.32, 0.72, 0, 1],
+      ease: [0.32, 0.72, 0, 1] as any,
     }
   },
   exit: (direction: number) => ({
@@ -148,7 +148,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="w-full max-w-[540px] mx-auto">
+    <div className="w-full max-w-[540px] mx-auto pt-12">
       <motion.div 
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
@@ -165,7 +165,7 @@ export default function SignupPage() {
           </div>
 
           <div className="p-12 md:p-16">
-            <AnimatePresence mode="wait" custom={direction}>
+            <AnimatePresence mode="wait" custom={direction} initial={false}>
               {stage === "IDENTITY" && (
                 <motion.div
                   key="identity"
@@ -320,10 +320,7 @@ export default function SignupPage() {
                   <div className="pt-6 space-y-8">
                     <label className="flex items-center justify-center gap-4 cursor-pointer group">
                       <div 
-                        className={clsx(
-                          "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-500",
-                          rememberMe ? "bg-primary border-primary shadow-[0_0_15px_rgba(212,175,55,0.4)]" : "bg-white/5 border-white/10"
-                        )}
+                        className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-500 ${rememberMe ? 'bg-primary border-primary shadow-[0_0_15px_rgba(212,175,55,0.4)]' : 'bg-white/5 border-white/10'}`}
                         onClick={() => setRememberMe(!rememberMe)}
                       >
                         {rememberMe && <span className="text-background font-bold text-xs">✔</span>}
@@ -344,7 +341,7 @@ export default function SignupPage() {
           </div>
         </Card>
 
-        <footer className="mt-16 text-center space-y-2">
+        <footer className="mt-16 text-center space-y-2 pb-12">
           <p className="text-muted-foreground/30 text-xs font-light tracking-widest uppercase">
             Already part of the network?
           </p>
