@@ -1,19 +1,14 @@
 import express from "express";
-import session from "express-session";
-import connectPg from "connect-pg-simple";
 import cors, { CorsOptions } from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import path from "path";
-import { sessionCookieName, sessionCookieOptions } from "./config/auth";
 import { env } from "./config/env";
 import { updateLastActive } from "./middlewares/activity";
 import { errorHandler } from "./middlewares/errorHandler";
 import { notFound } from "./middlewares/notFound";
 import routes from "./routes";
 import { ensureUploadsDir } from "./services/photoService";
-
-const PgStore = connectPg(session);
 
 export const app = express();
 
@@ -76,22 +71,6 @@ app.use((req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
 });
-
-app.use(
-  session({
-    name: sessionCookieName,
-    store: new PgStore({
-      conString: env.DATABASE_URL,
-      tableName: "session",
-      createTableIfMissing: true
-    }),
-    secret: env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    rolling: true,
-    cookie: sessionCookieOptions
-  })
-);
 
 app.use(updateLastActive);
 app.use(routes);

@@ -12,11 +12,8 @@ function getBearerToken(req: Request) {
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const token = getBearerToken(req);
-  if (token === null) {
-    return res.status(401).json({ error: "Missing authorization header" });
-  }
   if (!token) {
-    return res.status(401).json({ error: "Invalid token" });
+    return res.status(401).json({ error: "Missing or invalid authorization header" });
   }
   let userId: string;
   try {
@@ -44,7 +41,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
 export function requireApproved(req: Request, res: Response, next: NextFunction) {
   const user = res.locals.user;
-  if (user.status !== "APPROVED") {
+  if (!user || user.status !== "APPROVED") {
     return res.status(403).json({ error: "Approval required" });
   }
   return next();
@@ -52,24 +49,8 @@ export function requireApproved(req: Request, res: Response, next: NextFunction)
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   const user = res.locals.user;
-  if (!user.isAdmin && user.role !== "ADMIN") {
+  if (!user || (!user.isAdmin && user.role !== "ADMIN")) {
     return res.status(403).json({ error: "Admin only" });
-  }
-  return next();
-}
-
-export function requireAuthHeader(req: Request, res: Response, next: NextFunction) {
-  const token = getBearerToken(req);
-  if (token === null) {
-    return res.status(401).json({ error: "Missing authorization header" });
-  }
-  if (!token) {
-    return res.status(401).json({ error: "Invalid token" });
-  }
-  try {
-    req.userId = verifyAccessToken(token);
-  } catch (error) {
-    return res.status(401).json({ error: "Invalid token" });
   }
   return next();
 }

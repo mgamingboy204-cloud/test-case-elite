@@ -28,19 +28,43 @@ const EnvSchema = z
     MIN_LIKES_FOR_REFUND: z.coerce.number().default(5)
   })
   .superRefine((value, ctx) => {
-    if (!value.WEB_ORIGIN.startsWith("https://")) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["WEB_ORIGIN"],
-        message: "WEB_ORIGIN must be https."
-      });
-    }
-    if (value.ADMIN_ORIGIN && !value.ADMIN_ORIGIN.startsWith("https://")) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["ADMIN_ORIGIN"],
-        message: "ADMIN_ORIGIN must be https."
-      });
+    const isLocal = (url: string) =>
+      url.startsWith("http://localhost") || url.startsWith("http://127.0.0.1");
+
+    if (value.NODE_ENV === "production") {
+      if (!value.WEB_ORIGIN.startsWith("https://")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["WEB_ORIGIN"],
+          message: "WEB_ORIGIN must be https in production."
+        });
+      }
+      if (value.ADMIN_ORIGIN && !value.ADMIN_ORIGIN.startsWith("https://")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["ADMIN_ORIGIN"],
+          message: "ADMIN_ORIGIN must be https in production."
+        });
+      }
+    } else {
+      if (!value.WEB_ORIGIN.startsWith("https://") && !isLocal(value.WEB_ORIGIN)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["WEB_ORIGIN"],
+          message: "WEB_ORIGIN must be https (unless localhost)."
+        });
+      }
+      if (
+        value.ADMIN_ORIGIN &&
+        !value.ADMIN_ORIGIN.startsWith("https://") &&
+        !isLocal(value.ADMIN_ORIGIN)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["ADMIN_ORIGIN"],
+          message: "ADMIN_ORIGIN must be https (unless localhost)."
+        });
+      }
     }
     const provider = value.STORAGE_PROVIDER ?? (value.NODE_ENV === "production" ? "supabase" : "local");
     if (provider === "supabase") {

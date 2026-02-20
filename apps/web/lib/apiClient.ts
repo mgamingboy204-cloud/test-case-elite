@@ -5,8 +5,12 @@ const rawApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 if (!rawApiUrl) {
   throw new Error("NEXT_PUBLIC_API_BASE_URL is required.");
 }
-if (rawApiUrl.startsWith("http://")) {
-  throw new Error("NEXT_PUBLIC_API_BASE_URL must be https.");
+
+const isLocalhost =
+  rawApiUrl.includes("localhost") || rawApiUrl.includes("127.0.0.1");
+
+if (!isLocalhost && rawApiUrl.startsWith("http://")) {
+  throw new Error("NEXT_PUBLIC_API_BASE_URL must be https in non-local environments.");
 }
 
 export const API_URL = rawApiUrl.replace(/\/$/, "");

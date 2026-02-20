@@ -21,38 +21,9 @@ import {
 import { HttpError } from "../utils/httpErrors";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
 
-async function saveSession(req: Request) {
-  await new Promise<void>((resolve, reject) => {
-    req.session.save((error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve();
-    });
-  });
-}
-
 function logSessionEvent(event: string, details: Record<string, unknown>) {
   if (env.NODE_ENV !== "production") {
     console.debug(`[auth] ${event}`, details);
-  }
-}
-
-const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
-const SIXTY_DAYS_MS = 1000 * 60 * 60 * 24 * 60;
-
-function applySessionLifetime(
-  req: Request,
-  options: { rememberDevice30Days?: boolean; rememberMe?: boolean }
-) {
-  if (options.rememberDevice30Days) {
-    req.session.cookie.maxAge = THIRTY_DAYS_MS;
-  } else if (options.rememberMe) {
-    req.session.cookie.maxAge = SIXTY_DAYS_MS;
-  } else {
-    req.session.cookie.maxAge = undefined;
-    req.session.cookie.expires = undefined;
   }
 }
 
@@ -72,18 +43,7 @@ export async function verifyOtp(req: Request, res: Response) {
   try {
     const user = await verifyOtpAndGetUser(phone, code);
 
-    req.session.otpVerifiedPhone = phone;
-    req.session.userId = user.id;
-
-    applySessionLifetime(req, {
-      rememberDevice30Days: req.session.pendingRememberDevice30Days ?? false,
-      rememberMe: rememberMe ?? req.session.pendingRememberMe ?? false
-    });
-
-    req.session.pendingUserId = undefined;
-    req.session.pendingPhone = undefined;
-
-    const resolvedRememberMe = rememberMe ?? req.session.pendingRememberMe ?? false;
+    const resolvedRememberMe = rememberMe ?? false;
 
     const accessToken = signAccessToken(user.id, { rememberMe: resolvedRememberMe });
     const refreshToken = signRefreshToken(user.id, { rememberMe: resolvedRememberMe });
@@ -94,16 +54,7 @@ export async function verifyOtp(req: Request, res: Response) {
 
     res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
 
-    if (req.session.pendingRememberDevice30Days) {
-      const { token } = await createDeviceToken(user.id);
-      res.cookie(deviceCookieName, token, deviceCookieOptions);
-    }
-
-    req.session.pendingRememberDevice30Days = undefined;
-    req.session.pendingRememberMe = undefined;
-
-    await saveSession(req);
-    logSessionEvent("otp-verified", { userId: user.id, sessionId: req.sessionID });
+    logSessionEvent("otp-verified", { userId: user.id });
 
     return res.json({
       ok: true,
@@ -141,41 +92,23 @@ export async function register(req: Request, res: Response) {
   };
 
   await registerPendingUser({ phone, email, password });
-  req.session.pendingPhone = phone;
 
-  await saveSession(req);
   return res.json({ ok: true, otpRequired: true });
 }
 
 export async function login(req: Request, res: Response) {
-  const { phone, password, rememberDevice30Days, rememberDevice, rememberMe } = req.body as {
+  const { phone, password, rememberMe } = req.body as {
     phone: string;
     password: string;
-    rememberDevice30Days?: boolean;
-    rememberDevice?: boolean;
     rememberMe?: boolean;
   };
-
-  const rememberDevice30DaysValue = rememberDevice30Days ?? rememberDevice ?? false;
 
   const result = await validateLogin({ phone, password });
 
   if (result.otpRequired) {
-    req.session.pendingUserId = result.user.id;
-    req.session.pendingPhone = phone;
-    req.session.pendingRememberDevice30Days = rememberDevice30DaysValue;
-    req.session.pendingRememberMe = rememberMe ?? false;
     await requestOtp(phone);
-    await saveSession(req);
     return res.json({ ok: true, otpRequired: true });
   }
-
-  applySessionLifetime(req, {
-    rememberDevice30Days: rememberDevice30DaysValue,
-    rememberMe: rememberMe ?? false
-  });
-
-  req.session.userId = result.user.id;
 
   const resolvedRememberMe = rememberMe ?? false;
 
@@ -215,12 +148,7 @@ export async function login(req: Request, res: Response) {
 }
 
 export async function logout(req: Request, res: Response) {
-  req.session.destroy(() => undefined);
-
-  // Clear session cookie
-  res.clearCookie(sessionCookieName, sessionCookieOptions);
-
-  // Clear refresh cookie (must match options used when setting it)
+  // Clear refresh cookie
   res.clearCookie(refreshCookieName, buildRefreshCookieOptions(env.REFRESH_TOKEN_TTL_DAYS));
 
   return res.json({ ok: true });

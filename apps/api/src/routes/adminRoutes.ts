@@ -37,7 +37,6 @@ const meetUrlSchema = z
 router.post(
   "/admin/users/:id/approve",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ id: z.string() })),
   asyncHandler(approveUserHandler)
@@ -45,7 +44,6 @@ router.post(
 router.post(
   "/admin/users/:id/reject",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ id: z.string() })),
   asyncHandler(rejectUserHandler)
@@ -53,7 +51,6 @@ router.post(
 router.post(
   "/admin/users/:id/ban",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ id: z.string() })),
   asyncHandler(banUserHandler)
@@ -63,7 +60,6 @@ router.get("/admin/dashboard", requireAuth, requireAdmin, asyncHandler(dashboard
 router.post(
   "/admin/users/:id/deactivate",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ id: z.string() })),
   asyncHandler(deactivateUserHandler)
@@ -71,7 +67,6 @@ router.post(
 router.post(
   "/admin/users/:id/delete",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ id: z.string() })),
   asyncHandler(deleteUserHandler)
@@ -82,7 +77,6 @@ router.get("/admin/refunds", requireAuth, requireAdmin, asyncHandler(listRefunds
 router.post(
   "/admin/refunds/:id/approve",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ id: z.string() })),
   asyncHandler(approveRefundHandler)
@@ -90,7 +84,6 @@ router.post(
 router.post(
   "/admin/refunds/:id/deny",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ id: z.string() })),
   asyncHandler(denyRefundHandler)
@@ -100,7 +93,6 @@ router.get("/admin/verification-requests", requireAuth, requireAdmin, asyncHandl
 router.post(
   "/admin/verification-requests/:id/start",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ id: z.string() })),
   validateBody(z.object({ meetUrl: meetUrlSchema })),
@@ -109,7 +101,6 @@ router.post(
 router.post(
   "/admin/verification-requests/:id/approve",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ id: z.string() })),
   asyncHandler(approveVerificationRequestHandler)
@@ -117,7 +108,6 @@ router.post(
 router.post(
   "/admin/verification-requests/:id/reject",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ id: z.string() })),
   validateBody(z.object({ reason: z.string().min(1) })),
@@ -127,7 +117,6 @@ router.post(
 router.post(
   "/admin/verifications/:userId/meet-link",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ userId: z.string() })),
   validateBody(z.object({ meetUrl: meetUrlSchema })),
@@ -136,7 +125,6 @@ router.post(
 router.post(
   "/admin/verifications/:userId/approve",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ userId: z.string() })),
   validateBody(z.object({ reason: z.string().min(1).nullish() })),
@@ -145,7 +133,6 @@ router.post(
 router.post(
   "/admin/verifications/:userId/reject",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateParams(z.object({ userId: z.string() })),
   validateBody(z.object({ reason: z.string().min(1) })),
@@ -155,7 +142,6 @@ router.post(
 router.post(
   "/admin/dev/shift-payment-date",
   requireAuth,
-  requireAuthHeader,
   requireAdmin,
   validateBody(z.object({ userId: z.string().uuid(), daysBack: z.coerce.number().int().min(1) })),
   asyncHandler(shiftPaymentDateHandler)
