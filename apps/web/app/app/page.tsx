@@ -1,19 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { LegacyRedirectPage } from "@/app/components/LegacyRedirectPage";
 
 export default function AppHome() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/discover");
-  }, [router]);
-
   return (
-    <div className="card">
-      <h2>Loading your dashboard...</h2>
-      <p className="card-subtitle">Preparing your premium experience.</p>
-    </div>
+    <LegacyRedirectPage
+      to="/discover"
+      title="Loading your dashboard"
+      description="The app home route now forwards to the Discover dashboard."
+    />
   );
 }

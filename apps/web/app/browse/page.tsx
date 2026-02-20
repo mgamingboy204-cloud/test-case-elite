@@ -1,21 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { LegacyRedirectPage } from "@/app/components/LegacyRedirectPage";
 
 export default function BrowsePage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/discover");
-  }, [router]);
-
   return (
-    <div className="public-shell">
-      <div className="card">
-        <h2>Redirecting...</h2>
-        <p className="card-subtitle">Discover is now available at /discover.</p>
-      </div>
-    </div>
+    <LegacyRedirectPage
+      to="/discover"
+      title="Opening Discover"
+      description="Browse has been consolidated into the primary Discover experience."
+    />
   );
 }

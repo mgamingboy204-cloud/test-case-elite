@@ -1,21 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { LegacyRedirectPage } from "@/app/components/LegacyRedirectPage";
 
 export default function VerificationPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/onboarding/video-verification");
-  }, [router]);
-
   return (
-    <div className="public-shell">
-      <div className="card">
-        <h2>Redirecting...</h2>
-        <p className="card-subtitle">Verification has moved to onboarding.</p>
-      </div>
-    </div>
+    <LegacyRedirectPage
+      to="/onboarding/video-verification"
+      title="Opening verification"
+      description="Video verification now lives in onboarding for a single guided flow."
+    />
   );
 }

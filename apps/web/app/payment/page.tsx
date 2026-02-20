@@ -1,21 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { LegacyRedirectPage } from "@/app/components/LegacyRedirectPage";
 
 export default function PaymentRedirectPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/onboarding/payment");
-  }, [router]);
-
   return (
-    <div className="public-shell">
-      <div className="card">
-        <h2>Redirecting...</h2>
-        <p className="card-subtitle">Payment is managed in onboarding.</p>
-      </div>
-    </div>
+    <LegacyRedirectPage
+      to="/onboarding/payment"
+      title="Opening payment setup"
+      description="Payment onboarding is now managed under /onboarding/payment."
+    />
   );
 }

@@ -1,18 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { LegacyRedirectPage } from "@/app/components/LegacyRedirectPage";
 
 export default function AuthPage() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace("/login");
-  }, [router]);
-
   return (
-    <div className="card">
-      <h2>Redirecting...</h2>
-      <p className="card-subtitle">Sending you to the new login experience.</p>
-    </div>
+    <LegacyRedirectPage
+      to="/login"
+      title="Moving you to sign in"
+      description="The dedicated authentication route now lives at /login."
+    />
   );
 }
