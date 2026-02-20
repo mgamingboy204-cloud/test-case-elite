@@ -2,195 +2,217 @@
 
 import Link from "next/link";
 import { type MouseEvent, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/app/components/ui/Button";
+import { Card } from "@/app/components/ui/Card";
 
 const features = [
   {
-    icon: "✓",
+    icon: "◎",
     title: "Video Verified",
-    desc: "Every member is identity-verified through a live video call for your safety.",
+    desc: "Every member is identity-verified through a live biometric session for absolute authenticity.",
   },
   {
-    icon: "♥",
+    icon: "✦",
     title: "Quality Matches",
-    desc: "Our algorithm focuses on compatibility, not volume. Fewer, better connections.",
+    desc: "Our orchestrator focuses on significant compatibility, not volume. Fewer, profound connections.",
   },
   {
-    icon: "★",
-    title: "Premium Experience",
-    desc: "No ads, no bots, no games. A clean, premium dating experience you deserve.",
+    icon: "◈",
+    title: "Elite Experience",
+    desc: "No ads, no bots, no distractions. A clean, premium environment dedicated to your legacy.",
   },
   {
-    icon: "⚑",
+    icon: "✨",
     title: "Safe & Private",
-    desc: "End-to-end privacy controls, instant reporting, and a dedicated safety team.",
+    desc: "End-to-end encryption, priority reporting, and a dedicated curatorial concierge.",
   },
 ];
 
 const stats = [
-  { value: "$50K+$", label: "Avg Member Income" },
-  { value: "$12K+$", label: "Premium Dates Booked" },
-  { value: "$98%$", label: "Satisfaction Rate" },
+  { value: "$50K+", label: "Avg Member Income" },
+  { value: "12K+", label: "Elite Dates Booked" },
+  { value: "98%", label: "Satisfaction Rate" },
 ];
 
-function TiltCard({ title, subtitle, className }: { title: string; subtitle: string; className?: string }) {
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-
-  const transform = useMemo(() => `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`, [tilt.x, tilt.y]);
-
-  const onMove = (event: MouseEvent<HTMLDivElement>) => {
-    if (window.innerWidth < 1024) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const px = (event.clientX - rect.left) / rect.width;
-    const py = (event.clientY - rect.top) / rect.height;
-    setTilt({ x: (0.5 - py) * 14, y: (px - 0.5) * 14 });
-  };
-
+function FeatureCard({ title, icon, desc, index }: { title: string; icon: string; desc: string, index: number }) {
   return (
-    <div className={`glass-card ${className ?? ""}`} style={{ transform }} onMouseMove={onMove} onMouseLeave={() => setTilt({ x: 0, y: 0 })}>
-      <h3>{title}</h3>
-      <p>{subtitle}</p>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.8, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <Card className="p-10 bg-white/40 backdrop-blur-3xl border-white/60 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)] rounded-[3rem] group hover:shadow-[0_40px_80px_-20px_rgba(232,165,178,0.1)] transition-all duration-700 h-full">
+        <div className="w-14 h-14 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center text-2xl text-primary/60 mb-8 group-hover:rotate-12 group-hover:bg-primary group-hover:text-white transition-all duration-700">
+          {icon}
+        </div>
+        <h4 className="text-2xl font-serif italic text-foreground/80 mb-4">{title}</h4>
+        <p className="text-sm text-muted-foreground/50 leading-relaxed italic">{desc}</p>
+      </Card>
+    </motion.div>
   );
 }
 
 export default function HomePage() {
-  const [sheetOpen, setSheetOpen] = useState(false);
-
   return (
-    <div className="marketing-home">
-      <section className="hero-shell">
-        <div className="hero-overlay" />
+    <div className="relative overflow-hidden pt-32">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[60%] bg-primary/[0.03] rounded-full blur-[150px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/[0.05] rounded-full blur-[120px]" />
+      </div>
 
-        <div className="hero-copy">
-          <p className="hero-kicker">Elite Match</p>
-          <h1>Start something epic.</h1>
-          <p className="hero-subtitle">
-            Full-bleed, premium matchmaking for ambitious singles ready for real connection.
-          </p>
-
-          <div className="desktop-cta">
-            <Link href="/signup">
-              <Button size="lg" style={{ borderRadius: 999, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35), 0 20px 40px rgba(230,57,70,0.35)" }}>Create Account</Button>
-            </Link>
-            <Link href="/login">
-              <Button size="lg" variant="secondary" style={{ borderRadius: 999 }}>Log In</Button>
-            </Link>
-          </div>
-        </div>
-
-        <div className="stats-bar">
-          {stats.map((s) => (
-            <div key={s.label} className="stat-item">
-              <span>{s.value}</span>
-              <small>{s.label}</small>
+      {/* Hero Section */}
+      <section className="relative z-10 max-w-7xl mx-auto px-8 py-24 md:py-40">
+        <div className="grid lg:grid-cols-2 gap-20 items-center">
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+            className="space-y-10"
+          >
+            <div className="space-y-4">
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, delay: 0.2 }}
+                className="text-[12px] uppercase tracking-[0.6em] font-black text-primary italic"
+              >
+                The Future of Significant Connection
+              </motion.p>
+              <h1 className="text-6xl md:text-8xl font-serif italic tracking-tight text-foreground/90 leading-[0.9]">
+                Start something <br />
+                <span className="text-primary/80">profound.</span>
+              </h1>
             </div>
-          ))}
-        </div>
 
-        <div className="visual-stack">
-          <TiltCard title="Verified People" subtitle="Every profile is video screened." className="card-a" />
-          <TiltCard title="3D-Lite Motion" subtitle="Cards respond to your movement." className="card-b" />
-          <TiltCard title="Privacy First" subtitle="Built-in trust and safety controls." className="card-c" />
-        </div>
+            <p className="text-xl text-muted-foreground/40 font-serif italic max-w-lg leading-relaxed border-l-2 border-primary/10 pl-8">
+              A meticulously curated environment for ambitious individuals ready for connections that transcend the superficial.
+            </p>
 
-        <button className="mobile-launch" onClick={() => setSheetOpen(true)}>
-          Get Started
-        </button>
-      </section>
-
-      <section className="features-shell">
-        <h2>Why Elite Match</h2>
-        <div className="features-grid">
-          {features.map((f) => (
-            <article key={f.title} className="feature-card">
-              <div className="feature-icon">{f.icon}</div>
-              <h4>{f.title}</h4>
-              <p>{f.desc}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {sheetOpen && (
-        <div className="mobile-sheet-wrap" onClick={() => setSheetOpen(false)}>
-          <div className="mobile-sheet" onClick={(event) => event.stopPropagation()}>
-            <div className="sheet-handle" />
-            <h3>Welcome to Elite Match</h3>
-            <p>Choose how you want to begin.</p>
-            <div className="sheet-actions">
-              <Link href="/signup" onClick={() => setSheetOpen(false)}>
-                <Button size="lg" fullWidth style={{ borderRadius: 999 }}>Create Account</Button>
+            <div className="flex flex-col sm:flex-row gap-6 pt-4">
+              <Link href="/signup">
+                <Button size="xl" className="px-12 py-8 rounded-[2rem] shadow-2xl shadow-primary/20 text-[10px] uppercase tracking-[0.4em] font-black">
+                  Authorize Membership
+                </Button>
               </Link>
-              <Link href="/login" onClick={() => setSheetOpen(false)}>
-                <Button size="lg" variant="secondary" fullWidth style={{ borderRadius: 999 }}>Sign In</Button>
+              <Link href="/login">
+                <Button size="xl" variant="secondary" className="px-12 py-8 rounded-[2rem] text-[10px] uppercase tracking-[0.4em] font-black italic">
+                  Return to Origin
+                </Button>
               </Link>
             </div>
-            <button className="sheet-close" onClick={() => setSheetOpen(false)}>Close</button>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, filter: "blur(20px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            transition={{ duration: 2, ease: [0.16, 1, 0.3, 1] }}
+            className="relative"
+          >
+            <div className="aspect-[4/5] rounded-[4rem] overflow-hidden shadow-[0_80px_160px_-40px_rgba(0,0,0,0.15)] group relative">
+              <img
+                src="https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=1200&q=80"
+                alt="Elite Connection"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[3s]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60" />
+
+              <div className="absolute bottom-12 left-12 right-12 bg-white/20 backdrop-blur-3xl border border-white/40 p-10 rounded-[2.5rem] shadow-2xl">
+                <p className="text-[10px] uppercase tracking-[0.5em] font-black text-white/90 mb-2 italic">Active Curations</p>
+                <p className="text-2xl font-serif italic text-white leading-tight">Authentic identity, verified biometric signal.</p>
+              </div>
+            </div>
+
+            {/* Decorative Element */}
+            <div className="absolute -top-12 -right-12 w-48 h-48 border border-primary/10 rounded-full animate-pulse pointer-events-none" />
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Stats Bar */}
+      <section className="relative z-10 border-y border-primary/5 bg-white/20 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-primary/5">
+            {stats.map((s, i) => (
+              <motion.div
+                key={s.label}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: i * 0.1 }}
+                className="py-12 md:py-20 flex flex-col items-center gap-2 group"
+              >
+                <span className="text-5xl md:text-6xl font-serif italic text-primary/80 group-hover:scale-110 transition-transform duration-700">{s.value}</span>
+                <span className="text-[10px] uppercase tracking-[0.5em] font-black text-muted-foreground/30 italic">{s.label}</span>
+              </motion.div>
+            ))}
           </div>
         </div>
-      )}
+      </section>
 
-      <style jsx>{`
-        .marketing-home { min-height: 100vh; background: var(--bg); color: var(--text); font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
-        .hero-shell { position: relative; min-height: 100vh; padding: 24px; background-image: url('https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=2000&q=80'); background-size: cover; background-position: center; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
-        .hero-overlay { position: absolute; inset: 0; background: radial-gradient(circle at 50% 120%, rgba(0,0,0,0.92), rgba(0,0,0,0.35) 45%, rgba(0,0,0,0.58)); }
-        .hero-copy { position: relative; z-index: 2; margin-bottom: 110px; max-width: 620px; }
-        .hero-kicker { font-size: 12px; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(255,255,255,0.78); margin-bottom: 12px; }
-        .hero-copy h1 { font-size: clamp(2.1rem, 8vw, 5.2rem); color: #fff; line-height: 0.96; letter-spacing: -0.04em; font-weight: 800; }
-        .hero-subtitle { margin-top: 18px; font-size: clamp(0.95rem, 2.1vw, 1.2rem); color: rgba(255,255,255,0.86); max-width: 560px; line-height: 1.55; }
-        .desktop-cta { display: flex; gap: 12px; margin-top: 28px; }
-        .stats-bar { position: absolute; left: 24px; right: 24px; bottom: 24px; z-index: 2; background: linear-gradient(135deg, rgba(255,255,255,0.17), rgba(255,255,255,0.04)); border: 1px solid rgba(255,255,255,0.26); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-radius: 999px; padding: 16px 22px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; box-shadow: 0 8px 26px rgba(0,0,0,0.2); }
-        .stat-item { text-align: center; color: #fff; display: flex; flex-direction: column; gap: 4px; }
-        .stat-item span { font-size: clamp(1.2rem, 3.5vw, 2rem); font-weight: 800; }
-        .stat-item small { font-size: 11px; letter-spacing: 0.03em; color: rgba(255,255,255,0.82); }
-        .visual-stack { position: absolute; right: 3%; top: 18%; width: min(450px, 42vw); z-index: 2; display: none; }
-        .glass-card { border-radius: 24px; padding: 24px; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(15px); background: rgba(255,255,255,0.05); box-shadow: 0 12px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.18); }
-        .glass-card h3 { color: #fff; margin-bottom: 6px; }
-        .glass-card p { color: rgba(255,255,255,0.78); }
-        .card-b { margin-left: 26px; }
-        .card-c { margin-left: 54px; }
-        .mobile-launch { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 4; border-radius: 999px; padding: 16px; font-weight: 700; color: #fff; background: linear-gradient(120deg, #ff4d5a, #d12836); box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 18px 32px rgba(209,40,54,0.45); }
-        .features-shell { padding: 64px 20px 92px; background: linear-gradient(180deg, rgba(9,9,12,0.96), rgba(19,19,28,0.96)); }
-        :global([data-theme='light']) .features-shell { background: linear-gradient(180deg, rgba(241,245,255,0.9), rgba(228,236,250,0.95)); }
-        .features-shell h2 { text-align: center; margin-bottom: 24px; color: #fff; font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 800; }
-        :global([data-theme='light']) .features-shell h2 { color: #202331; }
-        .features-grid { max-width: 1100px; margin: 0 auto; display: grid; gap: 16px; grid-template-columns: repeat(1, minmax(0,1fr)); }
-        .feature-card { border-radius: 16px; padding: 20px; backdrop-filter: blur(15px); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 6px 18px rgba(0,0,0,0.18); }
-        .feature-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,0.12); margin-bottom: 12px; }
-        .feature-card h4 { color: #fff; margin-bottom: 8px; font-weight: 700; }
-        .feature-card p { color: rgba(255,255,255,0.78); font-size: 0.95rem; }
-        :global([data-theme='light']) .feature-card { background: rgba(255,255,255,0.58); border-color: rgba(255,255,255,0.7); }
-        :global([data-theme='light']) .feature-card h4, :global([data-theme='light']) .feature-card p { color: #1f2533; }
-        .mobile-sheet-wrap { position: fixed; inset: 0; background: rgba(3,5,8,0.55); backdrop-filter: blur(14px); z-index: 50; display: flex; align-items: flex-end; }
-        .mobile-sheet { width: 100%; border-radius: 24px 24px 0 0; padding: 18px 20px calc(28px + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.08); border-top: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(20px); }
-        .sheet-handle { width: 44px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.45); margin: 0 auto 16px; }
-        .mobile-sheet h3 { color: #fff; margin-bottom: 6px; text-align: center; }
-        .mobile-sheet p { text-align: center; color: rgba(255,255,255,0.74); margin-bottom: 18px; }
-        .sheet-actions { display: grid; gap: 10px; }
-        .sheet-actions :global(a) { width: 100%; }
-        .sheet-actions :global(a:last-child button) { background: linear-gradient(120deg, #ff4d5a, #d12836); color: #fff; border: 1px solid rgba(255,255,255,0.2); min-height: 48px; }
-        .sheet-actions :global(button) { min-height: 48px; }
-        .sheet-close { display: block; margin: 14px auto 0; color: rgba(255,255,255,0.75); }
-        @media (min-width: 1024px) {
-          .hero-shell { padding: 38px 56px; }
-          .visual-stack { display: block; }
-          .mobile-launch { display: none; }
-          .features-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
-        }
-        @media (max-width: 767px) {
-          .desktop-cta { display: none; }
-          .hero-shell { min-height: 94vh; justify-content: flex-start; padding-top: 80px; }
-          .hero-copy { margin-bottom: 24px; }
-          .hero-kicker, .hero-copy h1, .hero-subtitle { margin-bottom: 24px; }
-          .stats-bar { position: relative; left: auto; right: auto; bottom: auto; margin-bottom: 24px; border-radius: 20px; grid-template-columns: 1fr; gap: 14px; padding: 20px; }
-          .visual-stack { margin-bottom: 24px; }
-          .features-shell { padding-top: 40px; }
-          .features-shell h2 { margin-bottom: 24px; }
-          .features-grid { gap: 24px; }
-          .mobile-launch { width: calc(100% - 32px); }
-        }
-      `}</style>
+      {/* Features Section */}
+      <section className="relative z-10 max-w-7xl mx-auto px-8 py-32 md:py-48">
+        <header className="mb-24 text-center space-y-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="flex flex-col items-center gap-4"
+          >
+            <p className="text-[12px] uppercase tracking-[0.6em] font-black text-primary/40 italic font-sans">The Elite Protocol</p>
+            <div className="w-12 h-[1px] bg-primary/20" />
+          </motion.div>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-4xl md:text-6xl font-serif italic text-foreground/90 tracking-tight"
+          >
+            Why Choose the Collective
+          </motion.h2>
+        </header>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {features.map((f, i) => (
+            <FeatureCard key={f.title} {...f} index={i} />
+          ))}
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="relative z-10 max-w-5xl mx-auto px-8 py-32 md:pb-64">
+        <Card className="p-16 md:p-32 bg-primary text-center rounded-[5rem] overflow-hidden relative group">
+          <div className="absolute inset-0 bg-gradient-to-tr from-primary via-primary to-[#d12836] opacity-90" />
+
+          {/* Noise Texture */}
+          <div className="absolute inset-0 opacity-[0.05] mix-blend-multiply bg-[url('https://grainy-gradients.vercel.app/noise.svg')] pointer-events-none" />
+
+          <div className="relative z-10 space-y-12">
+            <div className="space-y-6">
+              <h2 className="text-4xl md:text-7xl font-serif italic text-white tracking-tight leading-[0.9]">
+                Your legacy in <br /> connection begins.
+              </h2>
+              <p className="text-[11px] uppercase tracking-[0.6em] font-black text-white/40 italic font-sans">
+                Access the most exclusive circle in the digital realm.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
+              <Link href="/signup">
+                <Button size="xl" variant="secondary" className="px-16 py-8 rounded-[2rem] text-[10px] uppercase tracking-[0.4em] font-black bg-white text-primary hover:bg-white/90">
+                  Begin Identity Synthesis
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Decorative Blurs */}
+          <div className="absolute -top-32 -left-32 w-64 h-64 bg-white/10 rounded-full blur-[100px]" />
+          <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-black/10 rounded-full blur-[120px]" />
+        </Card>
+      </section>
     </div>
   );
 }

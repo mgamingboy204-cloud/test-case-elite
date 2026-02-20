@@ -16,28 +16,31 @@ import { useSession } from "@/lib/session";
 
 type Stage = "IDENTITY" | "SECURITY" | "VERIFICATION";
 
-const stageVariants: any = {
+const stageVariants = {
   enter: (direction: number) => ({
-    x: direction > 0 ? 100 : -100,
+    x: direction > 0 ? 40 : -40,
     opacity: 0,
-    filter: "blur(10px)",
+    scale: 0.98,
+    filter: "blur(15px)",
   }),
   center: {
     x: 0,
     opacity: 1,
+    scale: 1,
     filter: "blur(0px)",
     transition: {
-      duration: 0.6,
-      ease: [0.32, 0.72, 0, 1] as any,
+      duration: 1,
+      ease: [0.16, 1, 0.3, 1] as any,
     }
   },
   exit: (direction: number) => ({
-    x: direction < 0 ? 100 : -100,
+    x: direction < 0 ? 40 : -40,
     opacity: 0,
-    filter: "blur(10px)",
+    scale: 1.02,
+    filter: "blur(15px)",
     transition: {
-      duration: 0.4,
-      ease: "easeInOut",
+      duration: 0.6,
+      ease: [0.16, 1, 0.3, 1] as any,
     }
   })
 };
@@ -46,7 +49,7 @@ export default function SignupPage() {
   const router = useRouter();
   const { addToast } = useToast();
   const { refresh } = useSession();
-  
+
   const [[stage, direction], setStage] = useState<[Stage, number]>(["IDENTITY", 0]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -89,7 +92,7 @@ export default function SignupPage() {
     if (password !== confirmPassword) {
       nextErrors.confirmPassword = "Security keys must match perfectly.";
     }
-    
+
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
@@ -148,208 +151,196 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="w-full max-w-[540px] mx-auto pt-12">
-      <motion.div 
+    <div className="flex flex-col items-center justify-center w-full">
+      <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: [0.32, 0.72, 0, 1] }}
+        transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-[540px] relative z-10"
       >
-        <Card className="glass-card !p-0 overflow-hidden border-white/10 shadow-[0_64px_128px_-24px_rgba(0,0,0,0.8)]">
-          {/* Spring-Driven Progress Loader */}
-          <div className="relative h-1.5 w-full bg-white/5">
-             <motion.div 
-               animate={{ width: stage === "IDENTITY" ? "33.3%" : stage === "SECURITY" ? "66.6%" : "100%" }}
-               transition={{ type: "spring", stiffness: 60, damping: 20 }}
-               className="h-full premium-gradient shadow-[0_0_20px_rgba(212,175,55,0.6)]"
-             />
+        <Card className="p-0 overflow-hidden border-white/60 shadow-[0_80px_160px_-40px_rgba(0,0,0,0.1)] backdrop-blur-3xl bg-white/40 rounded-[4rem] group border border-white/60">
+          {/* Progress Indication */}
+          <div className="relative h-1.5 w-full bg-primary/5">
+            <motion.div
+              animate={{ width: stage === "IDENTITY" ? "33.3%" : stage === "SECURITY" ? "66.6%" : "100%" }}
+              transition={{ type: "spring", stiffness: 40, damping: 20 }}
+              className="h-full bg-primary/40 shadow-[0_0_20px_rgba(232,165,178,0.4)]"
+            />
           </div>
 
           <div className="p-12 md:p-16">
             <AnimatePresence mode="wait" custom={direction} initial={false}>
-              {stage === "IDENTITY" && (
-                <motion.div
-                  key="identity"
-                  custom={direction}
-                  variants={stageVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  className="space-y-10"
-                >
-                  <header className="text-center space-y-3">
-                    <motion.h1 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="text-4xl md:text-5xl font-serif premium-text-gradient tracking-tight"
-                    >
-                      Discovery
-                    </motion.h1>
-                    <motion.p 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3 }}
-                      className="text-muted-foreground font-light tracking-wide uppercase text-[10px]"
-                    >
-                      Phase 1: Verify your existence
-                    </motion.p>
-                  </header>
+              <motion.div
+                key={stage}
+                custom={direction}
+                variants={stageVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+              >
+                {stage === "IDENTITY" && (
+                  <div className="space-y-12">
+                    <header className="text-center space-y-4">
+                      <h1 className="text-5xl md:text-6xl font-serif tracking-tight text-foreground/90 italic">The Discovery</h1>
+                      <div className="flex flex-col items-center gap-2">
+                        <p className="text-[10px] uppercase tracking-[0.5em] font-black text-primary/40 italic">
+                          Phase 1: Your Identity
+                        </p>
+                        <div className="w-12 h-[1px] bg-primary/20" />
+                      </div>
+                    </header>
 
-                  <div className="space-y-6">
-                    <Input
-                      label="Legal Name"
-                      placeholder="Alexander Pierce"
-                      className="h-16 rounded-[1.25rem]"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      error={errors.name}
-                    />
-                    <Input
-                      label="Secure Line (Phone)"
-                      type="tel"
-                      placeholder="123 456 7890"
-                      className="h-16 rounded-[1.25rem]"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      error={errors.phone}
-                      maxLength={10}
-                    />
+                    <div className="space-y-8">
+                      <Input
+                        label="Nom de Plume (Legal Name)"
+                        placeholder="e.g. Julian Sterling"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        error={errors.name}
+                      />
+                      <Input
+                        label="Encrypted Line (Phone)"
+                        type="tel"
+                        placeholder="123 456 7890"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        error={errors.phone}
+                        maxLength={10}
+                        inputMode="numeric"
+                      />
+                    </div>
+
+                    <div className="pt-6">
+                      <Button
+                        variant="premium"
+                        size="xl"
+                        fullWidth
+                        onClick={() => { if (validateIdentity()) paginate("SECURITY", 1); }}
+                        className="py-8 rounded-[1.5rem] shadow-2xl shadow-primary/20 text-[10px] uppercase tracking-[0.4em] font-black"
+                      >
+                        Authenticate to Next Phase
+                      </Button>
+                    </div>
                   </div>
+                )}
 
-                  <Button 
-                    variant="premium"
-                    size="xl"
-                    fullWidth
-                    onClick={() => { if (validateIdentity()) paginate("SECURITY", 1); }}
-                  >
-                    Continue to Security
-                  </Button>
-                </motion.div>
-              )}
+                {stage === "SECURITY" && (
+                  <div className="space-y-12">
+                    <header className="text-center space-y-4">
+                      <h1 className="text-5xl md:text-6xl font-serif tracking-tight text-foreground/90 italic">Access Control</h1>
+                      <div className="flex flex-col items-center gap-2">
+                        <p className="text-[10px] uppercase tracking-[0.5em] font-black text-primary/40 italic">
+                          Phase 2: Security Credentials
+                        </p>
+                        <div className="w-12 h-[1px] bg-primary/20" />
+                      </div>
+                    </header>
 
-              {stage === "SECURITY" && (
-                <motion.div
-                  key="security"
-                  custom={direction}
-                  variants={stageVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  className="space-y-8"
-                >
-                  <header className="text-center space-y-3">
-                    <h1 className="text-4xl md:text-5xl font-serif premium-text-gradient tracking-tight">Access</h1>
-                    <p className="text-muted-foreground font-light tracking-wide uppercase text-[10px]">
-                      Phase 2: Secure your credentials
-                    </p>
-                  </header>
+                    <div className="space-y-8">
+                      <Input
+                        label="Private Correspondence (Email)"
+                        type="email"
+                        placeholder="vault@elite.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        error={errors.email}
+                      />
+                      <Input
+                        label="Master Passphrase"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        error={errors.password}
+                      />
+                      <Input
+                        label="Re-verify Passphrase"
+                        type="password"
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        error={errors.confirmPassword}
+                      />
+                    </div>
 
-                  <div className="space-y-5">
-                    <Input
-                      label="Private Email (Encrypted)"
-                      type="email"
-                      placeholder="vault@elite.com"
-                      className="h-16 rounded-[1.25rem]"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      error={errors.email}
-                    />
-                    <Input
-                      label="Pass-Key"
-                      type="password"
-                      placeholder="••••••••"
-                      className="h-16 rounded-[1.25rem]"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      error={errors.password}
-                    />
-                    <Input
-                      label="Confirm Pass-Key"
-                      type="password"
-                      placeholder="••••••••"
-                      className="h-16 rounded-[1.25rem]"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      error={errors.confirmPassword}
-                    />
+                    <div className="space-y-6 pt-6">
+                      <Button
+                        variant="premium"
+                        size="xl"
+                        fullWidth
+                        loading={loading}
+                        onClick={handleSecurityInitialize}
+                        className="py-8 rounded-[1.5rem] shadow-2xl shadow-primary/20 text-[10px] uppercase tracking-[0.4em] font-black"
+                      >
+                        Request Vault Entry
+                      </Button>
+                      <button
+                        onClick={() => paginate("IDENTITY", -1)}
+                        className="w-full text-muted-foreground/30 text-[10px] uppercase tracking-[0.4em] font-black hover:text-primary transition-all duration-700 italic"
+                      >
+                        Return to Discovery
+                      </button>
+                    </div>
                   </div>
+                )}
 
-                  <div className="pt-4 space-y-4">
-                    <Button 
-                      variant="premium"
-                      size="xl"
-                      fullWidth
-                      loading={loading}
-                      onClick={handleSecurityInitialize}
-                    >
-                      Request Final Entry
-                    </Button>
-                    <button 
-                      onClick={() => paginate("IDENTITY", -1)}
-                      className="w-full text-muted-foreground text-xs uppercase tracking-widest hover:text-primary transition-colors font-medium"
-                    >
-                      Back to Identity
-                    </button>
-                  </div>
-                </motion.div>
-              )}
+                {stage === "VERIFICATION" && (
+                  <div className="space-y-12 text-center">
+                    <header className="space-y-6">
+                      <h1 className="text-5xl md:text-6xl font-serif tracking-tight text-foreground/90 italic">The Cipher</h1>
+                      <div className="space-y-2">
+                        <p className="text-sm text-foreground/60 font-serif italic leading-relaxed">
+                          A unique verification code has been dispatched to
+                        </p>
+                        <p className="text-2xl text-primary/60 font-serif italic">{phone}</p>
+                      </div>
+                    </header>
 
-              {stage === "VERIFICATION" && (
-                <motion.div
-                  key="verification"
-                  custom={direction}
-                  variants={stageVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  className="space-y-12 text-center"
-                >
-                  <header className="space-y-4">
-                    <h1 className="text-4xl md:text-5xl font-serif premium-text-gradient tracking-tight">The Key</h1>
-                    <p className="text-muted-foreground font-light leading-relaxed">
-                      A unique decryption code has been sent to <br/>
-                      <span className="text-primary font-bold tracking-widest">{phone}</span>
-                    </p>
-                  </header>
+                    <div className="flex flex-col items-center gap-10 py-4">
+                      <div className="scale-110">
+                        <OtpInput onComplete={handleVerify} disabled={loading} />
+                      </div>
+                      <ResendTimer onResend={handleResend} />
+                    </div>
 
-                  <div className="flex flex-col items-center gap-10">
-                    <OtpInput onComplete={handleVerify} disabled={loading} />
-                    <ResendTimer onResend={handleResend} />
-                  </div>
-
-                  <div className="pt-6 space-y-8">
-                    <label className="flex items-center justify-center gap-4 cursor-pointer group">
-                      <div 
-                        className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-500 ${rememberMe ? 'bg-primary border-primary shadow-[0_0_15px_rgba(212,175,55,0.4)]' : 'bg-white/5 border-white/10'}`}
+                    <div className="space-y-10 pt-4">
+                      <div
+                        className="flex items-center justify-center gap-4 cursor-pointer group"
                         onClick={() => setRememberMe(!rememberMe)}
                       >
-                        {rememberMe && <span className="text-background font-bold text-xs">✔</span>}
+                        <div className={`w-6 h-6 rounded-2xl border-2 border-primary/10 flex items-center justify-center transition-all duration-700 ${rememberMe ? "bg-primary border-primary shadow-lg shadow-primary/20" : "bg-white/40 group-hover:border-primary/30"}`}>
+                          {rememberMe && <div className="w-2 h-2 rounded-full bg-white animate-in zoom-in duration-500" />}
+                        </div>
+                        <span className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/30 group-hover:text-primary/60 transition-colors italic">Trust this terminal (30 Days)</span>
                       </div>
-                      <span className="text-sm text-muted-foreground/80 group-hover:text-foreground transition-colors font-light tracking-wide">Trust this terminal for 30 days</span>
-                    </label>
-                    
-                    <button 
-                      onClick={() => paginate("SECURITY", -1)}
-                      className="text-muted-foreground text-[10px] uppercase tracking-[0.3em] hover:text-primary transition-colors font-bold"
-                    >
-                      Edit Application Details
-                    </button>
+
+                      <button
+                        onClick={() => paginate("SECURITY", -1)}
+                        className="text-muted-foreground/30 text-[10px] uppercase tracking-[0.4em] font-black hover:text-primary transition-all duration-700 italic border-b border-primary/5 pb-1 inline-block"
+                      >
+                        Refine Application Details
+                      </button>
+                    </div>
                   </div>
-                </motion.div>
-              )}
+                )}
+              </motion.div>
             </AnimatePresence>
           </div>
+
+          {/* Cinematic accent blurs on card */}
+          <div className="absolute -right-32 -top-32 w-64 h-64 bg-primary/10 rounded-full blur-[120px] pointer-events-none group-hover:bg-primary/20 transition-all duration-1000" />
+          <div className="absolute -left-32 -bottom-32 w-64 h-64 bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
         </Card>
 
-        <footer className="mt-16 text-center space-y-2 pb-12">
-          <p className="text-muted-foreground/30 text-xs font-light tracking-widest uppercase">
-            Already part of the network?
+        <footer className="mt-16 text-center space-y-6">
+          <p className="text-[10px] text-muted-foreground/20 uppercase tracking-[0.5em] font-black italic">
+            Already part of the inner circle?
           </p>
-          <Link 
-            href="/login" 
-            className="block text-primary/60 hover:text-primary transition-all duration-500 font-serif italic text-lg"
+          <Link
+            href="/login"
+            className="inline-block text-primary/60 hover:text-primary transition-all duration-700 font-serif italic text-2xl border-b border-primary/10 hover:border-primary/40 pb-2"
           >
-            Authenticate into your vault
+            Authenticate into your workspace
           </Link>
         </footer>
       </motion.div>

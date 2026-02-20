@@ -20,7 +20,7 @@ interface AvatarProps {
 export function Avatar({ src, name = "?", size = 44, className, style }: AvatarProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
-  
+
   const initials = name
     .split(" ")
     .map((w) => w[0])
@@ -31,8 +31,9 @@ export function Avatar({ src, name = "?", size = 44, className, style }: AvatarP
   return (
     <motion.div
       whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
       className={cn(
-        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-secondary shadow-inner",
+        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/[0.05] bg-primary/5 shadow-inner",
         className
       )}
       style={{ width: size, height: size, ...style }}
@@ -43,8 +44,8 @@ export function Avatar({ src, name = "?", size = 44, className, style }: AvatarP
             key="image"
             src={src}
             alt={name}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isLoaded ? 1 : 0 }}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: isLoaded ? 1 : 0, scale: isLoaded ? 1 : 0.8 }}
             exit={{ opacity: 0 }}
             onLoad={() => setIsLoaded(true)}
             onError={() => setFailed(true)}
@@ -55,16 +56,16 @@ export function Avatar({ src, name = "?", size = 44, className, style }: AvatarP
             key="fallback"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex h-full w-full items-center justify-center font-bold tracking-tighter premium-gradient text-primary-foreground"
-            style={{ fontSize: size * 0.38 }}
+            className="flex h-full w-full items-center justify-center font-serif premium-text-gradient font-bold"
+            style={{ fontSize: size * 0.4 }}
           >
             {initials}
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {/* Premium Glass Overlay */}
-      <div className="absolute inset-0 rounded-full border border-white/5 pointer-events-none" />
+
+      {/* Premium Polish Overlay */}
+      <div className="absolute inset-0 rounded-full border border-white/20 pointer-events-none mix-blend-overlay" />
     </motion.div>
   );
 }

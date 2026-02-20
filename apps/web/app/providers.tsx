@@ -86,7 +86,10 @@ export default function Providers({ children }: { children: ReactNode }) {
     <ThemeContext.Provider value={themeValue}>
       <ToastContext.Provider value={toastValue}>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <div className="noise-overlay" />
+            {children}
+          </AuthProvider>
           <ToastContainer toasts={toasts} removeToast={removeToast} />
           {process.env.NODE_ENV === "development" ? <ReactQueryDevtools initialIsOpen={false} /> : null}
         </QueryClientProvider>
@@ -100,41 +103,28 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
 
   return (
     <div
-      style={{
-        position: "fixed",
-        top: 16,
-        right: 16,
-        zIndex: 9999,
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-        maxWidth: 360,
-        width: "100%"
-      }}
+      className="fixed top-8 right-8 z-[9999] flex flex-col gap-4 max-w-sm w-full"
       aria-live="polite"
     >
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="fade-in"
-          style={{
-            background:
-              toast.type === "success" ? "var(--success)" : toast.type === "error" ? "var(--danger)" : "var(--text)",
-            color: "#fff",
-            padding: "12px 16px",
-            borderRadius: "var(--radius-md)",
-            fontSize: 14,
-            fontWeight: 500,
-            boxShadow: "var(--shadow-md)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12
-          }}
+          className="bg-white/60 backdrop-blur-2xl border border-white/60 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] rounded-3xl p-6 flex justify-between items-center gap-6 animate-in slide-in-from-right-8 duration-700 ease-out group"
         >
-          <span>{toast.message}</span>
-          <button onClick={() => removeToast(toast.id)} style={{ opacity: 0.7, fontSize: 18, lineHeight: 1 }}>
-            &times;
+          <div className="flex items-center gap-4">
+            <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${toast.type === "success" ? "bg-emerald-500 shadow-emerald-500/20" :
+                toast.type === "error" ? "bg-red-500 shadow-red-500/20" :
+                  "bg-primary shadow-primary/20"
+              }`} />
+            <span className="text-sm font-serif italic text-foreground/80 leading-tight">
+              {toast.message}
+            </span>
+          </div>
+          <button
+            onClick={() => removeToast(toast.id)}
+            className="text-muted-foreground/30 hover:text-primary transition-colors text-xl font-light"
+          >
+            ✕
           </button>
         </div>
       ))}

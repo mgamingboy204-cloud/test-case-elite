@@ -5,49 +5,49 @@
 @tailwind utilities;
 
 :root {
-  /* Midnight Premium Palette */
-  --background: 220 33% 3%;
-  --foreground: 210 20% 98%;
+  /* Cinematic Pearl White & Rose Gold Palette */
+  --background: 30 20% 98%;      /* Pearl White / Cream */
+  --foreground: 330 10% 15%;     /* Deep Obsidian for text readability */
   
-  --card: 220 33% 5%;
-  --card-foreground: 210 20% 98%;
+  --card: 30 25% 100%;           /* Pure White for depth */
+  --card-foreground: 330 10% 15%;
   
-  --popover: 220 33% 3%;
-  --popover-foreground: 210 20% 98%;
+  --popover: 30 25% 100%;
+  --popover-foreground: 330 10% 15%;
   
-  /* Brushed Gold Primary */
-  --primary: 43 65% 53%;
-  --primary-foreground: 220 33% 3%;
+  /* Cinematic Rose Gold Primary */
+  --primary: 345 50% 70%;        /* Rose Gold */
+  --primary-foreground: 30 20% 98%;
   
-  --secondary: 220 15% 15%;
-  --secondary-foreground: 210 20% 98%;
+  --secondary: 345 30% 95%;      /* Blush/Soft Rose */
+  --secondary-foreground: 330 10% 15%;
   
-  --muted: 220 15% 10%;
-  --muted-foreground: 215 15% 65%;
+  --muted: 30 15% 92%;
+  --muted-foreground: 330 10% 40%;
   
-  --accent: 43 65% 53%;
-  --accent-foreground: 210 20% 98%;
+  --accent: 345 50% 70%;
+  --accent-foreground: 30 20% 98%;
   
   --destructive: 0 84% 60%;
   --destructive-foreground: 210 20% 98%;
 
-  --border: 220 15% 12%;
-  --input: 220 15% 12%;
-  --ring: 43 65% 53%;
+  --border: 30 15% 90%;
+  --input: 30 15% 90%;
+  --ring: 345 50% 70%;
   
   --radius: 1rem;
 }
 
 @layer base {
   * {
-    @apply border-border selection:bg-primary/30 selection:text-primary;
+    @apply border-border selection:bg-primary/20 selection:text-primary;
   }
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
   h1, h2, h3, h4 {
-    @apply font-serif tracking-tight;
+    @apply font-serif tracking-tight text-foreground;
   }
 }
 
@@ -59,30 +59,37 @@
     font-family: 'Inter', sans-serif;
   }
 
+  /* Cinematic Ultrasoft Glassmorphism */
   .glass-card {
-    @apply bg-card/60 backdrop-blur-xl border border-white/5 shadow-2xl;
+    @apply bg-white/70 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.04)];
   }
 
   .glass-morphism {
-    @apply bg-white/5 backdrop-blur-lg border border-white/10;
+    @apply bg-white/50 backdrop-blur-xl border border-white/40 shadow-sm;
+  }
+
+  /* Deep editorial overlay for images */
+  .editorial-overlay {
+    background: linear-gradient(180deg, rgba(20, 15, 18, 0) 0%, rgba(20, 15, 18, 0.4) 60%, rgba(20, 15, 18, 0.9) 100%);
   }
 
   .premium-gradient {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, #b8860b 100%);
+    /* Rose Gold Gradient */
+    background: linear-gradient(135deg, #e8a5b2 0%, #d48b99 50%, #c47685 100%);
   }
 
   .premium-text-gradient {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #fbfbfb 0%, #888888 100%);
+    background-image: linear-gradient(135deg, #c47685 0%, #a85867 100%);
   }
 
   .input-premium {
-    @apply bg-white/[0.03] border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300;
+    @apply bg-white/60 border-black/5 focus:border-primary/50 focus:ring-primary/20 transition-all duration-300 shadow-inner;
   }
 
   .btn-premium {
-    @apply relative overflow-hidden transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50;
-    background: linear-gradient(135deg, #d4af37 0%, #aa891d 100%);
+    @apply relative overflow-hidden transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 text-white shadow-[0_4px_14px_rgba(232,165,178,0.4)];
+    background: linear-gradient(135deg, #e8a5b2 0%, #d48b99 100%);
   }
   
   .btn-premium::after {
@@ -93,15 +100,35 @@
   .btn-premium:hover::after {
     @apply opacity-100;
   }
+
+  /* Cinematic Noise Texture */
+  .noise-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
 }
 
 /* Custom Scrollbar for Premium Feel */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-background;
+  @apply bg-transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-white/10 rounded-full transition-colors hover:bg-white/20;
+  @apply bg-primary/20 rounded-full transition-colors hover:bg-primary/40;
 }

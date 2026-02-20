@@ -22,11 +22,11 @@ interface ButtonProps extends Omit<HTMLMotionProps<"button">, "children"> {
 }
 
 const variants = {
-  primary: "bg-primary text-primary-foreground hover:shadow-[0_0_20px_rgba(212,175,55,0.3)]",
-  secondary: "bg-secondary text-secondary-foreground border border-white/10 hover:bg-secondary/80",
-  ghost: "bg-transparent text-foreground hover:bg-white/5",
+  primary: "bg-primary text-primary-foreground hover:shadow-[0_0_20px_rgba(232,165,178,0.4)]",
+  secondary: "bg-secondary text-secondary-foreground border border-black/5 hover:bg-secondary/70",
+  ghost: "bg-transparent text-foreground hover:bg-black/5",
   danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-  premium: "premium-gradient text-primary-foreground shadow-xl hover:shadow-primary/20",
+  premium: "premium-gradient text-white shadow-xl hover:shadow-primary/40",
 };
 
 const sizes = {

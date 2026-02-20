@@ -1,0 +1,14 @@
+# Premium Dating App Redesign Tasks
+
+- [x] Analyze existing project structure and tech stack
+- [x] Identify all core features and pages
+- [x] Design a premium, cinematic UI architecture (Rose Gold & Pearl White)
+- [x] Create implementation plan for the redesign
+- [/] Implement new UI for core layouts and components
+  - [/] global.css (color palette, utilities)
+  - [ ] layout.tsx (ambient backgrounds, fonts)
+  - [ ] Core UI components (Buttons, Cards, Tabs)
+- [ ] Update individual feature pages with the new premium design
+  - [ ] Discover (Swipe stack)
+  - [ ] Profile / Matches
+- [ ] Verify functionality and aesthetics

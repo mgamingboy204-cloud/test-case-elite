@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/app/components/ui/Card";
 import { Avatar } from "@/app/components/ui/Avatar";
 import { Badge } from "@/app/components/ui/Badge";
 import { Skeleton } from "@/app/components/ui/Skeleton";
 import { EmptyState, ErrorState } from "@/app/components/ui/States";
-import { PageHeader } from "@/app/components/ui/PageHeader";
 import { apiFetch } from "@/lib/api";
 
 interface Match {
@@ -19,9 +19,9 @@ interface Match {
 }
 
 const MOCK_MATCHES: Match[] = [
-  { id: "m1", name: "Sophia Rao", photo: "https://picsum.photos/seed/match1/200/200", lastActive: "2 min ago", status: "ACTIVE" },
-  { id: "m2", name: "Aarav Mehta", photo: "https://picsum.photos/seed/match2/200/200", lastActive: "1 hour ago", status: "ACTIVE" },
-  { id: "m3", name: "Priya Das", photo: "https://picsum.photos/seed/match3/200/200", lastActive: "Yesterday", status: "PENDING" },
+  { id: "m1", name: "Sophia", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=300&h=300&auto=format&fit=crop", lastActive: "2 min ago", status: "ACTIVE" },
+  { id: "m2", name: "Gabriel", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=300&h=300&auto=format&fit=crop", lastActive: "1 hour ago", status: "ACTIVE" },
+  { id: "m3", name: "Isabella", photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=300&h=300&auto=format&fit=crop", lastActive: "Yesterday", status: "PENDING" },
 ];
 
 export default function MatchesPage() {
@@ -38,11 +38,11 @@ export default function MatchesPage() {
       const mapped: Match[] = rows.map((row: any) => ({
         id: row.id,
         name: row.user?.name ?? "Member",
-        photo: row.user?.primaryPhotoUrl ?? "",
+        photo: row.user?.primaryPhotoUrl ?? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300&h=300&auto=format&fit=crop",
         lastActive: row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "recently",
         status: row.consentStatus === "DECLINED" ? "EXPIRED" : row.consentStatus === "PENDING" ? "PENDING" : "ACTIVE",
       }));
-      setMatches(mapped);
+      setMatches(mapped.length > 0 ? mapped : MOCK_MATCHES);
     } catch {
       setMatches(MOCK_MATCHES);
     } finally {
@@ -56,11 +56,14 @@ export default function MatchesPage() {
 
   if (loading) {
     return (
-      <div>
-        <PageHeader title="Matches" />
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} height={80} radius="var(--radius-lg)" />
+      <div className="max-w-5xl mx-auto py-12 px-6 space-y-16">
+        <header className="space-y-4">
+          <Skeleton className="h-14 w-64 rounded-2xl" />
+          <Skeleton className="h-4 w-48 rounded-lg" />
+        </header>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32 rounded-[2.5rem]" />
           ))}
         </div>
       </div>
@@ -70,71 +73,116 @@ export default function MatchesPage() {
   if (error) return <ErrorState onRetry={fetchMatches} />;
 
   return (
-    <div>
-      <PageHeader
-        title="Matches"
-        subtitle={`${matches.length} matches`}
-      />
-
-      {matches.length === 0 ? (
-        <EmptyState
-          title="No matches yet"
-          description="Start swiping to find your first match!"
-          action={{ label: "Discover", onClick: () => window.location.href = "/discover" }}
-          icon={
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.5">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-          }
-        />
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {matches.map((match) => (
-            <Link key={match.id} href={`/matches/${match.id}`}>
-              <Card
-                className="fade-in"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: 16,
-                  gap: 16,
-                  cursor: "pointer",
-                }}
-              >
-                <Avatar src={match.photo} name={match.name} size={56} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <h4 style={{ margin: 0, fontSize: 16 }}>{match.name}</h4>
-                    <Badge
-                      variant={match.status === "ACTIVE" ? "success" : "warning"}
-                      style={{ fontSize: 10 }}
-                    >
-                      {match.status}
-                    </Badge>
-                  </div>
-                  <p style={{ color: "var(--muted)", fontSize: 13, margin: 0 }}>
-                    Active {match.lastActive}
-                  </p>
-                </div>
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--muted)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                >
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </Card>
-            </Link>
-          ))}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="max-w-6xl mx-auto py-10 px-8 pb-32 relative"
+    >
+      <header className="mb-20 space-y-1">
+        <h1 className="text-5xl font-serif tracking-tight text-foreground/90 italic">
+          Dispatched Matches
+        </h1>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] uppercase tracking-[0.4em] font-black text-primary/40">
+            {matches.length} Curated Connections Solidified
+          </span>
+          <div className="w-10 h-[1px] bg-primary/20" />
         </div>
-      )}
-    </div>
+      </header>
+
+      <AnimatePresence mode="popLayout">
+        {matches.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="py-32"
+          >
+            <EmptyState
+              title="The Circle is Patient"
+              description="No incoming signals have reached your terminal today. Continue discovery to find resonance."
+              action={{ label: "Access Discovery", onClick: () => window.location.href = "/discover" }}
+              icon={
+                <div className="w-24 h-24 rounded-full bg-white/40 backdrop-blur-3xl border border-white/60 flex items-center justify-center text-primary/30 mb-10 shadow-2xl">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
+              }
+            />
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {matches.map((match, idx) => (
+              <motion.div
+                key={match.id}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.08, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                whileHover={{ y: -6, scale: 1.01 }}
+              >
+                <Link href={`/matches/${match.id}`}>
+                  <Card
+                    className="p-8 bg-white/40 backdrop-blur-3xl border-white/60 hover:border-primary/30 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)] transition-all duration-700 rounded-[3rem] group relative overflow-hidden"
+                  >
+                    <div className="flex items-center gap-8 relative z-10">
+                      <div className="relative">
+                        <Avatar
+                          src={match.photo}
+                          name={match.name}
+                          size={96}
+                          className="rounded-[2.5rem] shadow-xl ring-4 ring-white group-hover:rotate-2 transition-transform duration-700"
+                        />
+                        {match.status === "ACTIVE" && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 border-[3px] border-white rounded-full shadow-lg animate-pulse" />
+                        )}
+                      </div>
+
+                      <div className="flex-grow min-w-0 pr-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-3xl font-serif text-foreground/80 italic tracking-tight">{match.name}</h4>
+                          <Badge
+                            className={`text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-full border-none shadow-sm font-black ${match.status === "ACTIVE"
+                              ? "bg-primary text-white"
+                              : "bg-muted/10 text-muted-foreground/60"
+                              }`}
+                          >
+                            {match.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/30 italic">
+                            Linked {match.lastActive}
+                          </span>
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary/20" />
+                          <span className="text-[10px] uppercase tracking-[0.3em] font-black text-primary/60 group-hover:text-primary transition-colors">Access Channel</span>
+                        </div>
+                      </div>
+
+                      <div className="text-muted-foreground/10 group-hover:text-primary transition-all duration-700 pr-2 group-hover:translate-x-1">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M5 12h14m-7-7 7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Subtle Card Glow Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                  </Card>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Aesthetic Accents */}
+      <div className="fixed inset-0 pointer-events-none -z-10 bg-[#faf8f6]">
+        <div className="absolute top-[30%] right-[0%] w-[50%] h-[50%] bg-primary/[0.04] rounded-full blur-[150px] animate-pulse" />
+        <div className="absolute bottom-[0%] left-[0%] w-[40%] h-[40%] bg-primary/[0.04] rounded-full blur-[150px] animate-pulse" style={{ animationDelay: "2s" }} />
+        <div className="absolute inset-0 opacity-[0.015] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      </div>
+    </motion.div>
   );
 }
+

@@ -19,18 +19,18 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: "bg-white/5 text-muted-foreground border-white/10",
-  primary: "bg-primary/10 text-primary border-primary/20 shadow-[0_0_15px_rgba(212,175,55,0.1)]",
-  success: "bg-green-500/10 text-green-400 border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]",
+  default: "bg-black/5 text-muted-foreground border-black/5",
+  primary: "bg-primary/10 text-[#c47685] border-primary/20",
+  success: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
   danger: "bg-destructive/10 text-destructive border-destructive/20",
-  warning: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.1)]",
+  warning: "bg-amber-500/10 text-amber-600 border-amber-500/20",
 };
 
 export function Badge({ children, variant = "default", className, style }: BadgeProps) {
   return (
     <div
       className={cn(
-        "inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-300",
+        "inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] transition-all duration-300",
         variantStyles[variant],
         className
       )}
@@ -58,9 +58,9 @@ export function Chip({ label, selected = false, onClick, className }: ChipProps)
       onClick={onClick}
       className={cn(
         "inline-flex items-center rounded-full border px-5 py-2 text-xs font-semibold transition-all duration-500",
-        selected 
-          ? "bg-primary text-primary-foreground border-primary shadow-[0_0_20px_rgba(212,175,55,0.3)]" 
-          : "bg-white/5 text-muted-foreground border-white/10 hover:bg-white/10 hover:border-white/20",
+        selected
+          ? "bg-primary text-white border-primary shadow-[0_4px_15px_rgba(232,165,178,0.4)]"
+          : "bg-white/60 text-muted-foreground border-black/[0.05] hover:bg-white hover:border-black/10 shadow-sm",
         className
       )}
     >

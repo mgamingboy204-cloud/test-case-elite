@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "Elite Match",
-    statusBarStyle: "black-translucent"
+    statusBarStyle: "default"
   },
   icons: {
     icon: [
@@ -38,22 +38,24 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#05070a"
+  themeColor: "#faf9f8" /* Pearl White */
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable} dark`}>
+    <html lang="en" className={`${inter.variable} ${playfair.variable} light`}>
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
-      <body className="bg-background text-foreground selection:bg-primary/30 antialiased overflow-x-hidden">
+      <body className="bg-background text-foreground antialiased overflow-x-hidden selection:bg-primary/20 selection:text-primary transition-colors duration-1000">
         <Providers>
           <div className="relative min-h-screen flex flex-col">
-            {/* Subtle premium background glow */}
-            <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_50%_0%,_rgba(212,175,55,0.05),_transparent_40%)]" />
-            
+            {/* Soft Cinematic Depth Layers */}
+            <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(232,165,178,0.12),_transparent_60%)]" />
+            <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(232,165,178,0.08),_transparent_60%)]" />
+            <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.4),_transparent_100%)]" />
+
             <main className="relative z-10 flex-grow flex flex-col">
               {children}
             </main>

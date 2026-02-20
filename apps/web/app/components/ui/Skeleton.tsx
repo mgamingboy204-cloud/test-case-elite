@@ -18,43 +18,48 @@ interface SkeletonProps {
   style?: React.CSSProperties;
 }
 
-export function Skeleton({ className, width, height, radius, borderRadius }: SkeletonProps) {
+export function Skeleton({ className, width, height, radius, borderRadius, style }: SkeletonProps) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden bg-white/5 rounded-2xl",
+        "relative overflow-hidden bg-black/[0.03] rounded-2xl",
         className
       )}
-      style={{ width, height, borderRadius: radius || borderRadius }}
+      style={{ width, height, borderRadius: radius || borderRadius, ...style }}
     >
-      {/* Cinematic Shimmer Effect */}
+      {/* Cinematic Rose Gold Shimmer */}
       <motion.div
         animate={{
           x: ["-100%", "100%"],
         }}
         transition={{
-          duration: 2,
+          duration: 2.5,
           repeat: Infinity,
           ease: "linear",
         }}
-        className="absolute inset-0"
+        className="absolute inset-0 z-10"
         style={{
-          background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent)",
+          background: "linear-gradient(90deg, transparent, rgba(232,165,178,0.08), transparent)",
         }}
       />
-      
-      {/* Breathing Pulse */}
+
+      {/* Soft Breathing Ambient Pulse */}
       <motion.div
         animate={{
-          opacity: [0.5, 1, 0.5],
+          opacity: [0.3, 0.6, 0.3],
+          scale: [1, 1.02, 1],
         }}
         transition={{
-          duration: 3,
+          duration: 4,
           repeat: Infinity,
           ease: "easeInOut",
         }}
-        className="w-full h-full bg-white/5"
+        className="w-full h-full bg-primary/5"
       />
+
+      {/* Internal Premium Polish */}
+      <div className="absolute inset-x-0 top-0 h-px bg-white/40 pointer-events-none" />
     </div>
   );
 }
+

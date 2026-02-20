@@ -42,7 +42,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <label
             htmlFor={inputId}
             className={cn(
-              "text-xs uppercase tracking-[0.15em] font-bold transition-colors duration-300",
+              "text-[10px] uppercase tracking-[0.2em] font-bold transition-colors duration-500 ml-1",
               isFocused ? "text-primary" : "text-muted-foreground",
               error && "text-destructive"
             )}
@@ -50,7 +50,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {label}
           </label>
         )}
-        
+
         <div className="relative">
           <input
             ref={ref}
@@ -59,32 +59,32 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             onBlur={handleBlur}
             style={style}
             className={cn(
-              "w-full h-14 px-5 bg-white/[0.03] border border-white/10 rounded-2xl text-base placeholder:text-muted-foreground/30 outline-none transition-all duration-500",
-              "focus:bg-white/[0.05] focus:border-primary/50 focus:ring-4 focus:ring-primary/10",
-              error && "border-destructive/50 focus:border-destructive focus:ring-destructive/10",
+              "w-full h-14 px-5 bg-white/60 border border-black/[0.05] rounded-2xl text-base placeholder:text-muted-foreground/40 outline-none transition-all duration-500 shadow-sm",
+              "focus:bg-white focus:border-primary/40 focus:ring-4 focus:ring-primary/5 shadow-inner",
+              error && "border-destructive/30 focus:border-destructive/50 focus:ring-destructive/5",
               className
             )}
             {...props}
           />
-          
+
           {/* Animated focus underline for extra premier feel */}
           <motion.div
-            className="absolute bottom-0 left-0 h-[2px] bg-primary"
-            initial={{ width: "0%" }}
-            animate={{ width: isFocused ? "100%" : "0%" }}
-            transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+            className="absolute bottom-0 left-5 right-5 h-[1.5px] bg-primary rounded-full"
+            initial={{ scaleX: 0, opacity: 0 }}
+            animate={{ scaleX: isFocused ? 1 : 0, opacity: isFocused ? 0.8 : 0 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           />
         </div>
 
         <AnimatePresence>
           {error && (
             <motion.span
-              initial={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="text-xs font-medium text-destructive mt-1 flex items-center gap-1"
+              exit={{ opacity: 0, y: -4 }}
+              className="text-[11px] font-medium text-destructive mt-1 flex items-center gap-1.5 ml-1"
             >
-              <span className="text-[14px]">!</span> {error}
+              <span className="w-4 h-4 rounded-full bg-destructive/10 flex items-center justify-center text-[10px]">!</span> {error}
             </motion.span>
           )}
         </AnimatePresence>
