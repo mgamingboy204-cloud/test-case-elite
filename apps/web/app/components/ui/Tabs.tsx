@@ -12,12 +12,14 @@ interface TabsProps {
   active: string;
   onChange: (value: string) => void;
   style?: CSSProperties;
+  className?: string;
 }
 
-export function Tabs({ tabs, active, onChange, style }: TabsProps) {
+export function Tabs({ tabs, active, onChange, style, className }: TabsProps) {
   return (
     <div
       role="tablist"
+      className={className}
       style={{
         display: "flex",
         background: "var(--bg)",
