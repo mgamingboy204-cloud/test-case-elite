@@ -240,7 +240,7 @@ export default function ProfileWizardPage() {
                 <div className="space-y-12">
                   <div className="space-y-4">
                     <h3 className="text-3xl font-serif italic text-foreground/80 tracking-tight">Narrative Essence</h3>
-                    <p className="text-sm text-muted-foreground/50 leading-relaxed font-serif italic">Craft an editorial summary of your life's journey and motivations.</p>
+                    <p className="text-sm text-muted-foreground/50 leading-relaxed font-serif italic">Craft an editorial summary of your life&apos;s journey and motivations.</p>
                   </div>
                   <Textarea
                     label="The Narrative"

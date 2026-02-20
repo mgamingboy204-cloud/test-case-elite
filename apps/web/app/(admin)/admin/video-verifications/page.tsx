@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/app/components/ui/Card";
 import { Badge } from "@/app/components/ui/Badge";
 import { Chip } from "@/app/components/ui/Badge";
@@ -55,7 +55,7 @@ export default function AdminVideoVerificationsPage() {
   const [rejectModal, setRejectModal] = useState<{ open: boolean; requestId: string }>({ open: false, requestId: "" });
   const [rejectReason, setRejectReason] = useState("");
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
@@ -67,11 +67,11 @@ export default function AdminVideoVerificationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
 
   useEffect(() => {
     fetchRequests();
-  }, [statusFilter]);
+  }, [fetchRequests]);
 
   const updateRequest = (id: string, updates: Partial<VerificationRequest>) => {
     setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, ...updates } : r)));
@@ -218,10 +218,10 @@ export default function AdminVideoVerificationsPage() {
                     req.status === "APPROVED"
                       ? "success"
                       : req.status === "REJECTED"
-                      ? "danger"
-                      : req.status === "IN_PROGRESS"
-                      ? "primary"
-                      : "warning"
+                        ? "danger"
+                        : req.status === "IN_PROGRESS"
+                          ? "primary"
+                          : "warning"
                   }
                 >
                   {req.status.replace("_", " ")}

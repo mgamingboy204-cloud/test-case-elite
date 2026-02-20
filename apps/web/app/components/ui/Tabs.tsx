@@ -15,12 +15,14 @@ interface TabsProps {
   active: string;
   onChange: (value: string) => void;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-export function Tabs({ tabs, active, onChange, className }: TabsProps) {
+export function Tabs({ tabs, active, onChange, className, style }: TabsProps) {
   return (
     <div
       role="tablist"
+      style={style}
       className={cn(
         "inline-flex items-center p-1.5 rounded-full bg-white/60 backdrop-blur-xl border border-black/[0.05] shadow-sm",
         className

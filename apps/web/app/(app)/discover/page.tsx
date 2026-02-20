@@ -93,7 +93,7 @@ export default function DiscoverPage() {
 
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1);
-      x.reset();
+      x.set(0);
     }, 500); // Heavier cinematic weight
   };
 
@@ -163,7 +163,7 @@ export default function DiscoverPage() {
             >
               <EmptyState
                 title="The Circle is Complete"
-                description="You've experienced all curated discovery signals for this cycle. Reflections will resume shortly."
+                description="You&apos;ve experienced all curated discovery signals for this cycle. Reflections will resume shortly."
                 action={{ label: "Expand Parameters", onClick: () => setFilterOpen(true) }}
               />
             </motion.div>

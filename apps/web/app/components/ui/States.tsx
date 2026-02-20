@@ -72,7 +72,7 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({
-  message = "A momentary disruption in the collective's orchestration.",
+  message = "A momentary disruption in the collective&apos;s orchestration.",
   onRetry,
   className,
   style,

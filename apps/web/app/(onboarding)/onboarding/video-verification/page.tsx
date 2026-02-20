@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -81,7 +81,7 @@ export default function VideoVerificationPage() {
 
   const isVerified = status === "COMPLETED" || status === "APPROVED";
 
-  const fetchStatus = async (initial = false) => {
+  const fetchStatus = useCallback(async (initial = false) => {
     if (initial) setLoading(true);
     try {
       const data = await apiFetch<{ status: VStatus }>("/me/verification-status");
@@ -100,11 +100,11 @@ export default function VideoVerificationPage() {
     } finally {
       if (initial) setLoading(false);
     }
-  };
+  }, [router, refresh]);
 
   useEffect(() => {
     void fetchStatus(true);
-  }, []);
+  }, [fetchStatus]);
 
   useEffect(() => {
     if (isVerified) return;
@@ -112,7 +112,7 @@ export default function VideoVerificationPage() {
       void fetchStatus(false);
     }, 5000);
     return () => window.clearInterval(timer);
-  }, [isVerified]);
+  }, [isVerified, fetchStatus]);
 
   const handleRequest = async () => {
     setRequesting(true);
