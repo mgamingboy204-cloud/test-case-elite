@@ -16,7 +16,7 @@ export async function getProfile(userId: string) {
 export async function updateProfile(options: { userId: string; paymentStatus: string; onboardingStep: string; data: any }) {
   if (options.paymentStatus !== "PAID") {
     throw new HttpError(403, {
-      error: "Payment required",
+      message: "Payment required",
       currentStep: options.onboardingStep,
       requiredStep: "PAID",
       redirectTo: "/onboarding/payment"
@@ -64,7 +64,7 @@ export async function updateProfile(options: { userId: string; paymentStatus: st
   const photoCount = await prisma.photo.count({ where: { userId: options.userId } });
   let user = await prisma.user.findUnique({ where: { id: options.userId } });
   if (!user) {
-    throw new HttpError(404, { error: "User not found" });
+    throw new HttpError(404, { message: "User not found" });
   }
 
   const baseUserUpdate = {
@@ -110,7 +110,7 @@ export async function completeProfile(options: {
 }) {
   if (options.paymentStatus !== "PAID") {
     throw new HttpError(403, {
-      error: "Payment required",
+      message: "Payment required",
       currentStep: options.onboardingStep,
       requiredStep: "PAID",
       redirectTo: "/onboarding/payment"
@@ -119,12 +119,12 @@ export async function completeProfile(options: {
 
   const profile = await prisma.profile.findUnique({ where: { userId: options.userId } });
   if (!profile) {
-    throw new HttpError(400, { error: "Profile must be completed first." });
+    throw new HttpError(400, { message: "Profile must be completed first." });
   }
 
   const photoCount = await prisma.photo.count({ where: { userId: options.userId } });
   if (photoCount === 0) {
-    throw new HttpError(400, { error: "At least one photo is required to activate your profile." });
+    throw new HttpError(400, { message: "At least one photo is required to activate your profile." });
   }
 
   const user = await prisma.user.update({

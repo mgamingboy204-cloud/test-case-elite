@@ -123,7 +123,7 @@ export async function deactivateUser(userId: string) {
 export async function deleteUser(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
   if (!user) {
-    throw new HttpError(404, { error: "User not found" });
+    throw new HttpError(404, { message: "User not found" });
   }
   const matches = await prisma.match.findMany({
     where: { OR: [{ userAId: userId }, { userBId: userId }] },
@@ -469,7 +469,7 @@ export async function shiftPaymentDate(options: { userId: string; daysBack: numb
     orderBy: { paidAt: "desc" }
   });
   if (!payment?.paidAt) {
-    throw new HttpError(404, { error: "Payment not found" });
+    throw new HttpError(404, { message: "Payment not found" });
   }
   const shifted = new Date(payment.paidAt.getTime() - options.daysBack * 24 * 60 * 60 * 1000);
   const updated = await prisma.payment.update({

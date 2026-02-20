@@ -35,6 +35,9 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
       message: err.body.message,
       code: err.body.code ?? "HTTP_ERROR",
       fieldErrors: err.body.fieldErrors,
+      currentStep: err.body.currentStep,
+      requiredStep: err.body.requiredStep,
+      redirectTo: err.body.redirectTo,
     });
   }
 

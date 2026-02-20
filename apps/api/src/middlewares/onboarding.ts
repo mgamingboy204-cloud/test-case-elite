@@ -23,7 +23,7 @@ export function requireActive(req: Request, res: Response, next: NextFunction) {
   if (user.onboardingStep !== "ACTIVE") {
     const redirectTo = onboardingRedirectForStep(user.onboardingStep);
     return res.status(403).json({
-      error: "Onboarding incomplete",
+      message: "Onboarding incomplete",
       currentStep: user.onboardingStep,
       requiredStep: "ACTIVE",
       redirectTo

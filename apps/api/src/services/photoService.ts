@@ -35,7 +35,7 @@ export async function listPhotos(userId: string) {
 function getSupabaseClient() {
   if (!supabaseClient) {
     if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new HttpError(500, { error: "Supabase storage is not configured." });
+      throw new HttpError(500, { message: "Supabase storage is not configured." });
     }
     supabaseClient = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
   }
@@ -76,7 +76,7 @@ async function ensureSupabaseBucket() {
   if (data && !error) return;
   const { error: createError } = await supabase.storage.createBucket(PROFILE_BUCKET, { public: true });
   if (createError && createError.message !== "The resource already exists") {
-    throw new HttpError(500, { error: "Unable to initialize photo storage bucket." });
+    throw new HttpError(500, { message: "Unable to initialize photo storage bucket." });
   }
 }
 
@@ -98,16 +98,16 @@ async function removeExistingPhoto(userId: string) {
 export async function uploadPhoto(options: { userId: string; filename: string; dataUrl: string }) {
   const matches = options.dataUrl.match(/^data:(.+);base64,(.+)$/);
   if (!matches) {
-    throw new HttpError(400, { error: "Invalid image data." });
+    throw new HttpError(400, { message: "Invalid image data." });
   }
   const [, mimeType, base64Data] = matches;
   if (!allowedMimeTypes.has(mimeType)) {
-    throw new HttpError(400, { error: "Only JPEG, PNG, or WebP images are supported." });
+    throw new HttpError(400, { message: "Only JPEG, PNG, or WebP images are supported." });
   }
   const extension = extensionMap[mimeType] ?? "jpg";
   const size = calculateBase64Size(base64Data);
   if (size > MAX_FILE_SIZE_BYTES) {
-    throw new HttpError(413, { error: "Image must be 10MB or smaller." });
+    throw new HttpError(413, { message: "Image must be 10MB or smaller." });
   }
   await removeExistingPhoto(options.userId);
 
@@ -122,7 +122,7 @@ export async function uploadPhoto(options: { userId: string; filename: string; d
       upsert: false
     });
     if (error) {
-      throw new HttpError(500, { error: "Unable to upload photo. Please try again." });
+      throw new HttpError(500, { message: "Unable to upload photo. Please try again." });
     }
     const { data } = supabase.storage.from(PROFILE_BUCKET).getPublicUrl(storagePath);
     url = data.publicUrl;

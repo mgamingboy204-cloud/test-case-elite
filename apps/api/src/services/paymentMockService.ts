@@ -8,7 +8,7 @@ export async function startMockPayment(
   void couponCode;
   if (user.videoVerificationStatus !== "APPROVED") {
     throw new HttpError(403, {
-      error: "Verification required",
+      message: "Verification required",
       currentStep: user.onboardingStep,
       requiredStep: "VIDEO_VERIFIED",
       redirectTo: "/onboarding/video-verification"
@@ -27,7 +27,7 @@ export async function startMockPayment(
 export async function confirmMockPayment(user: { id: string; videoVerificationStatus: string; onboardingStep: string }) {
   if (user.videoVerificationStatus !== "APPROVED") {
     throw new HttpError(403, {
-      error: "Verification required",
+      message: "Verification required",
       currentStep: user.onboardingStep,
       requiredStep: "VIDEO_VERIFIED",
       redirectTo: "/onboarding/video-verification"

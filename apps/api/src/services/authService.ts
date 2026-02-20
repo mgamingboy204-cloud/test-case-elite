@@ -46,16 +46,16 @@ export async function upsertOtpCode(phone: string) {
 export async function verifyOtpAndGetUser(phone: string, code: string) {
   const record = await prisma.otpCode.findUnique({ where: { phone } });
   if (!record) {
-    throw new HttpError(401, { error: "OTP not found. Please request a new code." });
+    throw new HttpError(401, { message: "OTP not found. Please request a new code." });
   }
   if (record.expiresAt < new Date()) {
-    throw new HttpError(401, { error: "OTP expired. Please request a new code." });
+    throw new HttpError(401, { message: "OTP expired. Please request a new code." });
   }
   if (record.attempts >= 5) {
-    throw new HttpError(401, { error: "Too many attempts. Request a new OTP." });
+    throw new HttpError(401, { message: "Too many attempts. Request a new OTP." });
   }
   if (!record.codeHash) {
-    throw new HttpError(401, { error: "Invalid OTP. Please request a new code." });
+    throw new HttpError(401, { message: "Invalid OTP. Please request a new code." });
   }
 
   const valid = await bcrypt.compare(code, record.codeHash);
@@ -64,7 +64,7 @@ export async function verifyOtpAndGetUser(phone: string, code: string) {
       where: { phone },
       data: { attempts: record.attempts + 1 }
     });
-    throw new HttpError(401, { error: "Invalid OTP. Please try again." });
+    throw new HttpError(401, { message: "Invalid OTP. Please try again." });
   }
 
   await prisma.otpCode.delete({ where: { phone } });
@@ -102,7 +102,7 @@ export async function verifyOtpAndGetUser(phone: string, code: string) {
       });
     }
   } else {
-    throw new HttpError(401, { error: "No account found for this phone. Please sign up first." });
+    throw new HttpError(401, { message: "No account found for this phone. Please sign up first." });
   }
 
   return user;
@@ -139,7 +139,7 @@ export async function verifyDeviceToken(userId: string, token: string) {
 export async function registerPendingUser(options: { phone: string; email?: string | null; password: string }) {
   const existing = await prisma.user.findUnique({ where: { phone: options.phone } });
   if (existing) {
-    throw new HttpError(400, { error: "Phone already registered" });
+    throw new HttpError(400, { message: "Phone already registered" });
   }
   const passwordHash = await bcrypt.hash(options.password, 10);
   await prisma.pendingUser.upsert({
@@ -165,7 +165,7 @@ export async function requestOtp(phone: string) {
     prisma.user.findUnique({ where: { phone } })
   ]);
   if (!pending && !existing) {
-    throw new HttpError(404, { error: "No signup in progress for this phone." });
+    throw new HttpError(404, { message: "No signup in progress for this phone." });
   }
   await upsertOtpCode(phone);
 }
@@ -176,21 +176,21 @@ export async function validateLogin(options: {
 }) {
   const user = await prisma.user.findUnique({ where: { phone: options.phone } });
   if (!user) {
-    throw new HttpError(401, { error: "Invalid credentials" });
+    throw new HttpError(401, { message: "Invalid credentials" });
   }
   if (user.deletedAt) {
-    throw new HttpError(403, { error: "Account deleted" });
+    throw new HttpError(403, { message: "Account deleted" });
   }
   if (user.deactivatedAt) {
-    throw new HttpError(403, { error: "Account deactivated" });
+    throw new HttpError(403, { message: "Account deactivated" });
   }
   if (user.status === "BANNED") {
-    throw new HttpError(403, { error: "Account banned" });
+    throw new HttpError(403, { message: "Account banned" });
   }
 
   const valid = await bcrypt.compare(options.password, user.passwordHash);
   if (!valid) {
-    throw new HttpError(401, { error: "Invalid credentials" });
+    throw new HttpError(401, { message: "Invalid credentials" });
   }
 
   const onboardingStep = resolveOnboardingStep(user);

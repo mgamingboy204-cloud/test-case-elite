@@ -4,11 +4,23 @@ export class HttpError extends Error {
     message: string;
     code?: string;
     fieldErrors?: Record<string, string[]>;
+    currentStep?: string;
+    requiredStep?: string;
+    redirectTo?: string;
   };
 
   constructor(
     status: number,
-    body: string | { message: string; code?: string; fieldErrors?: Record<string, string[]> }
+    body:
+      | string
+      | {
+          message: string;
+          code?: string;
+          fieldErrors?: Record<string, string[]>;
+          currentStep?: string;
+          requiredStep?: string;
+          redirectTo?: string;
+        }
   ) {
     const message = typeof body === "string" ? body : body.message || "Request failed";
     super(message);

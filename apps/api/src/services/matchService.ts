@@ -59,7 +59,7 @@ export async function listMatches(userId: string) {
 export async function respondConsent(options: { matchId: string; userId: string; response: "YES" | "NO" }) {
   const match = await prisma.match.findUnique({ where: { id: options.matchId } });
   if (!match || ![match.userAId, match.userBId].includes(options.userId)) {
-    throw new HttpError(403, { error: "Not allowed" });
+    throw new HttpError(403, { message: "Not allowed" });
   }
   await prisma.consent.upsert({
     where: { matchId_userId: { matchId: options.matchId, userId: options.userId } },
@@ -95,17 +95,17 @@ export async function getPhoneUnlock(options: { matchId: string; userId: string 
     }
   });
   if (!match) {
-    throw new HttpError(404, { error: "Match not found" });
+    throw new HttpError(404, { message: "Match not found" });
   }
   if (![match.userAId, match.userBId].includes(options.userId)) {
-    throw new HttpError(403, { error: "Not allowed" });
+    throw new HttpError(403, { message: "Not allowed" });
   }
   if (!match.phoneExchange) {
-    throw new HttpError(403, { error: "Phone exchange not available" });
+    throw new HttpError(403, { message: "Phone exchange not available" });
   }
   const yesCount = match.consents.filter((c) => c.response === "YES").length;
   if (yesCount !== 2) {
-    throw new HttpError(403, { error: "Consent incomplete" });
+    throw new HttpError(403, { message: "Consent incomplete" });
   }
   return {
     matchId: match.id,

@@ -5,7 +5,7 @@ import { createLike, getIncomingLikes } from "../services/likeService";
 export async function createLikeHandler(req: Request, res: Response) {
   const { toUserId, type } = req.body as { toUserId: string; type: "LIKE" | "PASS" };
   if (toUserId === res.locals.user.id) {
-    throw new HttpError(400, { error: "Cannot act on yourself." });
+    throw new HttpError(400, { message: "Cannot act on yourself." });
   }
   const result = await createLike({
     fromUserId: res.locals.user.id,
