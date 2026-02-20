@@ -1,16 +1,18 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React from "react"
+
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Tabs } from "@/app/components/ui/Tabs";
 import { BottomSheet } from "@/app/components/ui/BottomSheet";
+import { Chip } from "@/app/components/ui/Badge";
 import { Badge } from "@/app/components/ui/Badge";
-import { Card } from "@/app/components/ui/Card";
 import { Skeleton } from "@/app/components/ui/Skeleton";
 import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { Button } from "@/app/components/ui/Button";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
-import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
+import type { CSSProperties } from "react";
 
 interface Profile {
   id: string;
@@ -24,6 +26,8 @@ interface Profile {
   premium: boolean;
 }
 
+const ALL_INTERESTS = ["Travel", "Fitness", "Music", "Cooking", "Reading", "Photography", "Movies", "Art", "Hiking", "Gaming", "Yoga", "Dancing"];
+
 export default function DiscoverPage() {
   const { addToast } = useToast();
   const [intent, setIntent] = useState("all");
@@ -32,42 +36,46 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [distance, setDistance] = useState(50);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
 
-  // Cinematic Motion Values
-  const x = useMotionValue(0);
-  const rotate = useTransform(x, [-250, 250], [-10, 10]);
-  const opacity = useTransform(x, [-350, -250, 0, 250, 350], [0, 1, 1, 1, 0]);
-  const scale = useTransform(x, [-300, 0, 300], [0.92, 1, 0.92]);
-
-  // Soft glowing indicators
-  const likeOpacity = useTransform(x, [50, 150], [0, 1]);
-  const nopeOpacity = useTransform(x, [-50, -150], [0, 1]);
+  /* Swipe state */
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [swipeX, setSwipeX] = useState(0);
+  const [swipeY, setSwipeY] = useState(0);
+  const [swiping, setSwiping] = useState(false);
+  const startPos = useRef({ x: 0, y: 0 });
+  const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
+  const [animatingOut, setAnimatingOut] = useState(false);
 
   const fetchProfiles = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
-      const data = await apiFetch<any>(`/discover/feed?intent=${intent}&limit=24`);
+      const interestQuery = selectedInterests.length ? `&interests=${encodeURIComponent(selectedInterests.join(","))}` : "";
+      const data = await apiFetch<any>(`/discover/feed?intent=${intent}&limit=24${interestQuery}`);
       const items = Array.isArray(data?.items) ? data.items : [];
       const mapped: Profile[] = items.map((item: any) => ({
         id: item.userId,
         userId: item.userId,
         name: item.name ?? "Member",
-        age: Number(item.age ?? 25),
-        city: item.city ?? "Secret Location",
-        bio: item.bioShort ?? "An elite member has not added a bio yet.",
-        photo: item.primaryPhotoUrl ?? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1000&auto=format&fit=crop",
+        age: Number(item.age ?? 18),
+        city: item.city ?? "",
+        bio: item.bioShort ?? "",
+        photo: item.primaryPhotoUrl ?? "",
         verified: item.videoVerificationStatus === "APPROVED",
-        premium: item.role === "ADMIN",
+        premium: false,
       }));
       setProfiles(mapped);
       setCurrentIndex(0);
     } catch {
       setError(true);
+      setProfiles([]);
+      setCurrentIndex(0);
     } finally {
       setLoading(false);
     }
-  }, [intent]);
+  }, [intent, distance, selectedInterests]);
 
   useEffect(() => {
     fetchProfiles();
@@ -75,285 +83,446 @@ export default function DiscoverPage() {
 
   const currentProfile = profiles[currentIndex];
 
-  const handleAction = async (type: "LIKE" | "PASS", direction: number) => {
-    if (!currentProfile) return;
+  const handleAction = useCallback(
+    async (type: "LIKE" | "PASS" | "SUPERLIKE", direction?: "left" | "right") => {
+      if (!currentProfile || animatingOut) return;
 
-    // Smooth cinematic throw
-    x.set(direction);
+      setAnimatingOut(true);
+      setSwipeDirection(direction || (type === "PASS" ? "left" : "right"));
+      setSwipeX(direction === "left" || type === "PASS" ? -500 : 500);
 
-    try {
-      await apiFetch("/likes", {
-        method: "POST",
-        body: { toUserId: currentProfile.userId, type } as never,
-      });
-      if (type === "LIKE") {
-        addToast(`Signal dispatched to ${currentProfile.name}`, "success");
+      try {
+        await apiFetch("/likes", {
+          method: "POST",
+          body: { toUserId: currentProfile.userId, type: type === "SUPERLIKE" ? "LIKE" : type } as never,
+        });
+      } catch {
+        /* stub */
       }
-    } catch (e) { }
 
-    setTimeout(() => {
-      setCurrentIndex(prev => prev + 1);
-      x.set(0);
-    }, 500); // Heavier cinematic weight
+      const feedbackMessages: Record<string, string> = {
+        LIKE: "Liked!",
+        PASS: "Passed",
+        SUPERLIKE: "Super Liked!",
+      };
+
+      addToast(feedbackMessages[type], type === "PASS" ? "info" : "success");
+
+      setTimeout(() => {
+        setCurrentIndex((i) => i + 1);
+        setSwipeX(0);
+        setSwipeY(0);
+        setSwipeDirection(null);
+        setAnimatingOut(false);
+      }, 250);
+    },
+    [currentProfile, animatingOut, addToast]
+  );
+
+  /* Pointer handlers for swipe */
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (animatingOut) return;
+      setSwiping(true);
+      startPos.current = { x: e.clientX, y: e.clientY };
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    },
+    [animatingOut]
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!swiping) return;
+      const dx = e.clientX - startPos.current.x;
+      const dy = (e.clientY - startPos.current.y) * 0.3;
+      setSwipeX(dx);
+      setSwipeY(dy);
+    },
+    [swiping]
+  );
+
+  const handlePointerUp = useCallback(() => {
+    if (!swiping) return;
+    setSwiping(false);
+
+    const threshold = 100;
+    if (swipeX > threshold) {
+      handleAction("LIKE", "right");
+    } else if (swipeX < -threshold) {
+      handleAction("PASS", "left");
+    } else {
+      setSwipeX(0);
+      setSwipeY(0);
+    }
+  }, [swiping, swipeX, handleAction]);
+
+  const cardStyle: CSSProperties = {
+    width: "min(92vw, 380px)",
+    height: "clamp(520px, 72vh, 640px)",
+    borderRadius: 30,
+    overflow: "hidden",
+    boxShadow: "var(--shadow-xl)",
+    position: "relative",
+    margin: "0 auto",
+    touchAction: "none",
+    userSelect: "none",
+    transform: `translateX(${swipeX}px) translateY(${swipeY}px) rotate(${swipeX * 0.06}deg)`,
+    transition: swiping ? "none" : "transform 250ms cubic-bezier(0.32, 0.72, 0, 1)",
+    cursor: swiping ? "grabbing" : "grab",
+    willChange: "transform",
   };
 
+  /* Action button style helper */
+  const actionBtnStyle = (bg: string, size = 56): CSSProperties => ({
+    width: size,
+    height: size,
+    borderRadius: "50%",
+    background: bg,
+    border: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: size * 0.4,
+    color: "#fff",
+    boxShadow: "var(--shadow-md)",
+    cursor: "pointer",
+    transition: "transform 150ms ease, box-shadow 150ms ease",
+  });
+
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] overflow-hidden relative">
-      {/* Background ambience */}
-      <div className="absolute inset-0 pointer-events-none -z-10">
-        <div className="absolute top-[20%] right-[5%] w-[40%] h-[40%] bg-primary/[0.04] rounded-full blur-[120px] animate-drift" />
-        <div className="absolute bottom-[10%] left-[5%] w-[35%] h-[35%] bg-primary/[0.04] rounded-full blur-[100px] animate-drift-slow" />
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "calc(100vh - 56px - 60px)",
+        overflow: "hidden",
+      }}
+    >
+      {/* Top header row */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "12px 8px 8px",
+          gap: 8,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 15,
+            fontWeight: 800,
+            color: "var(--primary)",
+            display: "none",
+          }}
+          className="discover-wordmark"
+        >
+          Elite Match
+        </span>
+
+        <Tabs
+          tabs={[
+            { label: "All", value: "all" },
+            { label: "Dating", value: "dating" },
+            { label: "Friends", value: "friends" },
+          ]}
+          active={intent}
+          onChange={setIntent}
+          style={{ flex: 1, maxWidth: 300, margin: "0 auto" }}
+        />
+
+        <button
+          onClick={() => setFilterOpen(true)}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--border)",
+            background: "var(--panel)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 18,
+            color: "var(--text)",
+            flexShrink: 0,
+          }}
+          aria-label="Open filters"
+        >
+          {"\u2699"}
+        </button>
       </div>
-      {/* Cinematic Inner Noise Layer */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.02] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')] z-0" />
 
-      {/* Cinematic Header */}
-      <header className="px-10 py-10 flex items-center justify-between relative z-20">
-        <div className="space-y-2">
-          <h1 className="text-5xl font-serif text-foreground/90 italic tracking-tight">Discovery</h1>
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] uppercase tracking-[0.5em] font-black text-primary/40 italic">Curated Aspirations</span>
-            <div className="w-12 h-[1px] bg-primary/20" />
+      {/* Card area */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "8px 0",
+          position: "relative",
+        }}
+      >
+        {loading ? (
+          <div
+            style={{
+              width: "min(92vw, 380px)",
+              height: "clamp(520px, 72vh, 640px)",
+              borderRadius: 30,
+              overflow: "hidden",
+            }}
+          >
+            <Skeleton width="100%" height="100%" radius={30} />
           </div>
-        </div>
-
-        <div className="flex items-center gap-8">
-          <Tabs
-            tabs={[
-              { label: "Elite", value: "all" },
-              { label: "Dating", value: "dating" },
-              { label: "Protocol", value: "friends" },
-            ]}
-            active={intent}
-            onChange={setIntent}
-            className="hidden md:flex bg-white/40 shadow-sm border-white/60 backdrop-blur-3xl rounded-2xl p-1"
+        ) : error ? (
+          <ErrorState onRetry={fetchProfiles} />
+        ) : !currentProfile ? (
+          <EmptyState
+            title="No more profiles"
+            description="Adjust your filters or check back later for new people."
+            action={{ label: "Adjust Filters", onClick: () => setFilterOpen(true) }}
+            icon={
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M16 16s-1.5-2-4-2-4 2-4 2" />
+                <line x1="9" y1="9" x2="9.01" y2="9" />
+                <line x1="15" y1="9" x2="15.01" y2="9" />
+              </svg>
+            }
           />
-          <button
-            onClick={() => setFilterOpen(true)}
-            className="w-16 h-16 rounded-[2rem] bg-white/40 backdrop-blur-3xl border border-white/60 flex items-center justify-center hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.05)] hover:border-primary/20 hover:scale-105 transition-all duration-700 group"
+        ) : (
+          /* Swipe Card */
+          <div
+            ref={cardRef}
+            style={cardStyle}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
           >
-            <span className="text-xl group-hover:rotate-90 transition-transform duration-1000 text-muted-foreground/30 group-hover:text-primary/60">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" />
-              </svg>
-            </span>
-          </button>
-        </div>
-      </header>
-
-      {/* Main Swipe Surface */}
-      <main className="flex-grow flex flex-col items-center justify-center relative px-6 pb-24 z-10">
-        <AnimatePresence mode="wait">
-          {loading ? (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.02 }}
-              className="w-full max-w-[460px] h-[70vh] max-h-[760px] rounded-[4rem] overflow-hidden shadow-2xl relative border border-white/60"
-            >
-              <Skeleton className="w-full h-full" />
-              <div className="absolute inset-0 bg-gradient-to-t from-white/20 to-transparent pointer-events-none" />
-            </motion.div>
-          ) : error ? (
-            <div className="max-w-md w-full">
-              <ErrorState key="error" onRetry={fetchProfiles} />
-            </div>
-          ) : !currentProfile ? (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="px-6 text-center"
-            >
-              <EmptyState
-                title="The Circle is Complete"
-                description="You&apos;ve experienced all curated discovery signals for this cycle. Reflections will resume shortly."
-                action={{ label: "Expand Parameters", onClick: () => setFilterOpen(true) }}
-              />
-            </motion.div>
-          ) : (
-            <div className="relative w-full max-w-[460px] h-[72vh] max-h-[780px]">
-              {/* Card stack depth — 3rd card */}
-              {profiles[currentIndex + 2] && (
-                <div className="absolute inset-x-14 inset-y-0 translate-y-20 scale-[0.83] opacity-10 transition-all duration-1000">
-                  <div className="w-full h-full rounded-[4rem] overflow-hidden bg-white/60 border border-white/40" />
-                </div>
-              )}
-              {/* Card stack depth — 2nd card */}
-              {profiles[currentIndex + 1] && (
-                <div className="absolute inset-x-6 inset-y-0 translate-y-10 scale-[0.92] opacity-30 transition-all duration-1000 ease-[0.16,1,0.3,1]">
-                  <div className="w-full h-full rounded-[4rem] overflow-hidden shadow-2xl border border-white/40">
-                    <img src={profiles[currentIndex + 1].photo} className="w-full h-full object-cover grayscale-[0.3] blur-[1px]" alt="next" />
-                  </div>
-                </div>
-              )}
-
-              <motion.div
-                key={currentProfile.userId}
-                style={{ x, rotate, opacity, scale }}
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={1}
-                onDragEnd={(_, info) => {
-                  if (info.offset.x > 150) handleAction("LIKE", 1000);
-                  else if (info.offset.x < -150) handleAction("PASS", -1000);
-                }}
-                className="w-full h-full cursor-grab active:cursor-grabbing will-change-[transform,opacity] z-10"
-              >
-                <div className="w-full h-full overflow-hidden rounded-[4rem] border border-white shadow-[0_80px_160px_-40px_rgba(0,0,0,0.15)] bg-white relative group">
-
-                  {/* Swipe Feedback Overlays */}
-                  <motion.div style={{ opacity: likeOpacity }} className="absolute inset-0 z-40 bg-gradient-to-tr from-transparent via-primary/5 to-primary/40 pointer-events-none" />
-                  <motion.div style={{ opacity: likeOpacity }} className="absolute top-20 left-16 z-50">
-                    <div className="px-12 py-5 bg-white/95 backdrop-blur-3xl border border-white/50 text-primary font-serif italic tracking-[0.4em] text-4xl rounded-[2rem] shadow-2xl -rotate-[12deg] scale-110">
-                      DISPATCH
-                    </div>
-                  </motion.div>
-
-                  <motion.div style={{ opacity: nopeOpacity }} className="absolute inset-0 z-40 bg-gradient-to-tl from-transparent via-black/5 to-black/30 pointer-events-none" />
-                  <motion.div style={{ opacity: nopeOpacity }} className="absolute top-20 right-16 z-50">
-                    <div className="px-12 py-5 bg-black/80 backdrop-blur-3xl border border-white/10 text-white font-serif italic tracking-[0.4em] text-4xl rounded-[2rem] shadow-2xl rotate-[12deg] scale-110">
-                      ARCHIVE
-                    </div>
-                  </motion.div>
-
-                  <img
-                    src={currentProfile.photo}
-                    className="w-full h-full object-cover pointer-events-none transition-transform duration-[4s] ease-[0.16,1,0.3,1] group-hover:scale-110"
-                    alt={currentProfile.name}
-                  />
-
-                  {/* Premium Information Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent flex flex-col justify-end p-14 pt-48">
-                    <div className="flex flex-wrap gap-3 mb-8">
-                      <Badge className="bg-white/10 backdrop-blur-3xl border-white/10 text-white text-[9px] uppercase tracking-[0.4em] font-black py-2.5 px-5 rounded-full">
-                        {currentProfile.city}
-                      </Badge>
-                      {currentProfile.premium && (
-                        <Badge className="bg-gradient-to-r from-primary to-primary/80 border-none text-[9px] text-white uppercase tracking-[0.4em] font-black py-2.5 px-5 rounded-full shadow-xl shadow-primary/20">
-                          Elite Tier
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-5">
-                        <h2 className="text-5xl md:text-6xl font-serif text-white tracking-tighter leading-none italic">
-                          {currentProfile.name}, <span className="font-light opacity-50 not-italic">{currentProfile.age}</span>
-                        </h2>
-                        {currentProfile.verified && (
-                          <div className="w-7 h-7 bg-primary/20 backdrop-blur-3xl rounded-full flex items-center justify-center border border-primary/30 shadow-2xl animate-pulse">
-                            <span className="text-primary text-xs">✦</span>
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-white/60 text-xl font-serif italic leading-relaxed line-clamp-2 pr-8 border-l-2 border-primary/30 pl-6">
-                        &ldquo;{currentProfile.bio}&rdquo;
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Glassmorphic card frame */}
-                  <div className="absolute inset-0 border-[1.5rem] border-white/5 pointer-events-none rounded-[4rem]" />
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-      </main>
-
-      {/* Cinematic Action Controls */}
-      <AnimatePresence>
-        {!loading && currentProfile && (
-          <motion.footer
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="px-10 py-16 flex justify-center items-center gap-12 absolute bottom-0 left-0 right-0 z-50 pointer-events-auto"
-          >
-            <motion.button
-              whileHover={{ scale: 1.15, y: -6, rotate: -5 }}
-              whileTap={{ scale: 0.85 }}
-              onClick={() => handleAction("PASS", -1000)}
-              className="w-20 h-20 rounded-[2.5rem] bg-white/80 backdrop-blur-xl border border-white/80 flex items-center justify-center shadow-[0_20px_50px_-15px_rgba(0,0,0,0.08)] transition-all duration-700 text-muted-foreground/30 hover:text-red-400/80 hover:border-red-100 hover:shadow-[0_20px_50px_-10px_rgba(220,100,100,0.15)] group"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:rotate-45 transition-transform duration-500">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.08, y: -12 }}
-              whileTap={{ scale: 0.92 }}
-              onClick={() => handleAction("LIKE", 1000)}
-              className="relative w-32 h-32 rounded-[3rem] flex items-center justify-center text-5xl text-white border-4 border-white transition-all duration-700 overflow-hidden group"
+            {/* Photo */}
+            <img
+              src={currentProfile.photo || "/placeholder.svg"}
+              alt={currentProfile.name}
               style={{
-                background: "linear-gradient(135deg, #e8a5b2 0%, #c47685 100%)",
-                boxShadow: "0 30px 80px -15px rgba(232,165,178,0.65), 0 0 0 0 rgba(232,165,178,0)",
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                position: "absolute",
+                inset: 0,
+              }}
+              crossOrigin="anonymous"
+              draggable={false}
+            />
+
+            {/* Swipe indicators */}
+            {swipeX > 30 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 40,
+                  left: 24,
+                  padding: "8px 16px",
+                  border: "3px solid var(--success)",
+                  color: "var(--success)",
+                  borderRadius: "var(--radius-md)",
+                  fontWeight: 800,
+                  fontSize: 28,
+                  transform: "rotate(-20deg)",
+                  opacity: Math.min(swipeX / 100, 1),
+                  background: "rgba(255,255,255,0.9)",
+                }}
+              >
+                LIKE
+              </div>
+            )}
+            {swipeX < -30 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 40,
+                  right: 24,
+                  padding: "8px 16px",
+                  border: "3px solid var(--danger)",
+                  color: "var(--danger)",
+                  borderRadius: "var(--radius-md)",
+                  fontWeight: 800,
+                  fontSize: 28,
+                  transform: "rotate(20deg)",
+                  opacity: Math.min(Math.abs(swipeX) / 100, 1),
+                  background: "rgba(255,255,255,0.9)",
+                }}
+              >
+                NOPE
+              </div>
+            )}
+
+            {/* Bottom gradient overlay */}
+            <div
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: "45%",
+                background: "linear-gradient(transparent, rgba(0,0,0,0.75))",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-end",
+                padding: "0 24px 24px",
               }}
             >
-              <span className="relative z-10 group-hover:scale-125 transition-transform duration-700">♥</span>
-              <div className="absolute inset-0 bg-white/15 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute -inset-2 rounded-[3.5rem] border-2 border-primary/30 opacity-0 group-hover:opacity-100 scale-100 group-hover:scale-110 transition-all duration-700" />
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.15, y: -6, rotate: 5 }}
-              whileTap={{ scale: 0.85 }}
-              className="w-20 h-20 rounded-[2.5rem] bg-white/80 backdrop-blur-xl border border-white/80 flex items-center justify-center shadow-[0_20px_50px_-15px_rgba(0,0,0,0.08)] transition-all duration-700 text-primary/30 hover:text-primary hover:border-primary/20 hover:shadow-[0_20px_50px_-10px_rgba(232,165,178,0.2)] group"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:rotate-12 transition-transform duration-500">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-              </svg>
-            </motion.button>
-          </motion.footer>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <h2 style={{ color: "#fff", margin: 0, fontSize: 26 }}>
+                  {currentProfile.name}, {currentProfile.age}
+                </h2>
+                {currentProfile.verified && (
+                  <Badge variant="success" style={{ fontSize: 11 }}>Verified</Badge>
+                )}
+                {currentProfile.premium && (
+                  <Badge variant="primary" style={{ fontSize: 11 }}>Premium</Badge>
+                )}
+              </div>
+              <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, marginBottom: 4 }}>
+                {currentProfile.city}
+              </p>
+              <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>
+                {currentProfile.bio}
+              </p>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+      </div>
 
-      <BottomSheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Discovery Curation">
-        <div className="p-14 space-y-12 bg-[#faf8f6]">
-          <header className="space-y-4">
-            <h3 className="text-5xl font-serif italic tracking-tight text-foreground/80">Curation Parameters</h3>
-            <p className="text-muted-foreground/50 font-serif italic leading-relaxed text-xl pr-12">
-              Refine the resonance of your curated discovery signals.
-            </p>
-          </header>
+      {/* Action buttons */}
+      {!loading && currentProfile && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 16,
+            padding: "12px 0 8px",
+          }}
+        >
+          <button
+            onClick={() => {
+              if (currentIndex > 0) {
+                setCurrentIndex((i) => i - 1);
+                addToast("Rewound", "info");
+              }
+            }}
+            style={actionBtnStyle("var(--panel)", 44)}
+            aria-label="Rewind"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+            </svg>
+          </button>
+          <button
+            onClick={() => handleAction("PASS", "left")}
+            style={actionBtnStyle("var(--danger)")}
+            aria-label="Pass"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+          <button
+            onClick={() => handleAction("SUPERLIKE")}
+            style={actionBtnStyle("#00B4D8", 48)}
+            aria-label="Super Like"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" stroke="#fff" strokeWidth="1">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+          </button>
+          <button
+            onClick={() => handleAction("LIKE", "right")}
+            style={actionBtnStyle("var(--success)")}
+            aria-label="Like"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff" stroke="#fff" strokeWidth="1">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+          </button>
+          <button
+            onClick={() => addToast("Boost activated!", "success")}
+            style={actionBtnStyle("var(--panel)", 44)}
+            aria-label="Boost"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+          </button>
+        </div>
+      )}
 
-          <div className="space-y-10">
-            <div className="space-y-6">
-              <div className="flex justify-between items-end">
-                <span className="text-[10px] uppercase tracking-[0.5em] font-black text-muted-foreground/30 italic">Liaison Range</span>
-                <span className="text-2xl font-serif italic tracking-tight text-primary/80">Regional (50km)</span>
-              </div>
-              <div className="h-1 w-full bg-black/[0.02] rounded-full overflow-hidden">
-                <div className="h-full w-1/3 bg-primary/40 rounded-full" />
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="flex justify-between items-end">
-                <span className="text-[10px] uppercase tracking-[0.5em] font-black text-muted-foreground/30 italic">Age Spectrum</span>
-                <span className="text-2xl font-serif italic tracking-tight text-primary/80">24 — 32 Era</span>
-              </div>
-              <div className="h-1 w-full bg-black/[0.02] rounded-full overflow-hidden">
-                <div className="h-full w-1/2 bg-primary/40 rounded-full mx-auto" />
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-8">
-            <Button
-              variant="premium"
-              size="xl"
-              fullWidth
-              onClick={() => setFilterOpen(false)}
-              className="py-8 rounded-[2rem] shadow-2xl shadow-primary/20 text-[10px] uppercase tracking-[0.4em] font-black"
+      {/* Filter BottomSheet */}
+      <BottomSheet
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        title="Filters"
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <div>
+            <label style={{ fontSize: 14, fontWeight: 500, display: "block", marginBottom: 12 }}>
+              Distance: {distance} km
+            </label>
+            <input
+              type="range"
+              min={5}
+              max={200}
+              value={distance}
+              onChange={(e) => setDistance(Number(e.target.value))}
+              style={{ width: "100%", accentColor: "var(--primary)" }}
+            />
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: 12,
+                color: "var(--muted)",
+                marginTop: 4,
+              }}
             >
-              Apply Curation Signal
-            </Button>
+              <span>5 km</span>
+              <span>200 km</span>
+            </div>
           </div>
+
+          <div>
+            <label style={{ fontSize: 14, fontWeight: 500, display: "block", marginBottom: 12 }}>
+              Interests
+            </label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {ALL_INTERESTS.map((interest) => (
+                <Chip
+                  key={interest}
+                  label={interest}
+                  selected={selectedInterests.includes(interest)}
+                  onClick={() =>
+                    setSelectedInterests((prev) =>
+                      prev.includes(interest)
+                        ? prev.filter((i) => i !== interest)
+                        : [...prev, interest]
+                    )
+                  }
+                />
+              ))}
+            </div>
+          </div>
+
+          <Button
+            fullWidth
+            onClick={() => {
+              setFilterOpen(false);
+              fetchProfiles();
+            }}
+          >
+            Apply Filters
+          </Button>
         </div>
       </BottomSheet>
     </div>

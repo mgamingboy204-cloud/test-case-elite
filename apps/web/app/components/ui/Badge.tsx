@@ -1,70 +1,73 @@
-"use client";
+'use client';
 
-import React from "react";
-import { motion } from "framer-motion";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import type { CSSProperties, ReactNode } from "react";
 
 type BadgeVariant = "default" | "primary" | "success" | "danger" | "warning";
 
 interface BadgeProps {
-  children: React.ReactNode;
+  children: ReactNode;
   variant?: BadgeVariant;
-  className?: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }
 
-const variantStyles: Record<BadgeVariant, string> = {
-  default: "bg-black/5 text-muted-foreground border-black/5",
-  primary: "bg-primary/10 text-[#c47685] border-primary/20",
-  success: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  danger: "bg-destructive/10 text-destructive border-destructive/20",
-  warning: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+const variantMap: Record<BadgeVariant, CSSProperties> = {
+  default: { background: "var(--border)", color: "var(--text)" },
+  primary: { background: "var(--primary-light)", color: "var(--primary)" },
+  success: { background: "var(--success-light)", color: "var(--success)" },
+  danger: { background: "var(--danger-light)", color: "var(--danger)" },
+  warning: { background: "var(--warning-light)", color: "var(--warning)" },
 };
 
-export function Badge({ children, variant = "default", className, style }: BadgeProps) {
+export function Badge({ children, variant = "default", style }: BadgeProps) {
   return (
-    <div
-      className={cn(
-        "inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] transition-all duration-300",
-        variantStyles[variant],
-        className
-      )}
-      style={style}
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "3px 10px",
+        fontSize: 12,
+        fontWeight: 600,
+        borderRadius: "var(--radius-full)",
+        whiteSpace: "nowrap",
+        ...variantMap[variant],
+        ...style,
+      }}
     >
       {children}
-    </div>
+    </span>
   );
 }
 
-/* ── Luxury Interactive Chip ── */
+/* Chip - interactive badge */
 interface ChipProps {
   label: string;
   selected?: boolean;
   onClick?: () => void;
-  className?: string;
+  style?: CSSProperties;
 }
 
-export function Chip({ label, selected = false, onClick, className }: ChipProps) {
+export function Chip({ label, selected = false, onClick, style }: ChipProps) {
   return (
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+    <button
       type="button"
       onClick={onClick}
-      className={cn(
-        "inline-flex items-center rounded-full border px-5 py-2 text-xs font-semibold transition-all duration-500",
-        selected
-          ? "bg-primary text-white border-primary shadow-[0_4px_15px_rgba(232,165,178,0.4)]"
-          : "bg-white/60 text-muted-foreground border-black/[0.05] hover:bg-white hover:border-black/10 shadow-sm",
-        className
-      )}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "8px 16px",
+        fontSize: 14,
+        fontWeight: 500,
+        borderRadius: "var(--radius-full)",
+        border: selected ? "2px solid var(--primary)" : "1px solid var(--border)",
+        background: selected ? "var(--primary-light)" : "var(--panel)",
+        color: selected ? "var(--primary)" : "var(--text)",
+        cursor: "pointer",
+        transition: "all 150ms ease",
+        whiteSpace: "nowrap",
+        ...style,
+      }}
     >
       {label}
-    </motion.button>
+    </button>
   );
 }

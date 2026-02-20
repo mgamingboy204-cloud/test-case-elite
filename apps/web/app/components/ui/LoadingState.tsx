@@ -2,12 +2,11 @@
 
 type LoadingStateProps = {
   message?: string;
-  className?: string;
 };
 
-export default function LoadingState({ message = "Loading...", className }: LoadingStateProps) {
+export default function LoadingState({ message = "Loading..." }: LoadingStateProps) {
   return (
-    <div className={`loading-state ${className || ""}`.trim()}>
+    <div className="loading-state">
       <div className="skeleton-card" />
       <div className="skeleton-line" />
       <div className="skeleton-line short" />

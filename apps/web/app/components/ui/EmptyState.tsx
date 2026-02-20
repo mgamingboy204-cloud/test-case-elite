@@ -9,12 +9,11 @@ type EmptyStateProps = {
   message: string;
   actionLabel?: string;
   onAction?: () => void;
-  className?: string;
 };
 
-export default function EmptyState({ icon, title, message, actionLabel, onAction, className }: EmptyStateProps) {
+export default function EmptyState({ icon, title, message, actionLabel, onAction }: EmptyStateProps) {
   return (
-    <div className={`empty-state ${className || ""}`.trim()}>
+    <div className="empty-state">
       {icon ? <div className="empty-state__icon">{icon}</div> : null}
       <h3>{title}</h3>
       <p className="text-muted">{message}</p>

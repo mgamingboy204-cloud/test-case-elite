@@ -1,51 +1,40 @@
-"use client";
+'use client';
 
-import React from "react";
-import { motion, HTMLMotionProps } from "framer-motion";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import type { CSSProperties, ReactNode } from "react";
 
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+interface CardProps {
+  children: ReactNode;
+  style?: CSSProperties;
+  className?: string;
+  onClick?: () => void;
 }
 
-interface CardProps extends HTMLMotionProps<"div"> {
-  hoverEffect?: boolean;
-  glass?: boolean;
-}
-
-export function Card({
-  children,
-  className,
-  hoverEffect = false,
-  glass = true,
-  onClick,
-  ...props
-}: CardProps) {
-  const isInteractive = !!onClick;
-
+export function Card({ children, style, className, onClick }: CardProps) {
   return (
-    <motion.div
-      {...(isInteractive || hoverEffect ? {
-        whileHover: { y: -4, boxShadow: "0 20px 40px -12px rgba(0,0,0,0.08)" },
-        whileTap: { scale: 0.99 }
-      } : {})}
+    <div
+      className={className}
       onClick={onClick}
-      className={cn(
-        "relative overflow-hidden rounded-[2.5rem] border border-black/[0.05] transition-all duration-500",
-        glass && "bg-white/70 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.04)]",
-        !glass && "bg-white shadow-sm",
-        isInteractive && "cursor-pointer hover:border-primary/40",
-        className
-      )}
-      {...props}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      style={{
+        background: "var(--panel)",
+        borderRadius: "var(--radius-lg)",
+        border: "1px solid var(--border)",
+        boxShadow: "var(--shadow)",
+        overflow: "hidden",
+        transition: "box-shadow 200ms ease, transform 200ms ease",
+        cursor: onClick ? "pointer" : undefined,
+        ...style,
+      }}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") onClick();
+            }
+          : undefined
+      }
     >
-      {/* Internal Premium Highlight - Soft Rose Glow */}
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-primary/[0.02] to-transparent" />
-
-      <div className="relative z-10 w-full h-full">
-        {children as React.ReactNode}
-      </div>
-    </motion.div>
+      {children}
+    </div>
   );
 }

@@ -3,10 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/app/components/ui/Input";
 import { Button } from "@/app/components/ui/Button";
-import { Card } from "@/app/components/ui/Card";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
@@ -57,10 +55,10 @@ export default function LoginPage() {
         setAccessToken(loginResponse.accessToken);
       }
       const user = await refresh();
-      addToast("Successfully authenticated into the network.", "success");
+      addToast("Logged in successfully!", "success");
       router.push(getDefaultRoute(user));
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Authentication failed";
+      const msg = err instanceof Error ? err.message : "Login failed";
       addToast(msg, "error");
     } finally {
       setLoading(false);
@@ -74,9 +72,9 @@ export default function LoginPage() {
         body: { phone: phone.replace(/\D/g, "") } as never,
         auth: "omit",
       });
-      addToast("A verification fragment has been dispatched.", "info");
+      addToast("OTP sent to your phone", "info");
     } catch {
-      addToast("Failed to dispatch verification fragment.", "error");
+      addToast("Failed to send OTP", "error");
     }
   };
 
@@ -92,161 +90,128 @@ export default function LoginPage() {
         setAccessToken(verificationResponse.accessToken);
       }
       const user = await refresh();
-      addToast("Identity elegantly verified.", "success");
+      addToast("Verified!", "success");
       router.push(getDefaultRoute(user));
     } catch {
-      addToast("Invalid code fragment.", "error");
+      addToast("Invalid OTP", "error");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center w-full">
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-[480px] relative z-10"
-      >
-        <Card className="p-12 md:p-16 border-white/60 shadow-[0_80px_160px_-40px_rgba(0,0,0,0.1)] backdrop-blur-3xl bg-white/40 rounded-[4rem] relative overflow-hidden group">
-          <header className="text-center mb-14 space-y-4">
-            <h1 className="text-5xl md:text-6xl font-serif tracking-tight text-foreground/90 italic">The Entry</h1>
-            <div className="flex flex-col items-center gap-2">
-              <p className="text-[10px] uppercase tracking-[0.5em] font-black text-primary/40 italic">
-                Authentication Ritual
-              </p>
-              <div className="w-12 h-[1px] bg-primary/20" />
-            </div>
-          </header>
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 430,
+        borderRadius: 28,
+        border: "1px solid rgba(255,255,255,0.12)",
+        backdropFilter: "blur(15px)",
+        background: "rgba(255,255,255,0.05)",
+        boxShadow: "0 24px 60px rgba(0,0,0,0.35)",
+      }}
+    >
+      <div style={{ padding: "28px 22px" }}>
+        <h2 style={{ marginBottom: 4, fontSize: "clamp(1.5rem, 4vw, 2rem)" }}>Welcome back</h2>
+        <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
+          Sign in to your account
+        </p>
 
-          <AnimatePresence mode="wait">
-            {!otpRequired ? (
-              <motion.div
-                key="password-login"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.02 }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                className="space-y-10"
-              >
-                <div className="space-y-8">
-                  <Input
-                    label="Terminal Phone Number"
-                    type="tel"
-                    placeholder="1234567890"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    error={errors.phone}
-                    maxLength={10}
-                    inputMode="numeric"
+        {!otpRequired ? (
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <Input
+                label="Phone Number"
+                type="tel"
+                placeholder="1234567890"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                error={errors.phone}
+                maxLength={10}
+                inputMode="numeric"
+              />
+              <div style={{ position: "relative" }}>
+                <Input
+                  label="Password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  error={errors.password}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: "absolute",
+                    right: 14,
+                    top: 36,
+                    fontSize: 13,
+                    color: "var(--muted)",
+                    fontWeight: 500,
+                  }}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    style={{ accentColor: "var(--primary)", width: 16, height: 16 }}
                   />
+                  Remember me
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={rememberDevice}
+                    onChange={(e) => setRememberDevice(e.target.checked)}
+                    style={{ accentColor: "var(--primary)", width: 16, height: 16 }}
+                  />
+                  Remember this device for 30 days
+                </label>
+              </div>
+            </div>
 
-                  <div className="relative group">
-                    <Input
-                      label="Security Passphrase"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      error={errors.password}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-6 top-12 text-[9px] uppercase tracking-[0.3em] font-black text-primary/30 hover:text-primary transition-all duration-500 italic"
-                    >
-                      {showPassword ? "Obscure" : "Reveal"}
-                    </button>
-                  </div>
+            <Button
+              fullWidth
+              size="lg"
+              loading={loading}
+              onClick={handleLogin}
+              style={{ marginTop: 24, borderRadius: 999, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35), 0 14px 28px rgba(230,57,70,0.35)" }}
+            >
+              Sign In
+            </Button>
 
-                  <div className="space-y-4 pt-2">
-                    <div className="flex items-center gap-4 group cursor-pointer" onClick={() => setRememberMe(!rememberMe)}>
-                      <div className={`w-6 h-6 rounded-2xl border-2 border-primary/10 flex items-center justify-center transition-all duration-700 ${rememberMe ? "bg-primary border-primary shadow-lg shadow-primary/20" : "bg-white/40 group-hover:border-primary/30"}`}>
-                        {rememberMe && <div className="w-2 h-2 rounded-full bg-white animate-in zoom-in duration-500" />}
-                      </div>
-                      <span className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/30 group-hover:text-primary/60 transition-colors italic">Preserve Session Identity</span>
-                    </div>
-
-                    <div className="flex items-center gap-4 group cursor-pointer" onClick={() => setRememberDevice(!rememberDevice)}>
-                      <div className={`w-6 h-6 rounded-2xl border-2 border-primary/10 flex items-center justify-center transition-all duration-700 ${rememberDevice ? "bg-primary border-primary shadow-lg shadow-primary/20" : "bg-white/40 group-hover:border-primary/30"}`}>
-                        {rememberDevice && <div className="w-2 h-2 rounded-full bg-white animate-in zoom-in duration-500" />}
-                      </div>
-                      <span className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/30 group-hover:text-primary/60 transition-colors italic">Trust this Domicile (30 Days)</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  <Button
-                    fullWidth
-                    size="xl"
-                    loading={loading}
-                    onClick={handleLogin}
-                    variant="premium"
-                    className="py-8 rounded-[1.5rem] shadow-2xl shadow-primary/20 text-[10px] uppercase tracking-[0.4em] font-black"
-                  >
-                    Initiate Secure Entry
-                  </Button>
-                </div>
-
-                <div className="text-center space-y-8 pt-6">
-                  <Link href="/otp" className="block text-[10px] uppercase tracking-[0.4em] font-black text-primary/30 hover:text-primary hover:tracking-[0.5em] transition-all duration-700 italic border-b border-primary/5 pb-1 inline-block">
-                    One-Time Passcode Entry
-                  </Link>
-                  <p className="text-[10px] text-muted-foreground/30 font-black uppercase tracking-[0.3em] italic">
-                    New to the collective?{" "}
-                    <Link href="/signup" className="text-primary/60 hover:text-primary transition-colors underline decoration-primary/10 underline-offset-8">
-                      Apply for Invitation
-                    </Link>
-                  </p>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="otp-login"
-                initial={{ opacity: 0, scale: 1.02 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                className="space-y-12"
-              >
-                <div className="text-center space-y-4">
-                  <p className="text-sm text-foreground/60 font-serif italic leading-relaxed px-4">
-                    A unique courier code has been sent to your device. Please verify your presence to continue.
-                  </p>
-                </div>
-
-                <div className="py-6 scale-110">
-                  <OtpInput onComplete={handleVerifyOtp} disabled={loading} />
-                </div>
-
-                <div className="space-y-8 pt-4">
-                  <ResendTimer onResend={handleSendOtp} />
-                  <Button
-                    variant="ghost"
-                    fullWidth
-                    onClick={() => setOtpRequired(false)}
-                    className="text-[10px] uppercase tracking-[0.4em] font-black text-muted-foreground/30 hover:text-foreground/60 rounded-[1.5rem] py-6 border-black/[0.03] hover:bg-white transition-all duration-700 italic"
-                  >
-                    Return to Passphrase
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Cinematic accent blurs on card */}
-          <div className="absolute -right-24 -top-24 w-48 h-48 bg-primary/10 rounded-full blur-[100px] pointer-events-none group-hover:bg-primary/20 transition-all duration-1000" />
-          <div className="absolute -left-24 -bottom-24 w-48 h-48 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
-        </Card>
-
-        <footer className="mt-16 text-center">
-          <p className="text-[10px] text-muted-foreground/20 uppercase tracking-[0.6em] font-black italic">
-            Premium End-to-End Encryption
-          </p>
-        </footer>
-      </motion.div>
+            <div style={{ textAlign: "center", marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+              <Link href="/otp" style={{ fontSize: 14, color: "var(--primary)", fontWeight: 500 }}>
+                Sign in with OTP instead
+              </Link>
+              <p style={{ fontSize: 14, color: "var(--muted)" }}>
+                {"Don't have an account? "}
+                <Link href="/signup" style={{ color: "var(--primary)", fontWeight: 600 }}>
+                  Sign Up
+                </Link>
+              </p>
+            </div>
+          </>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <p style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}>
+              Enter the 6-digit code sent to your phone
+            </p>
+            <OtpInput onComplete={handleVerifyOtp} disabled={loading} />
+            <ResendTimer onResend={handleSendOtp} />
+            <button onClick={() => setOtpRequired(false)} style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}>
+              Back to login
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

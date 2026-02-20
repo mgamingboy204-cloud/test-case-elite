@@ -1,39 +1,46 @@
 "use client";
 
-import React, { forwardRef } from "react";
-import { motion, HTMLMotionProps } from "framer-motion";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import React from "react"
 
-/** Utility for clean class merging */
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { type ButtonHTMLAttributes, forwardRef } from "react";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "premium";
-type Size = "sm" | "md" | "lg" | "xl";
+type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Size = "sm" | "md" | "lg";
 
-interface ButtonProps extends Omit<HTMLMotionProps<"button">, "children"> {
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
   fullWidth?: boolean;
-  children: React.ReactNode;
 }
 
-const variants = {
-  primary: "bg-primary text-primary-foreground hover:shadow-[0_0_20px_rgba(232,165,178,0.4)]",
-  secondary: "bg-secondary text-secondary-foreground border border-black/5 hover:bg-secondary/70",
-  ghost: "bg-transparent text-foreground hover:bg-black/5",
-  danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-  premium: "premium-gradient text-white shadow-xl hover:shadow-primary/40",
+const variantStyles: Record<Variant, React.CSSProperties> = {
+  primary: {
+    background: "var(--primary)",
+    color: "#fff",
+    border: "none",
+  },
+  secondary: {
+    background: "var(--panel)",
+    color: "var(--text)",
+    border: "1px solid var(--border)",
+  },
+  ghost: {
+    background: "transparent",
+    color: "var(--text)",
+    border: "none",
+  },
+  danger: {
+    background: "var(--danger)",
+    color: "#fff",
+    border: "none",
+  },
 };
 
-const sizes = {
-  sm: "h-9 px-4 text-xs rounded-full",
-  md: "h-11 px-6 text-sm rounded-full",
-  lg: "h-14 px-8 text-base rounded-full",
-  xl: "h-16 px-10 text-lg font-serif tracking-wide rounded-full",
+const sizeStyles: Record<Size, React.CSSProperties> = {
+  sm: { padding: "6px 14px", fontSize: 13, borderRadius: "var(--radius-sm)" },
+  md: { padding: "10px 20px", fontSize: 15, borderRadius: "var(--radius-md)" },
+  lg: { padding: "14px 28px", fontSize: 16, borderRadius: "var(--radius-lg)" },
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -43,50 +50,48 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       size = "md",
       loading = false,
       fullWidth = false,
-      className,
-      children,
       disabled,
+      style,
+      children,
       ...props
     },
     ref
   ) => {
     return (
-      <motion.button
-        ref={ref as any}
-        whileHover={!disabled && !loading ? { scale: 1.02, y: -1 } : {}}
-        whileTap={!disabled && !loading ? { scale: 0.98, y: 0 } : {}}
+      <button
+        ref={ref}
         disabled={disabled || loading}
-        className={cn(
-          "relative inline-flex items-center justify-center gap-3 font-semibold transition-all duration-300 active:duration-75 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden",
-          variants[variant],
-          sizes[size],
-          fullWidth ? "w-full" : "w-auto",
-          className
-        )}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          fontWeight: 600,
+          cursor: disabled || loading ? "not-allowed" : "pointer",
+          opacity: disabled || loading ? 0.5 : 1,
+          transition: "transform 150ms ease, opacity 150ms ease, box-shadow 150ms ease",
+          width: fullWidth ? "100%" : undefined,
+          whiteSpace: "nowrap",
+          ...variantStyles[variant],
+          ...sizeStyles[size],
+          ...style,
+        }}
+        onPointerDown={(e) => {
+          if (!disabled && !loading) {
+            (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.98)";
+          }
+        }}
+        onPointerUp={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+        }}
+        onPointerLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+        }}
         {...props}
       >
-        {/* Subtle Shine Effect for Premium/Primary */}
-        {(variant === "premium" || variant === "primary") && (
-          <motion.div
-            className="absolute inset-0 w-full h-full"
-            initial={{ x: "-100%" }}
-            whileHover={{ x: "100%" }}
-            transition={{ duration: 0.6, ease: "easeInOut" }}
-            style={{
-              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
-            }}
-          />
-        )}
-
-        {loading ? (
-          <div className="flex items-center gap-2">
-            <Spinner />
-            <span className="opacity-70">Processing...</span>
-          </div>
-        ) : (
-          <span className="relative z-10 flex items-center gap-2">{children}</span>
-        )}
-      </motion.button>
+        {loading && <Spinner />}
+        {children}
+      </button>
     );
   }
 );
@@ -96,24 +101,20 @@ Button.displayName = "Button";
 function Spinner() {
   return (
     <svg
-      className="animate-spin h-5 w-5"
-      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
       fill="none"
-      viewBox="0 0 24 24"
+      style={{ animation: "spin 0.8s linear infinite" }}
     >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      ></circle>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" opacity="0.3" />
       <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      ></path>
+        d="M14 8a6 6 0 00-6-6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

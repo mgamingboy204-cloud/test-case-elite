@@ -1,26 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { useState, type CSSProperties } from "react";
 
 interface AvatarProps {
   src?: string | null;
   name?: string;
   size?: number;
-  className?: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }
 
-export function Avatar({ src, name = "?", size = 44, className, style }: AvatarProps) {
-  const [isLoaded, setIsLoaded] = useState(false);
+export function Avatar({ src, name = "?", size = 44, style }: AvatarProps) {
   const [failed, setFailed] = useState(false);
-
   const initials = name
     .split(" ")
     .map((w) => w[0])
@@ -28,44 +18,38 @@ export function Avatar({ src, name = "?", size = 44, className, style }: AvatarP
     .toUpperCase()
     .slice(0, 2);
 
-  return (
-    <motion.div
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      className={cn(
-        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/[0.05] bg-primary/5 shadow-inner",
-        className
-      )}
-      style={{ width: size, height: size, ...style }}
-    >
-      <AnimatePresence mode="wait">
-        {src && !failed ? (
-          <motion.img
-            key="image"
-            src={src}
-            alt={name}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: isLoaded ? 1 : 0, scale: isLoaded ? 1 : 0.8 }}
-            exit={{ opacity: 0 }}
-            onLoad={() => setIsLoaded(true)}
-            onError={() => setFailed(true)}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <motion.div
-            key="fallback"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex h-full w-full items-center justify-center font-serif premium-text-gradient font-bold"
-            style={{ fontSize: size * 0.4 }}
-          >
-            {initials}
-          </motion.div>
-        )}
-      </AnimatePresence>
+  const baseStyle: CSSProperties = {
+    width: size,
+    height: size,
+    borderRadius: "50%",
+    overflow: "hidden",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "var(--primary-light)",
+    color: "var(--primary)",
+    fontWeight: 700,
+    fontSize: size * 0.38,
+    ...style,
+  };
 
-      {/* Premium Polish Overlay */}
-      <div className="absolute inset-0 rounded-full border border-white/20 pointer-events-none mix-blend-overlay" />
-    </motion.div>
+  if (src && !failed) {
+    return (
+      <div style={baseStyle}>
+        <img
+          src={src || "/placeholder.svg"}
+          alt={name}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          onError={() => setFailed(true)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div style={baseStyle} aria-label={name}>
+      {initials}
+    </div>
   );
 }

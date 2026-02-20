@@ -94,14 +94,12 @@ type AppShellLayoutProps = {
   children: ReactNode;
   rightPanel?: ReactNode;
   showMobileShell?: boolean;
-  className?: string;
 };
 
 export default function AppShellLayout({
   children,
   rightPanel,
-  showMobileShell = true,
-  className
+  showMobileShell = true
 }: AppShellLayoutProps) {
   const pathname = usePathname();
   const { user } = useSession();
@@ -109,7 +107,7 @@ export default function AppShellLayout({
   const isAdmin = user?.role === "ADMIN" || user?.isAdmin;
 
   return (
-    <div className={`app-shell-layout ${className || ""}`.trim()}>
+    <div className="app-shell-layout">
       {showMobileShell ? <MobileShell title={title} /> : null}
       <aside className="app-rail" aria-label="Primary">
         <Link className="rail-brand" href="/discover">

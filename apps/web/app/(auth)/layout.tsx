@@ -1,78 +1,42 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
+import Link from "next/link";
+import { useTheme } from "@/app/providers";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const { theme, toggle } = useTheme();
+
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#faf8f6]">
-      {/* ── Cinematic Ambient Background ── */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-
-        {/* Orb 1 — top left, slow drift */}
-        <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-            x: [0, 50, 0],
-            y: [0, -25, 0],
-            opacity: [0.35, 0.55, 0.35],
-          }}
-          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-[15%] -left-[10%] w-[75%] h-[75%] rounded-full bg-primary/[0.08] blur-[160px]"
-        />
-
-        {/* Orb 2 — bottom right, counter drift */}
-        <motion.div
-          animate={{
-            scale: [1.1, 1, 1.15],
-            x: [0, -35, 0],
-            y: [0, 35, 0],
-            opacity: [0.28, 0.48, 0.28],
-          }}
-          transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -bottom-[18%] -right-[15%] w-[70%] h-[70%] rounded-full bg-primary/[0.12] blur-[130px]"
-        />
-
-        {/* Orb 3 — center accent, faster */}
-        <motion.div
-          animate={{
-            scale: [1, 1.3, 1],
-            x: [0, 20, -15, 0],
-            y: [0, -15, 20, 0],
-            opacity: [0.15, 0.3, 0.15],
-          }}
-          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut", delay: 4 }}
-          className="absolute top-[40%] left-[40%] w-[40%] h-[40%] rounded-full bg-primary/[0.06] blur-[120px]"
-        />
-
-        {/* Vignette overlay */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_0%,_rgba(250,248,246,0.35)_100%)]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#faf8f6]/30 via-transparent to-[#faf8f6]/50" />
-
-        {/* Subtle grid pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.015]"
-          style={{
-            backgroundImage: `linear-gradient(rgba(196, 118, 133, 0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(196, 118, 133, 0.8) 1px, transparent 1px)`,
-            backgroundSize: "60px 60px",
-          }}
-        />
+    <div className="auth-shell">
+      <div className="bg-overlay" />
+      <div className="top-row">
+        <Link href="/" className="brand">Elite Match</Link>
+        <button onClick={toggle} className="theme-btn" aria-label="Toggle theme">
+          {theme === "light" ? "☾" : "☀"}
+        </button>
       </div>
 
-      {/* Cinematic grain texture */}
-      <div className="absolute inset-0 z-[1] opacity-[0.025] pointer-events-none mix-blend-multiply bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      <aside className="auth-panel">{children}</aside>
 
-      {/* Content */}
-      <motion.main
-        initial={{ opacity: 0, scale: 0.99, filter: "blur(12px)" }}
-        animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-        transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 w-full flex justify-center py-12"
-      >
-        <div className="w-full max-w-7xl px-6">
-          {children}
-        </div>
-      </motion.main>
+      <style jsx>{`
+        .auth-shell { min-height: 100vh; min-height: 100dvh; position: relative; background-image: url('https://images.unsplash.com/photo-1499952127939-9bbf5af6c51c?auto=format&fit=crop&w=2200&q=80'); background-size: cover; background-position: center; display: flex; justify-content: flex-end; align-items: stretch; }
+        .bg-overlay { position: absolute; inset: 0; background: radial-gradient(circle at 70% 25%, rgba(0,0,0,0.08), rgba(0,0,0,0.68)); }
+        .top-row { position: absolute; top: 18px; left: 18px; right: 18px; z-index: 3; display: flex; align-items: center; justify-content: space-between; }
+        .brand { font-size: 29px; font-weight: 800; letter-spacing: -0.03em; color: #fff; }
+        .theme-btn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.08); backdrop-filter: blur(14px); color: #fff; }
+        .auth-panel { width: min(480px, 100%); z-index: 2; padding: 96px 24px 24px; background: rgba(255,255,255,0.05); border-left: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(18px); display: flex; align-items: center; justify-content: center; }
+        :global([data-theme='light']) .auth-shell { background-image: url('https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=2200&q=80'); }
+        :global([data-theme='light']) .bg-overlay { background: radial-gradient(circle at 70% 24%, rgba(255,255,255,0.2), rgba(255,255,255,0.66)); }
+        :global([data-theme='light']) .brand, :global([data-theme='light']) .theme-btn { color: #1f2533; }
+        :global([data-theme='light']) .theme-btn { border-color: rgba(17,24,39,0.2); background: rgba(255,255,255,0.66); }
+        :global([data-theme='light']) .auth-panel { background: rgba(255,255,255,0.58); border-left-color: rgba(255,255,255,0.75); }
+        @media (max-width: 900px) {
+          .auth-shell { align-items: flex-end; }
+          .auth-panel { width: 100%; padding: 84px 16px calc(16px + env(safe-area-inset-bottom)); border-radius: 28px 28px 0 0; border-left: none; border-top: 1px solid rgba(255,255,255,0.18); min-height: 78vh; background: rgba(255,255,255,0.08); }
+          :global([data-theme='light']) .auth-panel { background: rgba(255,255,255,0.72); }
+        }
+      `}</style>
     </div>
   );
 }

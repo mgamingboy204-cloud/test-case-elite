@@ -1,76 +1,97 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { useEffect, type ReactNode, type CSSProperties } from "react";
 
 interface BottomSheetProps {
   open: boolean;
   onClose: () => void;
   title?: string;
   children: ReactNode;
-  className?: string;
 }
 
-export function BottomSheet({ open, onClose, title, children, className }: BottomSheetProps) {
+export function BottomSheet({ open, onClose, title, children }: BottomSheetProps) {
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    if (open) window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const sheetStyle: CSSProperties = {
+    position: "fixed",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    background: "var(--panel)",
+    borderRadius: "var(--radius-xl) var(--radius-xl) 0 0",
+    maxHeight: "85vh",
+    overflow: "auto",
+    boxShadow: "var(--shadow-xl)",
+    zIndex: 1001,
+    animation: "slideUp 250ms cubic-bezier(0.32, 0.72, 0, 1)",
+    paddingBottom: "env(safe-area-inset-bottom, 16px)",
+  };
+
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[1000] transition-all"
+    <>
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "var(--overlay)",
+          zIndex: 1000,
+          animation: "fadeIn 200ms ease",
+        }}
+        onClick={onClose}
+      />
+      <div style={sheetStyle} role="dialog" aria-modal="true" aria-label={title}>
+        {/* Handle */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            padding: "12px 0 4px",
+          }}
+        >
+          <div
+            style={{
+              width: 36,
+              height: 4,
+              borderRadius: 2,
+              background: "var(--border)",
+            }}
           />
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className={cn(
-              "fixed bottom-0 left-0 right-0 max-h-[90vh] bg-white rounded-t-[3rem] shadow-[0_-8px_40px_rgba(0,0,0,0.1)] z-[1001] flex flex-col overflow-hidden pb-safe",
-              className
-            )}
-            role="dialog"
-            aria-modal="true"
+        </div>
+        {title && (
+          <div
+            style={{
+              padding: "8px 24px 0",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
           >
-            {/* Handle Bar */}
-            <div className="flex justify-center py-4 cursor-grab active:cursor-grabbing">
-              <div className="w-12 h-1.5 rounded-full bg-black/[0.05]" />
-            </div>
-
-            {title && (
-              <div className="px-8 pb-4 flex justify-between items-center bg-white/50 backdrop-blur-md">
-                <h3 className="text-xl font-serif text-foreground m-0 tracking-tight">{title}</h3>
-                <button
-                  onClick={onClose}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-2xl text-muted-foreground hover:bg-black/5 transition-colors"
-                  aria-label="Close"
-                >
-                  &times;
-                </button>
-              </div>
-            )}
-
-            <div className="flex-grow overflow-y-auto px-8 pb-10">
-              {children}
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+            <h3 style={{ margin: 0 }}>{title}</h3>
+            <button
+              onClick={onClose}
+              style={{ fontSize: 22, color: "var(--muted)", lineHeight: 1 }}
+              aria-label="Close"
+            >
+              &times;
+            </button>
+          </div>
+        )}
+        <div style={{ padding: 24 }}>{children}</div>
+      </div>
+    </>
   );
 }

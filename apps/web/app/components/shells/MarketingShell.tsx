@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { useTheme } from "@/app/providers";
 import { type ReactNode, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 
 const navLinks = [
-  { href: "/learn", label: "Protocol" },
-  { href: "/safety", label: "Trust" },
-  { href: "/faq", label: "Inquiry" },
-  { href: "/support", label: "Concierge" },
+  { href: "/learn", label: "How It Works" },
+  { href: "/safety", label: "Safety" },
+  { href: "/faq", label: "FAQ" },
+  { href: "/support", label: "Support" },
 ];
 
 const footerLinks = [
@@ -25,153 +24,92 @@ export function MarketingShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#faf8f6] selection:bg-primary/20 selection:text-primary">
-      {/* Cinematic Header Overlay */}
-      <div className="fixed top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/60 to-transparent z-30 pointer-events-none" />
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
+      <header className="marketing-header">
+        <div className="nav-row">
+          <Link href="/" className="logo">Elite Match</Link>
 
-      <motion.header
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-        className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-7xl"
-      >
-        <div className="bg-white/40 backdrop-blur-3xl border border-white/60 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.05)] rounded-full px-8 py-3 flex items-center justify-between gap-8 transition-all duration-700 hover:shadow-[0_30px_60px_-15px_rgba(232,165,178,0.1)]">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-primary/60 flex items-center justify-center text-white shadow-lg shadow-primary/20 group-hover:rotate-12 transition-transform duration-700">
-              <span className="text-lg font-serif italic">E</span>
-            </div>
-            <span className="text-xl font-serif italic tracking-tight text-foreground/80 group-hover:text-primary transition-colors duration-700">
-              Elite Match
-            </span>
-          </Link>
-
-          <nav className="hidden lg:flex items-center gap-10">
+          <nav className="desktop-nav">
             {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-[11px] uppercase tracking-[0.4em] font-black text-muted-foreground/40 hover:text-primary transition-all duration-500 italic"
-              >
+              <Link key={link.href} href={link.href} className="nav-link">
                 {link.label}
               </Link>
             ))}
           </nav>
 
-          <div className="flex items-center gap-4">
-            <button
-              onClick={toggle}
-              className="w-10 h-10 rounded-full border border-primary/5 bg-white/40 flex items-center justify-center text-primary/40 hover:text-primary hover:border-primary/20 transition-all duration-500 group"
-              aria-label="Toggle theme"
-            >
-              <span className="group-hover:rotate-45 transition-transform duration-700 text-lg">
-                {theme === "light" ? "☾" : "☀"}
-              </span>
+          <div className="actions">
+            <button onClick={toggle} className="theme-btn" aria-label="Toggle theme">
+              {theme === "light" ? "☾" : "☀"}
             </button>
-            <Link
-              href="/login"
-              className="hidden sm:inline-flex px-8 py-3 rounded-full bg-primary/5 text-primary border border-primary/10 text-[10px] uppercase tracking-[0.3em] font-black hover:bg-primary hover:text-white transition-all duration-700 italic shadow-sm"
-            >
-              Entry
-            </Link>
-            <button
-              className="lg:hidden w-10 h-10 flex flex-col items-center justify-center gap-1.5"
-              onClick={() => setMenuOpen(true)}
-              aria-label="Open menu"
-            >
-              <div className="w-5 h-0.5 bg-primary/40 rounded-full" />
-              <div className="w-5 h-0.5 bg-primary/40 rounded-full" />
-            </button>
+            <Link href="/login" className="signin-btn">Sign In</Link>
+            <button className="mobile-menu-btn" onClick={() => setMenuOpen(true)} aria-label="Open menu">☰</button>
           </div>
         </div>
-      </motion.header>
+      </header>
 
-      <main className="flex-1 relative">
-        {children}
-      </main>
+      <main style={{ flex: 1 }}>{children}</main>
 
-      <footer className="border-t border-primary/5 bg-white/40 backdrop-blur-xl relative z-10">
-        <div className="max-w-7xl mx-auto px-8 py-16">
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-12">
-            <div className="flex flex-col items-center lg:items-start gap-4">
-              <Link href="/" className="text-2xl font-serif italic text-foreground/60 tracking-tight">
-                Elite Match
+      <footer className="marketing-footer">
+        <div className="footer-inner">
+          <div style={{ fontSize: 14, color: "var(--muted)" }}>
+            &copy; {new Date().getFullYear()} Elite Match. All rights reserved.
+          </div>
+          <nav className="footer-nav">
+            {footerLinks.map((link) => (
+              <Link key={link.href} href={link.href} className="footer-link">
+                {link.label}
               </Link>
-              <p className="text-[10px] uppercase tracking-[0.5em] font-black text-muted-foreground/20 italic">
-                &copy; {new Date().getFullYear()} The Collective. All Rights Reserved.
-              </p>
-            </div>
-
-            <nav className="flex flex-wrap justify-center gap-x-12 gap-y-4">
-              {footerLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-[10px] uppercase tracking-[0.4em] font-black text-muted-foreground/30 hover:text-primary transition-all duration-500 italic"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-
-          <div className="mt-16 flex flex-col items-center gap-6 opacity-20">
-            <div className="w-12 h-px bg-primary/40" />
-            <p className="text-[9px] uppercase tracking-[0.6em] font-black text-muted-foreground italic">
-              Premium End-to-End Encryption Mode Active
-            </p>
-          </div>
+            ))}
+          </nav>
         </div>
       </footer>
 
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-[#faf8f6]/80 backdrop-blur-2xl flex items-center justify-center p-8"
-            onClick={() => setMenuOpen(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="w-full max-w-sm bg-white/40 border border-white/60 shadow-2xl rounded-[3rem] p-12 space-y-8 text-center relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="absolute top-8 right-8 text-primary/40 hover:text-primary transition-colors text-2xl"
-                onClick={() => setMenuOpen(false)}
-              >
-                ✕
-              </button>
-
-              <div className="space-y-6 pt-8">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="block text-2xl font-serif italic text-foreground/60 hover:text-primary transition-all duration-500"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-
-              <div className="pt-8 border-t border-primary/5">
-                <Link
-                  href="/login"
-                  className="block w-full py-6 rounded-full bg-primary text-white text-[10px] uppercase tracking-[0.4em] font-black italic shadow-xl shadow-primary/20"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Secure Entry
+      {menuOpen && (
+          <div className="mobile-menu-overlay" onClick={() => setMenuOpen(false)}>
+            <div className="mobile-menu-sheet" onClick={(event) => event.stopPropagation()}>
+              <div className="sheet-handle" />
+              {navLinks.map((link) => (
+                <Link key={link.href} href={link.href} className="sheet-link" onClick={() => setMenuOpen(false)}>
+                  {link.label}
                 </Link>
-              </div>
-            </motion.div>
-          </motion.div>
+              ))}
+              <Link href="/login" className="sheet-signin" onClick={() => setMenuOpen(false)}>
+                Sign In
+              </Link>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+
+      <style jsx>{`
+        .marketing-header { position: fixed; inset: 14px 14px auto; z-index: 40; border: 1px solid rgba(255,255,255,0.1); background: rgba(10,12,18,0.45); backdrop-filter: blur(15px); border-radius: 999px; }
+        .nav-row { max-width: 1200px; margin: 0 auto; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .logo { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+        .desktop-nav { display: flex; align-items: center; gap: 20px; }
+        .nav-link { color: rgba(255,255,255,0.8); font-size: 14px; }
+        .actions { display: flex; align-items: center; gap: 10px; }
+        .theme-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.08); color: #fff; }
+        .signin-btn { padding: 9px 16px; border-radius: 999px; background: linear-gradient(120deg, #ff4d5a, #d12836); color: #fff; font-size: 14px; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255,255,255,0.4); }
+        .mobile-menu-btn { display: none; color: #fff; font-size: 24px; }
+        .marketing-footer { border-top: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+        .footer-inner { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
+        .footer-nav { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }
+        .footer-link { color: var(--muted); font-size: 13px; line-height: 1.9; padding: 4px 2px; }
+        .mobile-menu-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(5,8,14,0.56); backdrop-filter: blur(12px); display: flex; align-items: flex-end; }
+        .mobile-menu-sheet { width: 100%; border-radius: 22px 22px 0 0; padding: 16px 20px calc(24px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); backdrop-filter: blur(22px); display: flex; flex-direction: column; gap: 12px; }
+        .sheet-handle { width: 46px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.4); margin: 0 auto 6px; }
+        .sheet-link { color: #fff; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 500; }
+        .sheet-signin { margin-top: 4px; text-align: center; padding: 13px; border-radius: 999px; color: #fff; background: linear-gradient(120deg, #ff4d5a, #d12836); font-weight: 700; }
+        @media (max-width: 880px) {
+          .desktop-nav, .signin-btn { display: none; }
+          .mobile-menu-btn { display: block; }
+          .marketing-header { inset: 10px 10px auto; }
+          .footer-inner { justify-content: center; text-align: center; }
+          .footer-nav { width: 100%; gap: 12px 20px; }
+        }
+        :global([data-theme='light']) .marketing-header { background: rgba(255,255,255,0.62); border-color: rgba(255,255,255,0.8); }
+        :global([data-theme='light']) .logo, :global([data-theme='light']) .nav-link, :global([data-theme='light']) .theme-btn { color: #22293a; }
+        :global([data-theme='light']) .theme-btn { background: rgba(255,255,255,0.75); border-color: rgba(20,20,30,0.1); }
+      `}</style>
     </div>
   );
 }
