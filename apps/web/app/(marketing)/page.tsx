@@ -96,9 +96,9 @@ export default function HomePage() {
           min-height: 100dvh;
           padding-bottom: env(safe-area-inset-bottom, 16px);
           background:
-            linear-gradient(180deg, rgba(12, 11, 15, 0.42), rgba(8, 7, 10, 0.88)),
-            url("https://images.unsplash.com/photo-1493666438817-866a91353ca9?auto=format&fit=crop&w=1920&q=80") center / cover no-repeat fixed;
-          color: #f3ece3;
+            linear-gradient(180deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
+            url("https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=2048&q=80") center / cover no-repeat fixed;
+          color: #fdfcfb;
           font-family: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
 
@@ -110,7 +110,7 @@ export default function HomePage() {
         }
 
         .main-header {
-          padding-top: env(safe-area-inset-top, 24px);
+          padding-top: env(safe-area-inset-top, 44px);
           position: sticky;
           top: 0;
           z-index: 20;
@@ -124,10 +124,11 @@ export default function HomePage() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          background: rgba(13, 11, 16, 0.52);
-          border: 0.5px solid rgba(212, 175, 55, 0.45);
+          backdrop-filter: blur(25px);
+          -webkit-backdrop-filter: blur(25px);
+          background: rgba(10, 10, 12, 0.48);
+          border: 0.5px solid transparent;
+          border-bottom-color: rgba(183, 110, 121, 0.8);
           border-radius: 20px;
         }
 
@@ -154,6 +155,8 @@ export default function HomePage() {
         .hero-shell {
           min-height: 100dvh;
           width: min(1200px, calc(100% - 48px));
+          padding-left: 24px;
+          padding-right: 24px;
           margin: 0 auto;
           display: grid;
           place-items: center;
@@ -169,9 +172,9 @@ export default function HomePage() {
         .hero-kicker {
           margin-bottom: 20px;
           text-transform: uppercase;
-          letter-spacing: 0.18em;
+          letter-spacing: 0.2em;
           font-size: 0.78rem;
-          color: rgba(243, 236, 227, 0.72);
+          color: rgba(253, 252, 251, 0.74);
         }
 
         :global([data-theme='light']) .hero-kicker {
@@ -185,6 +188,7 @@ export default function HomePage() {
           letter-spacing: 0.15em;
           line-height: 1.02;
           text-transform: uppercase;
+          color: #fdfcfb;
         }
 
         .hero-subtitle {
@@ -192,7 +196,7 @@ export default function HomePage() {
           margin: 28px auto 0;
           font-size: clamp(1rem, 2.2vw, 1.2rem);
           line-height: 1.9;
-          color: rgba(243, 236, 227, 0.8);
+          color: rgba(253, 252, 251, 0.82);
         }
 
         :global([data-theme='light']) .hero-subtitle {
@@ -211,12 +215,13 @@ export default function HomePage() {
           min-width: 210px;
           min-height: 52px;
           border: 0.5px solid rgba(212, 175, 55, 0.58);
-          background: linear-gradient(135deg, #d4af37 0%, #c58383 100%);
+          background: linear-gradient(135deg, #b76e79 0%, #8c525a 100%);
           color: #fff;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26), 0 16px 28px rgba(20, 12, 16, 0.28);
+          box-shadow: inset 0 1px 0 rgba(255, 241, 237, 0.26), 0 16px 28px rgba(20, 12, 16, 0.28);
           letter-spacing: 0.05em;
           text-transform: uppercase;
           transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+          animation: roseBreath 0.8s ease-in-out infinite alternate;
         }
 
         .hero-actions :global(a:last-child button) {
@@ -231,8 +236,11 @@ export default function HomePage() {
 
         .reveal-shell {
           width: min(1200px, calc(100% - 48px));
+          padding-left: 24px;
+          padding-right: 24px;
           margin: 0 auto;
-          padding: 0 0 96px;
+          padding-top: 36px;
+          padding-bottom: 96px;
         }
 
         .reveal-intro h2 {
@@ -253,13 +261,13 @@ export default function HomePage() {
         .reveal-card {
           padding: 24px;
           border-radius: 20px;
-          border: 0.5px solid rgba(212, 175, 55, 0.55);
-          background: rgba(18, 14, 20, 0.42);
+          border: 0.5px solid rgba(183, 110, 121, 0.8);
+          background: rgba(12, 14, 22, 0.76);
           backdrop-filter: blur(15px);
           -webkit-backdrop-filter: blur(15px);
           opacity: 0;
           transform: translateY(28px);
-          transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+          transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         :global([data-theme='light']) .reveal-card {
@@ -300,6 +308,15 @@ export default function HomePage() {
           }
         }
 
+        @keyframes roseBreath {
+          from {
+            box-shadow: inset 0 1px 0 rgba(255, 241, 237, 0.2), 0 12px 22px rgba(140, 82, 90, 0.28);
+          }
+          to {
+            box-shadow: inset 0 1px 0 rgba(255, 241, 237, 0.35), 0 18px 32px rgba(183, 110, 121, 0.42);
+          }
+        }
+
         @media (max-width: 900px) {
           .reveal-grid {
             grid-template-columns: 1fr;
@@ -310,7 +327,7 @@ export default function HomePage() {
           .frosted-nav,
           .hero-shell,
           .reveal-shell {
-            width: calc(100% - 32px);
+            width: 100%;
           }
 
           .hero-shell {
