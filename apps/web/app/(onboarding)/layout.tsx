@@ -34,7 +34,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             >
-              {children}
+              <div className="app-content">{children}</div>
             </motion.div>
           </AnimatePresence>
         </RouteGuard>

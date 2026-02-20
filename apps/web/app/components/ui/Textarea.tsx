@@ -3,7 +3,6 @@
 import React, { type TextareaHTMLAttributes, forwardRef, useState } from "react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { motion, AnimatePresence } from "framer-motion";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -21,59 +20,43 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
 
     return (
-      <div className={cn("flex flex-col gap-2 w-full", className)}>
+      <div className={cn("flex w-full flex-col gap-2", className)}>
         {label && (
           <label
             htmlFor={inputId}
             className={cn(
-              "text-[10px] uppercase tracking-[0.2em] font-bold transition-colors duration-500 ml-1",
+              "ml-1 text-[11px] font-semibold uppercase tracking-[0.16em]",
               isFocused ? "text-primary" : "text-muted-foreground",
-              error ? "text-destructive" : ""
+              error && "text-destructive",
             )}
           >
             {label}
           </label>
         )}
-        <div className="relative">
-          <textarea
-            ref={ref}
-            id={inputId}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            className={cn(
-              "w-full px-5 py-4 bg-white/60 border border-black/[0.05] rounded-2xl text-base placeholder:text-muted-foreground/40 outline-none transition-all duration-500 shadow-sm min-h-[120px] resize-none",
-              "focus:bg-white focus:border-primary/40 focus:ring-4 focus:ring-primary/5 shadow-inner",
-              error ? "border-destructive/30 focus:border-destructive/50" : ""
-            )}
-            {...props}
-          />
-        </div>
-        <div className="flex justify-between items-center px-1">
-          <AnimatePresence>
-            {error && (
-              <motion.span
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-[11px] font-medium text-destructive flex items-center gap-1.5"
-              >
-                <span className="w-4 h-4 rounded-full bg-destructive/10 flex items-center justify-center text-[10px]">!</span> {error}
-              </motion.span>
-            )}
-          </AnimatePresence>
+
+        <textarea
+          ref={ref}
+          id={inputId}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          className={cn(
+            "input-premium min-h-[120px] resize-none py-3",
+            error && "border-destructive/40 focus:ring-destructive/10",
+          )}
+          {...props}
+        />
+
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-destructive">{error}</span>
           {charCount && (
-            <span
-              className={cn(
-                "text-[10px] font-medium transition-colors ml-auto tracking-wider",
-                charCount.current > charCount.max ? "text-destructive" : "text-muted-foreground/60"
-              )}
-            >
-              {charCount.current} / {charCount.max}
+            <span className={cn("text-xs text-muted-foreground", charCount.current > charCount.max && "text-destructive")}>
+              {charCount.current}/{charCount.max}
             </span>
           )}
         </div>
       </div>
     );
-  }
+  },
 );
 
 Textarea.displayName = "Textarea";

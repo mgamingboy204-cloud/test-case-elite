@@ -86,7 +86,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
       </motion.header>
 
       <main className="flex-1 relative">
-        {children}
+        <div className="app-content">{children}</div>
       </main>
 
       <footer className="border-t border-primary/5 bg-white/40 backdrop-blur-xl relative z-10">
