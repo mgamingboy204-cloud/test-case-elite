@@ -160,8 +160,9 @@ export default function ProfilePage() {
     >
       {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none -z-10 bg-[#faf8f6]">
-        <div className="absolute top-[30%] right-[0%] w-[50%] h-[50%] bg-primary/[0.03] rounded-full blur-[150px] animate-pulse" />
-        <div className="absolute bottom-[0%] left-[0%] w-[40%] h-[40%] bg-primary/[0.03] rounded-full blur-[150px] animate-pulse" style={{ animationDelay: "2s" }} />
+        <div className="absolute top-[30%] right-[0%] w-[55%] h-[55%] bg-primary/[0.04] rounded-full blur-[160px] animate-drift" />
+        <div className="absolute bottom-[0%] left-[0%] w-[45%] h-[45%] bg-primary/[0.04] rounded-full blur-[150px] animate-drift-slow" />
+        <div className="absolute top-[5%] left-[40%] w-[30%] h-[30%] bg-primary/[0.02] rounded-full blur-[120px]" />
         <div className="absolute inset-0 opacity-[0.015] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
       </div>
 
@@ -169,12 +170,13 @@ export default function ProfilePage() {
       <header className="mb-20">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-10">
           <div className="flex items-center gap-10">
-            <div className="relative">
+            <div className="relative group/avatar">
+              <div className="absolute -inset-1.5 rounded-[3rem] bg-gradient-to-br from-primary/30 to-primary/10 opacity-0 group-hover/avatar:opacity-100 blur-md transition-opacity duration-700" />
               <Avatar
                 src={profile.photos[0]?.url}
                 name={profile.name}
                 size={112}
-                className="ring-[6px] ring-white shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] rounded-[2.5rem]"
+                className="ring-[6px] ring-white shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] rounded-[2.5rem] relative group-hover/avatar:shadow-[0_40px_80px_-20px_rgba(232,165,178,0.3)] transition-shadow duration-700"
               />
               {profile.verified && (
                 <div className="absolute -bottom-2 -right-2 bg-white p-2 rounded-2xl shadow-xl border border-primary/10">

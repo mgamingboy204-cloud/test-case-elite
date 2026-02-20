@@ -82,11 +82,14 @@ export default function MatchesPage() {
         <h1 className="text-5xl font-serif tracking-tight text-foreground/90 italic">
           Dispatched Matches
         </h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <span className="text-[10px] uppercase tracking-[0.4em] font-black text-primary/40">
             {matches.length} Curated Connections Solidified
           </span>
-          <div className="w-10 h-[1px] bg-primary/20" />
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-[1px] bg-primary/20" />
+            <span className="w-1.5 h-1.5 rounded-full bg-primary/40" />
+          </div>
         </div>
       </header>
 
@@ -134,7 +137,12 @@ export default function MatchesPage() {
                           className="rounded-[2.5rem] shadow-xl ring-4 ring-white group-hover:rotate-2 transition-transform duration-700"
                         />
                         {match.status === "ACTIVE" && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 border-[3px] border-white rounded-full shadow-lg animate-pulse" />
+                          <div className="absolute -top-1.5 -right-1.5">
+                            <span className="flex relative">
+                              <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-emerald-400 opacity-60" />
+                              <span className="relative inline-flex h-4 w-4 rounded-full bg-emerald-400 border-[3px] border-white shadow-lg" />
+                            </span>
+                          </div>
                         )}
                       </div>
 
@@ -178,8 +186,8 @@ export default function MatchesPage() {
 
       {/* Aesthetic Accents */}
       <div className="fixed inset-0 pointer-events-none -z-10 bg-[#faf8f6]">
-        <div className="absolute top-[30%] right-[0%] w-[50%] h-[50%] bg-primary/[0.04] rounded-full blur-[150px] animate-pulse" />
-        <div className="absolute bottom-[0%] left-[0%] w-[40%] h-[40%] bg-primary/[0.04] rounded-full blur-[150px] animate-pulse" style={{ animationDelay: "2s" }} />
+        <div className="absolute top-[30%] right-[0%] w-[50%] h-[50%] bg-primary/[0.04] rounded-full blur-[150px] animate-drift" />
+        <div className="absolute bottom-[0%] left-[0%] w-[40%] h-[40%] bg-primary/[0.04] rounded-full blur-[150px] animate-drift-slow" />
         <div className="absolute inset-0 opacity-[0.015] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
       </div>
     </motion.div>

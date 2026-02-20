@@ -100,8 +100,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Global Background Artifacts */}
       <div className="fixed inset-0 pointer-events-none -z-10 bg-[#faf8f6]">
-        <div className="absolute top-[10%] left-[5%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] opacity-60 animate-pulse" />
-        <div className="absolute bottom-[10%] right-[5%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] opacity-60 animate-pulse" style={{ animationDelay: "2s" }} />
+        <div className="absolute top-[10%] left-[5%] w-[45%] h-[45%] bg-primary/[0.05] rounded-full blur-[130px] animate-drift" />
+        <div className="absolute bottom-[10%] right-[5%] w-[40%] h-[40%] bg-primary/[0.05] rounded-full blur-[120px] animate-drift-slow" />
+        <div className="absolute top-[45%] left-[35%] w-[30%] h-[30%] bg-primary/[0.03] rounded-full blur-[100px]" />
         <div className="absolute inset-0 opacity-[0.02] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
       </div>
     </div>

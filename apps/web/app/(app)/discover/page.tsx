@@ -99,6 +99,11 @@ export default function DiscoverPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-80px)] overflow-hidden relative">
+      {/* Background ambience */}
+      <div className="absolute inset-0 pointer-events-none -z-10">
+        <div className="absolute top-[20%] right-[5%] w-[40%] h-[40%] bg-primary/[0.04] rounded-full blur-[120px] animate-drift" />
+        <div className="absolute bottom-[10%] left-[5%] w-[35%] h-[35%] bg-primary/[0.04] rounded-full blur-[100px] animate-drift-slow" />
+      </div>
       {/* Cinematic Inner Noise Layer */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.02] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')] z-0" />
 
@@ -169,11 +174,17 @@ export default function DiscoverPage() {
             </motion.div>
           ) : (
             <div className="relative w-full max-w-[460px] h-[72vh] max-h-[780px]">
-              {/* Background card stack effect with depth */}
+              {/* Card stack depth — 3rd card */}
+              {profiles[currentIndex + 2] && (
+                <div className="absolute inset-x-14 inset-y-0 translate-y-20 scale-[0.83] opacity-10 transition-all duration-1000">
+                  <div className="w-full h-full rounded-[4rem] overflow-hidden bg-white/60 border border-white/40" />
+                </div>
+              )}
+              {/* Card stack depth — 2nd card */}
               {profiles[currentIndex + 1] && (
-                <div className="absolute inset-x-8 inset-y-0 translate-y-12 scale-[0.9] opacity-20 transition-all duration-1000 ease-[0.16,1,0.3,1]">
+                <div className="absolute inset-x-6 inset-y-0 translate-y-10 scale-[0.92] opacity-30 transition-all duration-1000 ease-[0.16,1,0.3,1]">
                   <div className="w-full h-full rounded-[4rem] overflow-hidden shadow-2xl border border-white/40">
-                    <img src={profiles[currentIndex + 1].photo} className="w-full h-full object-cover grayscale-[0.5]" alt="next" />
+                    <img src={profiles[currentIndex + 1].photo} className="w-full h-full object-cover grayscale-[0.3] blur-[1px]" alt="next" />
                   </div>
                 </div>
               )}
@@ -264,31 +275,36 @@ export default function DiscoverPage() {
           >
             <motion.button
               whileHover={{ scale: 1.15, y: -6, rotate: -5 }}
-              whileTap={{ scale: 0.9 }}
+              whileTap={{ scale: 0.85 }}
               onClick={() => handleAction("PASS", -1000)}
-              className="w-20 h-20 rounded-[2.5rem] bg-white border border-black/[0.05] flex items-center justify-center text-xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] transition-all duration-700 text-muted-foreground/20 hover:text-red-400/60 hover:border-red-100 hover:shadow-red-500/10"
+              className="w-20 h-20 rounded-[2.5rem] bg-white/80 backdrop-blur-xl border border-white/80 flex items-center justify-center shadow-[0_20px_50px_-15px_rgba(0,0,0,0.08)] transition-all duration-700 text-muted-foreground/30 hover:text-red-400/80 hover:border-red-100 hover:shadow-[0_20px_50px_-10px_rgba(220,100,100,0.15)] group"
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:rotate-45 transition-transform duration-500">
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </motion.button>
 
             <motion.button
-              whileHover={{ scale: 1.1, y: -10 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.08, y: -12 }}
+              whileTap={{ scale: 0.92 }}
               onClick={() => handleAction("LIKE", 1000)}
-              className="w-32 h-32 rounded-[3rem] bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-5xl text-white shadow-[0_40px_100px_-20px_rgba(232,165,178,0.7)] border-4 border-white transition-all duration-1000 hover:shadow-[0_50px_120px_-10px_rgba(232,165,178,0.9)] relative overflow-hidden group"
+              className="relative w-32 h-32 rounded-[3rem] flex items-center justify-center text-5xl text-white border-4 border-white transition-all duration-700 overflow-hidden group"
+              style={{
+                background: "linear-gradient(135deg, #e8a5b2 0%, #c47685 100%)",
+                boxShadow: "0 30px 80px -15px rgba(232,165,178,0.65), 0 0 0 0 rgba(232,165,178,0)",
+              }}
             >
-              <span className="relative z-10 group-hover:scale-125 transition-transform duration-1000 animate-pulse">♥</span>
-              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <span className="relative z-10 group-hover:scale-125 transition-transform duration-700">♥</span>
+              <div className="absolute inset-0 bg-white/15 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute -inset-2 rounded-[3.5rem] border-2 border-primary/30 opacity-0 group-hover:opacity-100 scale-100 group-hover:scale-110 transition-all duration-700" />
             </motion.button>
 
             <motion.button
               whileHover={{ scale: 1.15, y: -6, rotate: 5 }}
-              whileTap={{ scale: 0.9 }}
-              className="w-20 h-20 rounded-[2.5rem] bg-white border border-black/[0.05] flex items-center justify-center text-xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] transition-all duration-700 text-primary/30 hover:text-primary hover:border-primary/20 hover:shadow-primary/10"
+              whileTap={{ scale: 0.85 }}
+              className="w-20 h-20 rounded-[2.5rem] bg-white/80 backdrop-blur-xl border border-white/80 flex items-center justify-center shadow-[0_20px_50px_-15px_rgba(0,0,0,0.08)] transition-all duration-700 text-primary/30 hover:text-primary hover:border-primary/20 hover:shadow-[0_20px_50px_-10px_rgba(232,165,178,0.2)] group"
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:rotate-12 transition-transform duration-500">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
               </svg>
             </motion.button>

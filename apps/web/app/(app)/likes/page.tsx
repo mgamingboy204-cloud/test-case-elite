@@ -103,8 +103,9 @@ export default function LikesPage() {
     >
       {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none -z-10 bg-[#faf8f6]">
-        <div className="absolute top-[30%] left-[0%] w-[50%] h-[50%] bg-primary/[0.03] rounded-full blur-[150px] animate-pulse" />
-        <div className="absolute bottom-[0%] right-[0%] w-[40%] h-[40%] bg-primary/[0.03] rounded-full blur-[150px] animate-pulse" style={{ animationDelay: "2s" }} />
+        <div className="absolute top-[30%] left-[0%] w-[50%] h-[50%] bg-primary/[0.04] rounded-full blur-[150px] animate-drift" />
+        <div className="absolute bottom-[0%] right-[0%] w-[40%] h-[40%] bg-primary/[0.04] rounded-full blur-[150px] animate-drift-slow" />
+        <div className="absolute top-[10%] right-[20%] w-[25%] h-[25%] bg-primary/[0.02] rounded-full blur-[100px]" />
         <div className="absolute inset-0 opacity-[0.015] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
       </div>
 
@@ -152,7 +153,7 @@ export default function LikesPage() {
                 exit={{ opacity: 0, scale: 0.9, filter: "blur(20px)" }}
                 transition={{ duration: 0.8, delay: idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
               >
-                <Card className="relative group overflow-hidden flex flex-col items-center text-center p-12 bg-white/40 backdrop-blur-3xl border-white/60 hover:border-primary/30 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.12)] transition-all duration-700 rounded-[3.5rem]">
+                <Card className="relative group overflow-hidden flex flex-col items-center text-center p-12 bg-white/50 backdrop-blur-3xl border-white/70 hover:border-primary/20 hover:shadow-[0_40px_80px_-20px_rgba(232,165,178,0.12)] transition-all duration-700 rounded-[3.5rem]">
                   <div className="relative mb-10">
                     <div className="relative">
                       <Avatar

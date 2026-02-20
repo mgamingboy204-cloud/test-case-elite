@@ -41,8 +41,14 @@ export default function SettingsPage() {
         {/* Appearance */}
         <section className="space-y-8">
           <div className="flex items-center gap-4 px-6">
-            <h2 className="text-[10px] uppercase tracking-[0.5em] font-black text-primary/30 italic">The Experience</h2>
-            <div className="flex-grow h-px bg-primary/5" />
+            <h2 className="text-[10px] uppercase tracking-[0.5em] font-black text-primary/30 italic flex-shrink-0">The Experience</h2>
+            <motion.div
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              className="flex-grow h-px bg-gradient-to-r from-primary/10 to-transparent origin-left"
+            />
           </div>
           <Card className="p-10 bg-white/40 backdrop-blur-3xl border-white/60 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)] rounded-[3rem] transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)] group">
             <div className="flex justify-between items-center">
@@ -58,8 +64,14 @@ export default function SettingsPage() {
         {/* Notifications */}
         <section className="space-y-8">
           <div className="flex items-center gap-4 px-6">
-            <h2 className="text-[10px] uppercase tracking-[0.5em] font-black text-primary/30 italic">Liaison Alerts</h2>
-            <div className="flex-grow h-px bg-primary/5" />
+            <h2 className="text-[10px] uppercase tracking-[0.5em] font-black text-primary/30 italic flex-shrink-0">Liaison Alerts</h2>
+            <motion.div
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              className="flex-grow h-px bg-gradient-to-r from-primary/10 to-transparent origin-left"
+            />
           </div>
           <Card className="p-12 bg-white/40 backdrop-blur-3xl border-white/60 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)] space-y-12 rounded-[3.5rem] transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)]">
             <ToggleSetting label="Direct Connections" desc="Notifications for mutual synergy discoveries" defaultOn />
@@ -71,8 +83,14 @@ export default function SettingsPage() {
         {/* Account */}
         <section className="space-y-8">
           <div className="flex items-center gap-4 px-6">
-            <h2 className="text-[10px] uppercase tracking-[0.5em] font-black text-primary/30 italic">Identity Verification</h2>
-            <div className="flex-grow h-px bg-primary/5" />
+            <h2 className="text-[10px] uppercase tracking-[0.5em] font-black text-primary/30 italic flex-shrink-0">Identity Verification</h2>
+            <motion.div
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              className="flex-grow h-px bg-gradient-to-r from-primary/10 to-transparent origin-left"
+            />
           </div>
           <Card className="overflow-hidden bg-white/40 backdrop-blur-3xl border-white/60 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)] rounded-[3.5rem] transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)]">
             <div className="flex flex-col">
