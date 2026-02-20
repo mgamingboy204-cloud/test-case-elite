@@ -7,9 +7,10 @@ interface BottomSheetProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
+  className?: string;
 }
 
-export function BottomSheet({ open, onClose, title, children }: BottomSheetProps) {
+export function BottomSheet({ open, onClose, title, children, className }: BottomSheetProps) {
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
@@ -53,7 +54,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
         }}
         onClick={onClose}
       />
-      <div style={sheetStyle} role="dialog" aria-modal="true" aria-label={title}>
+      <div className={className} style={sheetStyle} role="dialog" aria-modal="true" aria-label={title}>
         {/* Handle */}
         <div
           style={{

@@ -8,9 +8,10 @@ interface ModalProps {
   title?: string;
   children: ReactNode;
   maxWidth?: number;
+  className?: string;
 }
 
-export function Modal({ open, onClose, title, children, maxWidth = 480 }: ModalProps) {
+export function Modal({ open, onClose, title, children, maxWidth = 480, className }: ModalProps) {
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -56,7 +57,7 @@ export function Modal({ open, onClose, title, children, maxWidth = 480 }: ModalP
   };
 
   return (
-    <div style={overlayStyle} onClick={onClose} role="dialog" aria-modal="true" aria-label={title}>
+    <div className={className} style={overlayStyle} onClick={onClose} role="dialog" aria-modal="true" aria-label={title}>
       <div style={contentStyle} onClick={(e) => e.stopPropagation()}>
         {title && (
           <div

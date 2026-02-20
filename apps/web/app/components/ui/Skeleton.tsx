@@ -5,6 +5,7 @@ interface SkeletonProps {
   height?: number | string;
   radius?: number | string;
   style?: CSSProperties;
+  className?: string;
 }
 
 export function Skeleton({
@@ -12,10 +13,11 @@ export function Skeleton({
   height = 20,
   radius = "var(--radius-sm)",
   style,
+  className,
 }: SkeletonProps) {
   return (
     <div
-      className="skeleton"
+      className={`skeleton ${className || ""}`.trim()}
       aria-hidden="true"
       style={{
         width,

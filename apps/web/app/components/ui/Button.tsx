@@ -53,6 +53,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       disabled,
       style,
       children,
+      className,
       ...props
     },
     ref
@@ -61,6 +62,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={disabled || loading}
+        className={className}
         style={{
           display: "inline-flex",
           alignItems: "center",

@@ -10,12 +10,13 @@ interface EmptyStateProps {
   description?: string;
   action?: { label: string; onClick: () => void };
   style?: CSSProperties;
+  className?: string;
 }
 
-export function EmptyState({ icon, title, description, action, style }: EmptyStateProps) {
+export function EmptyState({ icon, title, description, action, style, className }: EmptyStateProps) {
   return (
     <div
-      className="fade-in"
+      className={`fade-in ${className || ""}`.trim()}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -50,16 +51,18 @@ interface ErrorStateProps {
   message?: string;
   onRetry?: () => void;
   style?: CSSProperties;
+  className?: string;
 }
 
 export function ErrorState({
   message = "Something went wrong",
   onRetry,
   style,
+  className,
 }: ErrorStateProps) {
   return (
     <div
-      className="fade-in"
+      className={`fade-in ${className || ""}`.trim()}
       style={{
         display: "flex",
         flexDirection: "column",

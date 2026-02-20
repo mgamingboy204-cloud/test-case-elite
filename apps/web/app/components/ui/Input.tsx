@@ -6,6 +6,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   wrapperStyle?: CSSProperties;
+  className?: string;
 }
 
 const inputStyle: CSSProperties = {
@@ -21,10 +22,10 @@ const inputStyle: CSSProperties = {
 };
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, wrapperStyle, style, id, ...props }, ref) => {
+  ({ label, error, wrapperStyle, style, id, className, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, ...wrapperStyle }}>
+      <div className={className} style={{ display: "flex", flexDirection: "column", gap: 6, ...wrapperStyle }}>
         {label && (
           <label
             htmlFor={inputId}

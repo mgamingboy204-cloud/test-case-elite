@@ -8,6 +8,7 @@ interface BadgeProps {
   children: ReactNode;
   variant?: BadgeVariant;
   style?: CSSProperties;
+  className?: string;
 }
 
 const variantMap: Record<BadgeVariant, CSSProperties> = {
@@ -18,9 +19,10 @@ const variantMap: Record<BadgeVariant, CSSProperties> = {
   warning: { background: "var(--warning-light)", color: "var(--warning)" },
 };
 
-export function Badge({ children, variant = "default", style }: BadgeProps) {
+export function Badge({ children, variant = "default", style, className }: BadgeProps) {
   return (
     <span
+      className={className}
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -44,13 +46,15 @@ interface ChipProps {
   selected?: boolean;
   onClick?: () => void;
   style?: CSSProperties;
+  className?: string;
 }
 
-export function Chip({ label, selected = false, onClick, style }: ChipProps) {
+export function Chip({ label, selected = false, onClick, style, className }: ChipProps) {
   return (
     <button
       type="button"
       onClick={onClick}
+      className={className}
       style={{
         display: "inline-flex",
         alignItems: "center",

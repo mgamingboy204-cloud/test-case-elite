@@ -7,9 +7,10 @@ interface AvatarProps {
   name?: string;
   size?: number;
   style?: CSSProperties;
+  className?: string;
 }
 
-export function Avatar({ src, name = "?", size = 44, style }: AvatarProps) {
+export function Avatar({ src, name = "?", size = 44, style, className }: AvatarProps) {
   const [failed, setFailed] = useState(false);
   const initials = name
     .split(" ")
@@ -36,7 +37,7 @@ export function Avatar({ src, name = "?", size = 44, style }: AvatarProps) {
 
   if (src && !failed) {
     return (
-      <div style={baseStyle}>
+      <div className={className} style={baseStyle}>
         <img
           src={src || "/placeholder.svg"}
           alt={name}
@@ -48,7 +49,7 @@ export function Avatar({ src, name = "?", size = 44, style }: AvatarProps) {
   }
 
   return (
-    <div style={baseStyle} aria-label={name}>
+    <div className={className} style={baseStyle} aria-label={name}>
       {initials}
     </div>
   );

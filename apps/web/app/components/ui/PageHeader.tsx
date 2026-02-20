@@ -5,11 +5,13 @@ interface PageHeaderProps {
   subtitle?: string;
   action?: ReactNode;
   style?: CSSProperties;
+  className?: string;
 }
 
-export function PageHeader({ title, subtitle, action, style }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, action, style, className }: PageHeaderProps) {
   return (
     <div
+      className={className}
       style={{
         display: "flex",
         justifyContent: "space-between",

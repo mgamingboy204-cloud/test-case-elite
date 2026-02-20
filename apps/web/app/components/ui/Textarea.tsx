@@ -6,13 +6,14 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: string;
   charCount?: { current: number; max: number };
+  className?: string;
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, charCount, id, style, ...props }, ref) => {
+  ({ label, error, charCount, id, style, className, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className={className} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {label && (
           <label
             htmlFor={inputId}

@@ -7,13 +7,14 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   error?: string;
   options: { value: string; label: string }[];
   placeholder?: string;
+  className?: string;
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, options, placeholder, id, style, ...props }, ref) => {
+  ({ label, error, options, placeholder, id, style, className, ...props }, ref) => {
     const selectId = id || label?.toLowerCase().replace(/\s+/g, "-");
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className={className} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {label && (
           <label
             htmlFor={selectId}

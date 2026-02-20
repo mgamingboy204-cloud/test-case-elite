@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { Tabs } from "@/app/components/ui/Tabs";
 import { BottomSheet } from "@/app/components/ui/BottomSheet";
 import { Badge } from "@/app/components/ui/Badge";
+import { Card } from "@/app/components/ui/Card";
 import { Skeleton } from "@/app/components/ui/Skeleton";
 import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { Button } from "@/app/components/ui/Button";
