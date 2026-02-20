@@ -1,19 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { LegacyRedirectPage } from "@/app/components/LegacyRedirectPage";
 
 export default function LikesRedirectPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/likes");
-  }, [router]);
-
   return (
-    <div className="card">
-      <h2>Redirecting...</h2>
-      <p className="card-subtitle">Likes now live at /likes.</p>
-    </div>
+    <LegacyRedirectPage
+      to="/likes"
+      title="Redirecting to Likes"
+      description="Requests and likes were consolidated under /likes."
+    />
   );
 }

@@ -1,3 +1,4 @@
+import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi, describe, it, expect, afterEach } from "vitest";
@@ -24,28 +25,23 @@ vi.mock("next/navigation", () => ({
   })
 }));
 
-describe("Login OTP flow", () => {
+describe("Login flow", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it("refreshes session after OTP verification and redirects", async () => {
+  it("refreshes session after password login and redirects", async () => {
     const { apiFetch } = await import("../lib/api");
     const user = userEvent.setup();
     refreshMock.mockResolvedValue({ onboardingStep: "PAYMENT_PENDING" });
 
-    (apiFetch as any)
-      .mockResolvedValueOnce({ otpRequired: true })
-      .mockResolvedValueOnce({});
+    (apiFetch as any).mockResolvedValueOnce({ accessToken: "token" });
 
     render(<LoginPage />);
 
-    await user.type(screen.getByLabelText("Phone"), "5551234567");
-    await user.type(screen.getByLabelText("Password"), "Password@1");
-    await user.click(screen.getByRole("button", { name: "Login" }));
-
-    await user.type(screen.getByLabelText("OTP Code"), "123456");
-    await user.click(screen.getByRole("button", { name: "Verify OTP" }));
+    await user.type(screen.getByLabelText(/phone/i), "5551234567");
+    await user.type(screen.getByLabelText(/passphrase|password/i), "Password@1");
+    await user.click(screen.getByRole("button", { name: /initiate secure entry/i }));
 
     expect(refreshMock).toHaveBeenCalled();
     expect(pushMock).toHaveBeenCalledWith("/onboarding/payment");
