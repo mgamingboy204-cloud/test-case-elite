@@ -85,7 +85,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
         {/* Content area */}
         <main className="flex-1 min-w-0 flex flex-col items-center">
-          <div className="w-full max-w-6xl px-8 py-12 md:py-20 min-h-[calc(100vh-80px)]">
+          <div className="w-full max-w-7xl px-4 md:px-8 py-10 md:py-16 min-h-[calc(100vh-80px)]">
             <AnimatePresence mode="wait">
               <motion.div
                 key={pathname}
@@ -94,7 +94,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
               >
-                {children}
+                <div className="app-content">{children}</div>
               </motion.div>
             </AnimatePresence>
           </div>

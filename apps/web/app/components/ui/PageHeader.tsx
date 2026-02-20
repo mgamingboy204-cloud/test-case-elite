@@ -1,35 +1,21 @@
-import type { ReactNode, CSSProperties } from "react";
+import type { ReactNode } from "react";
+import { clsx } from "clsx";
 
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
   action?: ReactNode;
-  style?: CSSProperties;
   className?: string;
 }
 
-export function PageHeader({ title, subtitle, action, style, className }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, action, className }: PageHeaderProps) {
   return (
-    <div
-      className={className}
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: 16,
-        padding: "24px 0 16px",
-        ...style,
-      }}
-    >
+    <div className={clsx("mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between", className)}>
       <div>
-        <h1 style={{ margin: 0, fontSize: 24 }}>{title}</h1>
-        {subtitle && (
-          <p style={{ margin: "4px 0 0", color: "var(--muted)", fontSize: 15 }}>
-            {subtitle}
-          </p>
-        )}
+        <h1 className="text-3xl md:text-4xl">{title}</h1>
+        {subtitle && <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>}
       </div>
-      {action && <div>{action}</div>}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }

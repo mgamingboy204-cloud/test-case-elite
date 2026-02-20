@@ -70,7 +70,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         className="relative z-10 w-full flex justify-center py-12"
       >
         <div className="w-full max-w-7xl px-6">
-          {children}
+          <div className="app-content max-w-xl mx-auto">{children}</div>
         </div>
       </motion.main>
     </div>
