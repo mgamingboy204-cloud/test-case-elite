@@ -1,17 +1,26 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 interface AvatarProps {
   src?: string | null;
   name?: string;
   size?: number;
-  style?: CSSProperties;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-export function Avatar({ src, name = "?", size = 44, style, className }: AvatarProps) {
+export function Avatar({ src, name = "?", size = 44, className, style }: AvatarProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  
   const initials = name
     .split(" ")
     .map((w) => w[0])
@@ -19,38 +28,43 @@ export function Avatar({ src, name = "?", size = 44, style, className }: AvatarP
     .toUpperCase()
     .slice(0, 2);
 
-  const baseStyle: CSSProperties = {
-    width: size,
-    height: size,
-    borderRadius: "50%",
-    overflow: "hidden",
-    flexShrink: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "var(--primary-light)",
-    color: "var(--primary)",
-    fontWeight: 700,
-    fontSize: size * 0.38,
-    ...style,
-  };
-
-  if (src && !failed) {
-    return (
-      <div className={className} style={baseStyle}>
-        <img
-          src={src || "/placeholder.svg"}
-          alt={name}
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          onError={() => setFailed(true)}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className={className} style={baseStyle} aria-label={name}>
-      {initials}
-    </div>
+    <motion.div
+      whileHover={{ scale: 1.05 }}
+      className={cn(
+        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-secondary shadow-inner",
+        className
+      )}
+      style={{ width: size, height: size, ...style }}
+    >
+      <AnimatePresence mode="wait">
+        {src && !failed ? (
+          <motion.img
+            key="image"
+            src={src}
+            alt={name}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: isLoaded ? 1 : 0 }}
+            exit={{ opacity: 0 }}
+            onLoad={() => setIsLoaded(true)}
+            onError={() => setFailed(true)}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <motion.div
+            key="fallback"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex h-full w-full items-center justify-center font-bold tracking-tighter premium-gradient text-primary-foreground"
+            style={{ fontSize: size * 0.38 }}
+          >
+            {initials}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Premium Glass Overlay */}
+      <div className="absolute inset-0 rounded-full border border-white/5 pointer-events-none" />
+    </motion.div>
   );
 }

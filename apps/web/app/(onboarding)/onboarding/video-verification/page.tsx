@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/app/components/ui/Card";
 import { Button } from "@/app/components/ui/Button";
 import { Badge } from "@/app/components/ui/Badge";
@@ -12,58 +13,71 @@ import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import { getDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
-import { motion, AnimatePresence } from "framer-motion";
 
 type VStatus = "NOT_REQUESTED" | "REQUESTED" | "IN_PROGRESS" | "COMPLETED" | "APPROVED" | "REJECTED";
 
-const statusConfig: Record<VStatus, { label: string; color: string; desc: string; icon: string }> = {
+interface StatusMeta {
+  label: string;
+  icon: string;
+  desc: string;
+  variant: "primary" | "warning" | "success" | "danger";
+  technicalCode: string;
+}
+
+const statusConfig: Record<VStatus, StatusMeta> = {
   NOT_REQUESTED: { 
-    label: "Identity Verification", 
-    color: "primary", 
-    desc: "To maintain our community's excellence, we require a brief video verification. Our concierge team will review your identity securely.",
-    icon: "👤"
+    label: "Identity Initialization", 
+    icon: "👤", 
+    desc: "A brief video session is required to maintain our circle's prestige. Our verification concierge will securely validate your identity.",
+    variant: "primary",
+    technicalCode: "AUTH_INIT_REQUIRED"
   },
   REQUESTED: { 
-    label: "In Queue", 
-    color: "warning", 
-    desc: "Your request has been received. A member of our verification team will be with you shortly. Please stay on this page.",
-    icon: "⏳"
+    label: "In Priority Queue", 
+    icon: "📡", 
+    desc: "Your identity signal has been received. A dedicated verifier is currently finalizing their current session to attend to yours.",
+    variant: "warning",
+    technicalCode: "SIGNAL_QUEUED_P1"
   },
   IN_PROGRESS: { 
-    label: "Verification Active", 
-    color: "primary", 
-    desc: "Your session is now being prioritized. Verification is in progress. Do not close this window.",
-    icon: "📡"
+    label: "Active Verification", 
+    icon: "📡", 
+    desc: "Secure link established. Your verification concierge is now reviewing your identity. Please do not sever this connection.",
+    variant: "primary",
+    technicalCode: "LINK_ESTABLISHED_SECURE"
   },
   COMPLETED: { 
     label: "Identity Confirmed", 
-    color: "success", 
-    desc: "Your identity has been successfully verified. Welcome to the elite tier.",
-    icon: "✨"
+    icon: "✨", 
+    desc: "Signal verified. Your profile has been granted Elite status. Redirecting to your secure onboarding dashboard.",
+    variant: "success",
+    technicalCode: "ID_HASH_CONFIRMED"
   },
   APPROVED: { 
     label: "Identity Confirmed", 
-    color: "success", 
-    desc: "Your identity has been successfully verified. Welcome to the elite tier.",
-    icon: "✨"
+    icon: "✨", 
+    desc: "Signal verified. Your profile has been granted Elite status. Redirecting to your secure onboarding dashboard.",
+    variant: "success",
+    technicalCode: "ID_HASH_CONFIRMED"
   },
   REJECTED: { 
-    label: "Verification Failed", 
-    color: "danger", 
-    desc: "We were unable to verify your identity. This may be due to lighting or document clarity. Please try again.",
-    icon: "❗"
+    label: "Identity Conflict", 
+    icon: "❗", 
+    desc: "We detected a conflict in your identity submission. Lighting or document clarity may be the cause. Please re-initiate.",
+    variant: "danger",
+    technicalCode: "AUTH_FAILED_RETRY"
   }
 };
 
 export default function VideoVerificationPage() {
   const router = useRouter();
   const { addToast } = useToast();
-  const { user, refresh } = useSession();
+  const { refresh } = useSession();
   const [status, setStatus] = useState<VStatus>("NOT_REQUESTED");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [requesting, setRequesting] = useState(false);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const [syncTime, setSyncTime] = useState<string>("");
 
   const isVerified = status === "COMPLETED" || status === "APPROVED";
 
@@ -72,12 +86,12 @@ export default function VideoVerificationPage() {
     try {
       const data = await apiFetch<{ status: VStatus }>("/me/verification-status");
       setStatus(data.status ?? "NOT_REQUESTED");
-      setLastUpdatedAt(new Date());
+      setSyncTime(new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       
       const refreshedUser = await refresh();
       if (refreshedUser) {
         const nextRoute = getDefaultRoute(refreshedUser);
-        if (nextRoute !== "/onboarding/video-verification" && nextRoute !== "/onboarding/video-verification/") {
+        if (!nextRoute.includes("video-verification")) {
           router.replace(nextRoute);
         }
       }
@@ -105,9 +119,9 @@ export default function VideoVerificationPage() {
     try {
       await apiFetch("/verification-requests", { method: "POST" });
       setStatus("REQUESTED");
-      addToast("Your verification request is now being prioritized.", "success");
+      addToast("Priority Signal Dispatched.", "success");
     } catch (err: any) {
-      addToast(err.message || "Priority request failed.", "error");
+      addToast(err.message || "Dispatch failure.", "error");
     } finally {
       setRequesting(false);
     }
@@ -117,124 +131,183 @@ export default function VideoVerificationPage() {
 
   if (loading) {
     return (
-      <div className="max-w-md mx-auto space-y-6 pt-12">
-        <Skeleton className="h-10 w-48 mx-auto" />
-        <Skeleton className="h-[300px] w-full rounded-2xl" />
-        <Skeleton className="h-12 w-full" />
+      <div className="w-full max-w-xl mx-auto space-y-8 pt-20 px-6">
+        <div className="flex flex-col items-center gap-4">
+          <Skeleton className="h-12 w-64 rounded-full" />
+          <Skeleton className="h-4 w-48 rounded-full" />
+        </div>
+        <Skeleton className="h-[400px] w-full rounded-[3rem]" />
       </div>
     );
   }
 
   if (error) {
-    return <ErrorState onRetry={() => fetchStatus(true)} />;
+    return (
+      <div className="w-full max-w-xl mx-auto pt-32 px-6">
+        <ErrorState message="Our identity network is currently out of sync." onRetry={() => fetchStatus(true)} />
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-xl mx-auto px-4 pt-10 pb-20">
+    <div className="w-full max-w-3xl mx-auto px-6 pt-12 pb-32">
       <motion.div 
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-10"
+        className="text-center mb-16 space-y-4"
       >
-        <h1 className="text-4xl font-serif premium-text-gradient mb-3">Identity Concierge</h1>
-        <p className="text-muted-foreground max-w-sm mx-auto">
-          Ensuring the integrity and exclusivity of the Elite network through secure verification.
+        <h1 className="text-5xl font-serif premium-text-gradient tracking-tight italic">Concierge Desk</h1>
+        <p className="text-muted-foreground font-light tracking-widest uppercase text-[10px]">
+          Identity Guard System v4.2 // Encryption: ACTIVE
         </p>
       </motion.div>
 
       <AnimatePresence mode="wait">
         <motion.div
           key={status}
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 1.02 }}
-          transition={{ duration: 0.4 }}
+          initial={{ opacity: 0, scale: 0.98, filter: "blur(10px)" }}
+          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+          exit={{ opacity: 0, scale: 1.02, filter: "blur(10px)" }}
+          transition={{ duration: 0.5 }}
         >
-          <Card className="glass-card !p-0 overflow-hidden border-white/10 shadow-2xl">
-            <div className="p-8 md:p-10 text-center">
-              <div className="mb-6 flex justify-center">
-                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-3xl border border-white/10">
-                  {config.icon}
-                </div>
-              </div>
+          <Card className="glass-card !p-0 overflow-hidden border-white/10 shadow-[0_64px_128px_-32px_rgba(0,0,0,0.9)] rounded-[3rem]">
+            {/* Identity Scanner Visualizer */}
+            <div className="relative h-[240px] w-full overflow-hidden bg-black/40 flex items-center justify-center border-b border-white/5">
+               {/* Grid Background */}
+               <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#ffffff1a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff1a_1px,transparent_1px)] bg-[size:40px_40px]" />
+               
+               {/* Pulsing Scan Ring */}
+               <motion.div 
+                 animate={{ 
+                   scale: [1, 1.2, 1],
+                   opacity: [0.3, 0.6, 0.3],
+                   rotate: 360
+                 }}
+                 transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                 className="absolute w-48 h-48 border-[1px] border-primary/30 rounded-full border-dashed"
+               />
+               <motion.div 
+                 animate={{ 
+                   scale: [1.1, 0.9, 1.1],
+                   opacity: [0.2, 0.4, 0.2]
+                 }}
+                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                 className="absolute w-40 h-40 border-[4px] border-primary/10 rounded-full"
+               />
 
-              <div className="flex flex-col items-center gap-2 mb-6">
-                 <h2 className="text-2xl font-serif text-foreground">{config.label}</h2>
-                 <div className="flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+               {/* Central Identity Icon */}
+               <div className="relative z-10 text-6xl drop-shadow-[0_0_20px_rgba(212,175,55,0.4)]">
+                 {config.icon}
+               </div>
+
+               {/* Scan Line Animation */}
+               <motion.div 
+                 animate={{ top: ["0%", "100%", "0%"] }}
+                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                 className="absolute left-0 right-0 h-[2px] bg-primary/40 z-20 shadow-[0_0_15px_rgba(212,175,55,0.8)]"
+               />
+            </div>
+
+            <div className="p-12 md:p-16">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-serif text-foreground">{config.label}</h2>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-primary opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                    </span>
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-primary font-bold">Live Status</span>
-                 </div>
+                    </div>
+                    <span className="text-[10px] uppercase tracking-[0.3em] text-primary font-bold">Terminal Sync: Active</span>
+                  </div>
+                </div>
+                <Badge variant={config.variant} className="px-6 py-2 rounded-full text-xs tracking-widest bg-white/5 border-white/10">
+                  {config.technicalCode}
+                </Badge>
               </div>
 
-              <p className="text-muted-foreground leading-relaxed mb-8 max-w-sm mx-auto">
-                {config.desc}
+              <p className="text-muted-foreground font-light leading-relaxed text-lg mb-12 max-w-xl italic">
+                "{config.desc}"
               </p>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {status === "NOT_REQUESTED" && (
                   <Button 
-                    className="btn-premium w-full py-7 text-lg shadow-xl" 
+                    variant="premium" 
+                    size="xl" 
+                    fullWidth 
                     loading={requesting} 
                     onClick={handleRequest}
+                    className="shadow-2xl h-20"
                   >
-                    Start Verification
+                    Establish Secure Session
                   </Button>
                 )}
 
                 {(status === "REQUESTED" || status === "IN_PROGRESS") && (
-                  <div className="space-y-6">
-                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className="space-y-10">
+                    <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                        <motion.div 
                          animate={{ x: ["-100%", "100%"] }}
-                         transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-                         className="h-full w-1/3 premium-gradient"
+                         transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                         className="h-full w-1/3 premium-gradient shadow-[0_0_15px_rgba(212,175,55,0.5)]"
                        />
                     </div>
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-widest">
-                       Connecting to verifier...
-                    </p>
+                    <div className="flex justify-between items-center px-2">
+                       <span className="text-[9px] text-muted-foreground uppercase tracking-[0.4em]">Optimizing connection...</span>
+                       <span className="text-[9px] text-primary uppercase tracking-[0.4em] font-bold">Encryption Level: MIL-SPEC</span>
+                    </div>
                   </div>
                 )}
 
                 {isVerified && (
                   <Link href="/onboarding/payment">
-                    <Button className="btn-premium w-full py-7 text-lg">Continue to Membership</Button>
+                    <Button variant="premium" size="xl" fullWidth className="h-20 shadow-2xl">
+                      Access Membership Vault
+                    </Button>
                   </Link>
                 )}
 
                 {status === "REJECTED" && (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Button 
-                      className="btn-premium w-full py-7" 
+                      variant="premium" 
+                      size="lg" 
                       loading={requesting} 
                       onClick={handleRequest}
                     >
-                      Request New Review
+                      Re-Initialize Scan
                     </Button>
-                    <Link href="/support" className="block text-xs text-muted-foreground hover:text-primary transition-colors">
-                      Need assistance? Speak with support
-                    </Link>
+                    <Button variant="secondary" size="lg" asChild>
+                      <Link href="/support">Speak with Concierge</Link>
+                    </Button>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="bg-white/[0.02] border-t border-white/5 p-4 flex justify-between items-center px-8">
-               <span className="text-[10px] text-muted-foreground/50 uppercase tracking-tighter">Verified by Elite Shield™</span>
-               <span className="text-[10px] text-muted-foreground/50">
-                 {lastUpdatedAt ? `Sync: ${lastUpdatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : "Syncing..."}
-               </span>
+            {/* Technical Footer Rail */}
+            <div className="bg-black/60 border-t border-white/5 p-6 flex flex-col md:flex-row justify-between items-center px-12 gap-4">
+               <div className="flex items-center gap-6">
+                 <span className="text-[10px] text-muted-foreground/40 uppercase tracking-tighter">Elite Shield v2.0.4</span>
+                 <div className="h-3 w-[1px] bg-white/10" />
+                 <span className="text-[10px] text-primary/60 font-mono">CODE: {config.technicalCode}</span>
+               </div>
+               <div className="flex items-center gap-4">
+                 <span className="text-[10px] text-muted-foreground/40 font-mono">LAST_SYNC: {syncTime}</span>
+                 <motion.div 
+                   animate={{ opacity: [0.2, 1, 0.2] }}
+                   transition={{ duration: 2, repeat: Infinity }}
+                   className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"
+                 />
+               </div>
             </div>
           </Card>
         </motion.div>
       </AnimatePresence>
 
-      <footer className="mt-10 text-center">
-         <p className="text-[11px] text-muted-foreground/40 max-w-xs mx-auto leading-relaxed">
-           Your data is encrypted end-to-end. Video sessions are conducted for security purposes only and are never shared with other members.
+      <footer className="mt-16 text-center">
+         <p className="text-[10px] text-muted-foreground/30 max-w-md mx-auto leading-relaxed uppercase tracking-widest">
+           Warning: All sessions are end-to-end encrypted and logged for audit. Identity spoofing is grounds for permanent network exclusion.
          </p>
       </footer>
     </div>

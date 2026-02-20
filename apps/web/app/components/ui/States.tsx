@@ -1,101 +1,94 @@
 "use client";
 
-import type { ReactNode, CSSProperties } from "react";
+import React from "react";
+import { motion } from "framer-motion";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 import { Button } from "./Button";
 
-/* ── Empty State ── */
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+/* ── Luxury Empty State ── */
 interface EmptyStateProps {
-  icon?: ReactNode;
+  icon?: React.ReactNode;
   title: string;
   description?: string;
   action?: { label: string; onClick: () => void };
-  style?: CSSProperties;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-export function EmptyState({ icon, title, description, action, style, className }: EmptyStateProps) {
+export function EmptyState({ icon, title, description, action, className, style }: EmptyStateProps) {
   return (
-    <div
-      className={`fade-in ${className || ""}`.trim()}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-        padding: "48px 24px",
-        gap: 16,
-        ...style,
-      }}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "flex flex-col items-center justify-center text-center p-12 glass-card rounded-[2.5rem]",
+        className
+      )}
+      style={style}
     >
       {icon && (
-        <div style={{ fontSize: 48, color: "var(--muted)", lineHeight: 1 }}>{icon}</div>
+        <motion.div
+          animate={{ y: [0, -10, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="text-6xl text-primary/40 mb-6"
+        >
+          {icon}
+        </motion.div>
       )}
-      <h3 style={{ margin: 0, color: "var(--text)" }}>{title}</h3>
+      <h3 className="text-2xl font-serif text-foreground mb-3">{title}</h3>
       {description && (
-        <p style={{ margin: 0, color: "var(--muted)", fontSize: 15, maxWidth: 320 }}>
+        <p className="text-muted-foreground text-sm max-w-xs mx-auto leading-relaxed mb-8">
           {description}
         </p>
       )}
       {action && (
-        <Button onClick={action.onClick} size="sm" style={{ marginTop: 8 }}>
+        <Button variant="premium" onClick={action.onClick}>
           {action.label}
         </Button>
       )}
-    </div>
+    </motion.div>
   );
 }
 
-/* ── Error State ── */
+/* ── Luxury Error State ── */
 interface ErrorStateProps {
   message?: string;
   onRetry?: () => void;
-  style?: CSSProperties;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export function ErrorState({
-  message = "Something went wrong",
+  message = "A momentary lapse in elite service.",
   onRetry,
-  style,
   className,
+  style,
 }: ErrorStateProps) {
   return (
-    <div
-      className={`fade-in ${className || ""}`.trim()}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-        padding: "48px 24px",
-        gap: 16,
-        ...style,
-      }}
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={cn(
+        "flex flex-col items-center justify-center text-center p-12 bg-destructive/5 border border-destructive/10 rounded-[2.5rem]",
+        className
+      )}
+      style={style}
     >
-      <div
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: "50%",
-          background: "var(--danger-light)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 24,
-          color: "var(--danger)",
-        }}
-      >
+      <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center text-destructive text-2xl font-bold mb-6">
         !
       </div>
-      <h3 style={{ margin: 0, color: "var(--text)" }}>Oops!</h3>
-      <p style={{ margin: 0, color: "var(--muted)", fontSize: 15 }}>{message}</p>
+      <h3 className="text-2xl font-serif text-foreground mb-2">Oops!</h3>
+      <p className="text-muted-foreground text-sm mb-8">{message}</p>
       {onRetry && (
-        <Button onClick={onRetry} variant="secondary" size="sm">
-          Try Again
+        <Button variant="danger" onClick={onRetry} size="md">
+          Attempt Reconnection
         </Button>
       )}
-    </div>
+    </motion.div>
   );
 }

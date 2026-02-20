@@ -1,40 +1,51 @@
-'use client';
+"use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import React from "react";
+import { motion, HTMLMotionProps } from "framer-motion";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
-interface CardProps {
-  children: ReactNode;
-  style?: CSSProperties;
-  className?: string;
-  onClick?: () => void;
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 
-export function Card({ children, style, className, onClick }: CardProps) {
+interface CardProps extends HTMLMotionProps<"div"> {
+  hoverEffect?: boolean;
+  glass?: boolean;
+}
+
+export function Card({ 
+  children, 
+  className, 
+  hoverEffect = false, 
+  glass = true,
+  onClick,
+  ...props 
+}: CardProps) {
+  const isInteractive = !!onClick;
+
   return (
-    <div
-      className={className}
+    <motion.div
+      {...(isInteractive || hoverEffect ? {
+        whileHover: { y: -4, shadow: "0 20px 40px -12px rgba(0,0,0,0.5)" },
+        whileTap: { scale: 0.99 }
+      } : {})}
       onClick={onClick}
-      role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      style={{
-        background: "var(--panel)",
-        borderRadius: "var(--radius-lg)",
-        border: "1px solid var(--border)",
-        boxShadow: "var(--shadow)",
-        overflow: "hidden",
-        transition: "box-shadow 200ms ease, transform 200ms ease",
-        cursor: onClick ? "pointer" : undefined,
-        ...style,
-      }}
-      onKeyDown={
-        onClick
-          ? (e) => {
-              if (e.key === "Enter" || e.key === " ") onClick();
-            }
-          : undefined
-      }
+      className={cn(
+        "relative overflow-hidden rounded-[2rem] border border-white/10 transition-colors duration-500",
+        glass && "bg-card/40 backdrop-blur-xl",
+        !glass && "bg-card",
+        isInteractive && "cursor-pointer hover:border-primary/30",
+        className
+      )}
+      {...props}
     >
-      {children}
-    </div>
+      {/* Internal Premium Highlight */}
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-white/[0.03] to-transparent" />
+      
+      <div className="relative z-10">
+        {children}
+      </div>
+    </motion.div>
   );
 }

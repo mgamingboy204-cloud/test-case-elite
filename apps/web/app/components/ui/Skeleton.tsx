@@ -1,30 +1,58 @@
-import type { CSSProperties } from "react";
+"use client";
 
-interface SkeletonProps {
-  width?: number | string;
-  height?: number | string;
-  radius?: number | string;
-  style?: CSSProperties;
-  className?: string;
+import React from "react";
+import { motion } from "framer-motion";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 
-export function Skeleton({
-  width = "100%",
-  height = 20,
-  radius = "var(--radius-sm)",
-  style,
-  className,
-}: SkeletonProps) {
+interface SkeletonProps {
+  className?: string;
+  width?: string | number;
+  height?: string | number;
+  borderRadius?: string | number;
+}
+
+export function Skeleton({ className, width, height, borderRadius }: SkeletonProps) {
   return (
     <div
-      className={`skeleton ${className || ""}`.trim()}
-      aria-hidden="true"
-      style={{
-        width,
-        height,
-        borderRadius: radius,
-        ...style,
-      }}
-    />
+      className={cn(
+        "relative overflow-hidden bg-white/5 rounded-2xl",
+        className
+      )}
+      style={{ width, height, borderRadius }}
+    >
+      {/* Cinematic Shimmer Effect */}
+      <motion.div
+        animate={{
+          x: ["-100%", "100%"],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+        className="absolute inset-0"
+        style={{
+          background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent)",
+        }}
+      />
+      
+      {/* Breathing Pulse */}
+      <motion.div
+        animate={{
+          opacity: [0.5, 1, 0.5],
+        }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="w-full h-full bg-white/5"
+      />
+    </div>
   );
 }

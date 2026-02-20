@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/app/components/ui/Card";
 import { Input } from "@/app/components/ui/Input";
 import { Button } from "@/app/components/ui/Button";
@@ -12,27 +13,32 @@ import { apiFetch } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
 import { getDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
-import { motion, AnimatePresence } from "framer-motion";
 
-type Step = "phone" | "account" | "otp";
+type Stage = "IDENTITY" | "SECURITY" | "VERIFICATION";
 
-const variants = {
+const stageVariants = {
   enter: (direction: number) => ({
     x: direction > 0 ? 100 : -100,
     opacity: 0,
-    scale: 0.98
+    filter: "blur(10px)",
   }),
   center: {
-    zIndex: 1,
     x: 0,
     opacity: 1,
-    scale: 1
+    filter: "blur(0px)",
+    transition: {
+      duration: 0.6,
+      ease: [0.32, 0.72, 0, 1],
+    }
   },
   exit: (direction: number) => ({
-    zIndex: 0,
     x: direction < 0 ? 100 : -100,
     opacity: 0,
-    scale: 0.98
+    filter: "blur(10px)",
+    transition: {
+      duration: 0.4,
+      ease: "easeInOut",
+    }
   })
 };
 
@@ -41,11 +47,11 @@ export default function SignupPage() {
   const { addToast } = useToast();
   const { refresh } = useSession();
   
-  const [[step, direction], setStep] = useState<[Step, number]>(["phone", 0]);
+  const [[stage, direction], setStage] = useState<[Stage, number]>(["IDENTITY", 0]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Form Data
+  // Concierge Form State
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -55,56 +61,44 @@ export default function SignupPage() {
 
   const cleanedPhone = useMemo(() => phone.replace(/\D/g, ""), [phone]);
 
-  const paginate = (newStep: Step, newDirection: number) => {
-    setStep([newStep, newDirection]);
+  const paginate = (newStage: Stage, newDirection: number) => {
+    setStage([newStage, newDirection]);
   };
 
-  const handleSendOtp = async () => {
-    if (!/^\d{10}$/.test(cleanedPhone)) {
-      setErrors({ phone: "Our network requires a valid 10-digit number." });
-      return;
-    }
-    setErrors({});
-    setLoading(true);
-    try {
-      await apiFetch("/auth/otp/send", {
-        method: "POST",
-        body: { phone: cleanedPhone } as never,
-        auth: "omit"
-      });
-      addToast("A secure code has been dispatched.", "success");
-      paginate("otp", 1);
-    } catch (err: any) {
-      addToast(err.message || "Priority request failed.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const validateStep1 = () => {
+  const validateIdentity = () => {
     if (!name.trim()) {
-      setErrors({ name: "Your name is required for our records." });
+      setErrors({ name: "A name is required for our records." });
       return false;
     }
     if (cleanedPhone.length !== 10) {
-      setErrors({ phone: "10 digits are required for secure identification." });
+      setErrors({ phone: "Our network requires a valid 10-digit number." });
       return false;
     }
     setErrors({});
     return true;
   };
 
-  const handleRegister = async () => {
+  const handleSecurityInitialize = () => {
     const nextErrors: Record<string, string> = {};
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) nextErrors.email = "Please use a valid elite email address.";
-    if (password.length < 8) nextErrors.password = "A stronger password (min 8 chars) is required.";
-    if (password !== confirmPassword) nextErrors.confirmPassword = "Security passwords must match.";
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      nextErrors.email = "Please use a valid elite email address.";
+    }
+    if (password.length < 8) {
+      nextErrors.password = "A stronger security key (min 8 chars) is required.";
+    }
+    if (password !== confirmPassword) {
+      nextErrors.confirmPassword = "Security keys must match perfectly.";
+    }
     
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
     }
 
+    handleRegister();
+  };
+
+  const handleRegister = async () => {
     setLoading(true);
     try {
       await apiFetch("/auth/register", {
@@ -112,9 +106,10 @@ export default function SignupPage() {
         body: { name, phone: cleanedPhone, email, password } as never,
         auth: "omit"
       });
-      paginate("otp", 1);
+      addToast("Your identity has been queued. Verification dispatched.", "success");
+      paginate("VERIFICATION", 1);
     } catch (err: any) {
-      addToast(err.message || "The application could not be processed.", "error");
+      addToast(err.message || "We could not process your application at this time.", "error");
     } finally {
       setLoading(false);
     }
@@ -130,7 +125,7 @@ export default function SignupPage() {
       });
       if (res?.accessToken) setAccessToken(res.accessToken);
       const user = await refresh();
-      addToast("Welcome to the Elite Circle.", "success");
+      addToast("Identity Confirmed. Welcome to the Elite network.", "success");
       router.push(getDefaultRoute(user));
     } catch (err: any) {
       addToast(err.message || "Invalid access code.", "error");
@@ -139,56 +134,81 @@ export default function SignupPage() {
     }
   };
 
+  const handleResend = async () => {
+    try {
+      await apiFetch("/auth/otp/send", {
+        method: "POST",
+        body: { phone: cleanedPhone } as never,
+        auth: "omit"
+      });
+      addToast("A new access code has been dispatched.", "info");
+    } catch {
+      addToast("Dispatch failure. Please try again later.", "error");
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[85vh] px-4 py-12">
+    <div className="w-full max-w-[540px] mx-auto">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="w-full max-w-[500px]"
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: [0.32, 0.72, 0, 1] }}
       >
-        <Card className="glass-card overflow-hidden !p-0 border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)]">
-          {/* Top Branding / Step Indicator */}
-          <div className="relative h-2 w-full bg-white/5 overflow-hidden">
+        <Card className="glass-card !p-0 overflow-hidden border-white/10 shadow-[0_64px_128px_-24px_rgba(0,0,0,0.8)]">
+          {/* Spring-Driven Progress Loader */}
+          <div className="relative h-1.5 w-full bg-white/5">
              <motion.div 
-               animate={{ width: step === "phone" ? "33%" : step === "account" ? "66%" : "100%" }}
-               transition={{ type: "spring", stiffness: 100, damping: 20 }}
-               className="h-full premium-gradient shadow-[0_0_15px_rgba(212,175,55,0.5)]"
+               animate={{ width: stage === "IDENTITY" ? "33.3%" : stage === "SECURITY" ? "66.6%" : "100%" }}
+               transition={{ type: "spring", stiffness: 60, damping: 20 }}
+               className="h-full premium-gradient shadow-[0_0_20px_rgba(212,175,55,0.6)]"
              />
           </div>
 
-          <div className="p-10 md:p-14">
-            <AnimatePresence mode="wait" custom={direction} initial={false}>
-              {step === "phone" && (
+          <div className="p-12 md:p-16">
+            <AnimatePresence mode="wait" custom={direction}>
+              {stage === "IDENTITY" && (
                 <motion.div
-                  key="phone"
+                  key="identity"
                   custom={direction}
-                  variants={variants}
+                  variants={stageVariants}
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-                  className="space-y-8"
+                  className="space-y-10"
                 >
-                  <div className="text-center space-y-2">
-                    <h1 className="text-4xl font-serif premium-text-gradient tracking-tight">Identity</h1>
-                    <p className="text-muted-foreground text-sm font-light">Join the network of the exceptional.</p>
-                  </div>
+                  <header className="text-center space-y-3">
+                    <motion.h1 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="text-4xl md:text-5xl font-serif premium-text-gradient tracking-tight"
+                    >
+                      Discovery
+                    </motion.h1>
+                    <motion.p 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.3 }}
+                      className="text-muted-foreground font-light tracking-wide uppercase text-[10px]"
+                    >
+                      Phase 1: Verify your existence
+                    </motion.p>
+                  </header>
 
                   <div className="space-y-6">
                     <Input
-                      label="Your Legal Name"
-                      placeholder="e.g. Alexander Pierce"
-                      className="input-premium h-14"
+                      label="Legal Name"
+                      placeholder="Alexander Pierce"
+                      className="h-16 rounded-[1.25rem]"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       error={errors.name}
                     />
                     <Input
-                      label="Personal Identity (Phone)"
+                      label="Secure Line (Phone)"
                       type="tel"
-                      placeholder="1234567890"
-                      className="input-premium h-14"
+                      placeholder="123 456 7890"
+                      className="h-16 rounded-[1.25rem]"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       error={errors.phone}
@@ -197,116 +217,125 @@ export default function SignupPage() {
                   </div>
 
                   <Button 
-                    className="btn-premium w-full py-7 text-lg font-medium shadow-2xl" 
-                    onClick={() => { if (validateStep1()) paginate("account", 1); }}
+                    variant="premium"
+                    size="xl"
+                    fullWidth
+                    onClick={() => { if (validateIdentity()) paginate("SECURITY", 1); }}
                   >
-                    Proceed to Verification
+                    Continue to Security
                   </Button>
                 </motion.div>
               )}
 
-              {step === "account" && (
+              {stage === "SECURITY" && (
                 <motion.div
-                  key="account"
+                  key="security"
                   custom={direction}
-                  variants={variants}
+                  variants={stageVariants}
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-                  className="space-y-6"
+                  className="space-y-8"
                 >
-                  <div className="text-center space-y-2">
-                    <h1 className="text-4xl font-serif premium-text-gradient">Security</h1>
-                    <p className="text-muted-foreground text-sm font-light">Encrypted credentials for elite privacy.</p>
-                  </div>
+                  <header className="text-center space-y-3">
+                    <h1 className="text-4xl md:text-5xl font-serif premium-text-gradient tracking-tight">Access</h1>
+                    <p className="text-muted-foreground font-light tracking-wide uppercase text-[10px]">
+                      Phase 2: Secure your credentials
+                    </p>
+                  </header>
 
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <Input
-                      label="Private Email (Optional)"
+                      label="Private Email (Encrypted)"
                       type="email"
-                      placeholder="you@private.com"
-                      className="input-premium h-14"
+                      placeholder="vault@elite.com"
+                      className="h-16 rounded-[1.25rem]"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       error={errors.email}
                     />
                     <Input
-                      label="Access Password"
+                      label="Pass-Key"
                       type="password"
                       placeholder="••••••••"
-                      className="input-premium h-14"
+                      className="h-16 rounded-[1.25rem]"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       error={errors.password}
                     />
                     <Input
-                      label="Confirm Security"
+                      label="Confirm Pass-Key"
                       type="password"
                       placeholder="••••••••"
-                      className="input-premium h-14"
+                      className="h-16 rounded-[1.25rem]"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       error={errors.confirmPassword}
                     />
                   </div>
 
-                  <div className="pt-6 space-y-4">
+                  <div className="pt-4 space-y-4">
                     <Button 
-                      className="btn-premium w-full py-7 text-lg" 
+                      variant="premium"
+                      size="xl"
+                      fullWidth
                       loading={loading}
-                      onClick={handleRegister}
+                      onClick={handleSecurityInitialize}
                     >
-                      Initialize Verification
+                      Request Final Entry
                     </Button>
                     <button 
-                      onClick={() => paginate("phone", -1)}
-                      className="w-full text-muted-foreground text-xs uppercase tracking-widest hover:text-primary transition-colors"
+                      onClick={() => paginate("IDENTITY", -1)}
+                      className="w-full text-muted-foreground text-xs uppercase tracking-widest hover:text-primary transition-colors font-medium"
                     >
-                      Back to Step 1
+                      Back to Identity
                     </button>
                   </div>
                 </motion.div>
               )}
 
-              {step === "otp" && (
+              {stage === "VERIFICATION" && (
                 <motion.div
-                  key="otp"
+                  key="verification"
                   custom={direction}
-                  variants={variants}
+                  variants={stageVariants}
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-                  className="space-y-10 text-center"
+                  className="space-y-12 text-center"
                 >
-                  <div className="space-y-3">
-                    <h1 className="text-4xl font-serif premium-text-gradient">Verification</h1>
-                    <p className="text-muted-foreground text-sm font-light leading-relaxed">
-                      We've dispatched a unique access code to <br/>
-                      <span className="text-primary font-medium tracking-wide">{phone}</span>
+                  <header className="space-y-4">
+                    <h1 className="text-4xl md:text-5xl font-serif premium-text-gradient tracking-tight">The Key</h1>
+                    <p className="text-muted-foreground font-light leading-relaxed">
+                      A unique decryption code has been sent to <br/>
+                      <span className="text-primary font-bold tracking-widest">{phone}</span>
                     </p>
-                  </div>
+                  </header>
 
-                  <div className="flex flex-col items-center gap-8">
+                  <div className="flex flex-col items-center gap-10">
                     <OtpInput onComplete={handleVerify} disabled={loading} />
-                    <ResendTimer onResend={handleSendOtp} />
+                    <ResendTimer onResend={handleResend} />
                   </div>
 
-                  <div className="pt-4 flex flex-col items-center gap-6">
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                      <div className={`w-5 h-5 rounded border border-white/20 flex items-center justify-center transition-all ${rememberMe ? 'bg-primary border-primary shadow-[0_0_10px_rgba(212,175,55,0.4)]' : 'bg-white/5'}`}
-                           onClick={() => setRememberMe(!rememberMe)}>
-                        {rememberMe && <span className="text-[10px] text-background font-bold">✔</span>}
+                  <div className="pt-6 space-y-8">
+                    <label className="flex items-center justify-center gap-4 cursor-pointer group">
+                      <div 
+                        className={clsx(
+                          "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-500",
+                          rememberMe ? "bg-primary border-primary shadow-[0_0_15px_rgba(212,175,55,0.4)]" : "bg-white/5 border-white/10"
+                        )}
+                        onClick={() => setRememberMe(!rememberMe)}
+                      >
+                        {rememberMe && <span className="text-background font-bold text-xs">✔</span>}
                       </div>
-                      <span className="text-sm text-muted-foreground/80 group-hover:text-foreground transition-colors font-light">Trust this device for 30 days</span>
+                      <span className="text-sm text-muted-foreground/80 group-hover:text-foreground transition-colors font-light tracking-wide">Trust this terminal for 30 days</span>
                     </label>
                     
                     <button 
-                      onClick={() => paginate("account", -1)}
-                      className="text-muted-foreground text-xs uppercase tracking-widest hover:text-primary transition-colors"
+                      onClick={() => paginate("SECURITY", -1)}
+                      className="text-muted-foreground text-[10px] uppercase tracking-[0.3em] hover:text-primary transition-colors font-bold"
                     >
-                      Incorrect Details?
+                      Edit Application Details
                     </button>
                   </div>
                 </motion.div>
@@ -315,10 +344,15 @@ export default function SignupPage() {
           </div>
         </Card>
 
-        <footer className="mt-12 text-center text-sm">
-          <span className="text-muted-foreground/40 font-light">A member of our team?</span>{" "}
-          <Link href="/login" className="text-primary/70 hover:text-primary transition-all font-medium border-b border-primary/20 pb-0.5 ml-1">
-            Re-Authenticate
+        <footer className="mt-16 text-center space-y-2">
+          <p className="text-muted-foreground/30 text-xs font-light tracking-widest uppercase">
+            Already part of the network?
+          </p>
+          <Link 
+            href="/login" 
+            className="block text-primary/60 hover:text-primary transition-all duration-500 font-serif italic text-lg"
+          >
+            Authenticate into your vault
           </Link>
         </footer>
       </motion.div>
