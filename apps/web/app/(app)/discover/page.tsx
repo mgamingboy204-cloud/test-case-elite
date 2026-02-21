@@ -427,12 +427,13 @@ export default function DiscoverPage() {
       {/* Action buttons */}
       {!loading && currentProfile && (
         <div
+          className="discover-swipe-actions"
           style={{
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             gap: 16,
-            padding: "12px 0 max(12px, env(safe-area-inset-bottom))",
+            padding: "12px 0",
           }}
         >
           <button
