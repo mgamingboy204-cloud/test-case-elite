@@ -16,6 +16,9 @@
   --sar: env(safe-area-inset-right, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
+  --app-header-height: 56px;
+  --app-mobile-safe-top: 0px;
+  --app-header-offset: var(--app-header-height);
   --bg: #f6f3ef;
   --bg2: #faf7f3;
   --surface: #ffffff;
@@ -57,6 +60,15 @@
   --marketing-glass: rgba(255, 251, 246, 0.76);
   --marketing-glass-border: rgba(201, 168, 145, 0.33);
   --marketing-overlay: rgba(255, 249, 242, 0.42);
+}
+
+@media (max-width: 768px) {
+  :root,
+  [data-theme="light"],
+  [data-theme="dark"] {
+    --app-mobile-safe-top: var(--sat);
+    --app-header-offset: calc(var(--app-header-height) + var(--app-mobile-safe-top));
+  }
 }
 
 /* Dark Theme */

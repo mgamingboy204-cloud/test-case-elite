@@ -220,7 +220,7 @@ export default function DiscoverPage() {
       style={{
         display: "flex",
         flexDirection: "column",
-        minHeight: "calc(100vh - 56px - 64px)",
+        minHeight: "calc(100vh - var(--app-header-offset) - 64px)",
         overflow: "hidden",
       }}
     >
@@ -230,7 +230,7 @@ export default function DiscoverPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "max(12px, env(safe-area-inset-top)) 8px 8px",
+          padding: "12px 8px 8px",
           gap: 8,
         }}
       >
