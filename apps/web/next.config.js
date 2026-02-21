@@ -17,9 +17,26 @@ const withPWA = require("next-pwa")({
         return url.href.startsWith(apiBaseUrl);
       },
       handler: "NetworkOnly",
-      method: "GET",
       options: {
         cacheName: "api-network-only"
+      }
+    },
+    {
+      urlPattern: ({ url }) => {
+        if (url.origin !== self.location.origin) {
+          return false;
+        }
+        return [
+          "/api/auth/login",
+          "/api/auth/token/refresh",
+          "/api/auth/logout",
+          "/api/me",
+          "/api/me/"
+        ].some((path) => url.pathname === path || url.pathname.startsWith(path));
+      },
+      handler: "NetworkOnly",
+      options: {
+        cacheName: "auth-network-only"
       }
     },
     ...runtimeCaching
@@ -29,6 +46,18 @@ const withPWA = require("next-pwa")({
 const nextConfig = {
   output: "standalone",
   reactStrictMode: true,
+  async rewrites() {
+    if (!apiBaseUrl) {
+      return [];
+    }
+    const normalizedApiBase = apiBaseUrl.replace(/\/$/, "");
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${normalizedApiBase}/:path*`
+      }
+    ];
+  },
   images: {
     remotePatterns: [
       {

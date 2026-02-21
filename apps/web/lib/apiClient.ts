@@ -2,14 +2,11 @@ import { getAccessToken, setAccessToken } from "./authToken";
 
 const rawApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-if (!rawApiUrl) {
-  throw new Error("NEXT_PUBLIC_API_BASE_URL is required.");
-}
-if (rawApiUrl.startsWith("http://")) {
+if (rawApiUrl?.startsWith("http://")) {
   throw new Error("NEXT_PUBLIC_API_BASE_URL must be https.");
 }
 
-export const API_URL = rawApiUrl.replace(/\/$/, "");
+export const API_URL = rawApiUrl?.replace(/\/$/, "") ?? "/api";
 
 type ApiFetchOptions = RequestInit & {
   auth?: "include" | "omit";

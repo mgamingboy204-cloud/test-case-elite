@@ -123,7 +123,7 @@ describe("Auth routes", () => {
     expect(refreshCookie).toBeTruthy();
     expect(refreshCookie).toContain("HttpOnly");
     expect(refreshCookie).toContain("Secure");
-    expect(refreshCookie).toContain("SameSite=None");
+    expect(refreshCookie).toContain("SameSite=Lax");
     expect(refreshCookie).toContain("Path=/");
   });
 });
