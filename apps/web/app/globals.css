@@ -302,26 +302,66 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
 }
 
 @media (max-width: 768px) {
+  html.discover-mobile-lock,
+  body.discover-mobile-lock {
+    overflow: hidden;
+    height: 100dvh;
+    overscroll-behavior: none;
+  }
+
   .discover-page {
-    background: linear-gradient(180deg, var(--bg2), var(--surface2));
+    --discover-page-bg:
+      radial-gradient(90% 55% at 50% 40%, color-mix(in srgb, var(--accent2) 20%, transparent), transparent 70%),
+      radial-gradient(120% 70% at 50% 110%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 72%),
+      linear-gradient(175deg, color-mix(in srgb, var(--surface2) 90%, var(--bg2) 10%), color-mix(in srgb, var(--bg) 82%, var(--surface) 18%));
+    background: var(--discover-page-bg);
+    position: relative;
+    isolation: isolate;
+  }
+
+  .discover-page::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(130% 85% at 50% 52%, transparent 56%, rgba(18, 10, 8, 0.18) 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .discover-page > * {
+    position: relative;
+    z-index: 1;
   }
 
   .discover-header {
-    background: color-mix(in srgb, var(--surface2) 88%, var(--accent) 12%) !important;
-    backdrop-filter: saturate(130%) blur(10px);
+    --discover-header-safe-top: max(16px, env(safe-area-inset-top));
+    --discover-header-bg: color-mix(in srgb, var(--surface2) 86%, var(--accent) 14%);
+    background: var(--discover-header-bg) !important;
+    backdrop-filter: saturate(140%) blur(12px);
+  }
+
+  .discover-main {
+    filter: drop-shadow(0 14px 30px rgba(22, 12, 9, 0.16));
   }
 
   .discover-settings-btn {
     color: var(--accent) !important;
-    box-shadow: 0 8px 20px rgba(46, 32, 21, 0.14);
+    box-shadow: 0 8px 22px rgba(46, 32, 21, 0.14);
+  }
+
+  .discover-bottom-dock {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--surface2) 68%, transparent), color-mix(in srgb, var(--surface2) 90%, var(--bg2) 10%));
+    border-top: 1px solid color-mix(in srgb, var(--discover-border) 84%, transparent);
+    backdrop-filter: blur(16px) saturate(128%);
+    box-shadow: 0 -16px 36px rgba(26, 16, 11, 0.16);
   }
 
   .discover-actions {
-    background: color-mix(in srgb, var(--surface2) 86%, var(--accent2) 14%) !important;
+    background: transparent !important;
   }
 
   .discover-action {
-    border: 1px solid color-mix(in srgb, var(--discover-border) 76%, transparent);
+    border: 1px solid color-mix(in srgb, var(--discover-border) 74%, transparent);
   }
 
   .discover-action--rewind {
@@ -337,25 +377,6 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
   }
 
   .bottom-nav {
-    backdrop-filter: saturate(130%) blur(10px);
-  }
-}
-
-@media (max-width: 768px) {
-  .discover-page {
-    --discover-mobile-overflow: visible;
-  }
-
-  .discover-header {
-    --discover-header-safe-top: max(16px, env(safe-area-inset-top));
-  }
-
-  .discover-actions {
-    --discover-actions-safe-bottom: calc(16px + env(safe-area-inset-bottom));
-  }
-
-  .bottom-nav {
-    padding-bottom: env(safe-area-inset-bottom) !important;
-    min-height: 64px;
+    backdrop-filter: saturate(140%) blur(14px);
   }
 }

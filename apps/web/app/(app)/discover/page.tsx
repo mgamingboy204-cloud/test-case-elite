@@ -10,6 +10,7 @@ import { Badge } from "@/app/components/ui/Badge";
 import { Skeleton } from "@/app/components/ui/Skeleton";
 import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { Button } from "@/app/components/ui/Button";
+import { BottomNav } from "@/app/components/BottomNav";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import type { CSSProperties } from "react";
@@ -106,6 +107,15 @@ export default function DiscoverPage() {
   useEffect(() => {
     fetchProfiles();
   }, [fetchProfiles]);
+
+  useEffect(() => {
+    document.body.classList.add("discover-mobile-lock");
+    document.documentElement.classList.add("discover-mobile-lock");
+    return () => {
+      document.body.classList.remove("discover-mobile-lock");
+      document.documentElement.classList.remove("discover-mobile-lock");
+    };
+  }, []);
 
   const currentProfile = profiles[currentIndex];
 
@@ -249,11 +259,11 @@ export default function DiscoverPage() {
     <div
       className="discover-page"
       style={{
+        height: "100dvh",
         display: "flex",
         flexDirection: "column",
-        minHeight: "calc(100dvh - 56px - 72px)",
-        background: "var(--surface2)",
-        overflow: "var(--discover-mobile-overflow, hidden)",
+        overflow: "hidden",
+        background: "var(--discover-page-bg)",
         paddingLeft: "max(12px, env(safe-area-inset-left, 0px))",
         paddingRight: "max(12px, env(safe-area-inset-right, 0px))",
       }}
@@ -270,7 +280,7 @@ export default function DiscoverPage() {
           paddingBottom: 8,
           paddingLeft: "max(12px, env(safe-area-inset-left, 0px))",
           gap: 8,
-          background: "var(--surface2)",
+          background: "var(--discover-header-bg)",
           borderBottom: "1px solid var(--discover-border)",
         }}
       >
@@ -318,22 +328,34 @@ export default function DiscoverPage() {
           }}
           aria-label="Open filters"
         >
-          {"\u2699"}
+          {"⚙"}
         </button>
       </div>
 
-      {/* Card area */}
       <div
+        className="discover-main"
         style={{
           flex: 1,
+          overflow: "hidden",
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          padding: "8px 0",
           position: "relative",
+          minHeight: 0,
         }}
       >
+        <div
+          style={{
+            height: "100%",
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "8px 0",
+            position: "relative",
+          }}
+        >
         {loading ? (
           <div
             style={{
@@ -463,9 +485,17 @@ export default function DiscoverPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
 
-      {/* Action buttons */}
+      <div
+        className="discover-bottom-dock"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          paddingBottom: "max(6px, env(safe-area-inset-bottom, 0px))",
+        }}
+      >
       {!loading && currentProfile && (
         <div
           className="discover-actions"
@@ -474,11 +504,11 @@ export default function DiscoverPage() {
             justifyContent: "center",
             alignItems: "center",
             gap: 18,
-            paddingTop: 12,
-            paddingBottom: "var(--discover-actions-safe-bottom, calc(16px + env(safe-area-inset-bottom, 0px)))",
+            paddingTop: 10,
+            paddingBottom: 10,
             paddingLeft: "max(12px, env(safe-area-inset-left, 0px))",
             paddingRight: "max(12px, env(safe-area-inset-right, 0px))",
-            background: "var(--surface2)",
+            background: "transparent",
           }}
         >
           <button
@@ -514,6 +544,8 @@ export default function DiscoverPage() {
           </button>
         </div>
       )}
+        <BottomNav fixed={false} />
+      </div>
 
       {/* Filter BottomSheet */}
       <BottomSheet

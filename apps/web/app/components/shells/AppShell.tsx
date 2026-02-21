@@ -18,6 +18,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
 
+  const isDiscoverRoute = pathname.startsWith("/discover");
   const headerStyle: CSSProperties = {
     minHeight: 56,
     background: "color-mix(in srgb, var(--surface2) 88%, transparent)",
@@ -115,24 +116,33 @@ export function AppShell({ children }: { children: ReactNode }) {
             minWidth: 0,
             maxWidth: 800,
             margin: "0 auto",
-            padding: "16px max(16px, env(safe-area-inset-right, 0px)) calc(88px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))",
-            overflowY: "auto",
+            padding: isDiscoverRoute
+              ? "0"
+              : "16px max(16px, env(safe-area-inset-right, 0px)) calc(102px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))",
+            overflowY: isDiscoverRoute ? "hidden" : "auto",
             width: "100%",
           }}
+          className={isDiscoverRoute ? "app-main app-main--discover" : "app-main"}
         >
           {children}
         </main>
       </div>
 
       {/* Mobile bottom nav */}
-      <div className="app-bottom-nav">
-        <BottomNav />
-      </div>
+      {!isDiscoverRoute ? (
+        <div className="app-bottom-nav">
+          <BottomNav fixed />
+        </div>
+      ) : null}
 
       <style>{`
         @media (max-width: 768px) {
           .app-sidebar { display: none !important; }
           .app-bottom-nav { display: block; }
+          .app-main--discover {
+            max-width: 100%;
+            margin: 0;
+          }
         }
         @media (min-width: 769px) {
           .app-bottom-nav { display: none; }

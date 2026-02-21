@@ -48,25 +48,28 @@ const tabs = [
   },
 ];
 
-export function BottomNav() {
+export function BottomNav({ fixed = true }: { fixed?: boolean }) {
   const pathname = usePathname();
 
   const navStyle: CSSProperties = {
-    position: "fixed",
-    bottom: 0,
-    left: 0,
-    right: 0,
+    position: fixed ? "fixed" : "relative",
+    bottom: fixed ? 0 : undefined,
+    left: fixed ? 0 : undefined,
+    right: fixed ? 0 : undefined,
     background: "var(--discover-nav-bg)",
     borderTop: "1px solid var(--discover-border)",
     boxShadow: "0 -10px 28px rgba(31, 20, 12, 0.16)",
     display: "flex",
     justifyContent: "space-around",
     alignItems: "center",
-    height: 64,
-    paddingBottom: "env(safe-area-inset-bottom, 0px)",
-    paddingLeft: "max(8px, env(safe-area-inset-left, 0px))",
-    paddingRight: "max(8px, env(safe-area-inset-right, 0px))",
+    height: 78,
+    paddingTop: 6,
+    paddingBottom: "max(10px, env(safe-area-inset-bottom, 0px))",
+    paddingLeft: "max(10px, env(safe-area-inset-left, 0px))",
+    paddingRight: "max(10px, env(safe-area-inset-right, 0px))",
     zIndex: 100,
+    borderTopLeftRadius: fixed ? 0 : 24,
+    borderTopRightRadius: fixed ? 0 : 24,
   };
 
   return (
@@ -82,11 +85,14 @@ export function BottomNav() {
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: 2,
-                minHeight: 44,
-                padding: "8px 16px",
+                gap: 4,
+                minHeight: 48,
+                minWidth: 64,
+                padding: "8px 14px",
                 textDecoration: "none",
                 transition: "transform 150ms ease",
+                borderRadius: 16,
+                background: active ? "color-mix(in srgb, var(--primary-light) 78%, transparent)" : "transparent",
               }}
               aria-current={active ? "page" : undefined}
             >
@@ -96,6 +102,7 @@ export function BottomNav() {
                   fontSize: 11,
                   fontWeight: active ? 600 : 400,
                   color: active ? "var(--primary)" : "var(--muted)",
+                  letterSpacing: 0.2,
                 }}
               >
                 {tab.label}
@@ -104,8 +111,7 @@ export function BottomNav() {
           );
         })}
       </nav>
-      {/* Spacer */}
-      <div style={{ height: "calc(64px + max(12px, env(safe-area-inset-bottom, 0px)))" }} />
+      {fixed ? <div style={{ height: "calc(78px + max(10px, env(safe-area-inset-bottom, 0px)))" }} /> : null}
     </>
   );
 }
