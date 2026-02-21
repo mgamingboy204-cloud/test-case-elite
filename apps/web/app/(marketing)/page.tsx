@@ -77,7 +77,7 @@ export default function HomePage() {
         .home-page {
           min-height: 100dvh;
           background:
-            radial-gradient(1200px 650px at 50% -80px, rgba(244, 114, 182, 0.15), transparent 70%),
+            radial-gradient(1200px 650px at 50% -80px, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%),
             linear-gradient(180deg, var(--marketing-bg-start), var(--marketing-bg-end));
           color: var(--marketing-text-strong);
           padding: clamp(78px, 12vw, 110px) 12px 58px;
@@ -92,7 +92,7 @@ export default function HomePage() {
           position: relative;
           display: grid;
           place-items: center;
-          box-shadow: 0 30px 90px rgba(15, 23, 42, 0.28);
+          box-shadow: 0 30px 90px rgba(20, 14, 15, 0.34);
           border: 1px solid var(--marketing-glass-border);
         }
 
@@ -100,20 +100,20 @@ export default function HomePage() {
           position: absolute;
           inset: -8%;
           background:
-            radial-gradient(72% 78% at var(--mx) var(--my), rgba(103, 232, 249, 0.45), transparent 58%),
-            radial-gradient(70% 84% at 20% 84%, rgba(253, 186, 116, 0.66), transparent 62%),
-            radial-gradient(72% 82% at 78% 22%, rgba(59, 130, 246, 0.46), transparent 64%),
-            linear-gradient(135deg, #082f49, #1e3a8a 44%, #0f172a 85%);
+            radial-gradient(72% 78% at var(--mx) var(--my), color-mix(in srgb, var(--accent2) 30%, transparent), transparent 58%),
+            radial-gradient(70% 84% at 20% 84%, color-mix(in srgb, var(--accent) 54%, transparent), transparent 62%),
+            radial-gradient(72% 82% at 78% 22%, rgba(133, 79, 88, 0.4), transparent 64%),
+            linear-gradient(135deg, color-mix(in srgb, var(--marketing-bg-start) 75%, #161824), color-mix(in srgb, var(--marketing-bg-end) 72%, #111622) 44%, #0b0d14 85%);
           transform: scale(1.04);
           animation: floatBg 12s ease-in-out infinite alternate;
-          filter: saturate(108%) blur(2px);
+          filter: saturate(106%) blur(2px);
         }
 
         .hero-wrap::before {
           content: "";
           position: absolute;
           inset: 0;
-          background: linear-gradient(180deg, rgba(2, 6, 23, 0.18), rgba(2, 6, 23, 0.55));
+          background: linear-gradient(180deg, color-mix(in srgb, var(--marketing-overlay) 72%, transparent), color-mix(in srgb, var(--marketing-overlay) 94%, #090a10));
           z-index: 1;
         }
 
@@ -140,7 +140,7 @@ export default function HomePage() {
           letter-spacing: 0.22em;
           text-transform: uppercase;
           font-size: 0.75rem;
-          color: rgba(255, 255, 255, 0.82);
+          color: color-mix(in srgb, var(--marketing-text-strong) 84%, transparent);
           margin-bottom: 16px;
         }
 
@@ -155,14 +155,14 @@ export default function HomePage() {
           line-height: 0.95;
           text-wrap: balance;
           font-size: clamp(2.2rem, 10.8vw, 7.2rem);
-          color: #fff;
-          text-shadow: 0 8px 25px rgba(2, 6, 23, 0.52);
+          color: color-mix(in srgb, var(--marketing-text-strong) 96%, #fff);
+          text-shadow: 0 8px 25px rgba(11, 8, 10, 0.56);
         }
 
         .hero-subtext {
           margin: 28px auto 0;
           max-width: 700px;
-          color: rgba(255, 255, 255, 0.9);
+          color: color-mix(in srgb, var(--marketing-text-strong) 90%, transparent);
           line-height: 1.75;
           font-size: clamp(0.98rem, 2.5vw, 1.2rem);
         }
@@ -194,7 +194,7 @@ export default function HomePage() {
 
         :global(.cta):focus-visible {
           outline: none;
-          box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 0 5px rgba(244, 63, 94, 0.45);
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--bg2) 88%, #fff), 0 0 0 5px var(--ring);
         }
 
         :global(.cta):hover { transform: translateY(-2px); }
@@ -202,39 +202,39 @@ export default function HomePage() {
 
         :global(.cta-primary) {
           color: #fff;
-          background: linear-gradient(120deg, #ff5f6d, #ff455a);
-          box-shadow: 0 14px 32px rgba(255, 77, 94, 0.35);
+          background: linear-gradient(120deg, var(--cta), var(--primary-hover));
+          box-shadow: 0 14px 32px color-mix(in srgb, var(--cta) 42%, transparent);
         }
 
         :global(.cta-primary):hover {
           filter: brightness(1.08);
-          box-shadow: 0 16px 34px rgba(255, 77, 94, 0.45);
+          box-shadow: 0 16px 34px color-mix(in srgb, var(--cta) 52%, transparent);
         }
 
         :global(.cta-primary):active {
-          box-shadow: 0 9px 18px rgba(255, 77, 94, 0.28);
+          box-shadow: 0 9px 18px color-mix(in srgb, var(--cta) 35%, transparent);
         }
 
         :global(.cta-secondary) {
-          color: #fff;
-          border: 1px solid rgba(148, 163, 184, 0.54);
-          background: rgba(15, 23, 42, 0.82);
-          box-shadow: 0 12px 28px rgba(2, 6, 23, 0.34);
+          color: color-mix(in srgb, var(--marketing-text-strong) 96%, #fff);
+          border: 1px solid color-mix(in srgb, var(--marketing-glass-border) 85%, transparent);
+          background: color-mix(in srgb, var(--surface2) 78%, transparent);
+          box-shadow: 0 12px 28px color-mix(in srgb, var(--bg) 46%, transparent);
           backdrop-filter: blur(6px);
         }
 
         :global(html.dark .cta-secondary) {
-          border-color: rgba(255, 255, 255, 0.24);
-          background: rgba(15, 23, 42, 0.76);
+          border-color: color-mix(in srgb, var(--accent2) 44%, transparent);
+          background: color-mix(in srgb, var(--surface) 72%, transparent);
         }
 
         :global(.cta-secondary):hover {
-          border-color: rgba(226, 232, 240, 0.82);
-          box-shadow: 0 15px 31px rgba(2, 6, 23, 0.38);
+          border-color: color-mix(in srgb, var(--accent2) 64%, transparent);
+          box-shadow: 0 15px 31px color-mix(in srgb, var(--bg) 58%, transparent);
         }
 
         :global(.cta-secondary):active {
-          box-shadow: 0 9px 18px rgba(2, 6, 23, 0.28);
+          box-shadow: 0 9px 18px color-mix(in srgb, var(--bg) 42%, transparent);
         }
 
         .feature-section {
@@ -277,8 +277,8 @@ export default function HomePage() {
 
         .feature-card:hover {
           transform: translateY(-4px);
-          border-color: rgba(244, 114, 182, 0.58);
-          box-shadow: 0 22px 42px rgba(15, 23, 42, 0.22);
+          border-color: color-mix(in srgb, var(--accent2) 62%, transparent);
+          box-shadow: 0 22px 42px rgba(26, 18, 14, 0.24);
         }
 
         .feature-card h3 {

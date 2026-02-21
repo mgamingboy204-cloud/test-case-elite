@@ -101,7 +101,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         .marketing-header.is-compact {
           inset: calc(env(safe-area-inset-top, 0px) + 6px) 20px auto;
           transform: translateY(-1px);
-          box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 12px 36px rgba(28, 18, 16, 0.24);
         }
         .shell-main { flex: 1; }
         .nav-row { max-width: 1240px; margin: 0 auto; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; transition: min-height 250ms ease, padding 250ms ease; }
@@ -110,21 +110,21 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         .desktop-nav { display: flex; align-items: center; gap: 20px; }
         .nav-link { color: var(--marketing-text-strong); font-size: 15px; padding: 10px 6px; border-radius: 999px; }
         .actions { display: flex; align-items: center; gap: 10px; }
-        .theme-btn { width: 44px; height: 44px; border-radius: 999px; border: 1px solid var(--marketing-glass-border); background: rgba(255,255,255,0.2); color: var(--marketing-text-strong); }
-        .invite-btn { min-height: 44px; display: inline-flex; align-items: center; padding: 0 18px; border-radius: 999px; background: linear-gradient(120deg, #ff4d5a, #d12836); color: #fff; font-size: 14px; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255,255,255,0.3); }
+        .theme-btn { width: 44px; height: 44px; border-radius: 999px; border: 1px solid var(--marketing-glass-border); background: color-mix(in srgb, var(--surface2) 55%, transparent); color: var(--marketing-text-strong); }
+        .invite-btn { min-height: 44px; display: inline-flex; align-items: center; padding: 0 18px; border-radius: 999px; background: linear-gradient(120deg, var(--cta), var(--primary-hover)); color: var(--ctaText); font-size: 14px; font-weight: 700; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bg2) 65%, #fff), 0 10px 26px color-mix(in srgb, var(--cta) 34%, transparent); }
         .mobile-menu-btn { display: none; color: var(--marketing-text-strong); font-size: 24px; min-width: 44px; min-height: 44px; }
 
-        .marketing-footer { border-top: 1px solid var(--marketing-glass-border); background: linear-gradient(180deg, transparent, rgba(148, 163, 184, 0.06)); }
+        .marketing-footer { border-top: 1px solid var(--marketing-glass-border); background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent2) 16%, transparent)); }
         .footer-inner { max-width: 1240px; margin: 0 auto; padding: 24px; display: flex; gap: 16px; justify-content: space-between; align-items: center; }
         .footer-copy { font-size: 14px; color: var(--marketing-text-muted); }
         .footer-nav { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center; }
         .footer-link { color: var(--marketing-text-muted); font-size: 14px; line-height: 1.8; padding: 8px 2px; min-height: 44px; display: inline-flex; align-items: center; }
 
-        .mobile-menu-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(5,8,14,0.46); backdrop-filter: blur(12px); display: flex; align-items: flex-end; }
+        .mobile-menu-overlay { position: fixed; inset: 0; z-index: 80; background: color-mix(in srgb, var(--bg) 72%, transparent); backdrop-filter: blur(12px); display: flex; align-items: flex-end; }
         .mobile-menu-sheet { width: 100%; border-radius: 22px 22px 0 0; padding: 16px 20px calc(24px + env(safe-area-inset-bottom)); border-top: 1px solid var(--marketing-glass-border); background: var(--marketing-glass); backdrop-filter: blur(22px); display: flex; flex-direction: column; gap: 10px; }
         .sheet-handle { width: 46px; height: 5px; border-radius: 999px; background: var(--marketing-text-muted); opacity: 0.5; margin: 0 auto 6px; }
         .sheet-link { color: var(--marketing-text-strong); padding: 14px 0; border-bottom: 1px solid var(--marketing-glass-border); font-weight: 500; min-height: 44px; display: flex; align-items: center; }
-        .sheet-signin { margin-top: 4px; text-align: center; padding: 13px; border-radius: 999px; color: #fff; background: linear-gradient(120deg, #ff4d5a, #d12836); font-weight: 700; min-height: 44px; }
+        .sheet-signin { margin-top: 4px; text-align: center; padding: 13px; border-radius: 999px; color: #fff; background: linear-gradient(120deg, var(--cta), var(--primary-hover)); font-weight: 700; min-height: 44px; }
         .sheet-subtle { text-align: center; padding: 8px; color: var(--marketing-text-muted); min-height: 44px; display: grid; place-items: center; }
 
         @media (max-width: 880px) {
