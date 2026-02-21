@@ -16,6 +16,15 @@ import { apiFetch } from "@/lib/api";
 import { useDiscoverBuffer } from "./useDiscoverBuffer";
 
 const ALL_INTERESTS = ["Travel", "Fitness", "Music", "Cooking", "Reading", "Photography", "Movies", "Art", "Hiking", "Gaming", "Yoga", "Dancing"];
+const PREFETCH_CARD_COUNT = 2;
+
+function toDiscoverImageUrl(url: string | null | undefined) {
+  if (!url) return "/placeholder.svg";
+  if (url.includes("/storage/v1/object/public/")) {
+    return url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/").concat(url.includes("?") ? "&width=900&quality=75" : "?width=900&quality=75");
+  }
+  return url;
+}
 
 export default function DiscoverPage() {
   const { addToast } = useToast();
@@ -37,6 +46,7 @@ export default function DiscoverPage() {
   const [animatingOut, setAnimatingOut] = useState(false);
 
   const {
+    buffer,
     currentCard: currentProfile,
     loading,
     error,
@@ -135,6 +145,32 @@ export default function DiscoverPage() {
     }
   }, [swiping, swipeX, handleAction]);
 
+  const [photoLoaded, setPhotoLoaded] = useState(false);
+  const prefetchCacheRef = useRef(new Set<string>());
+
+  const currentPhotoSrc = toDiscoverImageUrl(currentProfile?.photo);
+
+  useEffect(() => {
+    setPhotoLoaded(false);
+  }, [currentPhotoSrc]);
+
+  useEffect(() => {
+    const nextPhotos = buffer
+      .slice(1, PREFETCH_CARD_COUNT + 1)
+      .map((card) => toDiscoverImageUrl(card.photo))
+      .filter((url) => url !== "/placeholder.svg" && !prefetchCacheRef.current.has(url));
+
+    for (const url of nextPhotos) {
+      const img = new window.Image();
+      img.decoding = "async";
+      img.src = url;
+      prefetchCacheRef.current.add(url);
+    }
+  }, [buffer]);
+
+  const showDiscoverDebugStatus =
+    process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEBUG_DISCOVER_STATUS === "true";
+
   const cardStyle: CSSProperties = {
     width: "min(92vw, 380px)",
     height: "clamp(520px, 70vh, 640px)",
@@ -228,8 +264,17 @@ export default function DiscoverPage() {
             onPointerCancel={handlePointerUp}
           >
             {/* Photo */}
+            {!photoLoaded && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(120deg, rgba(255,255,255,0.08), rgba(255,255,255,0.22), rgba(255,255,255,0.08))",
+                }}
+              />
+            )}
             <img
-              src={currentProfile.photo || "/placeholder.svg"}
+              src={currentPhotoSrc}
               alt={currentProfile.name}
               style={{
                 width: "100%",
@@ -237,7 +282,13 @@ export default function DiscoverPage() {
                 objectFit: "cover",
                 position: "absolute",
                 inset: 0,
+                opacity: photoLoaded ? 1 : 0,
+                transition: "opacity 180ms ease-out",
               }}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              onLoad={() => setPhotoLoaded(true)}
               crossOrigin="anonymous"
               draggable={false}
             />
@@ -464,15 +515,17 @@ export default function DiscoverPage() {
         </div>
       </BottomSheet>
 
-      {syncWarning && (
+      {showDiscoverDebugStatus && syncWarning && (
         <div style={{ textAlign: "center", padding: "4px 12px", fontSize: 12, color: "var(--muted)" }}>
           Syncing swipes in background...
         </div>
       )}
 
-      <div style={{ textAlign: "center", paddingBottom: 8, fontSize: 11, color: "var(--muted)" }}>
-        Buffered discover enabled ({batchSize} batch / refill below {lowWatermark})
-      </div>
+      {showDiscoverDebugStatus && (
+        <div style={{ textAlign: "center", paddingBottom: 8, fontSize: 11, color: "var(--muted)" }}>
+          Buffered discover enabled ({batchSize} batch / refill below {lowWatermark})
+        </div>
+      )}
 
       <DiscoverFilterBridge onOpen={() => setFilterOpen(true)} />
     </div>
