@@ -184,7 +184,7 @@ export default function DiscoverPage() {
 
   const cardStyle: CSSProperties = {
     width: "min(92vw, 380px)",
-    height: "clamp(520px, 62vh, 620px)",
+    height: "clamp(520px, 70vh, 640px)",
     borderRadius: 30,
     overflow: "hidden",
     boxShadow: "var(--shadow-xl)",
@@ -220,8 +220,9 @@ export default function DiscoverPage() {
       style={{
         display: "flex",
         flexDirection: "column",
-        minHeight: "calc(100vh - var(--app-header-offset) - 64px)",
+        minHeight: "calc(100dvh - var(--app-header-offset))",
         overflow: "hidden",
+        paddingBottom: "calc(var(--bn) + var(--sab) + 90px)",
       }}
     >
       {/* Top header row */}
@@ -297,7 +298,7 @@ export default function DiscoverPage() {
           <div
             style={{
               width: "min(92vw, 380px)",
-              height: "clamp(520px, 62vh, 620px)",
+              height: "clamp(520px, 70vh, 640px)",
               borderRadius: 30,
               overflow: "hidden",
             }}
