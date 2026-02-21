@@ -42,6 +42,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
               {theme === "light" ? "☾" : "☀"}
             </button>
             <Link href="/login" className="signin marketing-tap-target">Sign In</Link>
+            <Link href="/signup" className="request-btn marketing-rose-btn marketing-tap-target">Request Invitation</Link>
             <button className="mobile-menu-btn marketing-tap-target" onClick={() => setMenuOpen(true)} aria-label="Open menu">☰</button>
           </div>
         </div>
@@ -94,61 +95,62 @@ export function MarketingShell({ children }: { children: ReactNode }) {
           margin: 0 auto;
           min-height: 74px;
           border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(8, 14, 28, 0.72);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid var(--marketing-glass-border);
+          background: var(--marketing-glass);
+          backdrop-filter: blur(15px);
+          -webkit-backdrop-filter: blur(15px);
           padding: 10px 30px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 16px;
         }
-        .logo { color: #f8f7f5; font-size: 40px; font-family: var(--font-playfair), "Playfair Display", Georgia, serif; }
+        .logo { color: var(--marketing-heading); font-size: 40px; font-family: var(--font-playfair), "Playfair Display", Georgia, serif; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
         .desktop-nav { display: flex; align-items: center; gap: 30px; }
-        .nav-link { color: #f4f3f0; font-size: 36px; font-weight: 600; }
+        .nav-link { color: var(--marketing-text-strong); font-size: 36px; font-weight: 600; }
         .actions { display: flex; align-items: center; gap: 10px; }
         .theme-btn {
           width: 44px;
           height: 44px;
           border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          background: rgba(255, 255, 255, 0.08);
-          color: #f6f5f2;
+          border: 1px solid var(--marketing-glass-border);
+          background: rgba(255, 255, 255, 0.55);
+          color: var(--marketing-text-strong);
           font-size: 22px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
         }
-        .signin { color: #f7f6f4; font-size: 40px; font-weight: 500; padding-right: 8px; }
-        .mobile-menu-btn { display: none; color: #fff; font-size: 24px; }
+        .signin { color: var(--marketing-text-strong); font-size: 34px; font-weight: 600; padding-right: 8px; }
+        .request-btn { padding: 0 24px; display: inline-flex; align-items: center; justify-content: center; }
+        .mobile-menu-btn { display: none; color: var(--marketing-text-strong); font-size: 24px; }
         .marketing-footer {
           margin-top: auto;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(4, 10, 24, 0.86);
-          backdrop-filter: blur(10px);
+          border-top: 1px solid var(--marketing-glass-border);
+          background: rgba(253, 252, 248, 0.84);
+          backdrop-filter: blur(15px);
         }
         .footer-inner {
           width: min(1360px, calc(100% - 40px));
           margin: 0 auto;
-          padding: 26px 0;
+          padding: 26px 0 calc(26px + env(safe-area-inset-bottom, 0px));
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 16px;
           flex-wrap: wrap;
         }
-        .copyright { color: rgba(245, 241, 234, 0.78); font-size: 15px; }
+        .copyright { color: var(--marketing-text-muted); font-size: 15px; }
         .footer-nav { display: flex; gap: 26px; flex-wrap: wrap; }
-        .footer-link { color: rgba(247, 244, 238, 0.9); font-size: 17px; }
+        .footer-link { color: var(--marketing-text-strong); font-size: 17px; }
         .mobile-menu-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(3, 7, 16, 0.48); backdrop-filter: blur(8px); display: flex; align-items: flex-end; }
-        .mobile-menu-sheet { width: 100%; border-radius: 22px 22px 0 0; padding: 16px 20px calc(24px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,0.14); background: rgba(10, 16, 28, 0.96); display: flex; flex-direction: column; gap: 12px; }
-        .sheet-handle { width: 46px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.4); margin: 0 auto 6px; }
-        .sheet-link { color: #f8f5ef; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.12); }
+        .mobile-menu-sheet { width: 100%; border-radius: 22px 22px 0 0; padding: 16px 20px calc(24px + env(safe-area-inset-bottom)); border-top: 1px solid var(--marketing-glass-border); background: var(--marketing-bg-start); display: flex; flex-direction: column; gap: 12px; }
+        .sheet-handle { width: 46px; height: 5px; border-radius: 999px; background: rgba(142, 90, 90, 0.45); margin: 0 auto 6px; }
+        .sheet-link { color: var(--marketing-text-strong); padding: 14px 0; border-bottom: 1px solid var(--marketing-glass-border); }
         .sheet-signin, .sheet-invite { margin-top: 4px; text-align: center; padding: 13px; border-radius: 999px; }
-        .sheet-signin { border: 1px solid rgba(255,255,255,0.2); color: #f9f6f0; }
+        .sheet-signin { border: 1px solid var(--marketing-glass-border); color: var(--marketing-text-strong); }
         @media (max-width: 1100px) {
-          .desktop-nav, .signin { display: none; }
+          .desktop-nav, .signin, .request-btn { display: none; }
           .mobile-menu-btn { display: block; }
           .logo { font-size: 28px; }
           .nav-row { min-height: 62px; }

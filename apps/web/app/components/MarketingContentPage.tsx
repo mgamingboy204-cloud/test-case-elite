@@ -21,10 +21,9 @@ export function MarketingContentPage({
               marginBottom: subtitle ? 14 : 0,
               fontFamily: '"Playfair Display", Georgia, serif',
               fontSize: "clamp(2.15rem, 6vw, 3.6rem)",
-              letterSpacing: "0.08em",
-              lineHeight: 1.02,
-              fontWeight: 800,
-              textTransform: "uppercase"
+              letterSpacing: "-0.02em",
+              lineHeight: 1.1,
+              fontWeight: 700
             }}
           >
             {title}
