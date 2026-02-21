@@ -62,9 +62,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (getAccessToken()) return;
+    const hasAccessToken = Boolean(getAccessToken());
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.debug("[auth-client] bootstrap-refresh", { hasAccessToken });
+    }
+    if (hasAccessToken) return;
     void refreshAccessToken().then((token) => {
       setRefreshAttempted(true);
+      if (process.env.NODE_ENV !== "production") {
+        // eslint-disable-next-line no-console
+        console.debug("[auth-client] bootstrap-refresh-result", { success: Boolean(token) });
+      }
       if (token) {
         queryClient.invalidateQueries({ queryKey: queryKeys.me });
       }

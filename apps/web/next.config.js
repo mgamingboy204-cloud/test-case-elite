@@ -2,6 +2,7 @@
 const runtimeCaching = require("next-pwa/cache");
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+const apiProxyTarget = process.env.API_PROXY_TARGET || process.env.NEXT_PUBLIC_API_BASE_URL;
 
 const withPWA = require("next-pwa")({
   dest: "public",
@@ -11,10 +12,10 @@ const withPWA = require("next-pwa")({
   runtimeCaching: [
     {
       urlPattern: ({ url }) => {
-        if (!apiBaseUrl) {
+        if (!apiProxyTarget) {
           return false;
         }
-        return url.href.startsWith(apiBaseUrl);
+        return url.href.startsWith(apiProxyTarget);
       },
       handler: "NetworkOnly",
       options: {
@@ -31,7 +32,8 @@ const withPWA = require("next-pwa")({
           "/api/auth/token/refresh",
           "/api/auth/logout",
           "/api/me",
-          "/api/me/"
+          "/api/me/",
+          "/api/discover"
         ].some((path) => url.pathname === path || url.pathname.startsWith(path));
       },
       handler: "NetworkOnly",
@@ -47,10 +49,10 @@ const nextConfig = {
   output: "standalone",
   reactStrictMode: true,
   async rewrites() {
-    if (!apiBaseUrl) {
+    if (!apiProxyTarget) {
       return [];
     }
-    const normalizedApiBase = apiBaseUrl.replace(/\/$/, "");
+    const normalizedApiBase = apiProxyTarget.replace(/\/$/, "");
     return [
       {
         source: "/api/:path*",

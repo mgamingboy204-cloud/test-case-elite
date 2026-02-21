@@ -127,6 +127,30 @@ describe("Auth routes", () => {
     expect(refreshCookie).toContain("Path=/");
   });
 
+
+  it("exposes cookie diagnostics in development", async () => {
+    const phone = "5551010104";
+    await prisma.user.create({
+      data: {
+        phone,
+        email: "debug-cookie@example.com",
+        passwordHash: await bcrypt.hash("Password@1", 10),
+        status: "APPROVED",
+        verifiedAt: new Date(),
+        phoneVerifiedAt: new Date()
+      }
+    });
+
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ phone, password: "Password@1" });
+
+    const diagnostics = await agent.get("/debug/cookies");
+    expect(diagnostics.status).toBe(200);
+    expect(diagnostics.body.ok).toBe(true);
+    expect(diagnostics.body.includesRefreshCookie).toBe(true);
+    expect(diagnostics.body.cookieNames).toContain("em_refresh");
+  });
+
   it("uses long refresh cookie ttl when remember device is selected", async () => {
     const phone = "5551010103";
     await prisma.user.create({

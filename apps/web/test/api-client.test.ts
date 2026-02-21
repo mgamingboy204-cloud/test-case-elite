@@ -22,7 +22,7 @@ describe("apiFetch client", () => {
     vi.unstubAllGlobals();
   });
 
-  it("sends credentials and Authorization header", async () => {
+  it("sends credentials and Authorization header via same-origin API path", async () => {
     const { apiFetch } = await import("../lib/api");
     const { setAccessToken } = await import("../lib/authToken");
 
@@ -30,7 +30,7 @@ describe("apiFetch client", () => {
     await apiFetch("/me");
 
     const call = fetchMock.mock.calls[0];
-    expect(call?.[0]).toBe("https://api.example.com/me");
+    expect(call?.[0]).toBe("/api/me");
     const options = call?.[1] as RequestInit;
     expect(options.credentials).toBe("include");
     const headers = options.headers as Headers;
