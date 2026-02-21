@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 
 export type DiscoverCard = {
   id: string;
@@ -51,6 +51,7 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
   const [error, setError] = useState(false);
   const [syncWarning, setSyncWarning] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [authRequired, setAuthRequired] = useState(false);
 
   const cursorRef = useRef<string | undefined>(undefined);
   const hasMoreRef = useRef(true);
@@ -93,13 +94,22 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
         try {
           await apiFetch("/likes", {
             method: "POST",
+            retryOnUnauthorized: true,
             body: { toUserId: next.toUserId, type: next.type } as never,
           });
           queuedSwipesRef.current.shift();
+          setAuthRequired(false);
           if (queuedSwipesRef.current.length === 0) {
             setSyncWarning(false);
           }
-        } catch {
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 401) {
+            queuedSwipesRef.current.shift();
+            setAuthRequired(true);
+            setSyncWarning(false);
+            continue;
+          }
+
           next.attempts += 1;
           if (next.attempts >= MAX_RETRY_ATTEMPTS) {
             queuedSwipesRef.current.shift();
@@ -207,6 +217,7 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
     loading,
     error,
     syncWarning,
+    authRequired,
     hasMore,
     batchSize: BATCH_SIZE,
     lowWatermark: LOW_WATERMARK,
