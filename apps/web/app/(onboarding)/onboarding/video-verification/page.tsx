@@ -102,13 +102,21 @@ export default function VideoVerificationPage() {
   }
 
   return (
-    <div className="fade-in">
+    <div className="fade-in" style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom, 0px))" }}>
       <h1 style={{ marginBottom: 8 }}>Video Verification</h1>
       <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
         We continuously check your verification status and move you to the next onboarding step automatically.
       </p>
 
-      <Card style={{ padding: 28, marginBottom: 24 }}>
+      <Card
+        style={{
+          padding: 28,
+          marginBottom: 24,
+          border: "1px solid color-mix(in srgb, var(--accent) 28%, var(--border))",
+          background: "linear-gradient(150deg, color-mix(in srgb, var(--surface2) 90%, var(--accent) 10%), var(--panel))",
+          boxShadow: "var(--shadow-lg)",
+        }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ margin: 0 }}>Current Status</h3>
           <Badge variant={config.variant}>{config.label}</Badge>
@@ -121,7 +129,7 @@ export default function VideoVerificationPage() {
         </p>
 
         {status === "NOT_REQUESTED" && (
-          <Button fullWidth loading={requesting} onClick={handleRequest} size="lg">
+          <Button fullWidth loading={requesting} onClick={handleRequest} size="lg" style={{ minHeight: 52, fontWeight: 700 }}>
             Request Verification
           </Button>
         )}
@@ -140,7 +148,7 @@ export default function VideoVerificationPage() {
 
         {status === "REJECTED" && (
           <div style={{ display: "flex", gap: 12, flexDirection: "column" }}>
-            <Button fullWidth loading={requesting} onClick={handleRequest}>Request Again</Button>
+            <Button fullWidth loading={requesting} onClick={handleRequest} style={{ minHeight: 48 }}>Request Again</Button>
             <Link href="/support" style={{ textAlign: "center", color: "var(--primary)", fontWeight: 500, fontSize: 14 }}>
               Contact Support
             </Link>
