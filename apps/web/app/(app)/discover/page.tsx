@@ -31,6 +31,8 @@ const ALL_INTERESTS = ["Travel", "Fitness", "Music", "Cooking", "Reading", "Phot
 export default function DiscoverPage() {
   const { addToast } = useToast();
   const [intent, setIntent] = useState("all");
+  const initializedIntentRef = useRef(false);
+  const manualIntentSelectionRef = useRef(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,21 @@ export default function DiscoverPage() {
   const startPos = useRef({ x: 0, y: 0 });
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const [animatingOut, setAnimatingOut] = useState(false);
+
+  const setIntentFromUser = useCallback(async () => {
+    if (initializedIntentRef.current || manualIntentSelectionRef.current) return;
+    try {
+      const profile = await apiFetch<{ intent?: string }>("/profile");
+      if (manualIntentSelectionRef.current) return;
+      const profileIntent = String(profile?.intent ?? "").toLowerCase();
+      const defaultIntent = profileIntent === "dating" || profileIntent === "friends" ? profileIntent : "all";
+      setIntent(defaultIntent);
+    } catch {
+      if (!manualIntentSelectionRef.current) setIntent("all");
+    } finally {
+      initializedIntentRef.current = true;
+    }
+  }, []);
 
   const fetchProfiles = useCallback(async () => {
     setLoading(true);
@@ -78,13 +95,17 @@ export default function DiscoverPage() {
   }, [intent, distance, selectedInterests]);
 
   useEffect(() => {
+    void setIntentFromUser();
+  }, [setIntentFromUser]);
+
+  useEffect(() => {
     fetchProfiles();
   }, [fetchProfiles]);
 
   const currentProfile = profiles[currentIndex];
 
   const handleAction = useCallback(
-    async (type: "LIKE" | "PASS" | "SUPERLIKE", direction?: "left" | "right") => {
+    async (type: "LIKE" | "PASS", direction?: "left" | "right") => {
       if (!currentProfile || animatingOut) return;
 
       setAnimatingOut(true);
@@ -94,7 +115,7 @@ export default function DiscoverPage() {
       try {
         await apiFetch("/likes", {
           method: "POST",
-          body: { toUserId: currentProfile.userId, type: type === "SUPERLIKE" ? "LIKE" : type } as never,
+          body: { toUserId: currentProfile.userId, type } as never,
         });
       } catch {
         /* stub */
@@ -103,7 +124,6 @@ export default function DiscoverPage() {
       const feedbackMessages: Record<string, string> = {
         LIKE: "Liked!",
         PASS: "Passed",
-        SUPERLIKE: "Super Liked!",
       };
 
       addToast(feedbackMessages[type], type === "PASS" ? "info" : "success");
@@ -158,7 +178,7 @@ export default function DiscoverPage() {
 
   const cardStyle: CSSProperties = {
     width: "min(92vw, 380px)",
-    height: "clamp(520px, 72vh, 640px)",
+    height: "clamp(520px, 62vh, 620px)",
     borderRadius: 30,
     overflow: "hidden",
     boxShadow: "var(--shadow-xl)",
@@ -194,7 +214,8 @@ export default function DiscoverPage() {
       style={{
         display: "flex",
         flexDirection: "column",
-        minHeight: "calc(100vh - 56px - 60px)",
+        minHeight: "calc(100dvh - 56px - 72px)",
+        background: "var(--surface2)",
         overflow: "hidden",
       }}
     >
@@ -204,8 +225,13 @@ export default function DiscoverPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "12px 8px 8px",
+          paddingTop: "max(12px, env(safe-area-inset-top, 0px))",
+          paddingRight: "max(8px, env(safe-area-inset-right, 0px))",
+          paddingBottom: 8,
+          paddingLeft: "max(8px, env(safe-area-inset-left, 0px))",
           gap: 8,
+          background: "var(--surface2)",
+          borderBottom: "1px solid var(--border)",
         }}
       >
         <span
@@ -227,7 +253,10 @@ export default function DiscoverPage() {
             { label: "Friends", value: "friends" },
           ]}
           active={intent}
-          onChange={setIntent}
+          onChange={(value) => {
+            manualIntentSelectionRef.current = true;
+            setIntent(value);
+          }}
           style={{ flex: 1, maxWidth: 300, margin: "0 auto" }}
         />
 
@@ -268,7 +297,7 @@ export default function DiscoverPage() {
           <div
             style={{
               width: "min(92vw, 380px)",
-              height: "clamp(520px, 72vh, 640px)",
+              height: "clamp(520px, 62vh, 620px)",
               borderRadius: 30,
               overflow: "hidden",
             }}
@@ -402,8 +431,12 @@ export default function DiscoverPage() {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            gap: 16,
-            padding: "12px 0 8px",
+            gap: 18,
+            paddingTop: 12,
+            paddingBottom: "max(12px, env(safe-area-inset-bottom, 0px))",
+            paddingLeft: "max(8px, env(safe-area-inset-left, 0px))",
+            paddingRight: "max(8px, env(safe-area-inset-right, 0px))",
+            background: "var(--surface2)",
           }}
         >
           <button
@@ -413,7 +446,7 @@ export default function DiscoverPage() {
                 addToast("Rewound", "info");
               }
             }}
-            style={actionBtnStyle("var(--panel)", 44)}
+            style={actionBtnStyle("var(--panel)", 52)}
             aria-label="Rewind"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -430,30 +463,12 @@ export default function DiscoverPage() {
             </svg>
           </button>
           <button
-            onClick={() => handleAction("SUPERLIKE")}
-            style={actionBtnStyle("#00B4D8", 48)}
-            aria-label="Super Like"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" stroke="#fff" strokeWidth="1">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-          </button>
-          <button
             onClick={() => handleAction("LIKE", "right")}
             style={actionBtnStyle("var(--success)")}
             aria-label="Like"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff" stroke="#fff" strokeWidth="1">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-          </button>
-          <button
-            onClick={() => addToast("Boost activated!", "success")}
-            style={actionBtnStyle("var(--panel)", 44)}
-            aria-label="Boost"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
             </svg>
           </button>
         </div>
