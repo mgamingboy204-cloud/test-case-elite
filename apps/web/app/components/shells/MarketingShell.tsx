@@ -24,7 +24,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
+    <div style={{ minHeight: "100svh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
       <header className="marketing-header">
         <div className="nav-row">
           <Link href="/" className="logo">Elite Match</Link>
@@ -81,19 +81,19 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         )}
 
       <style jsx>{`
-        .marketing-header { position: fixed; inset: 14px 14px auto; z-index: 40; border: 1px solid rgba(255,255,255,0.1); background: rgba(10,12,18,0.45); backdrop-filter: blur(15px); border-radius: 999px; }
-        .nav-row { max-width: 1200px; margin: 0 auto; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-        .logo { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+        .marketing-header { position: fixed; inset: calc(env(safe-area-inset-top, 0px) + 10px) 14px auto; z-index: 40; border: 1px solid rgba(255,255,255,0.1); background: rgba(10,12,18,0.45); backdrop-filter: blur(15px); border-radius: 999px; }
+        .nav-row { max-width: 1200px; margin: 0 auto; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; }
+        .logo { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.02em; padding: 8px 4px; }
         .desktop-nav { display: flex; align-items: center; gap: 20px; }
-        .nav-link { color: rgba(255,255,255,0.8); font-size: 14px; }
+        .nav-link { color: rgba(255,255,255,0.86); font-size: 14px; padding: 10px 6px; border-radius: 999px; }
         .actions { display: flex; align-items: center; gap: 10px; }
         .theme-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.08); color: #fff; }
-        .signin-btn { padding: 9px 16px; border-radius: 999px; background: linear-gradient(120deg, #ff4d5a, #d12836); color: #fff; font-size: 14px; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255,255,255,0.4); }
+        .signin-btn { padding: 11px 18px; border-radius: 999px; background: linear-gradient(120deg, #ff4d5a, #d12836); color: #fff; font-size: 14px; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255,255,255,0.4); }
         .mobile-menu-btn { display: none; color: #fff; font-size: 24px; }
         .marketing-footer { border-top: 1px solid var(--border); background: rgba(255,255,255,0.02); }
-        .footer-inner { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
+        .footer-inner { max-width: 1200px; margin: 0 auto; padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
         .footer-nav { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }
-        .footer-link { color: var(--muted); font-size: 13px; line-height: 1.9; padding: 4px 2px; }
+        .footer-link { color: var(--muted); font-size: 13px; line-height: 1.9; padding: 8px 4px; min-height: 40px; display: inline-flex; align-items: center; }
         .mobile-menu-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(5,8,14,0.56); backdrop-filter: blur(12px); display: flex; align-items: flex-end; }
         .mobile-menu-sheet { width: 100%; border-radius: 22px 22px 0 0; padding: 16px 20px calc(24px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); backdrop-filter: blur(22px); display: flex; flex-direction: column; gap: 12px; }
         .sheet-handle { width: 46px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.4); margin: 0 auto 6px; }
@@ -102,12 +102,13 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         @media (max-width: 880px) {
           .desktop-nav, .signin-btn { display: none; }
           .mobile-menu-btn { display: block; }
-          .marketing-header { inset: 10px 10px auto; }
+          .marketing-header { inset: calc(env(safe-area-inset-top, 0px) + 8px) 10px auto; }
           .footer-inner { justify-content: center; text-align: center; }
           .footer-nav { width: 100%; gap: 12px 20px; }
         }
         :global([data-theme='light']) .marketing-header { background: rgba(255,255,255,0.62); border-color: rgba(255,255,255,0.8); }
-        :global([data-theme='light']) .logo, :global([data-theme='light']) .nav-link, :global([data-theme='light']) .theme-btn { color: #22293a; }
+        :global([data-theme='light']) .logo, :global([data-theme='light']) .nav-link, :global([data-theme='light']) .theme-btn { color: #1a1a2e; }
+        :global([data-theme='light']) .nav-link { color: rgba(26, 26, 46, 0.9); }
         :global([data-theme='light']) .theme-btn { background: rgba(255,255,255,0.75); border-color: rgba(20,20,30,0.1); }
       `}</style>
     </div>
