@@ -17,9 +17,9 @@
   --text: #121826;
   --muted: #8E8E9A;
   --border: #E8E8ED;
-  --primary: #E63946;
-  --primary-hover: #D12836;
-  --primary-light: rgba(230, 57, 70, 0.08);
+  --primary: #b87769;
+  --primary-hover: #9d645b;
+  --primary-light: rgba(184, 119, 105, 0.12);
   --danger: #DC2626;
   --danger-light: rgba(220, 38, 38, 0.08);
   --success: #16A34A;
@@ -38,13 +38,14 @@
   --overlay: rgba(0,0,0,0.4);
   --shimmer-from: #f0f0f0;
   --shimmer-to: #e0e0e0;
-  --marketing-bg-start: #ffffff;
-  --marketing-bg-end: #f8fafc;
-  --marketing-text-strong: #121826;
-  --marketing-text-muted: #475569;
-  --marketing-glass: rgba(255, 255, 255, 0.72);
-  --marketing-glass-border: rgba(148, 163, 184, 0.28);
-  --marketing-overlay: rgba(255, 255, 255, 0.38);
+  --marketing-bg-start: #fdf9f6;
+  --marketing-bg-end: #f6efe9;
+  --marketing-text-strong: #1A1A1A;
+  --marketing-text-muted: #5f4b4b;
+  --marketing-accent: #7a4f4f;
+  --marketing-glass: rgba(255, 255, 255, 0.74);
+  --marketing-glass-border: rgba(122, 79, 79, 0.2);
+  --marketing-overlay: rgba(21, 18, 20, 0.3);
 }
 
 /* Dark Theme */
@@ -54,9 +55,9 @@
   --text: #F0F0F5;
   --muted: #6B6B7B;
   --border: #2A2A38;
-  --primary: #FF4D5A;
-  --primary-hover: #FF3344;
-  --primary-light: rgba(255, 77, 90, 0.12);
+  --primary: #d89d8f;
+  --primary-hover: #c8897a;
+  --primary-light: rgba(216, 157, 143, 0.16);
   --danger: #EF4444;
   --danger-light: rgba(239, 68, 68, 0.12);
   --success: #22C55E;
@@ -70,13 +71,14 @@
   --overlay: rgba(0,0,0,0.6);
   --shimmer-from: #1f1f2e;
   --shimmer-to: #2a2a3e;
-  --marketing-bg-start: #060912;
-  --marketing-bg-end: #0f172a;
-  --marketing-text-strong: #f8fafc;
-  --marketing-text-muted: #94a3b8;
-  --marketing-glass: rgba(15, 23, 42, 0.7);
-  --marketing-glass-border: rgba(148, 163, 184, 0.2);
-  --marketing-overlay: rgba(2, 6, 23, 0.5);
+  --marketing-bg-start: #05070d;
+  --marketing-bg-end: #0e1220;
+  --marketing-text-strong: #f8f3ef;
+  --marketing-text-muted: #c9b4ad;
+  --marketing-accent: #f2b7a2;
+  --marketing-glass: rgba(13, 17, 29, 0.7);
+  --marketing-glass-border: rgba(242, 183, 162, 0.24);
+  --marketing-overlay: rgba(3, 5, 10, 0.56);
 }
 
 /* Theme transition */
@@ -230,38 +232,38 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
 
 .marketing-page {
   min-height: calc(100dvh - 100px);
-  padding: clamp(80px, 10vw, 132px) 20px clamp(88px, 9vw, 120px);
+  padding: clamp(88px, 12vw, 148px) 20px clamp(96px, 10vw, 134px);
   background: linear-gradient(180deg, var(--marketing-bg-start), var(--marketing-bg-end));
   color: var(--marketing-text-strong);
 }
 
 .marketing-container {
-  width: min(960px, 100%);
+  width: min(980px, 100%);
   margin: 0 auto;
 }
 
 .marketing-kicker {
   color: var(--marketing-text-muted);
   font-size: 16px;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .marketing-panel {
   border-radius: 24px;
   border: 1px solid var(--marketing-glass-border);
   background: var(--marketing-glass);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.1), 0 8px 24px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 16px 46px rgba(10, 12, 19, 0.13), 0 8px 26px rgba(10, 12, 19, 0.1);
 }
 
 .marketing-interactive {
-  transition: transform 220ms ease-in-out, box-shadow 220ms ease-in-out;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, opacity 0.3s ease-in-out;
 }
 
 @media (hover: hover) {
   .marketing-interactive:hover {
-    transform: scale(1.02);
-    box-shadow: 0 20px 46px rgba(15, 23, 42, 0.16);
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 20px 54px rgba(10, 12, 19, 0.18);
   }
 }

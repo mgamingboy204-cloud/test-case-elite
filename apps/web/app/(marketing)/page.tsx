@@ -3,11 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect } from "react";
-import { Inter, Playfair_Display } from "next/font/google";
 import { Button } from "@/app/components/ui/Button";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
 
 const revealCards = [
   { title: "Concierge Introductions", description: "Personal match curation designed around your lifestyle, values, and long-term intent." },
@@ -31,7 +28,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className={`marketing-home ${inter.variable} ${playfair.variable}`}>
+    <div className="marketing-home">
       <section className="hero-shell" aria-labelledby="hero-title">
         <Image
           src="https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=2048&q=80"
@@ -44,7 +41,7 @@ export default function HomePage() {
         <div className="hero-overlay" />
         <div className="hero-copy">
           <p className="hero-kicker">Invitation-only matchmaking</p>
-          <h1 id="hero-title">Start something epic.</h1>
+          <h1 id="hero-title">START SOMETHING EPIC</h1>
           <p className="hero-subtitle">A private introduction service for discerning individuals who value elegance, discretion, and exceptional chemistry.</p>
           <div className="hero-actions">
             <Link href="/signup"><Button size="lg" style={{ borderRadius: 999, minHeight: 44 }}>Request Invitation</Button></Link>
@@ -84,11 +81,12 @@ export default function HomePage() {
           place-items: center;
           overflow: hidden;
           border-radius: 34px;
+          box-shadow: 0 34px 72px rgba(8, 10, 16, 0.25);
         }
         .hero-overlay {
           position: absolute;
           inset: 0;
-          background: var(--marketing-overlay);
+          background: linear-gradient(180deg, rgba(8, 10, 18, 0.52), var(--marketing-overlay));
           backdrop-filter: blur(4px);
         }
         .hero-copy {
@@ -98,16 +96,16 @@ export default function HomePage() {
           text-align: center;
           padding: 40px 16px;
         }
-        .hero-kicker { margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.78rem; color: var(--marketing-text-muted); }
-        .hero-copy h1 { margin: 0; font-family: var(--font-playfair), "Playfair Display", Georgia, serif; font-size: clamp(2.35rem, 7vw, 5.2rem); letter-spacing: 0.14em; line-height: 1.02; text-transform: uppercase; }
-        .hero-subtitle { max-width: 640px; margin: 24px auto 0; font-size: clamp(1rem, 2.2vw, 1.2rem); line-height: 1.8; color: var(--marketing-text-strong); }
+        .hero-kicker { margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.24em; font-size: 0.78rem; color: color-mix(in srgb, var(--marketing-text-strong) 70%, #e3bbb0); }
+        .hero-copy h1 { margin: 0; font-family: var(--font-playfair), "Playfair Display", Georgia, serif; font-size: clamp(2.35rem, 7vw, 5.2rem); letter-spacing: 0.14em; line-height: 1.02; text-transform: uppercase; color: #fff4ed; text-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); }
+        .hero-subtitle { max-width: 640px; margin: 24px auto 0; font-size: clamp(1rem, 2.2vw, 1.2rem); line-height: 1.8; color: rgba(255, 245, 238, 0.94); }
         .hero-actions { margin-top: 36px; display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
-        .hero-actions :global(button) { min-width: 210px; transition: transform 220ms ease-in-out; }
-        .hero-actions :global(button:hover) { transform: scale(1.02); }
+        .hero-actions :global(button) { min-width: 210px; transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out; }
+        .hero-actions :global(button:hover) { transform: translateY(-1px) scale(1.01); box-shadow: 0 16px 40px rgba(13, 10, 12, 0.34); }
         .reveal-shell { width: min(1200px, calc(100% - 40px)); margin: 0 auto; padding: 44px 0 110px; }
         .reveal-intro h2 { margin: 0; font-family: var(--font-playfair), "Playfair Display", Georgia, serif; letter-spacing: 0.08em; font-size: clamp(1.6rem, 5vw, 2.6rem); text-transform: uppercase; }
         .reveal-grid { margin-top: 28px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-        .reveal-card { padding: 24px; opacity: 0; transform: translateY(24px); transition: opacity 0.8s ease, transform 0.8s ease; }
+        .reveal-card { padding: 28px; opacity: 0; transform: translateY(24px); transition: opacity 0.8s ease, transform 0.8s ease; }
         .reveal-card.is-visible { opacity: 1; transform: translateY(0); }
         .reveal-card h3 { margin: 0; font-family: var(--font-playfair), "Playfair Display", Georgia, serif; letter-spacing: 0.08em; text-transform: uppercase; }
         .reveal-card p { margin: 14px 0 0; line-height: 1.8; color: var(--marketing-text-muted); }
