@@ -8,7 +8,7 @@ import { Skeleton } from "@/app/components/ui/Skeleton";
 import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { useToast } from "@/app/providers";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 
 interface IncomingLike {
   id: string;
@@ -63,6 +63,7 @@ export default function LikesPage() {
     try {
       await apiFetch("/likes", {
         method: "POST",
+        retryOnUnauthorized: true,
         body: { toUserId: like.userId, type } as never,
       });
       setLikes((prev) => prev.filter((l) => l.id !== like.id));
@@ -70,8 +71,12 @@ export default function LikesPage() {
         type === "LIKE" ? `You liked ${like.name}!` : `Passed on ${like.name}`,
         type === "LIKE" ? "success" : "info"
       );
-    } catch {
-      addToast("Action failed", "error");
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        addToast("Session expired. Please sign in and try again.", "error");
+      } else {
+        addToast("Action failed", "error");
+      }
     } finally {
       setActioning(null);
     }

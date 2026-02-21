@@ -51,6 +51,7 @@ export default function DiscoverPage() {
     loading,
     error,
     syncWarning,
+    authRequired,
     advance,
     reload,
     lowWatermark,
@@ -91,12 +92,9 @@ export default function DiscoverPage() {
       setSwipeX(direction === "left" || type === "PASS" ? -500 : 500);
       advance(type);
 
-      const feedbackMessages: Record<string, string> = {
-        LIKE: "Liked!",
-        PASS: "Passed",
-      };
-
-      addToast(feedbackMessages[type], type === "PASS" ? "info" : "success");
+      if (type === "PASS") {
+        addToast("Passed", "info");
+      }
 
       setTimeout(() => {
         setSwipeX(0);
@@ -167,6 +165,12 @@ export default function DiscoverPage() {
       prefetchCacheRef.current.add(url);
     }
   }, [buffer]);
+
+
+  useEffect(() => {
+    if (!authRequired) return;
+    addToast("Session expired. Please sign in again to sync likes.", "error");
+  }, [authRequired, addToast]);
 
   const showDiscoverDebugStatus =
     process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEBUG_DISCOVER_STATUS === "true";
