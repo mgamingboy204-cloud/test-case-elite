@@ -102,7 +102,7 @@ export default function VideoVerificationPage() {
   }
 
   return (
-    <div className="fade-in" style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom, 0px))" }}>
+    <div className="fade-in" style={{ paddingBottom: 24 }}>
       <h1 style={{ marginBottom: 8 }}>Video Verification</h1>
       <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
         We continuously check your verification status and move you to the next onboarding step automatically.
@@ -129,25 +129,31 @@ export default function VideoVerificationPage() {
         </p>
 
         {status === "NOT_REQUESTED" && (
-          <Button fullWidth loading={requesting} onClick={handleRequest} size="lg" style={{ minHeight: 52, fontWeight: 700 }}>
-            Request Verification
-          </Button>
+          <div className="safe-bottom">
+            <Button fullWidth loading={requesting} onClick={handleRequest} size="lg" style={{ minHeight: 52, fontWeight: 700 }}>
+              Request Verification
+            </Button>
+          </div>
         )}
 
         {(status === "REQUESTED" || status === "IN_PROGRESS") && (
-          <Button fullWidth variant="secondary" onClick={() => fetchStatus(false)}>
-            Check Now
-          </Button>
+          <div className="safe-bottom">
+            <Button fullWidth variant="secondary" onClick={() => fetchStatus(false)}>
+              Check Now
+            </Button>
+          </div>
         )}
 
         {isVerified && (
-          <Link href="/onboarding/payment">
-            <Button fullWidth size="lg">Continue to Payment</Button>
-          </Link>
+          <div className="safe-bottom">
+            <Link href="/onboarding/payment">
+              <Button fullWidth size="lg">Continue to Payment</Button>
+            </Link>
+          </div>
         )}
 
         {status === "REJECTED" && (
-          <div style={{ display: "flex", gap: 12, flexDirection: "column" }}>
+          <div className="safe-bottom" style={{ display: "flex", gap: 12, flexDirection: "column" }}>
             <Button fullWidth loading={requesting} onClick={handleRequest} style={{ minHeight: 48 }}>Request Again</Button>
             <Link href="/support" style={{ textAlign: "center", color: "var(--primary)", fontWeight: 500, fontSize: 14 }}>
               Contact Support

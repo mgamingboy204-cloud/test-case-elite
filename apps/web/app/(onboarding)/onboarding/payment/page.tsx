@@ -92,7 +92,7 @@ export default function PaymentPage() {
   };
 
   return (
-    <div className="fade-in" style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom, 0px))" }}>
+    <div className="fade-in" style={{ paddingBottom: 24 }}>
       <h1 style={{ marginBottom: 8 }}>Membership</h1>
       <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 32 }}>
         Unlock the full Elite Match experience.
@@ -185,9 +185,11 @@ export default function PaymentPage() {
               )}
             </div>
 
-            <Button fullWidth size="lg" loading={loading} onClick={handleStartPayment}>
-              Subscribe Now
-            </Button>
+            <div className="safe-bottom">
+              <Button fullWidth size="lg" loading={loading} onClick={handleStartPayment}>
+                Subscribe Now
+              </Button>
+            </div>
           </Card>
         </>
       )}
@@ -222,7 +224,7 @@ export default function PaymentPage() {
           <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
             You will be charged <strong>$29.00</strong> for Elite Match Premium.
           </p>
-          <div style={{ display: "flex", gap: 12 }}>
+          <div className="safe-bottom" style={{ display: "flex", gap: 12 }}>
             <Button variant="secondary" fullWidth onClick={() => setStep("plan")}>
               Back
             </Button>
@@ -264,7 +266,7 @@ export default function PaymentPage() {
             Your membership is now active.
           </p>
           <Badge variant="success">Active</Badge>
-          <div style={{ marginTop: 24 }}>
+          <div className="safe-bottom" style={{ marginTop: 24 }}>
             <Button
               size="lg"
               fullWidth

@@ -10,16 +10,16 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
   const { theme, toggle } = useTheme();
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
+    <div style={{ minHeight: "100dvh", background: "var(--bg)" }}>
       <header
+        className="safe-top safe-x"
         style={{
-          height: 56,
+          minHeight: 56,
           borderBottom: "1px solid var(--border)",
           background: "var(--panel)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 24px",
           position: "sticky",
           top: 0,
           zIndex: 50,
@@ -51,10 +51,11 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
         </button>
       </header>
       <main
+        className="safe-x safe-bottom"
         style={{
           maxWidth: 600,
           margin: "0 auto",
-          padding: "32px 24px 80px",
+          paddingTop: 32,
         }}
       >
         <RouteGuard allowedOnboardingSteps={["PHONE_VERIFIED", "VIDEO_VERIFICATION_PENDING", "VIDEO_VERIFIED", "PAYMENT_PENDING", "PAID", "PROFILE_PENDING"]}>{children}</RouteGuard>
