@@ -56,13 +56,16 @@ export function BottomNav() {
     bottom: 0,
     left: 0,
     right: 0,
-    background: "var(--panel)",
+    background: "var(--surface2)",
     borderTop: "1px solid var(--border)",
+    boxShadow: "0 -10px 28px rgba(45, 32, 20, 0.08)",
     display: "flex",
     justifyContent: "space-around",
     alignItems: "center",
-    height: 60,
-    paddingBottom: "env(safe-area-inset-bottom, 0px)",
+    height: 64,
+    paddingBottom: "max(12px, env(safe-area-inset-bottom, 0px))",
+    paddingLeft: "max(8px, env(safe-area-inset-left, 0px))",
+    paddingRight: "max(8px, env(safe-area-inset-right, 0px))",
     zIndex: 100,
   };
 
@@ -80,7 +83,8 @@ export function BottomNav() {
                 flexDirection: "column",
                 alignItems: "center",
                 gap: 2,
-                padding: "6px 16px",
+                minHeight: 44,
+                padding: "8px 16px",
                 textDecoration: "none",
                 transition: "transform 150ms ease",
               }}
@@ -101,7 +105,7 @@ export function BottomNav() {
         })}
       </nav>
       {/* Spacer */}
-      <div style={{ height: "calc(60px + env(safe-area-inset-bottom, 0px))" }} />
+      <div style={{ height: "calc(64px + max(12px, env(safe-area-inset-bottom, 0px)))" }} />
     </>
   );
 }
