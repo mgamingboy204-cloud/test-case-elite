@@ -82,7 +82,7 @@ export default function HomePage() {
         }
         .overlay-layer {
           z-index: -1;
-          background: linear-gradient(180deg, rgba(4, 12, 24, 0.64) 0%, rgba(4, 12, 24, 0.74) 52%, rgba(7, 10, 20, 0.82) 100%);
+          background: linear-gradient(to bottom, rgba(0,0,0,0.6), rgba(0,0,0,0.3));
         }
         .hero {
           width: min(860px, 100%);
@@ -100,8 +100,9 @@ export default function HomePage() {
           margin: 0;
           font-family: var(--font-playfair), "Playfair Display", Georgia, serif;
           font-size: clamp(3.1rem, 8.9vw, 7.6rem);
-          line-height: 0.95;
-          letter-spacing: 0.01em;
+          line-height: 1.1;
+          letter-spacing: -0.02em;
+          font-weight: 700;
           color: #fff;
         }
         .subtitle {
@@ -133,9 +134,9 @@ export default function HomePage() {
           border: 1px solid transparent;
         }
         .cta-primary {
-          background: #ff4f71;
+          background: linear-gradient(135deg, #FF758C 0%, #FF7EB3 100%);
           color: #fff;
-          box-shadow: 0 18px 36px rgba(239, 79, 124, 0.44);
+          box-shadow: 0 10px 20px rgba(255, 126, 179, 0.4);
         }
         .cta-secondary {
           background: rgba(15, 23, 44, 0.93);
@@ -164,8 +165,10 @@ export default function HomePage() {
         }
         .feature-card {
           border-radius: 22px;
-          background: rgba(9, 16, 34, 0.88);
-          border: 1px solid rgba(242, 152, 168, 0.45);
+          background: rgba(9, 16, 34, 0.72);
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          backdrop-filter: blur(15px);
+          -webkit-backdrop-filter: blur(15px);
           padding: clamp(24px, 2.4vw, 34px);
           box-shadow: 0 20px 48px rgba(6, 8, 15, 0.34);
         }

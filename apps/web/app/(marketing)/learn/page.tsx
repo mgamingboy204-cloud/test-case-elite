@@ -30,7 +30,7 @@ export default function LearnPage() {
 
       <div style={{ marginTop: 28 }}>
         <Link href="/signup">
-          <Button size="lg" className="marketing-rose-btn" style={{ minHeight: 44, background: "var(--marketing-button-gradient)", boxShadow: "var(--marketing-button-shadow)", border: "1px solid rgba(255,228,220,0.42)", color: "#160f14" }}>Get Started Now</Button>
+          <Button size="lg" className="marketing-rose-btn">Get Started Now</Button>
         </Link>
       </div>
     </MarketingContentPage>
