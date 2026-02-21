@@ -162,7 +162,7 @@ export async function getDiscoverProfiles(options: {
       age: true,
       city: true,
       bioShort: true,
-      preferences: true,
+      intent: true,
       user: {
         select: {
           videoVerificationStatus: true,
@@ -184,7 +184,7 @@ export async function getDiscoverProfiles(options: {
     age: profile.age,
     city: profile.city,
     bioShort: profile.bioShort,
-    preferences: profile.preferences,
+    intent: profile.intent,
     videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,
     primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl),
     photos: []
@@ -222,7 +222,7 @@ export async function getDiscoverFeed(options: {
       age: true,
       city: true,
       bioShort: true,
-      preferences: true,
+      intent: true,
       user: {
         select: {
           videoVerificationStatus: true,
@@ -247,7 +247,7 @@ export async function getDiscoverFeed(options: {
     age: profile.age,
     city: profile.city,
     bioShort: profile.bioShort,
-    preferences: profile.preferences,
+    intent: profile.intent,
     videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,
     primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl)
   }));
@@ -283,7 +283,7 @@ export async function getDiscoverProfileDetail(options: { userId: string; target
     city: profile.city,
     profession: profile.profession,
     bioShort: profile.bioShort,
-    preferences: profile.preferences,
+    intent: profile.intent,
     primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl),
     verifiedAt: profile.user?.verifiedAt ?? null,
     videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,

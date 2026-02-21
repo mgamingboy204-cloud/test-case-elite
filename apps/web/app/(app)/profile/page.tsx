@@ -52,7 +52,7 @@ export default function ProfilePage() {
   const [profession, setProfession] = useState("");
   const [age, setAge] = useState(18);
   const [gender, setGender] = useState("OTHER");
-  const [genderPreference, setGenderPreference] = useState("ALL");
+  const [intent, setIntent] = useState("dating");
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -73,7 +73,7 @@ export default function ProfilePage() {
       }
       setAge(Number(serverProfile.age ?? 18));
       setGender(String(serverProfile.gender ?? "OTHER"));
-      setGenderPreference(String(serverProfile.genderPreference ?? "ALL"));
+      setIntent(String(serverProfile.intent ?? "dating"));
       setProfile({
         name: String(serverProfile.name ?? ""),
         age: Number(serverProfile.age ?? 18),
@@ -113,11 +113,10 @@ export default function ProfilePage() {
           name,
           age: Number(age),
           gender,
-          genderPreference,
+          intent,
           city,
           profession,
           bioShort: bio,
-          preferences: {},
         } as never,
       });
       setProfile((prev) => (prev ? { ...prev, name, bio, city, profession, age: Number(age) } : prev));

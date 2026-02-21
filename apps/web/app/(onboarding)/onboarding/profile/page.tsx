@@ -1,435 +1,331 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { ChangeEvent, useMemo, useState } from "react";
 import { Card } from "@/app/components/ui/Card";
 import { Input } from "@/app/components/ui/Input";
 import { Textarea } from "@/app/components/ui/Textarea";
 import { Select } from "@/app/components/ui/Select";
 import { Button } from "@/app/components/ui/Button";
-import { Chip } from "@/app/components/ui/Badge";
 import { useToast } from "@/app/providers";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
+import { useSession } from "@/lib/session";
 
-const STEPS = ["Photos", "Basics", "About", "Interests", "Preferences", "Review"] as const;
-type Step = (typeof STEPS)[number];
+const STEPS = ["Photo", "Basics", "About", "Intent", "Review"] as const;
 
-const ALL_INTERESTS = [
-  "Travel", "Fitness", "Music", "Cooking", "Reading", "Photography",
-  "Movies", "Art", "Hiking", "Gaming", "Yoga", "Dancing",
-  "Coffee", "Wine", "Sports", "Tech", "Fashion", "Volunteering",
-];
+type WizardData = {
+  photoUrl: string;
+  name: string;
+  age: string;
+  gender: "MALE" | "FEMALE" | "NON_BINARY" | "OTHER" | "";
+  city: string;
+  profession: string;
+  bio: string;
+  intent: "dating" | "friends" | "all";
+};
+
+const initialData: WizardData = {
+  photoUrl: "",
+  name: "",
+  age: "",
+  gender: "",
+  city: "",
+  profession: "",
+  bio: "",
+  intent: "dating"
+};
 
 export default function ProfileWizardPage() {
-  const router = useRouter();
+  const { refresh } = useSession();
   const { addToast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [data, setData] = useState<WizardData>(initialData);
 
-  /* Form data */
-  const [photos, setPhotos] = useState<{ id: string; url: string; primary: boolean }[]>([]);
-  const [name, setName] = useState("");
-  const [age, setAge] = useState("");
-  const [gender, setGender] = useState("");
-  const [city, setCity] = useState("");
-  const [profession, setProfession] = useState("");
-  const [bio, setBio] = useState("");
-  const [interests, setInterests] = useState<string[]>([]);
-  const [intent, setIntent] = useState("dating");
-  const [distance, setDistance] = useState(50);
+  const reducedMotion = useMemo(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
 
   const step = STEPS[currentStep];
 
-  const handleAddPhoto = useCallback(() => {
-    if (photos.length >= 6) return;
-    const id = Math.random().toString(36).slice(2, 8);
-    const newPhoto = {
-      id,
-      url: `https://picsum.photos/seed/${id}/400/500`,
-      primary: photos.length === 0,
-    };
-    setPhotos((p) => [...p, newPhoto]);
-    addToast("Photo added!", "success");
-  }, [photos, addToast]);
+  const updateField = <K extends keyof WizardData>(key: K, value: WizardData[K]) => {
+    setData((prev) => ({ ...prev, [key]: value }));
+  };
 
-  const handleRemovePhoto = useCallback((id: string) => {
-    setPhotos((p) => {
-      const filtered = p.filter((ph) => ph.id !== id);
-      if (filtered.length > 0 && !filtered.some((ph) => ph.primary)) {
-        filtered[0].primary = true;
+  const handleUploadPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      addToast("Please choose a valid image file", "error");
+      return;
+    }
+
+    const reader = new FileReader();
+    setUploading(true);
+    reader.onload = async () => {
+      try {
+        const dataUrl = String(reader.result ?? "");
+        if (!dataUrl.startsWith("data:image/")) {
+          throw new Error("invalid-data-url");
+        }
+        const response = await apiFetch<{ photo?: { url: string } }>("/photos/upload", {
+          method: "POST",
+          body: { filename: file.name, dataUrl } as never
+        });
+        updateField("photoUrl", response.photo?.url ?? "");
+        addToast("Photo uploaded", "success");
+      } catch (error) {
+        const message = error instanceof ApiError ? error.message : "Failed to upload photo";
+        addToast(message, "error");
+      } finally {
+        setUploading(false);
       }
-      return filtered;
-    });
-  }, []);
-
-  const handleSetPrimary = useCallback((id: string) => {
-    setPhotos((p) =>
-      p.map((ph) => ({ ...ph, primary: ph.id === id }))
-    );
-  }, []);
-
-  const toggleInterest = useCallback((interest: string) => {
-    setInterests((prev) =>
-      prev.includes(interest) ? prev.filter((i) => i !== interest) : [...prev, interest]
-    );
-  }, []);
+    };
+    reader.onerror = () => {
+      setUploading(false);
+      addToast("Failed to read image", "error");
+    };
+    reader.readAsDataURL(file);
+  };
 
   const canProceed = () => {
     switch (step) {
-      case "Photos":
-        return photos.length >= 1;
+      case "Photo":
+        return Boolean(data.photoUrl);
       case "Basics":
-        return name && age && gender && city;
+        return Boolean(data.name && data.age && data.gender && data.city && data.profession);
       case "About":
-        return bio.length >= 10;
-      case "Interests":
-        return interests.length >= 3;
-      case "Preferences":
-        return true;
+        return data.bio.trim().length >= 10;
+      case "Intent":
+        return Boolean(data.intent);
       default:
         return true;
     }
   };
 
   const handleComplete = async () => {
+    if (!canProceed()) {
+      addToast("Please complete required fields", "error");
+      return;
+    }
+
     setLoading(true);
     try {
       await apiFetch("/profile", {
         method: "PUT",
-        body: { name, age: Number(age), gender: gender.toUpperCase(), city, profession, bioShort: bio, preferences: { interests, intent, distance }, genderPreference: "ALL" } as never,
+        body: {
+          name: data.name.trim(),
+          age: Number(data.age),
+          gender: data.gender,
+          city: data.city.trim(),
+          profession: data.profession.trim(),
+          bioShort: data.bio.trim(),
+          intent: data.intent
+        } as never
       });
+
       await apiFetch("/profile/complete", { method: "POST" });
-      addToast("Profile complete!", "success");
-      router.push("/discover");
-    } catch {
-      addToast("Failed to save profile", "error");
-    } finally {
+      await refresh();
+      window.location.href = "/discover";
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Failed to save profile";
+      addToast(message, "error");
       setLoading(false);
     }
   };
 
+  const progress = ((currentStep + 1) / STEPS.length) * 100;
+
   return (
-    <div className="fade-in">
+    <div
+      style={{
+        padding: "0 0 max(28px, env(safe-area-inset-bottom, 0px))",
+        maxWidth: 640,
+        margin: "0 auto"
+      }}
+    >
       <h1 style={{ marginBottom: 8 }}>Build Your Profile</h1>
-      <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
+      <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 18 }}>
         Step {currentStep + 1} of {STEPS.length}: {step}
       </p>
 
-      {/* Progress bar */}
       <div
         style={{
-          display: "flex",
-          gap: 4,
-          marginBottom: 32,
+          height: 10,
+          borderRadius: 999,
+          background: "color-mix(in srgb, var(--border) 74%, transparent)",
+          overflow: "hidden",
+          marginBottom: 24,
+          border: "1px solid color-mix(in srgb, var(--accent) 22%, var(--border))"
         }}
       >
-        {STEPS.map((_, i) => (
-          <div
-            key={i}
-            style={{
-              flex: 1,
-              height: 4,
-              borderRadius: 2,
-              background: i <= currentStep ? "var(--primary)" : "var(--border)",
-              transition: "background 300ms ease",
-            }}
-          />
-        ))}
+        <div
+          style={{
+            width: `${progress}%`,
+            height: "100%",
+            background:
+              "linear-gradient(90deg, color-mix(in srgb, var(--accent) 50%, #b76e79), color-mix(in srgb, var(--primary) 62%, #f2d4b7))",
+            transition: reducedMotion ? "none" : "width 260ms ease"
+          }}
+        />
       </div>
 
-      <Card style={{ padding: 28, marginBottom: 24 }}>
-        {/* Photos Step */}
-        {step === "Photos" && (
-          <div>
-            <h3 style={{ marginBottom: 4 }}>Add Photos</h3>
-            <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 20 }}>
-              Upload up to 6 photos. First photo is your primary.
-            </p>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 12,
-                marginBottom: 16,
-              }}
-            >
-              {photos.map((photo) => (
-                <div
-                  key={photo.id}
-                  style={{
-                    position: "relative",
-                    aspectRatio: "3/4",
-                    borderRadius: "var(--radius-md)",
-                    overflow: "hidden",
-                    border: photo.primary ? "2px solid var(--primary)" : "1px solid var(--border)",
-                  }}
-                >
+      <Card
+        style={{
+          padding: 20,
+          marginBottom: 16,
+          border: "1px solid color-mix(in srgb, var(--accent) 20%, var(--border))",
+          background: "linear-gradient(145deg, color-mix(in srgb, var(--surface2) 92%, var(--accent) 8%), var(--panel))"
+        }}
+      >
+        <div
+          key={step}
+          style={{
+            animation: reducedMotion ? "none" : "stepEnter 200ms ease",
+            transform: "translateZ(0)"
+          }}
+        >
+          {step === "Photo" && (
+            <div>
+              <h3 style={{ marginBottom: 8 }}>Upload your photo</h3>
+              <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 16 }}>
+                We support one profile photo.
+              </p>
+              <label
+                htmlFor="profile-photo-input"
+                style={{
+                  display: "block",
+                  border: "2px dashed var(--border)",
+                  borderRadius: 16,
+                  padding: 12,
+                  cursor: "pointer"
+                }}
+              >
+                {data.photoUrl ? (
                   <img
-                    src={photo.url || "/placeholder.svg"}
-                    alt="Profile photo"
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    crossOrigin="anonymous"
+                    src={data.photoUrl}
+                    alt="Profile preview"
+                    style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", borderRadius: 12 }}
                   />
-                  {photo.primary && (
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: 6,
-                        left: 6,
-                        fontSize: 10,
-                        fontWeight: 700,
-                        padding: "2px 6px",
-                        background: "var(--primary)",
-                        color: "#fff",
-                        borderRadius: "var(--radius-full)",
-                      }}
-                    >
-                      PRIMARY
-                    </span>
-                  )}
+                ) : (
                   <div
                     style={{
-                      position: "absolute",
-                      bottom: 6,
-                      right: 6,
+                      minHeight: 220,
                       display: "flex",
-                      gap: 4,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--muted)",
+                      fontWeight: 600
                     }}
                   >
-                    {!photo.primary && (
-                      <button
-                        onClick={() => handleSetPrimary(photo.id)}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: "50%",
-                          background: "rgba(0,0,0,0.6)",
-                          color: "#fff",
-                          fontSize: 14,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        title="Set as primary"
-                      >
-                        {"\u2605"}
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleRemovePhoto(photo.id)}
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        background: "rgba(220,38,38,0.8)",
-                        color: "#fff",
-                        fontSize: 14,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                      title="Remove"
-                    >
-                      {"\u2715"}
-                    </button>
+                    Tap to upload a photo
                   </div>
-                </div>
-              ))}
-              {photos.length < 6 && (
-                <button
-                  onClick={handleAddPhoto}
-                  style={{
-                    aspectRatio: "3/4",
-                    borderRadius: "var(--radius-md)",
-                    border: "2px dashed var(--border)",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 4,
-                    color: "var(--muted)",
-                    fontSize: 28,
-                    background: "var(--bg)",
-                    cursor: "pointer",
-                    transition: "border-color 200ms",
-                  }}
-                >
-                  +
-                  <span style={{ fontSize: 11, fontWeight: 500 }}>Add Photo</span>
-                </button>
-              )}
+                )}
+              </label>
+              <input id="profile-photo-input" type="file" accept="image/*" onChange={handleUploadPhoto} style={{ marginTop: 12 }} />
+              {uploading && <p style={{ color: "var(--muted)", marginTop: 8 }}>Uploading...</p>}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Basics Step */}
-        {step === "Basics" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <h3 style={{ marginBottom: 0 }}>Basic Info</h3>
-            <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your first name" />
-            <Input label="Age" type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="25" min="18" max="99" />
-            <Select
-              label="Gender"
-              value={gender}
-              onChange={(e) => setGender(e.target.value)}
-              placeholder="Select gender"
-              options={[
-                { value: "male", label: "Male" },
-                { value: "female", label: "Female" },
-                { value: "non-binary", label: "Non-binary" },
-                { value: "other", label: "Other" },
-              ]}
-            />
-            <Input label="City" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Mumbai" />
-            <Input label="Profession" value={profession} onChange={(e) => setProfession(e.target.value)} placeholder="Software Engineer" />
-          </div>
-        )}
+          {step === "Basics" && (
+            <div style={{ display: "grid", gap: 12 }}>
+              <Input label="Name" value={data.name} onChange={(e) => updateField("name", e.target.value)} placeholder="Your name" />
+              <Input label="Age" type="number" min="18" max="99" value={data.age} onChange={(e) => updateField("age", e.target.value)} />
+              <Select
+                label="Gender"
+                value={data.gender}
+                onChange={(e) => updateField("gender", e.target.value as WizardData["gender"])}
+                placeholder="Select gender"
+                options={[
+                  { value: "MALE", label: "Male" },
+                  { value: "FEMALE", label: "Female" },
+                  { value: "NON_BINARY", label: "Non-binary" },
+                  { value: "OTHER", label: "Other" }
+                ]}
+              />
+              <Input label="City" value={data.city} onChange={(e) => updateField("city", e.target.value)} />
+              <Input label="Profession" value={data.profession} onChange={(e) => updateField("profession", e.target.value)} />
+            </div>
+          )}
 
-        {/* About Step */}
-        {step === "About" && (
-          <div>
-            <h3 style={{ marginBottom: 4 }}>About You</h3>
-            <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 16 }}>
-              Write a short bio to help others get to know you.
-            </p>
+          {step === "About" && (
             <Textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell us about yourself..."
+              label="Bio"
               rows={5}
+              value={data.bio}
+              onChange={(e) => updateField("bio", e.target.value)}
               maxLength={300}
-              charCount={{ current: bio.length, max: 300 }}
+              charCount={{ current: data.bio.length, max: 300 }}
             />
-          </div>
-        )}
+          )}
 
-        {/* Interests Step */}
-        {step === "Interests" && (
-          <div>
-            <h3 style={{ marginBottom: 4 }}>Your Interests</h3>
-            <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 16 }}>
-              Select at least 3 interests.
-            </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {ALL_INTERESTS.map((interest) => (
-                <Chip
-                  key={interest}
-                  label={interest}
-                  selected={interests.includes(interest)}
-                  onClick={() => toggleInterest(interest)}
-                />
-              ))}
-            </div>
-            <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 12 }}>
-              {interests.length} selected
-            </p>
-          </div>
-        )}
-
-        {/* Preferences Step */}
-        {step === "Preferences" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <h3 style={{ marginBottom: 0 }}>Preferences</h3>
+          {step === "Intent" && (
             <Select
               label="Intent"
-              value={intent}
-              onChange={(e) => setIntent(e.target.value)}
+              value={data.intent}
+              onChange={(e) => updateField("intent", e.target.value as WizardData["intent"])}
               options={[
                 { value: "dating", label: "Dating" },
                 { value: "friends", label: "Friends" },
-                { value: "all", label: "Open to anything" },
+                { value: "all", label: "Open to anything" }
               ]}
             />
-            <div>
-              <label style={{ fontSize: 14, fontWeight: 500, display: "block", marginBottom: 8 }}>
-                Discovery Distance: {distance} km
-              </label>
-              <input
-                type="range"
-                min={5}
-                max={200}
-                value={distance}
-                onChange={(e) => setDistance(Number(e.target.value))}
-                style={{ width: "100%", accentColor: "var(--primary)" }}
-              />
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: 12,
-                  color: "var(--muted)",
-                  marginTop: 4,
-                }}
-              >
-                <span>5 km</span>
-                <span>200 km</span>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* Review Step */}
-        {step === "Review" && (
-          <div>
-            <h3 style={{ marginBottom: 16 }}>Review Your Profile</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <ReviewItem label="Photos" value={`${photos.length} photos`} />
-              <ReviewItem label="Name" value={name || "Not set"} />
-              <ReviewItem label="Age" value={age || "Not set"} />
-              <ReviewItem label="Gender" value={gender || "Not set"} />
-              <ReviewItem label="City" value={city || "Not set"} />
-              <ReviewItem label="Profession" value={profession || "Not set"} />
-              <ReviewItem label="Bio" value={bio || "Not set"} />
-              <ReviewItem label="Interests" value={interests.join(", ") || "None"} />
-              <ReviewItem label="Intent" value={intent} />
-              <ReviewItem label="Distance" value={`${distance} km`} />
+          {step === "Review" && (
+            <div style={{ display: "grid", gap: 10 }}>
+              <Review label="Photo" value={data.photoUrl ? "Uploaded" : "Missing"} />
+              <Review label="Name" value={data.name} />
+              <Review label="Age" value={data.age} />
+              <Review label="Gender" value={data.gender} />
+              <Review label="City" value={data.city} />
+              <Review label="Profession" value={data.profession} />
+              <Review label="Bio" value={data.bio} />
+              <Review label="Intent" value={data.intent} />
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </Card>
 
-      {/* Navigation */}
-      <div style={{ display: "flex", gap: 12 }}>
+      <div style={{ display: "flex", gap: 10 }}>
         {currentStep > 0 && (
-          <Button
-            variant="secondary"
-            fullWidth
-            onClick={() => setCurrentStep((s) => s - 1)}
-          >
+          <Button variant="secondary" fullWidth size="lg" onClick={() => setCurrentStep((v) => v - 1)}>
             Back
           </Button>
         )}
         {currentStep < STEPS.length - 1 ? (
-          <Button
-            fullWidth
-            disabled={!canProceed()}
-            onClick={() => setCurrentStep((s) => s + 1)}
-          >
+          <Button fullWidth size="lg" onClick={() => setCurrentStep((v) => v + 1)} disabled={!canProceed() || uploading}>
             Continue
           </Button>
         ) : (
-          <Button fullWidth loading={loading} onClick={handleComplete}>
+          <Button fullWidth size="lg" loading={loading} onClick={handleComplete}>
             Complete Profile
           </Button>
         )}
       </div>
+
+      <style jsx>{`
+        @keyframes stepEnter {
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
 
-function ReviewItem({ label, value }: { label: string; value: string }) {
+function Review({ label, value }: { label: string; value: string }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        padding: "8px 0",
-        borderBottom: "1px solid var(--border)",
-        gap: 16,
-      }}
-    >
-      <span style={{ fontSize: 14, color: "var(--muted)", flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: 14, fontWeight: 500, textAlign: "right" }}>{value}</span>
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
+      <span style={{ color: "var(--muted)" }}>{label}</span>
+      <span style={{ fontWeight: 600, textAlign: "right" }}>{value || "—"}</span>
     </div>
   );
 }

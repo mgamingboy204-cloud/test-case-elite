@@ -36,9 +36,6 @@ export async function updateProfile(options: { userId: string; paymentStatus: st
   if (typeof normalized.gender === "string") {
     normalized.gender = normalized.gender.toUpperCase();
   }
-  if (typeof normalized.genderPreference === "string") {
-    normalized.genderPreference = normalized.genderPreference.toUpperCase();
-  }
   const nameParts = displayName ? displayName.split(" ").filter(Boolean) : [];
   const firstName = rawFirstName?.toString().trim() || nameParts[0] || null;
   const lastName =
@@ -47,12 +44,11 @@ export async function updateProfile(options: { userId: string; paymentStatus: st
   const profileData = {
     name: normalized.name,
     gender: normalized.gender,
-    genderPreference: normalized.genderPreference,
     age: normalized.age,
     city: normalized.city,
     profession: normalized.profession,
     bioShort: normalized.bioShort,
-    preferences: normalized.preferences ?? {}
+    intent: normalized.intent ?? "dating"
   };
 
   const profile = await prisma.profile.upsert({
