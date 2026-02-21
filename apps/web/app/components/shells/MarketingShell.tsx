@@ -48,7 +48,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
             <button onClick={toggle} className="theme-btn marketing-interactive" aria-label="Toggle theme">
               {theme === "light" ? "☾" : "☀"}
             </button>
-            <Link href="/signup" className="invite-btn marketing-interactive">Request Invitation</Link>
+            <Link href="/login" className="invite-btn marketing-interactive">Sign In</Link>
             <button className="mobile-menu-btn" onClick={() => setMenuOpen(true)} aria-label="Open menu">☰</button>
           </div>
         </div>
@@ -79,11 +79,11 @@ export function MarketingShell({ children }: { children: ReactNode }) {
                 {link.label}
               </Link>
             ))}
-            <Link href="/signup" className="sheet-signin" onClick={() => setMenuOpen(false)}>
-              Request Invitation
+            <Link href="/login" className="sheet-signin" onClick={() => setMenuOpen(false)}>
+              Sign In
             </Link>
-            <Link href="/login" className="sheet-subtle" onClick={() => setMenuOpen(false)}>
-              Existing Member
+            <Link href="/signup" className="sheet-subtle" onClick={() => setMenuOpen(false)}>
+              Request Invitation
             </Link>
           </div>
         </div>
