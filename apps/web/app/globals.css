@@ -12,24 +12,32 @@
 /* CSS Variables - Light Theme (default) */
 :root,
 [data-theme="light"] {
-  --bg: #FAFAFA;
-  --panel: #FFFFFF;
-  --text: #121826;
-  --muted: #8E8E9A;
-  --border: #E8E8ED;
-  --primary: #E63946;
-  --primary-hover: #D12836;
-  --primary-light: rgba(230, 57, 70, 0.08);
+  --bg: #f6f3ef;
+  --bg2: #faf7f3;
+  --surface: #ffffff;
+  --surface2: #fffaf6;
+  --panel: var(--surface);
+  --text: #231a17;
+  --muted: #7f7267;
+  --border: #e9e2da;
+  --accent: #cfa28a;
+  --accent2: #d9b199;
+  --ring: rgba(207, 162, 138, 0.6);
+  --cta: #ef5a66;
+  --ctaText: #fffaf8;
+  --primary: var(--cta);
+  --primary-hover: #e44a58;
+  --primary-light: rgba(239, 90, 102, 0.1);
   --danger: #DC2626;
   --danger-light: rgba(220, 38, 38, 0.08);
   --success: #16A34A;
   --success-light: rgba(22, 163, 74, 0.08);
   --warning: #F59E0B;
   --warning-light: rgba(245, 158, 11, 0.08);
-  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
-  --shadow-xl: 0 20px 60px rgba(0,0,0,0.15);
+  --shadow: 0 1px 3px rgba(45, 32, 20, 0.08), 0 1px 2px rgba(45, 32, 20, 0.05);
+  --shadow-md: 0 6px 18px rgba(45, 32, 20, 0.1);
+  --shadow-lg: 0 12px 34px rgba(45, 32, 20, 0.14);
+  --shadow-xl: 0 24px 68px rgba(45, 32, 20, 0.16);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -38,45 +46,53 @@
   --overlay: rgba(0,0,0,0.4);
   --shimmer-from: #f0f0f0;
   --shimmer-to: #e0e0e0;
-  --marketing-bg-start: #ffffff;
-  --marketing-bg-end: #f8fafc;
-  --marketing-text-strong: #121826;
-  --marketing-text-muted: #475569;
-  --marketing-glass: rgba(255, 255, 255, 0.72);
-  --marketing-glass-border: rgba(148, 163, 184, 0.28);
-  --marketing-overlay: rgba(255, 255, 255, 0.38);
+  --marketing-bg-start: #f8f4ef;
+  --marketing-bg-end: #f3ece3;
+  --marketing-text-strong: #231a17;
+  --marketing-text-muted: #6f635a;
+  --marketing-glass: rgba(255, 251, 246, 0.76);
+  --marketing-glass-border: rgba(201, 168, 145, 0.33);
+  --marketing-overlay: rgba(255, 249, 242, 0.42);
 }
 
 /* Dark Theme */
 [data-theme="dark"] {
-  --bg: #0F0F14;
-  --panel: #1A1A24;
-  --text: #F0F0F5;
-  --muted: #6B6B7B;
-  --border: #2A2A38;
-  --primary: #FF4D5A;
-  --primary-hover: #FF3344;
-  --primary-light: rgba(255, 77, 90, 0.12);
+  --bg: #07080b;
+  --bg2: #0b0d14;
+  --surface: #0f1220;
+  --surface2: #141827;
+  --panel: var(--surface);
+  --text: #f8f2ec;
+  --muted: #aa9c92;
+  --border: #2f2730;
+  --accent: #d6a48a;
+  --accent2: #e3b08e;
+  --ring: rgba(227, 176, 142, 0.56);
+  --cta: #ff5f6a;
+  --ctaText: #fff7f2;
+  --primary: var(--cta);
+  --primary-hover: #ff4c59;
+  --primary-light: rgba(255, 95, 106, 0.14);
   --danger: #EF4444;
   --danger-light: rgba(239, 68, 68, 0.12);
   --success: #22C55E;
   --success-light: rgba(34, 197, 94, 0.12);
   --warning: #FBBF24;
   --warning-light: rgba(251, 191, 36, 0.12);
-  --shadow: 0 1px 3px rgba(0,0,0,0.3);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-  --shadow-lg: 0 8px 30px rgba(0,0,0,0.5);
-  --shadow-xl: 0 20px 60px rgba(0,0,0,0.6);
+  --shadow: 0 1px 3px rgba(0,0,0,0.42);
+  --shadow-md: 0 6px 18px rgba(0,0,0,0.5);
+  --shadow-lg: 0 12px 34px rgba(0,0,0,0.56);
+  --shadow-xl: 0 24px 68px rgba(0,0,0,0.62);
   --overlay: rgba(0,0,0,0.6);
   --shimmer-from: #1f1f2e;
   --shimmer-to: #2a2a3e;
-  --marketing-bg-start: #060912;
-  --marketing-bg-end: #0f172a;
-  --marketing-text-strong: #f8fafc;
-  --marketing-text-muted: #94a3b8;
-  --marketing-glass: rgba(15, 23, 42, 0.7);
-  --marketing-glass-border: rgba(148, 163, 184, 0.2);
-  --marketing-overlay: rgba(2, 6, 23, 0.5);
+  --marketing-bg-start: #07080b;
+  --marketing-bg-end: #0d0f18;
+  --marketing-text-strong: #f8f1ea;
+  --marketing-text-muted: #b2a297;
+  --marketing-glass: rgba(18, 17, 23, 0.72);
+  --marketing-glass-border: rgba(214, 164, 138, 0.28);
+  --marketing-overlay: rgba(16, 13, 16, 0.52);
 }
 
 /* Theme transition */
@@ -224,7 +240,7 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
 
 /* Focus ring */
 :focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
@@ -252,7 +268,7 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
   background: var(--marketing-glass);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.1), 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 48px rgba(28, 20, 14, 0.12), 0 8px 24px rgba(28, 20, 14, 0.08);
 }
 
 .marketing-interactive {
@@ -262,6 +278,6 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
 @media (hover: hover) {
   .marketing-interactive:hover {
     transform: scale(1.02);
-    box-shadow: 0 20px 46px rgba(15, 23, 42, 0.16);
+    box-shadow: 0 20px 46px rgba(28, 20, 14, 0.2);
   }
 }
