@@ -110,6 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {/* Content area */}
         <main
+          className="app-main-content"
           style={{
             flex: 1,
             minWidth: 0,
@@ -129,12 +130,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <style>{`
+        .app-bottom-nav { display: none; }
         @media (max-width: 768px) {
           .app-sidebar { display: none !important; }
           .app-bottom-nav { display: block; }
-        }
-        @media (min-width: 769px) {
-          .app-bottom-nav { display: none; }
+          .app-main-content { padding-bottom: var(--app-bottom-nav-height); }
         }
       `}</style>
     </div>

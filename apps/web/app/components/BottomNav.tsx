@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { CSSProperties } from "react";
 
 const tabs = [
   {
@@ -51,61 +50,24 @@ const tabs = [
 export function BottomNav() {
   const pathname = usePathname();
 
-  const navStyle: CSSProperties = {
-    position: "fixed",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    background: "color-mix(in srgb, var(--surface) 88%, var(--accent) 12%)",
-    borderTop: "1px solid color-mix(in srgb, var(--border) 72%, var(--accent) 28%)",
-    display: "flex",
-    justifyContent: "space-around",
-    alignItems: "center",
-    height: 64,
-    paddingBottom: "env(safe-area-inset-bottom, 0px)",
-    boxShadow: "0 -8px 24px rgba(45, 32, 20, 0.12)",
-    backdropFilter: "saturate(140%) blur(10px)",
-    zIndex: 100,
-  };
-
   return (
-    <>
-      <nav style={navStyle} aria-label="Main navigation">
-        {tabs.map((tab) => {
-          const active = pathname.startsWith(tab.href);
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 2,
-                minHeight: 44,
-                minWidth: 44,
-                padding: "8px 16px",
-                textDecoration: "none",
-                transition: "transform 150ms ease",
-              }}
-              aria-current={active ? "page" : undefined}
-            >
-              {tab.icon(active)}
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: active ? 600 : 400,
-                  color: active ? "var(--primary)" : "var(--muted)",
-                }}
-              >
-                {tab.label}
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
-      {/* Spacer */}
-      <div style={{ height: "calc(64px + env(safe-area-inset-bottom, 0px))" }} />
-    </>
+    <nav className="app-mobile-bottom-nav" aria-label="Main navigation">
+      {tabs.map((tab) => {
+        const active = pathname.startsWith(tab.href);
+        return (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            className="app-mobile-bottom-nav__link"
+            aria-current={active ? "page" : undefined}
+          >
+            {tab.icon(active)}
+            <span className="app-mobile-bottom-nav__label">
+              {tab.label}
+            </span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
