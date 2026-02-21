@@ -27,6 +27,17 @@ function logSessionEvent(event: string, details: Record<string, unknown>) {
   }
 }
 
+
+function describeCookieOptions(options: ReturnType<typeof buildRefreshCookieOptions>) {
+  return {
+    httpOnly: options.httpOnly,
+    sameSite: options.sameSite,
+    secure: options.secure,
+    path: options.path,
+    maxAge: options.maxAge
+  };
+}
+
 function resolveRememberPreference(
   value:
     | {
@@ -138,9 +149,15 @@ export async function login(req: Request, res: Response) {
     ? env.REFRESH_TOKEN_TTL_DAYS
     : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
 
-  res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
+  const refreshCookieOptions = buildRefreshCookieOptions(refreshTtlDays);
+  res.cookie(refreshCookieName, refreshToken, refreshCookieOptions);
 
-  logSessionEvent("login", { userId: result.user.id, rememberMe: resolvedRememberMe, refreshTtlDays });
+  logSessionEvent("login", {
+    userId: result.user.id,
+    rememberMe: resolvedRememberMe,
+    refreshTtlDays,
+    refreshCookie: describeCookieOptions(refreshCookieOptions)
+  });
 
   return res.json({
     ok: true,
@@ -176,6 +193,13 @@ export async function logout(req: Request, res: Response) {
 export async function refreshAccessToken(req: Request, res: Response) {
   const { refreshToken: refreshTokenFromBody } = (req.body ?? {}) as { refreshToken?: string };
 
+  const cookieHeader = req.headers.cookie ?? "";
+  logSessionEvent("refresh-request", {
+    hasCookieHeader: Boolean(cookieHeader),
+    includesRefreshCookie: cookieHeader.includes(`${refreshCookieName}=`),
+    hasBodyRefreshToken: Boolean(refreshTokenFromBody)
+  });
+
   const cookies = parseCookies(req.headers.cookie);
   const refreshToken = refreshTokenFromBody ?? cookies[refreshCookieName];
 
@@ -205,11 +229,32 @@ export async function refreshAccessToken(req: Request, res: Response) {
   const nextRefreshToken = signRefreshToken(user.id, { rememberMe });
 
   const refreshTtlDays = rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
-  res.cookie(refreshCookieName, nextRefreshToken, buildRefreshCookieOptions(refreshTtlDays));
+  const refreshCookieOptions = buildRefreshCookieOptions(refreshTtlDays);
+  res.cookie(refreshCookieName, nextRefreshToken, refreshCookieOptions);
 
-  logSessionEvent("token-refreshed", { userId: user.id, rememberMe, refreshTtlDays });
+  logSessionEvent("token-refreshed", {
+    userId: user.id,
+    rememberMe,
+    refreshTtlDays,
+    refreshCookie: describeCookieOptions(refreshCookieOptions)
+  });
 
   return res.json({ ok: true, accessToken });
+}
+
+export async function debugCookies(req: Request, res: Response) {
+  if (env.NODE_ENV === "production") {
+    return res.status(404).json({ message: "Not found" });
+  }
+
+  const cookieHeader = req.headers.cookie ?? "";
+  const cookies = parseCookies(cookieHeader);
+  return res.json({
+    ok: true,
+    hasCookieHeader: Boolean(cookieHeader),
+    includesRefreshCookie: cookieHeader.includes(`${refreshCookieName}=`),
+    cookieNames: Object.keys(cookies)
+  });
 }
 
 export async function whoAmI(req: Request, res: Response) {

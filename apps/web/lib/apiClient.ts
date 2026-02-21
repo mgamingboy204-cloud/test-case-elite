@@ -6,7 +6,14 @@ if (rawApiUrl?.startsWith("http://")) {
   throw new Error("NEXT_PUBLIC_API_BASE_URL must be https.");
 }
 
-export const API_URL = rawApiUrl?.replace(/\/$/, "") ?? "/api";
+export const API_URL = "/api";
+
+function logAuthRequest(event: string, details: Record<string, unknown>) {
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.debug(`[auth-client] ${event}`, details);
+  }
+}
 
 type ApiFetchOptions = RequestInit & {
   auth?: "include" | "omit";
@@ -84,6 +91,17 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, hasR
       cache: "no-store"
     }
   );
+
+  if (process.env.NODE_ENV !== "production" && path.startsWith("/auth/")) {
+    logAuthRequest("request", {
+      path,
+      requestUrl: `${API_URL}${path}`,
+      credentials: "include",
+      configuredApiBaseUrl: rawApiUrl ?? null,
+      status: res.status
+    });
+  }
+
   const contentType = res.headers.get("content-type") ?? "";
   const payload = contentType.includes("application/json") ? await res.json() : await res.text();
   if (res.status === 401 && options.retryOnUnauthorized && !hasRetried) {
@@ -101,11 +119,20 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, hasR
 }
 
 export async function refreshAccessToken() {
-  const res = await fetch(`${API_URL}/auth/token/refresh`, {
+  const requestUrl = `${API_URL}/auth/token/refresh`;
+  const res = await fetch(requestUrl, {
     method: "POST",
     credentials: "include",
     cache: "no-store"
   });
+  if (process.env.NODE_ENV !== "production") {
+    logAuthRequest("refresh", {
+      requestUrl,
+      credentials: "include",
+      configuredApiBaseUrl: rawApiUrl ?? null,
+      status: res.status
+    });
+  }
   if (!res.ok) {
     return null;
   }
