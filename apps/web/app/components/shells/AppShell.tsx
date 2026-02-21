@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { theme, toggle } = useTheme();
 
   const headerStyle: CSSProperties = {
-    height: 56,
+    height: "var(--app-header-offset)",
     background: "var(--panel)",
     borderBottom: "1px solid var(--border)",
     display: "flex",
@@ -29,6 +29,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     position: "sticky",
     top: 0,
     zIndex: 50,
+    paddingTop: "var(--app-mobile-safe-top)",
   };
 
   return (
@@ -76,8 +77,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             flexDirection: "column",
             gap: 4,
             position: "sticky",
-            top: 56,
-            height: "calc(100vh - 56px)",
+            top: "var(--app-header-offset)",
+            height: "calc(100vh - var(--app-header-offset))",
             overflowY: "auto",
           }}
         >

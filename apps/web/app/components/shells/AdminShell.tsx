@@ -28,7 +28,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
       {/* Header */}
       <header
         style={{
-          height: 56,
+          height: "var(--app-header-offset)",
           background: "var(--panel)",
           borderBottom: "1px solid var(--border)",
           display: "flex",
@@ -38,6 +38,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           position: "sticky",
           top: 0,
           zIndex: 50,
+          paddingTop: "var(--app-mobile-safe-top)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -121,8 +122,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
             borderLeft: "1px solid var(--border)",
             padding: "16px 0",
             position: "sticky",
-            top: 56,
-            height: "calc(100vh - 56px)",
+            top: "var(--app-header-offset)",
+            height: "calc(100vh - var(--app-header-offset))",
             overflowY: "auto",
             flexShrink: 0,
           }}
