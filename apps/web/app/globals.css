@@ -57,6 +57,9 @@
   --marketing-glass: rgba(255, 251, 246, 0.76);
   --marketing-glass-border: rgba(201, 168, 145, 0.33);
   --marketing-overlay: rgba(255, 249, 242, 0.42);
+  --discover-nav-bg: #fffdf9;
+  --discover-chip: #fff7ef;
+  --discover-border: #eadccf;
 }
 
 /* Dark Theme */
@@ -97,6 +100,9 @@
   --marketing-glass: rgba(18, 17, 23, 0.72);
   --marketing-glass-border: rgba(214, 164, 138, 0.28);
   --marketing-overlay: rgba(16, 13, 16, 0.52);
+  --discover-nav-bg: #10131d;
+  --discover-chip: #1a1a23;
+  --discover-border: #4a3340;
 }
 
 /* Theme transition */
@@ -292,5 +298,45 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
   .marketing-interactive:hover {
     transform: scale(1.02);
     box-shadow: 0 20px 46px rgba(28, 20, 14, 0.2);
+  }
+}
+
+@media (max-width: 768px) {
+  .discover-page {
+    background: linear-gradient(180deg, var(--bg2), var(--surface2));
+  }
+
+  .discover-header {
+    background: color-mix(in srgb, var(--surface2) 88%, var(--accent) 12%) !important;
+    backdrop-filter: saturate(130%) blur(10px);
+  }
+
+  .discover-settings-btn {
+    color: var(--accent) !important;
+    box-shadow: 0 8px 20px rgba(46, 32, 21, 0.14);
+  }
+
+  .discover-actions {
+    background: color-mix(in srgb, var(--surface2) 86%, var(--accent2) 14%) !important;
+  }
+
+  .discover-action {
+    border: 1px solid color-mix(in srgb, var(--discover-border) 76%, transparent);
+  }
+
+  .discover-action--rewind {
+    background: var(--discover-chip) !important;
+  }
+
+  .discover-action--pass {
+    background: linear-gradient(180deg, #d06779, #aa364b) !important;
+  }
+
+  .discover-action--like {
+    background: linear-gradient(180deg, #d9b18f, #be866b) !important;
+  }
+
+  .bottom-nav {
+    backdrop-filter: saturate(130%) blur(10px);
   }
 }

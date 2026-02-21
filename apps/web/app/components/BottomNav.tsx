@@ -56,14 +56,14 @@ export function BottomNav() {
     bottom: 0,
     left: 0,
     right: 0,
-    background: "var(--surface2)",
-    borderTop: "1px solid var(--border)",
-    boxShadow: "0 -10px 28px rgba(45, 32, 20, 0.08)",
+    background: "var(--discover-nav-bg)",
+    borderTop: "1px solid var(--discover-border)",
+    boxShadow: "0 -10px 28px rgba(31, 20, 12, 0.16)",
     display: "flex",
     justifyContent: "space-around",
     alignItems: "center",
     height: 64,
-    paddingBottom: "max(12px, env(safe-area-inset-bottom, 0px))",
+    paddingBottom: "env(safe-area-inset-bottom, 0px)",
     paddingLeft: "max(8px, env(safe-area-inset-left, 0px))",
     paddingRight: "max(8px, env(safe-area-inset-right, 0px))",
     zIndex: 100,
@@ -71,7 +71,7 @@ export function BottomNav() {
 
   return (
     <>
-      <nav style={navStyle} aria-label="Main navigation">
+      <nav style={navStyle} aria-label="Main navigation" className="bottom-nav">
         {tabs.map((tab) => {
           const active = pathname.startsWith(tab.href);
           return (
