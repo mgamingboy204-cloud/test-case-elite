@@ -15,7 +15,8 @@ const footerLinks = [
   { href: "/terms", label: "Terms" },
   { href: "/privacy", label: "Privacy" },
   { href: "/cookie-policy", label: "Cookies" },
-  { href: "/contact", label: "Contact" }
+  { href: "/contact", label: "Contact" },
+  { href: "/safety", label: "Safety" }
 ];
 
 export function MarketingShell({ children }: { children: ReactNode }) {
@@ -24,23 +25,23 @@ export function MarketingShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="shell-root">
-      <header className="marketing-header marketing-panel">
+      <header className="marketing-header">
         <div className="nav-row">
           <Link href="/" className="logo marketing-tap-target">Elite Match</Link>
 
           <nav className="desktop-nav">
             {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="nav-link marketing-interactive marketing-tap-target">
+              <Link key={link.href} href={link.href} className="nav-link marketing-tap-target">
                 {link.label}
               </Link>
             ))}
           </nav>
 
           <div className="actions">
-            <button onClick={toggle} className="theme-btn marketing-interactive marketing-tap-target" aria-label="Toggle theme">
+            <button onClick={toggle} className="theme-btn marketing-tap-target" aria-label="Toggle theme">
               {theme === "light" ? "☾" : "☀"}
             </button>
-            <Link href="/signup" className="invite-btn marketing-rose-btn marketing-interactive marketing-tap-target">Request Invitation</Link>
+            <Link href="/login" className="signin marketing-tap-target">Sign In</Link>
             <button className="mobile-menu-btn marketing-tap-target" onClick={() => setMenuOpen(true)} aria-label="Open menu">☰</button>
           </div>
         </div>
@@ -50,11 +51,8 @@ export function MarketingShell({ children }: { children: ReactNode }) {
 
       <footer className="marketing-footer">
         <div className="footer-inner">
-          <div style={{ fontSize: 14, color: "var(--marketing-text-muted)" }}>
-            © {new Date().getFullYear()} Elite Match. Invitation-only introductions.
-          </div>
+          <div className="copyright">© {new Date().getFullYear()} Elite Match. All rights reserved.</div>
           <nav className="footer-nav">
-            <Link href="/" className="footer-link marketing-tap-target">Back to Home</Link>
             {footerLinks.map((link) => (
               <Link key={link.href} href={link.href} className="footer-link marketing-tap-target">
                 {link.label}
@@ -63,11 +61,6 @@ export function MarketingShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </footer>
-
-      <div className="mobile-cta">
-        <Link href="/" className="cta-home marketing-tap-target">Home</Link>
-        <Link href="/signup" className="cta-request marketing-rose-btn marketing-tap-target">Request Invitation</Link>
-      </div>
 
       {menuOpen && (
         <div className="mobile-menu-overlay" onClick={() => setMenuOpen(false)}>
@@ -78,7 +71,10 @@ export function MarketingShell({ children }: { children: ReactNode }) {
                 {link.label}
               </Link>
             ))}
-            <Link href="/signup" className="sheet-signin marketing-rose-btn marketing-tap-target" onClick={() => setMenuOpen(false)}>
+            <Link href="/login" className="sheet-signin marketing-tap-target" onClick={() => setMenuOpen(false)}>
+              Sign In
+            </Link>
+            <Link href="/signup" className="sheet-invite marketing-rose-btn marketing-tap-target" onClick={() => setMenuOpen(false)}>
               Request Invitation
             </Link>
           </div>
@@ -91,54 +87,71 @@ export function MarketingShell({ children }: { children: ReactNode }) {
           position: fixed;
           inset: calc(env(safe-area-inset-top, 0px) + 10px) 14px auto;
           z-index: 40;
-          border-radius: 999px;
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
         }
         .shell-main { flex: 1; }
-        .nav-row { max-width: 1200px; margin: 0 auto; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; }
-        .logo { font-size: 20px; font-weight: 800; color: var(--marketing-text-strong); letter-spacing: 0.01em; padding: 8px 4px; display: inline-flex; align-items: center; }
-        .desktop-nav { display: flex; align-items: center; gap: 26px; }
-        .nav-link { color: var(--marketing-text-strong); font-size: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 12px 10px; border-radius: 999px; display: inline-flex; align-items: center; }
+        .nav-row {
+          width: min(1760px, calc(100vw - 28px));
+          margin: 0 auto;
+          min-height: 74px;
+          border-radius: 999px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(8, 14, 28, 0.72);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          padding: 10px 30px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+        }
+        .logo { color: #f8f7f5; font-size: 40px; font-family: var(--font-playfair), "Playfair Display", Georgia, serif; }
+        .desktop-nav { display: flex; align-items: center; gap: 30px; }
+        .nav-link { color: #f4f3f0; font-size: 36px; font-weight: 600; }
         .actions { display: flex; align-items: center; gap: 10px; }
-        .theme-btn { width: 44px; height: 44px; border-radius: 999px; border: 1px solid var(--marketing-glass-border); background: rgba(255,255,255,0.2); color: var(--marketing-text-strong); }
-        .invite-btn { display: inline-flex; align-items: center; padding: 0 18px; font-size: 14px; }
-        .mobile-menu-btn { display: none; color: var(--marketing-text-strong); font-size: 24px; }
-        .marketing-footer { border-top: 1px solid var(--marketing-glass-border); background: linear-gradient(180deg, transparent, rgba(148, 114, 114, 0.08)); }
-        .footer-inner { max-width: 1200px; margin: 0 auto; padding: 26px 24px calc(88px + env(safe-area-inset-bottom, 0px)); display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
-        .footer-nav { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }
-        .footer-link { color: var(--marketing-text-muted); font-size: 14px; line-height: 1.9; padding: 8px 4px; display: inline-flex; align-items: center; }
-        .mobile-cta { display: none; }
-        .mobile-menu-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(5,8,14,0.46); backdrop-filter: blur(12px); display: flex; align-items: flex-end; }
-        .mobile-menu-sheet { width: 100%; border-radius: 22px 22px 0 0; padding: 16px 20px calc(24px + env(safe-area-inset-bottom)); border-top: 1px solid var(--marketing-glass-border); background: var(--marketing-glass); backdrop-filter: blur(22px); display: flex; flex-direction: column; gap: 12px; }
-        .sheet-handle { width: 46px; height: 5px; border-radius: 999px; background: var(--marketing-text-muted); opacity: 0.5; margin: 0 auto 6px; }
-        .sheet-link { color: var(--marketing-text-strong); padding: 14px 0; border-bottom: 1px solid var(--marketing-glass-border); font-weight: 500; display: flex; align-items: center; }
-        .sheet-signin { margin-top: 4px; text-align: center; padding: 13px; }
-        @media (max-width: 880px) {
-          .desktop-nav, .invite-btn { display: none; }
+        .theme-btn {
+          width: 44px;
+          height: 44px;
+          border-radius: 999px;
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          background: rgba(255, 255, 255, 0.08);
+          color: #f6f5f2;
+          font-size: 22px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .signin { color: #f7f6f4; font-size: 40px; font-weight: 500; padding-right: 8px; }
+        .mobile-menu-btn { display: none; color: #fff; font-size: 24px; }
+        .marketing-footer {
+          margin-top: auto;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(4, 10, 24, 0.86);
+          backdrop-filter: blur(10px);
+        }
+        .footer-inner {
+          width: min(1360px, calc(100% - 40px));
+          margin: 0 auto;
+          padding: 26px 0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+        .copyright { color: rgba(245, 241, 234, 0.78); font-size: 15px; }
+        .footer-nav { display: flex; gap: 26px; flex-wrap: wrap; }
+        .footer-link { color: rgba(247, 244, 238, 0.9); font-size: 17px; }
+        .mobile-menu-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(3, 7, 16, 0.48); backdrop-filter: blur(8px); display: flex; align-items: flex-end; }
+        .mobile-menu-sheet { width: 100%; border-radius: 22px 22px 0 0; padding: 16px 20px calc(24px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,0.14); background: rgba(10, 16, 28, 0.96); display: flex; flex-direction: column; gap: 12px; }
+        .sheet-handle { width: 46px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.4); margin: 0 auto 6px; }
+        .sheet-link { color: #f8f5ef; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.12); }
+        .sheet-signin, .sheet-invite { margin-top: 4px; text-align: center; padding: 13px; border-radius: 999px; }
+        .sheet-signin { border: 1px solid rgba(255,255,255,0.2); color: #f9f6f0; }
+        @media (max-width: 1100px) {
+          .desktop-nav, .signin { display: none; }
           .mobile-menu-btn { display: block; }
-          .marketing-header { inset: calc(env(safe-area-inset-top, 0px) + 8px) 10px auto; }
-          .footer-inner { justify-content: center; text-align: center; }
-          .footer-nav { width: 100%; gap: 8px 16px; }
-          .mobile-cta {
-            position: fixed;
-            left: 10px;
-            right: 10px;
-            bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
-            display: grid;
-            grid-template-columns: 1fr 1.4fr;
-            gap: 10px;
-            z-index: 60;
-            padding: 10px;
-            border-radius: 18px;
-            background: var(--marketing-glass);
-            border: 1px solid var(--marketing-glass-border);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-          }
-          .cta-home, .cta-request { border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
-          .cta-home { color: var(--marketing-text-strong); background: rgba(148, 163, 184, 0.12); }
-          .cta-request { color: #fff; }
+          .logo { font-size: 28px; }
+          .nav-row { min-height: 62px; }
         }
       `}</style>
     </div>
