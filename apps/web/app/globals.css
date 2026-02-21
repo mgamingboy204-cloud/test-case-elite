@@ -14,7 +14,7 @@
 [data-theme="light"] {
   --sat: env(safe-area-inset-top, 0px);
   --sar: env(safe-area-inset-right, 0px);
-  --sab: env(safe-area-inset-bottom);
+  --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
   --bn: 58px;
   --app-header-height: 56px;
@@ -357,7 +357,7 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
     position: fixed;
     left: max(12px, var(--sal));
     right: max(12px, var(--sar));
-    bottom: calc(var(--bn) + var(--sab) + 10px);
+    bottom: calc(var(--bn) + var(--sab) + 12px);
     z-index: 60;
   }
 }
