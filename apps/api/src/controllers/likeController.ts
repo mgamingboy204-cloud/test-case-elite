@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { HttpError } from "../utils/httpErrors";
-import { createLike, getIncomingLikes } from "../services/likeService";
+import { createLike, getIncomingLikes, rewindLastLike } from "../services/likeService";
 
 export async function createLikeHandler(req: Request, res: Response) {
   const { toUserId, type } = req.body as { toUserId: string; type: "LIKE" | "PASS" };
@@ -18,4 +18,12 @@ export async function createLikeHandler(req: Request, res: Response) {
 export async function incomingLikesHandler(req: Request, res: Response) {
   const result = await getIncomingLikes(res.locals.user.id);
   return res.json(result);
+}
+
+export async function rewindLikeHandler(req: Request, res: Response) {
+  const result = await rewindLastLike(res.locals.user.id);
+  if (!result.rewoundProfileId) {
+    throw new HttpError(404, { message: "No swipe action available to rewind." });
+  }
+  return res.json({ ok: true, rewoundProfileId: result.rewoundProfileId });
 }

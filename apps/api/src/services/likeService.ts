@@ -114,3 +114,44 @@ export async function getIncomingLikes(userId: string) {
   });
   return { incoming };
 }
+
+export async function rewindLastLike(userId: string) {
+  const lastAction = await prisma.like.findFirst({
+    where: { fromUserId: userId },
+    orderBy: { createdAt: "desc" }
+  });
+
+  if (!lastAction) {
+    return { rewoundProfileId: null as string | null };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.like.delete({ where: { id: lastAction.id } });
+    if (lastAction.type !== "LIKE") {
+      return;
+    }
+
+    const ordered = [lastAction.fromUserId, lastAction.toUserId].sort();
+    const match = await tx.match.findUnique({
+      where: { userAId_userBId: { userAId: ordered[0], userBId: ordered[1] } }
+    });
+
+    if (!match) {
+      return;
+    }
+
+    const reciprocalLike = await tx.like.findFirst({
+      where: {
+        fromUserId: lastAction.toUserId,
+        toUserId: lastAction.fromUserId,
+        type: "LIKE"
+      }
+    });
+
+    if (!reciprocalLike) {
+      await tx.match.delete({ where: { id: match.id } });
+    }
+  });
+
+  return { rewoundProfileId: lastAction.toUserId };
+}

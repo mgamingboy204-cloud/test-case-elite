@@ -49,13 +49,16 @@ export default function DiscoverPage() {
   const startPos = useRef({ x: 0, y: 0 });
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const [animatingOut, setAnimatingOut] = useState(false);
+  const [isRewinding, setIsRewinding] = useState(false);
 
   const setIntentFromUser = useCallback(async () => {
     if (initializedIntentRef.current || manualIntentSelectionRef.current) return;
     try {
-      const profile = await apiFetch<{ intent?: string }>("/profile");
+      const profileResponse = await apiFetch<{ profile?: { intent?: string } }>("/profile", {
+        retryOnUnauthorized: true,
+      });
       if (manualIntentSelectionRef.current) return;
-      const profileIntent = String(profile?.intent ?? "").toLowerCase();
+      const profileIntent = String(profileResponse?.profile?.intent ?? "").toLowerCase();
       const defaultIntent = profileIntent === "dating" || profileIntent === "friends" ? profileIntent : "all";
       setIntent(defaultIntent);
     } catch {
@@ -70,7 +73,9 @@ export default function DiscoverPage() {
     setError(false);
     try {
       const interestQuery = selectedInterests.length ? `&interests=${encodeURIComponent(selectedInterests.join(","))}` : "";
-      const data = await apiFetch<any>(`/discover/feed?intent=${intent}&limit=24${interestQuery}`);
+      const data = await apiFetch<any>(`/discover/feed?intent=${intent}&limit=24${interestQuery}`, {
+        retryOnUnauthorized: true,
+      });
       const items = Array.isArray(data?.items) ? data.items : [];
       const mapped: Profile[] = items.map((item: any) => ({
         id: item.userId,
@@ -108,36 +113,67 @@ export default function DiscoverPage() {
     async (type: "LIKE" | "PASS", direction?: "left" | "right") => {
       if (!currentProfile || animatingOut) return;
 
+      const previousIndex = currentIndex;
+
       setAnimatingOut(true);
       setSwipeDirection(direction || (type === "PASS" ? "left" : "right"));
       setSwipeX(direction === "left" || type === "PASS" ? -500 : 500);
 
       try {
-        await apiFetch("/likes", {
+        const request = apiFetch("/likes", {
           method: "POST",
+          retryOnUnauthorized: true,
           body: { toUserId: currentProfile.userId, type } as never,
         });
+
+        await new Promise<void>((resolve) => {
+          setTimeout(() => {
+            setCurrentIndex((i) => i + 1);
+            setSwipeX(0);
+            setSwipeY(0);
+            setSwipeDirection(null);
+            setAnimatingOut(false);
+            resolve();
+          }, 250);
+        });
+
+        await request;
+
+        const feedbackMessages: Record<string, string> = {
+          LIKE: "Liked!",
+          PASS: "Passed",
+        };
+
+        addToast(feedbackMessages[type], type === "PASS" ? "info" : "success");
       } catch {
-        /* stub */
-      }
-
-      const feedbackMessages: Record<string, string> = {
-        LIKE: "Liked!",
-        PASS: "Passed",
-      };
-
-      addToast(feedbackMessages[type], type === "PASS" ? "info" : "success");
-
-      setTimeout(() => {
-        setCurrentIndex((i) => i + 1);
+        setCurrentIndex(previousIndex);
         setSwipeX(0);
         setSwipeY(0);
         setSwipeDirection(null);
         setAnimatingOut(false);
-      }, 250);
+        addToast("Could not save that action. Please try again.", "error");
+      }
     },
-    [currentProfile, animatingOut, addToast]
+    [currentProfile, animatingOut, addToast, currentIndex]
   );
+
+  const handleRewind = useCallback(async () => {
+    if (animatingOut || currentIndex === 0 || isRewinding) return;
+    setIsRewinding(true);
+    setCurrentIndex((index) => Math.max(index - 1, 0));
+    try {
+      await apiFetch<{ ok: boolean; rewoundProfileId: string }>("/likes/rewind", {
+        method: "POST",
+        retryOnUnauthorized: true,
+      });
+      addToast("Rewound", "info");
+    } catch {
+      setCurrentIndex((index) => Math.min(index + 1, profiles.length));
+      addToast("Could not rewind right now.", "error");
+    } finally {
+      setIsRewinding(false);
+    }
+  }, [animatingOut, currentIndex, isRewinding, profiles.length, addToast]);
 
   /* Pointer handlers for swipe */
   const handlePointerDown = useCallback(
@@ -211,27 +247,31 @@ export default function DiscoverPage() {
 
   return (
     <div
+      className="discover-page"
       style={{
         display: "flex",
         flexDirection: "column",
         minHeight: "calc(100dvh - 56px - 72px)",
         background: "var(--surface2)",
         overflow: "hidden",
+        paddingLeft: "max(12px, env(safe-area-inset-left, 0px))",
+        paddingRight: "max(12px, env(safe-area-inset-right, 0px))",
       }}
     >
       {/* Top header row */}
       <div
+        className="discover-header"
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           paddingTop: "max(12px, env(safe-area-inset-top, 0px))",
-          paddingRight: "max(8px, env(safe-area-inset-right, 0px))",
+          paddingRight: "max(12px, env(safe-area-inset-right, 0px))",
           paddingBottom: 8,
-          paddingLeft: "max(8px, env(safe-area-inset-left, 0px))",
+          paddingLeft: "max(12px, env(safe-area-inset-left, 0px))",
           gap: 8,
           background: "var(--surface2)",
-          borderBottom: "1px solid var(--border)",
+          borderBottom: "1px solid var(--discover-border)",
         }}
       >
         <span
@@ -262,12 +302,13 @@ export default function DiscoverPage() {
 
         <button
           onClick={() => setFilterOpen(true)}
+          className="discover-settings-btn"
           style={{
             width: 40,
             height: 40,
             borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--border)",
-            background: "var(--panel)",
+            border: "1px solid var(--discover-border)",
+            background: "var(--discover-chip)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -427,27 +468,25 @@ export default function DiscoverPage() {
       {/* Action buttons */}
       {!loading && currentProfile && (
         <div
+          className="discover-actions"
           style={{
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             gap: 18,
             paddingTop: 12,
-            paddingBottom: "max(12px, env(safe-area-inset-bottom, 0px))",
-            paddingLeft: "max(8px, env(safe-area-inset-left, 0px))",
-            paddingRight: "max(8px, env(safe-area-inset-right, 0px))",
+            paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
+            paddingLeft: "max(12px, env(safe-area-inset-left, 0px))",
+            paddingRight: "max(12px, env(safe-area-inset-right, 0px))",
             background: "var(--surface2)",
           }}
         >
           <button
-            onClick={() => {
-              if (currentIndex > 0) {
-                setCurrentIndex((i) => i - 1);
-                addToast("Rewound", "info");
-              }
-            }}
+            onClick={handleRewind}
+            className="discover-action discover-action--rewind"
             style={actionBtnStyle("var(--panel)", 52)}
             aria-label="Rewind"
+            disabled={currentIndex === 0 || isRewinding}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
@@ -455,6 +494,7 @@ export default function DiscoverPage() {
           </button>
           <button
             onClick={() => handleAction("PASS", "left")}
+            className="discover-action discover-action--pass"
             style={actionBtnStyle("var(--danger)")}
             aria-label="Pass"
           >
@@ -464,6 +504,7 @@ export default function DiscoverPage() {
           </button>
           <button
             onClick={() => handleAction("LIKE", "right")}
+            className="discover-action discover-action--like"
             style={actionBtnStyle("var(--success)")}
             aria-label="Like"
           >
