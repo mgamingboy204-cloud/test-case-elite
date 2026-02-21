@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/Card";
 import { Input } from "@/app/components/ui/Input";
 import { Button } from "@/app/components/ui/Button";
 import { Badge } from "@/app/components/ui/Badge";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
+import { getDefaultRoute } from "@/lib/onboarding";
+import { useSession } from "@/lib/session";
 
 const benefits = [
   "Unlimited swipes and likes",
@@ -19,7 +21,9 @@ const benefits = [
 ];
 
 export default function PaymentPage() {
+  const router = useRouter();
   const { addToast } = useToast();
+  const { refresh } = useSession();
   const [coupon, setCoupon] = useState("");
   const [couponValid, setCouponValid] = useState<boolean | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
@@ -60,8 +64,13 @@ export default function PaymentPage() {
     setLoading(true);
     try {
       await apiFetch("/payments/mock/confirm", { method: "POST" });
+      const refreshedUser = await refresh();
+      const nextRoute = getDefaultRoute(refreshedUser);
       setStep("done");
       addToast("Payment successful!", "success");
+      if (nextRoute !== "/onboarding/profile") {
+        addToast("Payment processed. Redirecting to your next required step.", "info");
+      }
     } catch {
       addToast("Payment failed", "error");
     } finally {
@@ -69,8 +78,21 @@ export default function PaymentPage() {
     }
   };
 
+  const handleSetupProfile = async () => {
+    const refreshedUser = await refresh();
+    const nextRoute = getDefaultRoute(refreshedUser);
+
+    if (nextRoute === "/onboarding/profile") {
+      router.push("/onboarding/profile");
+      return;
+    }
+
+    addToast("We are syncing your onboarding status. Taking you to the right step.", "info");
+    router.replace(nextRoute);
+  };
+
   return (
-    <div className="fade-in">
+    <div className="fade-in" style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom, 0px))" }}>
       <h1 style={{ marginBottom: 8 }}>Membership</h1>
       <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 32 }}>
         Unlock the full Elite Match experience.
@@ -78,7 +100,15 @@ export default function PaymentPage() {
 
       {step === "plan" && (
         <>
-          <Card style={{ padding: 28, marginBottom: 24 }}>
+          <Card
+            style={{
+              padding: 28,
+              marginBottom: 24,
+              border: "1px solid color-mix(in srgb, var(--accent) 30%, var(--border))",
+              background: "linear-gradient(145deg, color-mix(in srgb, var(--surface2) 88%, var(--accent) 12%), var(--panel))",
+              boxShadow: "var(--shadow-lg)",
+            }}
+          >
             <div
               style={{
                 display: "flex",
@@ -163,7 +193,15 @@ export default function PaymentPage() {
       )}
 
       {step === "confirm" && (
-        <Card style={{ padding: 28, textAlign: "center" }}>
+        <Card
+          style={{
+            padding: 28,
+            textAlign: "center",
+            border: "1px solid color-mix(in srgb, var(--accent) 24%, var(--border))",
+            background: "linear-gradient(145deg, color-mix(in srgb, var(--surface2) 90%, var(--accent) 10%), var(--panel))",
+            boxShadow: "var(--shadow-md)",
+          }}
+        >
           <div
             style={{
               width: 64,
@@ -196,7 +234,15 @@ export default function PaymentPage() {
       )}
 
       {step === "done" && (
-        <Card style={{ padding: 32, textAlign: "center" }}>
+        <Card
+          style={{
+            padding: 32,
+            textAlign: "center",
+            border: "1px solid color-mix(in srgb, var(--accent) 30%, var(--border))",
+            background: "linear-gradient(145deg, color-mix(in srgb, var(--surface2) 88%, var(--accent) 12%), var(--panel))",
+            boxShadow: "var(--shadow-lg)",
+          }}
+        >
           <div
             style={{
               width: 72,
@@ -219,11 +265,14 @@ export default function PaymentPage() {
           </p>
           <Badge variant="success">Active</Badge>
           <div style={{ marginTop: 24 }}>
-            <Link href="/onboarding/profile">
-              <Button size="lg" fullWidth>
-                Set Up Your Profile
-              </Button>
-            </Link>
+            <Button
+              size="lg"
+              fullWidth
+              onClick={handleSetupProfile}
+              style={{ minHeight: 52, fontWeight: 700 }}
+            >
+              Set Up Your Profile
+            </Button>
           </div>
         </Card>
       )}
