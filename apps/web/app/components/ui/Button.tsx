@@ -38,9 +38,9 @@ const variantStyles: Record<Variant, React.CSSProperties> = {
 };
 
 const sizeStyles: Record<Size, React.CSSProperties> = {
-  sm: { padding: "6px 14px", fontSize: 13, borderRadius: "var(--radius-sm)" },
-  md: { padding: "10px 20px", fontSize: 15, borderRadius: "var(--radius-md)" },
-  lg: { padding: "14px 28px", fontSize: 16, borderRadius: "var(--radius-lg)" },
+  sm: { padding: "10px 14px", fontSize: 13, borderRadius: "var(--radius-sm)", minHeight: 44 },
+  md: { padding: "12px 20px", fontSize: 16, borderRadius: "var(--radius-md)", minHeight: 44 },
+  lg: { padding: "14px 28px", fontSize: 16, borderRadius: "var(--radius-lg)", minHeight: 48 },
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -69,7 +69,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           fontWeight: 600,
           cursor: disabled || loading ? "not-allowed" : "pointer",
           opacity: disabled || loading ? 0.5 : 1,
-          transition: "transform 150ms ease, opacity 150ms ease, box-shadow 150ms ease",
+          transition: "transform 220ms ease-in-out, opacity 180ms ease-in-out, box-shadow 220ms ease-in-out",
           width: fullWidth ? "100%" : undefined,
           whiteSpace: "nowrap",
           ...variantStyles[variant],
@@ -78,14 +78,19 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         }}
         onPointerDown={(e) => {
           if (!disabled && !loading) {
+            (e.currentTarget as HTMLButtonElement).style.opacity = "0.92";
+          }
+          if (!disabled && !loading) {
             (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.98)";
           }
         }}
         onPointerUp={(e) => {
           (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+          (e.currentTarget as HTMLButtonElement).style.opacity = "1";
         }}
         onPointerLeave={(e) => {
           (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+          (e.currentTarget as HTMLButtonElement).style.opacity = "1";
         }}
         {...props}
       >

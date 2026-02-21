@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect } from "react";
 import { Inter, Playfair_Display } from "next/font/google";
 import { Button } from "@/app/components/ui/Button";
@@ -9,18 +10,9 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
 
 const revealCards = [
-  {
-    title: "Concierge Introductions",
-    description: "Personal match curation designed around your lifestyle, values, and long-term intent.",
-  },
-  {
-    title: "Private by Default",
-    description: "Discretion-first profile controls with verification standards expected by high-net-worth members.",
-  },
-  {
-    title: "Global Elite Network",
-    description: "A refined community spanning major cities, private clubs, and executive travel corridors.",
-  },
+  { title: "Concierge Introductions", description: "Personal match curation designed around your lifestyle, values, and long-term intent." },
+  { title: "Private by Default", description: "Discretion-first profile controls with verification standards expected by high-net-worth members." },
+  { title: "Global Elite Network", description: "A refined community spanning major cities, private clubs, and executive travel corridors." }
 ];
 
 export default function HomePage() {
@@ -29,45 +21,37 @@ export default function HomePage() {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
-          }
+          if (entry.isIntersecting) entry.target.classList.add("is-visible");
         });
       },
       { threshold: 0.2 }
     );
-
     items.forEach((item) => observer.observe(item));
-
     return () => observer.disconnect();
   }, []);
 
   return (
     <div className={`marketing-home ${inter.variable} ${playfair.variable}`}>
-      
-
-      <main className="hero-shell">
-        <section className="hero-copy" aria-labelledby="hero-title">
+      <section className="hero-shell" aria-labelledby="hero-title">
+        <Image
+          src="https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=2048&q=80"
+          alt="Elegant couple at sunset"
+          fill
+          priority
+          sizes="100vw"
+          style={{ objectFit: "cover" }}
+        />
+        <div className="hero-overlay" />
+        <div className="hero-copy">
           <p className="hero-kicker">Invitation-only matchmaking</p>
           <h1 id="hero-title">Start something epic.</h1>
-          <p className="hero-subtitle">
-            A private introduction service for discerning individuals who value elegance, discretion, and exceptional chemistry.
-          </p>
-
+          <p className="hero-subtitle">A private introduction service for discerning individuals who value elegance, discretion, and exceptional chemistry.</p>
           <div className="hero-actions">
-            <Link href="/signup">
-              <Button size="lg" style={{ borderRadius: 999 }}>
-                Request Invitation
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button size="lg" variant="secondary" style={{ borderRadius: 999 }}>
-                Existing Member
-              </Button>
-            </Link>
+            <Link href="/signup"><Button size="lg" style={{ borderRadius: 999, minHeight: 44 }}>Request Invitation</Button></Link>
+            <Link href="/login"><Button size="lg" variant="secondary" style={{ borderRadius: 999, minHeight: 44 }}>Existing Member</Button></Link>
           </div>
-        </section>
-      </main>
+        </div>
+      </section>
 
       <section className="reveal-shell" aria-labelledby="why-elite-match-title">
         <div className="reveal-intro">
@@ -76,7 +60,7 @@ export default function HomePage() {
         </div>
         <div className="reveal-grid">
           {revealCards.map((card, index) => (
-            <article className="reveal-card" key={card.title} style={{ transitionDelay: `${index * 120}ms` }}>
+            <article className="reveal-card marketing-panel" key={card.title} style={{ transitionDelay: `${index * 120}ms` }}>
               <h3>{card.title}</h3>
               <p>{card.description}</p>
             </article>
@@ -86,267 +70,51 @@ export default function HomePage() {
 
       <style jsx>{`
         .marketing-home {
-          min-height: 100svh;
           min-height: 100dvh;
-          padding-bottom: env(safe-area-inset-bottom, 16px);
-          background:
-            linear-gradient(180deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
-            url("https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=2048&q=80") center / cover no-repeat fixed;
-          color: var(--marketing-text-primary);
           font-family: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          background: linear-gradient(180deg, var(--marketing-bg-start), var(--marketing-bg-end));
+          color: var(--marketing-text-strong);
         }
-
-        :global([data-theme='light']) .marketing-home {
-          background:
-            linear-gradient(180deg, rgba(255, 254, 252, 0.76), rgba(245, 240, 233, 0.92)),
-            radial-gradient(circle at 50% 10%, #fffefc 0%, #f5f0e9 100%);
-          color: var(--marketing-text-primary);
-        }
-
-
-        :global(:root),
-        :global([data-theme='light']) {
-          --marketing-text-primary: #1a1a1a;
-          --marketing-text-secondary: #3d3d4f;
-          --marketing-kicker: rgba(26, 26, 26, 0.72);
-          --marketing-card-bg: rgba(255, 254, 252, 0.76);
-          --marketing-card-border: rgba(197, 131, 131, 0.55);
-        }
-
-        :global([data-theme='dark']) {
-          --marketing-text-primary: #fdfcfb;
-          --marketing-text-secondary: rgba(253, 252, 251, 0.82);
-          --marketing-kicker: rgba(253, 252, 251, 0.74);
-          --marketing-card-bg: rgba(12, 14, 22, 0.76);
-          --marketing-card-border: rgba(183, 110, 121, 0.8);
-        }
-
-        .main-header {
-          padding-top: env(safe-area-inset-top, 44px);
-          position: sticky;
-          top: 0;
-          z-index: 20;
-        }
-
-        .frosted-nav {
-          margin: 0 auto;
-          width: min(1200px, calc(100% - 48px));
-          min-height: 68px;
-          padding: 14px 24px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          backdrop-filter: blur(25px);
-          -webkit-backdrop-filter: blur(25px);
-          background: rgba(10, 10, 12, 0.48);
-          border: 0.5px solid transparent;
-          border-bottom-color: rgba(183, 110, 121, 0.8);
-          border-radius: 20px;
-        }
-
-        :global([data-theme='light']) .frosted-nav {
-          background: rgba(255, 254, 252, 0.78);
-          border-color: rgba(197, 131, 131, 0.5);
-        }
-
-        .brand {
-          font-family: var(--font-playfair), "Playfair Display", Georgia, serif;
-          letter-spacing: 0.15em;
-          text-transform: uppercase;
-          font-size: 0.84rem;
-        }
-
-        .nav-link {
-          font-size: 0.82rem;
-          color: inherit;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          text-decoration: none;
-        }
-
         .hero-shell {
-          min-height: 100svh;
+          position: relative;
           min-height: 100dvh;
-          width: min(1200px, calc(100% - 48px));
-          padding-left: 24px;
-          padding-right: 24px;
+          width: min(1200px, calc(100% - 40px));
           margin: 0 auto;
           display: grid;
           place-items: center;
-          padding: 56px 0 96px;
+          overflow: hidden;
+          border-radius: 34px;
         }
-
+        .hero-overlay {
+          position: absolute;
+          inset: 0;
+          background: var(--marketing-overlay);
+          backdrop-filter: blur(4px);
+        }
         .hero-copy {
+          position: relative;
+          z-index: 1;
           width: min(760px, 100%);
           text-align: center;
-          animation: silkReveal 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+          padding: 40px 16px;
         }
-
-        .hero-kicker {
-          margin-bottom: 20px;
-          text-transform: uppercase;
-          letter-spacing: 0.2em;
-          font-size: 0.78rem;
-          color: var(--marketing-kicker);
-        }
-
-        .hero-copy h1 {
-          margin: 0;
-          font-family: var(--font-playfair), "Playfair Display", Georgia, serif;
-          font-size: clamp(2.35rem, 7vw, 5.2rem);
-          letter-spacing: 0.15em;
-          line-height: 1.02;
-          text-transform: uppercase;
-          color: var(--marketing-text-primary);
-        }
-
-        .hero-subtitle {
-          max-width: 640px;
-          margin: 28px auto 0;
-          font-size: clamp(1rem, 2.2vw, 1.2rem);
-          line-height: 1.9;
-          color: var(--marketing-text-secondary);
-        }
-
-        .hero-actions {
-          margin-top: 44px;
-          display: flex;
-          justify-content: center;
-          gap: 14px;
-          flex-wrap: wrap;
-        }
-
-        .hero-actions :global(button) {
-          min-width: 210px;
-          min-height: 52px;
-          padding: 0 18px;
-          border: 0.5px solid rgba(212, 175, 55, 0.58);
-          background: linear-gradient(135deg, #b76e79 0%, #8c525a 100%);
-          color: #fff;
-          box-shadow: inset 0 1px 0 rgba(255, 241, 237, 0.26), 0 16px 28px rgba(20, 12, 16, 0.28);
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          transition: all 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-          animation: roseBreath 0.8s ease-in-out infinite alternate;
-        }
-
-        .hero-actions :global(a:last-child button) {
-          background: transparent;
-          color: inherit;
-          border-color: rgba(212, 175, 55, 0.4);
-        }
-
-        :global([data-theme='light']) .hero-actions :global(button) {
-          border-color: rgba(140, 82, 90, 0.66);
-          background: linear-gradient(135deg, #b76e79 0%, #8c525a 100%);
-          color: #ffffff;
-          box-shadow: inset 0 1px 0 rgba(255, 241, 237, 0.34), 0 12px 24px rgba(72, 45, 50, 0.22);
-        }
-
-        :global([data-theme='light']) .hero-actions :global(a:last-child button) {
-          background: rgba(255, 255, 255, 0.68);
-          color: #1a1a1a;
-          border-color: rgba(140, 82, 90, 0.5);
-          box-shadow: none;
-        }
-
-        .hero-actions :global(button:hover) {
-          box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.2), 0 18px 30px rgba(20, 12, 16, 0.3);
-        }
-
-        .reveal-shell {
-          width: min(1200px, calc(100% - 48px));
-          padding-left: 24px;
-          padding-right: 24px;
-          margin: 0 auto;
-          padding-top: 36px;
-          padding-bottom: 96px;
-        }
-
-        .reveal-intro h2 {
-          margin: 0;
-          font-family: var(--font-playfair), "Playfair Display", Georgia, serif;
-          letter-spacing: 0.08em;
-          font-size: clamp(1.6rem, 5vw, 2.6rem);
-          text-transform: uppercase;
-        }
-
-        .reveal-grid {
-          margin-top: 30px;
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 16px;
-        }
-
-        .reveal-card {
-          padding: 24px;
-          border-radius: 20px;
-          border: 0.5px solid var(--marketing-card-border);
-          background: var(--marketing-card-bg);
-          backdrop-filter: blur(15px);
-          -webkit-backdrop-filter: blur(15px);
-          opacity: 0;
-          transform: translateY(28px);
-          transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-
-        .reveal-card.is-visible {
-          opacity: 1;
-          transform: translateY(0);
-        }
-
-        .reveal-card h3 {
-          margin: 0;
-          font-family: var(--font-playfair), "Playfair Display", Georgia, serif;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-        }
-
-        .reveal-card p {
-          margin: 14px 0 0;
-          line-height: 1.8;
-          color: var(--marketing-text-secondary);
-        }
-
-        @keyframes silkReveal {
-          from {
-            opacity: 0;
-            transform: translateY(24px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes roseBreath {
-          from {
-            box-shadow: inset 0 1px 0 rgba(255, 241, 237, 0.2), 0 12px 22px rgba(140, 82, 90, 0.28);
-          }
-          to {
-            box-shadow: inset 0 1px 0 rgba(255, 241, 237, 0.35), 0 18px 32px rgba(183, 110, 121, 0.42);
-          }
-        }
-
-        @media (max-width: 900px) {
-          .reveal-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
+        .hero-kicker { margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.78rem; color: var(--marketing-text-muted); }
+        .hero-copy h1 { margin: 0; font-family: var(--font-playfair), "Playfair Display", Georgia, serif; font-size: clamp(2.35rem, 7vw, 5.2rem); letter-spacing: 0.14em; line-height: 1.02; text-transform: uppercase; }
+        .hero-subtitle { max-width: 640px; margin: 24px auto 0; font-size: clamp(1rem, 2.2vw, 1.2rem); line-height: 1.8; color: var(--marketing-text-strong); }
+        .hero-actions { margin-top: 36px; display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+        .hero-actions :global(button) { min-width: 210px; transition: transform 220ms ease-in-out; }
+        .hero-actions :global(button:hover) { transform: scale(1.02); }
+        .reveal-shell { width: min(1200px, calc(100% - 40px)); margin: 0 auto; padding: 44px 0 110px; }
+        .reveal-intro h2 { margin: 0; font-family: var(--font-playfair), "Playfair Display", Georgia, serif; letter-spacing: 0.08em; font-size: clamp(1.6rem, 5vw, 2.6rem); text-transform: uppercase; }
+        .reveal-grid { margin-top: 28px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+        .reveal-card { padding: 24px; opacity: 0; transform: translateY(24px); transition: opacity 0.8s ease, transform 0.8s ease; }
+        .reveal-card.is-visible { opacity: 1; transform: translateY(0); }
+        .reveal-card h3 { margin: 0; font-family: var(--font-playfair), "Playfair Display", Georgia, serif; letter-spacing: 0.08em; text-transform: uppercase; }
+        .reveal-card p { margin: 14px 0 0; line-height: 1.8; color: var(--marketing-text-muted); }
+        @media (max-width: 900px) { .reveal-grid { grid-template-columns: 1fr; } }
         @media (max-width: 767px) {
-          .frosted-nav,
-          .hero-shell,
-          .reveal-shell {
-            width: 100%;
-          }
-
-          .hero-shell {
-            min-height: 100svh;
-            min-height: 100dvh;
-            padding: 40px 0 calc(76px + env(safe-area-inset-bottom, 0px));
-          }
+          .hero-shell, .reveal-shell { width: calc(100% - 20px); }
+          .hero-shell { border-radius: 22px; }
         }
       `}</style>
     </div>

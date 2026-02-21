@@ -17,12 +17,14 @@ export function Card({ children, style, className, onClick }: CardProps) {
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       style={{
-        background: "var(--panel)",
+        background: "color-mix(in srgb, var(--panel) 86%, transparent)",
         borderRadius: "var(--radius-lg)",
         border: "1px solid var(--border)",
-        boxShadow: "var(--shadow)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+        boxShadow: "var(--shadow-md)",
         overflow: "hidden",
-        transition: "box-shadow 200ms ease, transform 200ms ease",
+        transition: "box-shadow 220ms ease-in-out, transform 220ms ease-in-out",
         cursor: onClick ? "pointer" : undefined,
         ...style,
       }}

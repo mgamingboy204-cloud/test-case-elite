@@ -1,3 +1,5 @@
+import { MarketingContentPage } from "@/app/components/MarketingContentPage";
+
 export default function TermsPage() {
   const sections = [
     { title: "1. Acceptance of Terms", body: "By accessing or using Elite Match, you agree to be bound by these Terms of Service. If you do not agree, do not use the platform." },
@@ -8,23 +10,19 @@ export default function TermsPage() {
     { title: "6. Content", body: "You retain ownership of content you upload. By uploading, you grant Elite Match a license to display your content within the platform." },
     { title: "7. Termination", body: "We reserve the right to suspend or terminate your account at any time for violations of these terms or for any other reason at our discretion." },
     { title: "8. Limitation of Liability", body: "Elite Match is provided 'as is' without warranties. We are not liable for any damages arising from your use of the platform." },
-    { title: "9. Changes to Terms", body: "We may modify these terms at any time. Continued use after changes constitutes acceptance of the updated terms." },
+    { title: "9. Changes to Terms", body: "We may modify these terms at any time. Continued use after changes constitutes acceptance of the updated terms." }
   ];
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px 80px" }}>
-      <h1 style={{ marginBottom: 8 }}>Terms of Service</h1>
-      <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 40 }}>
-        Last updated: January 2026
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-        {sections.map((s) => (
-          <div key={s.title}>
-            <h3 style={{ marginBottom: 8 }}>{s.title}</h3>
-            <p style={{ color: "var(--muted)", fontSize: 15, lineHeight: 1.7 }}>{s.body}</p>
-          </div>
+    <MarketingContentPage title="Terms of Service" subtitle="Last updated: January 2026">
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        {sections.map((section) => (
+          <article key={section.title} className="marketing-panel" style={{ padding: "24px 24px 26px" }}>
+            <h3 style={{ marginBottom: 10 }}>{section.title}</h3>
+            <p className="marketing-kicker">{section.body}</p>
+          </article>
         ))}
       </div>
-    </div>
+    </MarketingContentPage>
   );
 }

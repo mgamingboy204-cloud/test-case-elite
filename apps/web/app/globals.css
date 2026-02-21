@@ -14,7 +14,7 @@
 [data-theme="light"] {
   --bg: #FAFAFA;
   --panel: #FFFFFF;
-  --text: #1A1A2E;
+  --text: #121826;
   --muted: #8E8E9A;
   --border: #E8E8ED;
   --primary: #E63946;
@@ -38,6 +38,13 @@
   --overlay: rgba(0,0,0,0.4);
   --shimmer-from: #f0f0f0;
   --shimmer-to: #e0e0e0;
+  --marketing-bg-start: #ffffff;
+  --marketing-bg-end: #f8fafc;
+  --marketing-text-strong: #121826;
+  --marketing-text-muted: #475569;
+  --marketing-glass: rgba(255, 255, 255, 0.72);
+  --marketing-glass-border: rgba(148, 163, 184, 0.28);
+  --marketing-overlay: rgba(255, 255, 255, 0.38);
 }
 
 /* Dark Theme */
@@ -63,6 +70,13 @@
   --overlay: rgba(0,0,0,0.6);
   --shimmer-from: #1f1f2e;
   --shimmer-to: #2a2a3e;
+  --marketing-bg-start: #060912;
+  --marketing-bg-end: #0f172a;
+  --marketing-text-strong: #f8fafc;
+  --marketing-text-muted: #94a3b8;
+  --marketing-glass: rgba(15, 23, 42, 0.7);
+  --marketing-glass-border: rgba(148, 163, 184, 0.2);
+  --marketing-overlay: rgba(2, 6, 23, 0.5);
 }
 
 /* Theme transition */
@@ -100,6 +114,11 @@ button {
   background: none;
   font: inherit;
   color: inherit;
+}
+
+button:active,
+a:active {
+  opacity: 0.92;
 }
 
 input, textarea, select {
@@ -207,4 +226,42 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+
+.marketing-page {
+  min-height: calc(100dvh - 100px);
+  padding: clamp(80px, 10vw, 132px) 20px clamp(88px, 9vw, 120px);
+  background: linear-gradient(180deg, var(--marketing-bg-start), var(--marketing-bg-end));
+  color: var(--marketing-text-strong);
+}
+
+.marketing-container {
+  width: min(960px, 100%);
+  margin: 0 auto;
+}
+
+.marketing-kicker {
+  color: var(--marketing-text-muted);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.marketing-panel {
+  border-radius: 24px;
+  border: 1px solid var(--marketing-glass-border);
+  background: var(--marketing-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.1), 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.marketing-interactive {
+  transition: transform 220ms ease-in-out, box-shadow 220ms ease-in-out;
+}
+
+@media (hover: hover) {
+  .marketing-interactive:hover {
+    transform: scale(1.02);
+    box-shadow: 0 20px 46px rgba(15, 23, 42, 0.16);
+  }
 }
