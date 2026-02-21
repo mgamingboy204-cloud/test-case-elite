@@ -38,14 +38,16 @@
   --overlay: rgba(0,0,0,0.4);
   --shimmer-from: #f0f0f0;
   --shimmer-to: #e0e0e0;
-  --marketing-bg-start: #fdf9f6;
-  --marketing-bg-end: #f6efe9;
+  --marketing-bg-start: #fefcf9;
+  --marketing-bg-end: #f5eee8;
   --marketing-text-strong: #1A1A1A;
-  --marketing-text-muted: #5f4b4b;
+  --marketing-text-muted: #4d4242;
   --marketing-accent: #7a4f4f;
-  --marketing-glass: rgba(255, 255, 255, 0.74);
-  --marketing-glass-border: rgba(122, 79, 79, 0.2);
+  --marketing-glass: rgba(255, 255, 255, 0.8);
+  --marketing-glass-border: rgba(122, 79, 79, 0.24);
   --marketing-overlay: rgba(21, 18, 20, 0.3);
+  --marketing-button-gradient: linear-gradient(124deg, #ffd8d2 0%, #f0aaa1 34%, #cf7f87 62%, #8f4a64 100%);
+  --marketing-button-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 16px 36px rgba(131, 68, 84, 0.34);
 }
 
 /* Dark Theme */
@@ -71,14 +73,16 @@
   --overlay: rgba(0,0,0,0.6);
   --shimmer-from: #1f1f2e;
   --shimmer-to: #2a2a3e;
-  --marketing-bg-start: #05070d;
-  --marketing-bg-end: #0e1220;
-  --marketing-text-strong: #f8f3ef;
-  --marketing-text-muted: #c9b4ad;
+  --marketing-bg-start: #05070f;
+  --marketing-bg-end: #0b1020;
+  --marketing-text-strong: #f8f1eb;
+  --marketing-text-muted: #c8aca3;
   --marketing-accent: #f2b7a2;
-  --marketing-glass: rgba(13, 17, 29, 0.7);
-  --marketing-glass-border: rgba(242, 183, 162, 0.24);
-  --marketing-overlay: rgba(3, 5, 10, 0.56);
+  --marketing-glass: rgba(14, 18, 32, 0.78);
+  --marketing-glass-border: rgba(242, 183, 162, 0.28);
+  --marketing-overlay: rgba(4, 6, 12, 0.62);
+  --marketing-button-gradient: linear-gradient(124deg, #ffd8d2 0%, #efa89d 34%, #d1818f 62%, #a75d76 100%);
+  --marketing-button-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 16px 38px rgba(159, 92, 110, 0.34);
 }
 
 /* Theme transition */
@@ -254,7 +258,18 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
   background: var(--marketing-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 16px 46px rgba(10, 12, 19, 0.13), 0 8px 26px rgba(10, 12, 19, 0.1);
+  box-shadow: 0 20px 52px rgba(10, 12, 19, 0.16), 0 10px 28px rgba(10, 12, 19, 0.13);
+}
+
+.marketing-rose-btn {
+  min-height: 44px;
+  border-radius: 999px;
+  background: var(--marketing-button-gradient);
+  color: #160f14;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 228, 220, 0.45);
+  box-shadow: var(--marketing-button-shadow);
 }
 
 .marketing-interactive {

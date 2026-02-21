@@ -32,7 +32,7 @@ export default function SupportPage() {
         <p className="marketing-kicker" style={{ marginBottom: 20 }}>
           Our support team is available Monday - Friday, 9am - 6pm.
         </p>
-        <Link href="/contact" style={{ minHeight: 44, borderRadius: 999, padding: "12px 24px", background: "linear-gradient(125deg, #f7d4c4, #d89d8f 45%, #9a5f60)", color: "#130d11", display: "inline-flex", alignItems: "center", fontWeight: 700, transition: "transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out" }}>
+        <Link href="/contact" className="marketing-rose-btn" style={{ minHeight: 44, borderRadius: 999, padding: "12px 24px", display: "inline-flex", alignItems: "center", transition: "transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out" }}>
           Contact Us
         </Link>
       </div>
