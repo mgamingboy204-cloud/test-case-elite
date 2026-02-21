@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card } from "@/app/components/ui/Card";
 import { Input } from "@/app/components/ui/Input";
 import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
@@ -122,23 +121,23 @@ export default function SignupPage() {
   };
 
   return (
-    <Card style={{ maxWidth: 440, width: "100%", padding: 0 }}>
-      <div style={{ padding: "32px 28px" }}>
-        <h2 style={{ marginBottom: 4 }}>Create account</h2>
-        <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 20 }}>
+    <div className="auth-form-card">
+      <div className="auth-form-inner">
+        <h2 className="auth-title">Create account</h2>
+        <p className="auth-subtitle">
           {step === "account"
             ? "Step 1: Create pending signup using phone, optional email, and password"
             : "Step 2: Verify OTP to create your user account and start onboarding"}
         </p>
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+        <div className="step-indicator" aria-hidden="true">
           {["account", "otp"].map((s, i) => (
             <div
               key={s}
               style={{
                 flex: 1,
                 height: 4,
-                borderRadius: 2,
+                borderRadius: 999,
                 background: i <= (step === "account" ? 0 : 1) ? "var(--primary)" : "var(--border)",
                 transition: "background 300ms ease"
               }}
@@ -148,13 +147,14 @@ export default function SignupPage() {
 
         {step === "account" ? (
           <>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="field-stack">
               <Input
                 label="Full Name"
                 placeholder="Your name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 error={errors.name}
+                style={inputStyle}
               />
               <Input
                 label="Phone Number"
@@ -165,6 +165,7 @@ export default function SignupPage() {
                 error={errors.phone}
                 maxLength={10}
                 inputMode="numeric"
+                style={inputStyle}
               />
               <Input
                 label="Email (optional)"
@@ -173,6 +174,7 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 error={errors.email}
+                style={inputStyle}
               />
               <Input
                 label="Password"
@@ -181,6 +183,7 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 error={errors.password}
+                style={inputStyle}
               />
               <Input
                 label="Confirm Password"
@@ -189,27 +192,26 @@ export default function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 error={errors.confirmPassword}
+                style={inputStyle}
               />
             </div>
 
-            <Button fullWidth size="lg" loading={loading} onClick={handleRegister} style={{ marginTop: 24 }}>
+            <Button fullWidth size="lg" loading={loading} onClick={handleRegister} style={buttonStyle}>
               Continue to OTP Verification
             </Button>
 
-            <p style={{ fontSize: 14, color: "var(--muted)", textAlign: "center", marginTop: 20 }}>
+            <p className="switch-link-wrap" style={{ marginTop: 20 }}>
               Already have an account?{" "}
-              <Link href="/login" style={{ color: "var(--primary)", fontWeight: 600 }}>
+              <Link href="/login" className="switch-link">
                 Sign In
               </Link>
             </p>
           </>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <p style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}>
-              OTP sent to {cleanedPhone}. Enter the 6-digit code.
-            </p>
+          <div className="otp-stack">
+            <p className="otp-copy">OTP sent to {cleanedPhone}. Enter the 6-digit code.</p>
 
-            <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, cursor: "pointer" }}>
+            <label className="check-row">
               <input
                 type="checkbox"
                 checked={rememberMe}
@@ -222,15 +224,85 @@ export default function SignupPage() {
             <OtpInput onComplete={handleVerifyOtp} disabled={loading} />
             <ResendTimer onResend={handleResendOtp} />
 
-            <button
-              onClick={() => setStep("account")}
-              style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}
-            >
+            <button onClick={() => setStep("account")} className="back-link">
               Back to account details
             </button>
           </div>
         )}
       </div>
-    </Card>
+
+      <style jsx>{`
+        .auth-form-card {
+          width: 100%;
+        }
+        .auth-form-inner {
+          padding: clamp(24px, 5vw, 34px);
+        }
+        .auth-title {
+          margin-bottom: 6px;
+          font-size: clamp(1.6rem, 4vw, 2rem);
+          line-height: 1.2;
+        }
+        .auth-subtitle {
+          color: var(--muted);
+          font-size: 0.92rem;
+          margin-bottom: 20px;
+        }
+        .step-indicator {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 24px;
+        }
+        .field-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+        .otp-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .otp-copy,
+        .back-link {
+          font-size: 14px;
+          color: var(--muted);
+          text-align: center;
+        }
+        .check-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 14px;
+          cursor: pointer;
+        }
+        .switch-link-wrap {
+          font-size: 14px;
+          color: var(--muted);
+          text-align: center;
+        }
+        .switch-link {
+          color: var(--primary);
+          font-weight: 600;
+        }
+      `}</style>
+    </div>
   );
 }
+
+const inputStyle = {
+  minHeight: 50,
+  borderRadius: "14px",
+  background: "color-mix(in srgb, var(--panel) 84%, transparent)",
+  borderColor: "color-mix(in srgb, var(--border) 88%, transparent)",
+  padding: "13px 16px",
+};
+
+const buttonStyle = {
+  marginTop: 24,
+  borderRadius: 999,
+  background: "linear-gradient(100deg, #d78a84 0%, #e6b18c 55%, #cf7f79 100%)",
+  color: "#fff8f3",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35), 0 16px 30px rgba(186, 111, 104, 0.35)",
+  letterSpacing: "0.01em",
+};

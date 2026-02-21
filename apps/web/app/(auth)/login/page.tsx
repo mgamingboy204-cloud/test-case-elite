@@ -100,26 +100,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: 430,
-        borderRadius: 28,
-        border: "1px solid rgba(255,255,255,0.12)",
-        backdropFilter: "blur(15px)",
-        background: "rgba(255,255,255,0.05)",
-        boxShadow: "0 24px 60px rgba(0,0,0,0.35)",
-      }}
-    >
-      <div style={{ padding: "28px 22px" }}>
-        <h2 style={{ marginBottom: 4, fontSize: "clamp(1.5rem, 4vw, 2rem)" }}>Welcome back</h2>
-        <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
-          Sign in to your account
-        </p>
+    <div className="auth-form-card">
+      <div className="auth-form-inner">
+        <h2 className="auth-title">Welcome back</h2>
+        <p className="auth-subtitle">Sign in to your account</p>
 
         {!otpRequired ? (
           <>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div className="field-stack">
               <Input
                 label="Phone Number"
                 type="tel"
@@ -129,6 +117,7 @@ export default function LoginPage() {
                 error={errors.phone}
                 maxLength={10}
                 inputMode="numeric"
+                style={inputStyle}
               />
               <div style={{ position: "relative" }}>
                 <Input
@@ -138,25 +127,19 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   error={errors.password}
+                  style={inputStyle}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: "absolute",
-                    right: 14,
-                    top: 36,
-                    fontSize: 13,
-                    color: "var(--muted)",
-                    fontWeight: 500,
-                  }}
+                  className="show-password"
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, cursor: "pointer" }}>
+              <div className="check-stack">
+                <label className="check-row">
                   <input
                     type="checkbox"
                     checked={rememberMe}
@@ -165,7 +148,7 @@ export default function LoginPage() {
                   />
                   Remember me
                 </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, cursor: "pointer" }}>
+                <label className="check-row">
                   <input
                     type="checkbox"
                     checked={rememberDevice}
@@ -177,41 +160,128 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <Button
-              fullWidth
-              size="lg"
-              loading={loading}
-              onClick={handleLogin}
-              style={{ marginTop: 24, borderRadius: 999, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35), 0 14px 28px rgba(230,57,70,0.35)" }}
-            >
+            <Button fullWidth size="lg" loading={loading} onClick={handleLogin} style={buttonStyle}>
               Sign In
             </Button>
 
-            <div style={{ textAlign: "center", marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-              <Link href="/otp" style={{ fontSize: 14, color: "var(--primary)", fontWeight: 500 }}>
+            <div className="auth-links">
+              <Link href="/otp" className="otp-link">
                 Sign in with OTP instead
               </Link>
-              <p style={{ fontSize: 14, color: "var(--muted)" }}>
+              <p className="switch-link-wrap">
                 {"Don't have an account? "}
-                <Link href="/signup" style={{ color: "var(--primary)", fontWeight: 600 }}>
+                <Link href="/signup" className="switch-link">
                   Sign Up
                 </Link>
               </p>
             </div>
           </>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <p style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}>
-              Enter the 6-digit code sent to your phone
-            </p>
+          <div className="otp-stack">
+            <p className="otp-copy">Enter the 6-digit code sent to your phone</p>
             <OtpInput onComplete={handleVerifyOtp} disabled={loading} />
             <ResendTimer onResend={handleSendOtp} />
-            <button onClick={() => setOtpRequired(false)} style={{ fontSize: 14, color: "var(--muted)", textAlign: "center" }}>
+            <button onClick={() => setOtpRequired(false)} className="back-link">
               Back to login
             </button>
           </div>
         )}
       </div>
+
+      <style jsx>{`
+        .auth-form-card {
+          width: 100%;
+        }
+        .auth-form-inner {
+          padding: clamp(24px, 5vw, 34px);
+        }
+        .auth-title {
+          margin-bottom: 6px;
+          font-size: clamp(1.65rem, 4vw, 2.15rem);
+          line-height: 1.2;
+        }
+        .auth-subtitle {
+          color: var(--muted);
+          font-size: 0.96rem;
+          margin-bottom: 24px;
+        }
+        .field-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+        }
+        .show-password {
+          position: absolute;
+          right: 14px;
+          top: 39px;
+          font-size: 13px;
+          color: var(--muted);
+          font-weight: 600;
+        }
+        .show-password:hover {
+          color: var(--primary);
+        }
+        .check-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .check-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 14px;
+          color: color-mix(in srgb, var(--text) 84%, var(--muted));
+          cursor: pointer;
+        }
+        .auth-links {
+          text-align: center;
+          margin-top: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .otp-link,
+        .switch-link {
+          color: var(--primary);
+          font-weight: 600;
+        }
+        .otp-link {
+          font-size: 0.94rem;
+        }
+        .switch-link-wrap {
+          font-size: 14px;
+          color: var(--muted);
+        }
+        .otp-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .otp-copy,
+        .back-link {
+          font-size: 14px;
+          color: var(--muted);
+          text-align: center;
+        }
+      `}</style>
     </div>
   );
 }
+
+const inputStyle = {
+  minHeight: 50,
+  borderRadius: "14px",
+  background: "color-mix(in srgb, var(--panel) 84%, transparent)",
+  borderColor: "color-mix(in srgb, var(--border) 88%, transparent)",
+  padding: "13px 16px",
+};
+
+const buttonStyle = {
+  marginTop: 24,
+  borderRadius: 999,
+  background: "linear-gradient(100deg, #d78a84 0%, #e6b18c 55%, #cf7f79 100%)",
+  color: "#fff8f3",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35), 0 16px 30px rgba(186, 111, 104, 0.35)",
+  letterSpacing: "0.01em",
+};
