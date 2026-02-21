@@ -36,4 +36,23 @@ describe("apiFetch client", () => {
     const headers = options.headers as Headers;
     expect(headers.get("Authorization")).toBe("Bearer test-token");
   });
+
+  it("falls back to same-origin /api when NEXT_PUBLIC_API_BASE_URL is unset", async () => {
+    vi.resetModules();
+    delete process.env.NEXT_PUBLIC_API_BASE_URL;
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({
+      ok: true,
+      headers: { get: () => "application/json" },
+      json: async () => ({ ok: true })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { apiFetch } = await import("../lib/api");
+    await apiFetch("/me");
+
+    const call = fetchMock.mock.calls[0];
+    expect(call?.[0]).toBe("/api/me");
+  });
+
 });
