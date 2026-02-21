@@ -41,9 +41,15 @@ export default function LoginPage() {
     if (!validate()) return;
     setLoading(true);
     try {
+      const shouldRememberSession = rememberMe || rememberDevice;
       const loginResponse = await apiFetch<{ accessToken?: string; otpRequired?: boolean }>("/auth/login", {
         method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), password, rememberMe, rememberDevice30Days: rememberDevice } as never,
+        body: {
+          phone: phone.replace(/\D/g, ""),
+          password,
+          rememberMe: shouldRememberSession,
+          rememberDevice30Days: rememberDevice,
+        } as never,
         auth: "omit",
       });
       if (loginResponse?.otpRequired) {
@@ -81,9 +87,10 @@ export default function LoginPage() {
   const handleVerifyOtp = async (code: string) => {
     setLoading(true);
     try {
+      const shouldRememberSession = rememberMe || rememberDevice;
       const verificationResponse = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", {
         method: "POST",
-        body: { phone: phone.replace(/\D/g, ""), code, rememberMe } as never,
+        body: { phone: phone.replace(/\D/g, ""), code, rememberMe: shouldRememberSession } as never,
         auth: "omit",
       });
       if (verificationResponse?.accessToken) {
