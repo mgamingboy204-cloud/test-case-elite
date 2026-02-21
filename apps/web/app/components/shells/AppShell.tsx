@@ -19,21 +19,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { theme, toggle } = useTheme();
 
   const headerStyle: CSSProperties = {
-    height: 56,
-    background: "var(--panel)",
-    borderBottom: "1px solid var(--border)",
+    minHeight: 56,
+    background: "color-mix(in srgb, var(--surface2) 88%, transparent)",
+    borderBottom: "1px solid var(--discover-border)",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "0 24px",
+    padding: "max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px))",
     position: "sticky",
     top: 0,
     zIndex: 50,
+    backdropFilter: "blur(12px) saturate(120%)",
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* Top header (both mobile & desktop) */}
+    <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
       <header style={headerStyle} className="app-header">
         <Link
           href="/discover"
@@ -63,7 +63,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <div style={{ flex: 1, display: "flex" }}>
+      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
         {/* Desktop sidebar */}
         <aside
           className="app-sidebar"
@@ -77,7 +77,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             gap: 4,
             position: "sticky",
             top: 56,
-            height: "calc(100vh - 56px)",
+            height: "calc(100dvh - 56px)",
             overflowY: "auto",
           }}
         >
@@ -111,10 +111,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main
           style={{
             flex: 1,
+            minHeight: 0,
             minWidth: 0,
             maxWidth: 800,
             margin: "0 auto",
-            padding: "0 16px",
+            padding: "16px max(16px, env(safe-area-inset-right, 0px)) calc(88px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))",
+            overflowY: "auto",
             width: "100%",
           }}
         >
