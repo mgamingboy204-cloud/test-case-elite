@@ -12,6 +12,10 @@
 /* CSS Variables - Light Theme (default) */
 :root,
 [data-theme="light"] {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
   --bg: #f6f3ef;
   --bg2: #faf7f3;
   --surface: #ffffff;
@@ -185,8 +189,17 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
 }
 
 /* Safe area support */
+.safe-top {
+  padding-top: max(16px, var(--sat));
+}
+
 .safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: max(16px, var(--sab));
+}
+
+.safe-x {
+  padding-left: max(16px, var(--sal));
+  padding-right: max(16px, var(--sar));
 }
 
 /* Shimmer animation for skeletons */

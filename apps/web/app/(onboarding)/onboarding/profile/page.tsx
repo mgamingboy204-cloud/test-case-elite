@@ -140,7 +140,7 @@ export default function ProfileWizardPage() {
   return (
     <div
       style={{
-        padding: "0 0 max(28px, env(safe-area-inset-bottom, 0px))",
+        paddingBottom: 28,
         maxWidth: 640,
         margin: "0 auto"
       }}
@@ -288,7 +288,7 @@ export default function ProfileWizardPage() {
         </div>
       </Card>
 
-      <div style={{ display: "flex", gap: 10 }}>
+      <div className="safe-bottom" style={{ display: "flex", gap: 10 }}>
         {currentStep > 0 && (
           <Button variant="secondary" fullWidth size="lg" onClick={() => setCurrentStep((v) => v - 1)}>
             Back
