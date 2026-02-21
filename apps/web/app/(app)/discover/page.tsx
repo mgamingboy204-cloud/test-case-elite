@@ -11,20 +11,9 @@ import { Skeleton } from "@/app/components/ui/Skeleton";
 import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { Button } from "@/app/components/ui/Button";
 import { useTheme, useToast } from "@/app/providers";
-import { apiFetch } from "@/lib/api";
 import type { CSSProperties } from "react";
-
-interface Profile {
-  id: string;
-  userId: string;
-  name: string;
-  age: number;
-  city: string;
-  bio: string;
-  photo: string;
-  verified: boolean;
-  premium: boolean;
-}
+import { apiFetch } from "@/lib/api";
+import { useDiscoverBuffer } from "./useDiscoverBuffer";
 
 const ALL_INTERESTS = ["Travel", "Fitness", "Music", "Cooking", "Reading", "Photography", "Movies", "Art", "Hiking", "Gaming", "Yoga", "Dancing"];
 
@@ -32,10 +21,6 @@ export default function DiscoverPage() {
   const { addToast } = useToast();
   const { theme, toggle } = useTheme();
   const [intent, setIntent] = useState("all");
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [distance, setDistance] = useState(50);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
@@ -51,38 +36,16 @@ export default function DiscoverPage() {
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const [animatingOut, setAnimatingOut] = useState(false);
 
-  const fetchProfiles = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const interestQuery = selectedInterests.length ? `&interests=${encodeURIComponent(selectedInterests.join(","))}` : "";
-      const data = await apiFetch<any>(`/discover/feed?intent=${intent}&limit=24${interestQuery}`);
-      const items = Array.isArray(data?.items) ? data.items : [];
-      const mapped: Profile[] = items.map((item: any) => ({
-        id: item.userId,
-        userId: item.userId,
-        name: item.name ?? "Member",
-        age: Number(item.age ?? 18),
-        city: item.city ?? "",
-        bio: item.bioShort ?? "",
-        photo: item.primaryPhotoUrl ?? "",
-        verified: item.videoVerificationStatus === "APPROVED",
-        premium: false,
-      }));
-      setProfiles(mapped);
-      setCurrentIndex(0);
-    } catch {
-      setError(true);
-      setProfiles([]);
-      setCurrentIndex(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [intent, distance, selectedInterests]);
-
-  useEffect(() => {
-    fetchProfiles();
-  }, [fetchProfiles]);
+  const {
+    currentCard: currentProfile,
+    loading,
+    error,
+    syncWarning,
+    advance,
+    reload,
+    lowWatermark,
+    batchSize,
+  } = useDiscoverBuffer({ intent, distance, selectedInterests });
 
   useEffect(() => {
     if (intentInitializedRef.current) return;
@@ -109,24 +72,14 @@ export default function DiscoverPage() {
     void setInitialIntentTab();
   }, []);
 
-  const currentProfile = profiles[currentIndex];
-
   const handleAction = useCallback(
-    async (type: "LIKE" | "PASS", direction?: "left" | "right") => {
+    (type: "LIKE" | "PASS", direction?: "left" | "right") => {
       if (!currentProfile || animatingOut) return;
 
       setAnimatingOut(true);
       setSwipeDirection(direction || (type === "PASS" ? "left" : "right"));
       setSwipeX(direction === "left" || type === "PASS" ? -500 : 500);
-
-      try {
-        await apiFetch("/likes", {
-          method: "POST",
-          body: { toUserId: currentProfile.userId, type } as never,
-        });
-      } catch {
-        /* stub */
-      }
+      advance(type);
 
       const feedbackMessages: Record<string, string> = {
         LIKE: "Liked!",
@@ -136,14 +89,13 @@ export default function DiscoverPage() {
       addToast(feedbackMessages[type], type === "PASS" ? "info" : "success");
 
       setTimeout(() => {
-        setCurrentIndex((i) => i + 1);
         setSwipeX(0);
         setSwipeY(0);
         setSwipeDirection(null);
         setAnimatingOut(false);
       }, 250);
     },
-    [currentProfile, animatingOut, addToast]
+    [currentProfile, animatingOut, addToast, advance]
   );
 
   /* Pointer handlers for swipe */
@@ -250,7 +202,7 @@ export default function DiscoverPage() {
             <Skeleton width="100%" height="100%" radius={30} />
           </div>
         ) : error ? (
-          <ErrorState onRetry={fetchProfiles} />
+          <ErrorState onRetry={reload} />
         ) : !currentProfile ? (
           <EmptyState
             title="No more profiles"
@@ -383,10 +335,7 @@ export default function DiscoverPage() {
         >
           <button
             onClick={() => {
-              if (currentIndex > 0) {
-                setCurrentIndex((i) => i - 1);
-                addToast("Rewound", "info");
-              }
+              addToast("Rewind is unavailable in buffered mode", "info");
             }}
             style={actionBtnStyle("var(--surface2)", 54)}
             aria-label="Rewind"
@@ -494,7 +443,7 @@ export default function DiscoverPage() {
             fullWidth
             onClick={() => {
               setFilterOpen(false);
-              fetchProfiles();
+              reload();
             }}
           >
             Apply Filters
@@ -514,6 +463,16 @@ export default function DiscoverPage() {
           </button>
         </div>
       </BottomSheet>
+
+      {syncWarning && (
+        <div style={{ textAlign: "center", padding: "4px 12px", fontSize: 12, color: "var(--muted)" }}>
+          Syncing swipes in background...
+        </div>
+      )}
+
+      <div style={{ textAlign: "center", paddingBottom: 8, fontSize: 11, color: "var(--muted)" }}>
+        Buffered discover enabled ({batchSize} batch / refill below {lowWatermark})
+      </div>
 
       <DiscoverFilterBridge onOpen={() => setFilterOpen(true)} />
     </div>
