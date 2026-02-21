@@ -53,8 +53,8 @@ export default function HomePage() {
             A private introduction service for discerning members who value elegance, discretion, and exceptional chemistry.
           </p>
           <div className="hero-actions">
-            <Link href="/signup" className="cta cta-primary">Request Invitation</Link>
-            <Link href="/login" className="cta cta-secondary">Existing Member</Link>
+            <Link href="/signup" className="cta cta-primary">REQUEST INVITATION</Link>
+            <Link href="/login" className="cta cta-secondary">EXISTING MEMBER</Link>
           </div>
         </div>
       </section>
@@ -168,56 +168,73 @@ export default function HomePage() {
         }
 
         .hero-actions {
-          margin-top: 30px;
+          margin-top: 34px;
           display: flex;
           justify-content: center;
+          gap: 20px;
           flex-wrap: wrap;
-          gap: 12px;
         }
 
-        .cta {
-          min-height: 48px;
-          min-width: min(240px, 100%);
-          border-radius: 999px;
-          padding: 0 24px;
-          font-size: 0.95rem;
-          font-weight: 700;
-          letter-spacing: 0.02em;
+        :global(.cta) {
+          height: 56px;
+          min-width: 282px;
+          border-radius: 9999px;
+          padding: 0 40px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          position: relative;
-          overflow: hidden;
-          transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          font-weight: 600;
+          font-size: 0.95rem;
+          cursor: pointer;
+          transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease, filter 220ms ease, background-color 220ms ease;
+          will-change: transform;
         }
 
-        .cta::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          transform: translateX(-140%);
-          background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.35), transparent);
-          transition: transform 500ms ease;
+        :global(.cta):focus-visible {
+          outline: none;
+          box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 0 5px rgba(244, 63, 94, 0.45);
         }
 
-        .cta:hover {
-          transform: translateY(-2px);
-        }
+        :global(.cta):hover { transform: translateY(-2px); }
+        :global(.cta):active { transform: translateY(1px); }
 
-        .cta:hover::after { transform: translateX(130%); }
-        .cta:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-
-        .cta-primary {
+        :global(.cta-primary) {
           color: #fff;
-          box-shadow: 0 8px 30px rgba(225, 29, 72, 0.4);
-          background: linear-gradient(125deg, #fb7185, #e11d48);
+          background: linear-gradient(120deg, #ff5f6d, #ff455a);
+          box-shadow: 0 14px 32px rgba(255, 77, 94, 0.35);
         }
 
-        .cta-secondary {
+        :global(.cta-primary):hover {
+          filter: brightness(1.08);
+          box-shadow: 0 16px 34px rgba(255, 77, 94, 0.45);
+        }
+
+        :global(.cta-primary):active {
+          box-shadow: 0 9px 18px rgba(255, 77, 94, 0.28);
+        }
+
+        :global(.cta-secondary) {
           color: #fff;
-          border: 1px solid rgba(255, 255, 255, 0.6);
-          background: rgba(15, 23, 42, 0.25);
+          border: 1px solid rgba(148, 163, 184, 0.54);
+          background: rgba(15, 23, 42, 0.82);
+          box-shadow: 0 12px 28px rgba(2, 6, 23, 0.34);
           backdrop-filter: blur(6px);
+        }
+
+        :global(html.dark .cta-secondary) {
+          border-color: rgba(255, 255, 255, 0.24);
+          background: rgba(15, 23, 42, 0.76);
+        }
+
+        :global(.cta-secondary):hover {
+          border-color: rgba(226, 232, 240, 0.82);
+          box-shadow: 0 15px 31px rgba(2, 6, 23, 0.38);
+        }
+
+        :global(.cta-secondary):active {
+          box-shadow: 0 9px 18px rgba(2, 6, 23, 0.28);
         }
 
         .feature-section {
@@ -282,10 +299,25 @@ export default function HomePage() {
         @media (max-width: 768px) {
           .home-page { padding-left: 10px; padding-right: 10px; }
           .hero-wrap { min-height: 76dvh; }
-          .hero-actions { flex-direction: column; align-items: stretch; }
-          .cta { width: 100%; min-width: 0; }
           .feature-grid { grid-template-columns: 1fr; }
           .feature-card { min-height: 190px; }
+        }
+
+        @media (max-width: 479px) {
+          .hero-actions {
+            width: min(92vw, 360px);
+            margin-left: auto;
+            margin-right: auto;
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          :global(.cta) {
+            width: 100%;
+            min-width: 0;
+            height: 52px;
+            padding: 0 32px;
+          }
         }
 
         @keyframes contentRise {
@@ -299,8 +331,10 @@ export default function HomePage() {
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .hero-bg, .hero-content, .cta, .feature-card { animation: none; transition: none; }
-          .cta::after { display: none; }
+
+           .hero-bg, .hero-content, .feature-card { animation: none; transition: none; }
+          :global(.cta) { transition: border-color 220ms ease, box-shadow 220ms ease, filter 220ms ease, background-color 220ms ease; }
+          :global(.cta:hover), :global(.cta:active) { transform: none; }
         }
       `}</style>
     </div>
