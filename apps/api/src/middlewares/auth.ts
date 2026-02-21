@@ -35,6 +35,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   if (user.status === "BANNED") {
     return res.status(403).json({ message: "Banned" });
   }
+  (req as Request & { user?: { userId: string; id: string } }).user = { userId: user.id, id: user.id };
   res.locals.user = user;
   return next();
 }
