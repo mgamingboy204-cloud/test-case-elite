@@ -150,12 +150,11 @@ model Profile {
   userId      String @id
   name        String
   gender      Gender
-  genderPreference GenderPreference @default(ALL)
   age         Int
   city        String
   profession  String
   bioShort    String
-  preferences Json
+  intent      String  @default("dating")
 
   user User @relation(fields: [userId], references: [id])
 }

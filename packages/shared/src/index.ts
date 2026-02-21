@@ -3,7 +3,6 @@ import { z } from "zod";
 const PhoneSchema = z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits.");
 
 const GenderSchema = z.enum(["MALE", "FEMALE", "NON_BINARY", "OTHER"]);
-const GenderPreferenceSchema = z.enum(["MALE", "FEMALE", "NON_BINARY", "OTHER", "ALL"]);
 
 export const RegisterSchema = z.object({
   phone: PhoneSchema,
@@ -27,12 +26,11 @@ export const ProfileSchema = z
     firstName: z.string().min(1).optional().nullable(),
     lastName: z.string().min(1).optional().nullable(),
     gender: GenderSchema,
-    genderPreference: GenderPreferenceSchema.optional().default("ALL"),
     age: z.number().int().min(18),
     city: z.string().min(1),
     profession: z.string().min(1),
     bioShort: z.string().min(1),
-    preferences: z.record(z.any()).default({})
+    intent: z.enum(["dating", "friends", "all"]).default("dating")
   })
   .superRefine((value, ctx) => {
     if (!value.displayName && !value.name) {
