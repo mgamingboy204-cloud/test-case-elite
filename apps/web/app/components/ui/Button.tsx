@@ -76,11 +76,16 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           ...sizeStyles[size],
           ...style,
         }}
+        onPointerEnter={(e) => {
+          if (!disabled && !loading && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
+          }
+        }}
         onPointerDown={(e) => {
           if (!disabled && !loading) {
             (e.currentTarget as HTMLButtonElement).style.opacity = "0.92";
           }
-          if (!disabled && !loading) {
+          if (!disabled && !loading && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
             (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.98)";
           }
         }}

@@ -9,32 +9,149 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="auth-shell">
-      <div className="bg-overlay" />
-      <div className="top-row">
+      <div className="auth-backdrop" aria-hidden="true" />
+      <div className="auth-overlay" aria-hidden="true" />
+      <div className="auth-vignette" aria-hidden="true" />
+      <div className="auth-glow auth-glow-top" aria-hidden="true" />
+      <div className="auth-glow auth-glow-bottom" aria-hidden="true" />
+
+      <header className="top-row">
         <Link href="/" className="brand">Elite Match</Link>
         <button onClick={toggle} className="theme-btn" aria-label="Toggle theme">
           {theme === "light" ? "☾" : "☀"}
         </button>
-      </div>
+      </header>
 
-      <aside className="auth-panel">{children}</aside>
+      <main className="auth-panel">{children}</main>
 
       <style jsx>{`
-        .auth-shell { min-height: 100vh; min-height: 100dvh; position: relative; background-image: url('https://images.unsplash.com/photo-1499952127939-9bbf5af6c51c?auto=format&fit=crop&w=2200&q=80'); background-size: cover; background-position: center; display: flex; justify-content: flex-end; align-items: stretch; }
-        .bg-overlay { position: absolute; inset: 0; background: radial-gradient(circle at 70% 25%, rgba(0,0,0,0.08), rgba(0,0,0,0.68)); }
-        .top-row { position: absolute; top: 18px; left: 18px; right: 18px; z-index: 3; display: flex; align-items: center; justify-content: space-between; }
-        .brand { font-size: 29px; font-weight: 800; letter-spacing: -0.03em; color: #fff; }
-        .theme-btn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.08); backdrop-filter: blur(14px); color: #fff; }
-        .auth-panel { width: min(480px, 100%); z-index: 2; padding: 96px 24px 24px; background: rgba(255,255,255,0.05); border-left: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(18px); display: flex; align-items: center; justify-content: center; }
-        :global([data-theme='light']) .auth-shell { background-image: url('https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=2200&q=80'); }
-        :global([data-theme='light']) .bg-overlay { background: radial-gradient(circle at 70% 24%, rgba(255,255,255,0.2), rgba(255,255,255,0.66)); }
-        :global([data-theme='light']) .brand, :global([data-theme='light']) .theme-btn { color: #1f2533; }
-        :global([data-theme='light']) .theme-btn { border-color: rgba(17,24,39,0.2); background: rgba(255,255,255,0.66); }
-        :global([data-theme='light']) .auth-panel { background: rgba(255,255,255,0.58); border-left-color: rgba(255,255,255,0.75); }
+        .auth-shell {
+          min-height: 100vh;
+          min-height: 100dvh;
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          padding: calc(20px + env(safe-area-inset-top, 0px)) calc(22px + env(safe-area-inset-right, 0px)) calc(22px + env(safe-area-inset-bottom, 0px)) calc(22px + env(safe-area-inset-left, 0px));
+          background: linear-gradient(145deg, #121019 0%, #1a141a 44%, #24181f 100%);
+        }
+        .auth-backdrop,
+        .auth-overlay,
+        .auth-vignette,
+        .auth-glow {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+        }
+        .auth-backdrop {
+          background-image: url('https://images.unsplash.com/photo-1499952127939-9bbf5af6c51c?auto=format&fit=crop&w=2200&q=80');
+          background-size: cover;
+          background-position: center;
+          filter: blur(6px) saturate(0.86);
+          transform: scale(1.05);
+          opacity: 0.45;
+        }
+        .auth-overlay {
+          background: linear-gradient(125deg, rgba(17, 13, 18, 0.86), rgba(28, 18, 24, 0.72));
+          backdrop-filter: blur(2px);
+        }
+        .auth-vignette {
+          background: radial-gradient(circle at center, rgba(255,255,255,0) 38%, rgba(5,4,7,0.65) 100%);
+        }
+        .auth-glow-top {
+          background: radial-gradient(circle at 18% 16%, rgba(238, 177, 147, 0.2), rgba(238, 177, 147, 0) 42%);
+        }
+        .auth-glow-bottom {
+          background: radial-gradient(circle at 82% 84%, rgba(199, 130, 121, 0.18), rgba(199, 130, 121, 0) 40%);
+        }
+        .top-row {
+          position: absolute;
+          top: calc(20px + env(safe-area-inset-top, 0px));
+          left: calc(22px + env(safe-area-inset-left, 0px));
+          right: calc(22px + env(safe-area-inset-right, 0px));
+          z-index: 5;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .brand {
+          font-size: clamp(1.45rem, 2.4vw, 1.9rem);
+          font-weight: 800;
+          letter-spacing: 0.02em;
+          color: #fff3ee;
+          text-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+        }
+        .theme-btn {
+          width: 42px;
+          height: 42px;
+          border-radius: 999px;
+          border: 1px solid rgba(238, 202, 179, 0.42);
+          background: rgba(38, 24, 32, 0.58);
+          backdrop-filter: blur(16px);
+          color: #fbe6da;
+          box-shadow: 0 8px 24px rgba(12, 8, 12, 0.35);
+          display: grid;
+          place-items: center;
+        }
+        .auth-panel {
+          position: relative;
+          z-index: 3;
+          width: min(92vw, 430px);
+          border-radius: 32px;
+          border: 1px solid rgba(244, 210, 186, 0.22);
+          background: linear-gradient(145deg, rgba(35, 25, 34, 0.84), rgba(26, 20, 30, 0.8));
+          backdrop-filter: blur(24px);
+          box-shadow: 0 28px 68px rgba(8, 6, 10, 0.62);
+        }
+        :global([data-theme='light']) .auth-shell {
+          background: linear-gradient(145deg, #f6f2ec 0%, #f3ede5 48%, #f2e8df 100%);
+        }
+        :global([data-theme='light']) .auth-backdrop {
+          background-image: url('https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=2200&q=80');
+          filter: blur(7px) saturate(0.68);
+          opacity: 0.34;
+        }
+        :global([data-theme='light']) .auth-overlay {
+          background: linear-gradient(135deg, rgba(247, 240, 231, 0.86), rgba(244, 234, 225, 0.8));
+        }
+        :global([data-theme='light']) .auth-vignette {
+          background: radial-gradient(circle at center, rgba(255,255,255,0) 42%, rgba(228, 215, 202, 0.46) 100%);
+        }
+        :global([data-theme='light']) .auth-glow-top {
+          background: radial-gradient(circle at 14% 14%, rgba(215, 181, 160, 0.32), rgba(215, 181, 160, 0) 44%);
+        }
+        :global([data-theme='light']) .auth-glow-bottom {
+          background: radial-gradient(circle at 80% 80%, rgba(202, 171, 150, 0.24), rgba(202, 171, 150, 0) 38%);
+        }
+        :global([data-theme='light']) .brand {
+          color: #2f2421;
+          text-shadow: none;
+        }
+        :global([data-theme='light']) .theme-btn {
+          color: #3b2c29;
+          border-color: rgba(185, 154, 132, 0.45);
+          background: rgba(255, 250, 245, 0.72);
+          box-shadow: 0 10px 24px rgba(143, 118, 95, 0.18);
+        }
+        :global([data-theme='light']) .auth-panel {
+          border-color: rgba(198, 166, 142, 0.35);
+          background: linear-gradient(145deg, rgba(255, 251, 247, 0.86), rgba(250, 243, 236, 0.8));
+          box-shadow: 0 24px 50px rgba(98, 77, 59, 0.16);
+        }
         @media (max-width: 900px) {
-          .auth-shell { align-items: flex-end; }
-          .auth-panel { width: 100%; padding: 84px 16px calc(16px + env(safe-area-inset-bottom)); border-radius: 28px 28px 0 0; border-left: none; border-top: 1px solid rgba(255,255,255,0.18); min-height: 78vh; background: rgba(255,255,255,0.08); }
-          :global([data-theme='light']) .auth-panel { background: rgba(255,255,255,0.72); }
+          .auth-shell {
+            justify-content: center;
+            align-items: center;
+            padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+          }
+          .top-row {
+            top: calc(14px + env(safe-area-inset-top, 0px));
+          }
+          .auth-panel {
+            width: min(92vw, 420px);
+            border-radius: 28px;
+          }
         }
       `}</style>
     </div>
