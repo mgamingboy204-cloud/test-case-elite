@@ -10,7 +10,7 @@ import { Badge } from "@/app/components/ui/Badge";
 import { Skeleton } from "@/app/components/ui/Skeleton";
 import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { Button } from "@/app/components/ui/Button";
-import { useToast } from "@/app/providers";
+import { useTheme, useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import type { CSSProperties } from "react";
 
@@ -30,6 +30,7 @@ const ALL_INTERESTS = ["Travel", "Fitness", "Music", "Cooking", "Reading", "Phot
 
 export default function DiscoverPage() {
   const { addToast } = useToast();
+  const { theme, toggle } = useTheme();
   const [intent, setIntent] = useState("all");
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -225,63 +226,6 @@ export default function DiscoverPage() {
         paddingBottom: "calc(var(--bn) + var(--sab) + 90px)",
       }}
     >
-      {/* Top header row */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "12px 8px 8px",
-          gap: 8,
-        }}
-      >
-        <span
-          style={{
-            fontSize: 15,
-            fontWeight: 800,
-            color: "var(--primary)",
-            display: "none",
-          }}
-          className="discover-wordmark"
-        >
-          Elite Match
-        </span>
-
-        <Tabs
-          tabs={[
-            { label: "All", value: "all" },
-            { label: "Dating", value: "dating" },
-            { label: "Friends", value: "friends" },
-          ]}
-          active={intent}
-          onChange={(next) => {
-            intentManuallyChangedRef.current = true;
-            setIntent(next);
-          }}
-          style={{ flex: 1, maxWidth: 300, margin: "0 auto" }}
-        />
-
-        <button
-          onClick={() => setFilterOpen(true)}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--border)",
-            background: "var(--panel)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 18,
-            color: "var(--text)",
-            flexShrink: 0,
-          }}
-          aria-label="Open filters"
-        >
-          {"\u2699"}
-        </button>
-      </div>
-
       {/* Card area */}
       <div
         style={{
@@ -481,6 +425,25 @@ export default function DiscoverPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           <div>
             <label style={{ fontSize: 14, fontWeight: 500, display: "block", marginBottom: 12 }}>
+              Looking for
+            </label>
+            <Tabs
+              tabs={[
+                { label: "All", value: "all" },
+                { label: "Dating", value: "dating" },
+                { label: "Friends", value: "friends" },
+              ]}
+              active={intent}
+              onChange={(next) => {
+                intentManuallyChangedRef.current = true;
+                setIntent(next);
+              }}
+            />
+          </div>
+
+
+          <div>
+            <label style={{ fontSize: 14, fontWeight: 500, display: "block", marginBottom: 12 }}>
               Distance: {distance} km
             </label>
             <input
@@ -536,8 +499,33 @@ export default function DiscoverPage() {
           >
             Apply Filters
           </Button>
+          <button
+            onClick={toggle}
+            style={{
+              border: "1px solid var(--border)",
+              background: "var(--surface2)",
+              borderRadius: "var(--radius-md)",
+              padding: "12px 14px",
+              textAlign: "left",
+              fontWeight: 600,
+            }}
+          >
+            Theme: {theme === "light" ? "Light" : "Dark"}
+          </button>
         </div>
       </BottomSheet>
+
+      <DiscoverFilterBridge onOpen={() => setFilterOpen(true)} />
     </div>
   );
+}
+
+function DiscoverFilterBridge({ onOpen }: { onOpen: () => void }) {
+  useEffect(() => {
+    const handler = () => onOpen();
+    window.addEventListener("elite-open-discover-filters", handler);
+    return () => window.removeEventListener("elite-open-discover-filters", handler);
+  }, [onOpen]);
+
+  return null;
 }
