@@ -27,6 +27,19 @@ function logSessionEvent(event: string, details: Record<string, unknown>) {
   }
 }
 
+function resolveRememberPreference(
+  value:
+    | {
+        rememberMe?: boolean;
+        rememberDevice30Days?: boolean;
+        rememberDevice?: boolean;
+      }
+    | null
+    | undefined
+) {
+  return Boolean(value?.rememberMe ?? value?.rememberDevice30Days ?? value?.rememberDevice ?? false);
+}
+
 export async function sendOtp(req: Request, res: Response) {
   const { phone } = req.body as { phone: string };
   await requestOtp(phone);
@@ -97,10 +110,12 @@ export async function register(req: Request, res: Response) {
 }
 
 export async function login(req: Request, res: Response) {
-  const { phone, password, rememberMe } = req.body as {
+  const { phone, password, rememberMe, rememberDevice30Days, rememberDevice } = req.body as {
     phone: string;
     password: string;
     rememberMe?: boolean;
+    rememberDevice30Days?: boolean;
+    rememberDevice?: boolean;
   };
 
   const result = await validateLogin({ phone, password });
@@ -110,7 +125,11 @@ export async function login(req: Request, res: Response) {
     return res.json({ ok: true, otpRequired: true });
   }
 
-  const resolvedRememberMe = rememberMe ?? false;
+  const resolvedRememberMe = resolveRememberPreference({
+    rememberMe,
+    rememberDevice30Days,
+    rememberDevice
+  });
 
   const accessToken = signAccessToken(result.user.id, { rememberMe: resolvedRememberMe });
   const refreshToken = signRefreshToken(result.user.id, { rememberMe: resolvedRememberMe });
@@ -121,7 +140,7 @@ export async function login(req: Request, res: Response) {
 
   res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
 
-  logSessionEvent("login", { userId: result.user.id });
+  logSessionEvent("login", { userId: result.user.id, rememberMe: resolvedRememberMe, refreshTtlDays });
 
   return res.json({
     ok: true,
@@ -187,6 +206,8 @@ export async function refreshAccessToken(req: Request, res: Response) {
 
   const refreshTtlDays = rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
   res.cookie(refreshCookieName, nextRefreshToken, buildRefreshCookieOptions(refreshTtlDays));
+
+  logSessionEvent("token-refreshed", { userId: user.id, rememberMe, refreshTtlDays });
 
   return res.json({ ok: true, accessToken });
 }

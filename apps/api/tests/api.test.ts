@@ -126,6 +126,35 @@ describe("Auth routes", () => {
     expect(refreshCookie).toContain("SameSite=Lax");
     expect(refreshCookie).toContain("Path=/");
   });
+
+  it("uses long refresh cookie ttl when remember device is selected", async () => {
+    const phone = "5551010103";
+    await prisma.user.create({
+      data: {
+        phone,
+        email: "remember@example.com",
+        passwordHash: await bcrypt.hash("Password@1", 10),
+        status: "APPROVED",
+        verifiedAt: new Date(),
+        phoneVerifiedAt: new Date()
+      }
+    });
+
+    const shortSessionLogin = await request(app).post("/auth/login").send({ phone, password: "Password@1" });
+    const rememberedLogin = await request(app)
+      .post("/auth/login")
+      .send({ phone, password: "Password@1", rememberDevice30Days: true });
+
+    const shortCookie = (shortSessionLogin.headers["set-cookie"] as string[] | undefined)?.find((cookie) =>
+      cookie.startsWith("em_refresh=")
+    );
+    const longCookie = (rememberedLogin.headers["set-cookie"] as string[] | undefined)?.find((cookie) =>
+      cookie.startsWith("em_refresh=")
+    );
+
+    expect(shortCookie).toContain("Max-Age=604800");
+    expect(longCookie).toContain("Max-Age=2592000");
+  });
 });
 
 describe("Discover routes", () => {
