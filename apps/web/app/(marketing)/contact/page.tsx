@@ -41,7 +41,7 @@ export default function ContactPage() {
             required
           />
           <Textarea label="Message" placeholder="Tell us how we can help..." rows={5} required />
-          <Button fullWidth loading={loading} type="submit" style={{ marginTop: 8, minHeight: 44 }}>
+          <Button fullWidth loading={loading} type="submit" className="marketing-rose-btn" style={{ marginTop: 8, minHeight: 44, background: "var(--marketing-button-gradient)", boxShadow: "var(--marketing-button-shadow)", border: "1px solid rgba(255,228,220,0.42)", color: "#160f14" }}>
             Send Message
           </Button>
         </form>

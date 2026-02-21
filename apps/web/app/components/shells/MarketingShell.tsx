@@ -40,7 +40,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
             <button onClick={toggle} className="theme-btn marketing-interactive" aria-label="Toggle theme">
               {theme === "light" ? "☾" : "☀"}
             </button>
-            <Link href="/signup" className="invite-btn marketing-interactive">Request Invitation</Link>
+            <Link href="/signup" className="invite-btn marketing-rose-btn marketing-interactive">Request Invitation</Link>
             <button className="mobile-menu-btn" onClick={() => setMenuOpen(true)} aria-label="Open menu">☰</button>
           </div>
         </div>
@@ -66,7 +66,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
 
       <div className="mobile-cta">
         <Link href="/" className="cta-home">Home</Link>
-        <Link href="/signup" className="cta-request">Request Invitation</Link>
+        <Link href="/signup" className="cta-request marketing-rose-btn">Request Invitation</Link>
       </div>
 
       {menuOpen && (
@@ -78,7 +78,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
                 {link.label}
               </Link>
             ))}
-            <Link href="/signup" className="sheet-signin" onClick={() => setMenuOpen(false)}>
+            <Link href="/signup" className="sheet-signin marketing-rose-btn" onClick={() => setMenuOpen(false)}>
               Request Invitation
             </Link>
           </div>
@@ -97,12 +97,12 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         }
         .shell-main { flex: 1; }
         .nav-row { max-width: 1200px; margin: 0 auto; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; }
-        .logo { font-size: 20px; font-weight: 800; color: var(--marketing-text-strong); letter-spacing: -0.02em; padding: 8px 4px; }
-        .desktop-nav { display: flex; align-items: center; gap: 20px; }
-        .nav-link { color: var(--marketing-text-strong); font-size: 15px; padding: 12px 10px; border-radius: 999px; min-height: 44px; display: inline-flex; align-items: center; }
+        .logo { font-size: 20px; font-weight: 800; color: var(--marketing-text-strong); letter-spacing: 0.01em; padding: 8px 4px; }
+        .desktop-nav { display: flex; align-items: center; gap: 26px; }
+        .nav-link { color: var(--marketing-text-strong); font-size: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 12px 10px; border-radius: 999px; min-height: 44px; display: inline-flex; align-items: center; }
         .actions { display: flex; align-items: center; gap: 10px; }
         .theme-btn { width: 44px; height: 44px; border-radius: 999px; border: 1px solid var(--marketing-glass-border); background: rgba(255,255,255,0.2); color: var(--marketing-text-strong); }
-        .invite-btn { min-height: 44px; display: inline-flex; align-items: center; padding: 0 18px; border-radius: 999px; background: linear-gradient(125deg, #f7d4c4, #d89d8f 45%, #9a5f60); color: #130d11; font-size: 14px; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255,255,255,0.42), 0 10px 24px rgba(154,95,96,0.22); }
+        .invite-btn { min-height: 44px; display: inline-flex; align-items: center; padding: 0 18px; font-size: 14px; }
         .mobile-menu-btn { display: none; color: var(--marketing-text-strong); font-size: 24px; min-width: 44px; min-height: 44px; }
         .marketing-footer { border-top: 1px solid var(--marketing-glass-border); background: linear-gradient(180deg, transparent, rgba(148, 114, 114, 0.08)); }
         .footer-inner { max-width: 1200px; margin: 0 auto; padding: 26px 24px calc(88px + env(safe-area-inset-bottom, 0px)); display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
@@ -113,7 +113,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         .mobile-menu-sheet { width: 100%; border-radius: 22px 22px 0 0; padding: 16px 20px calc(24px + env(safe-area-inset-bottom)); border-top: 1px solid var(--marketing-glass-border); background: var(--marketing-glass); backdrop-filter: blur(22px); display: flex; flex-direction: column; gap: 12px; }
         .sheet-handle { width: 46px; height: 5px; border-radius: 999px; background: var(--marketing-text-muted); opacity: 0.5; margin: 0 auto 6px; }
         .sheet-link { color: var(--marketing-text-strong); padding: 14px 0; border-bottom: 1px solid var(--marketing-glass-border); font-weight: 500; min-height: 44px; display: flex; align-items: center; }
-        .sheet-signin { margin-top: 4px; text-align: center; padding: 13px; border-radius: 999px; background: linear-gradient(125deg, #f7d4c4, #d89d8f 45%, #9a5f60); color: #130d11; font-weight: 700; min-height: 44px; }
+        .sheet-signin { margin-top: 4px; text-align: center; padding: 13px; }
         @media (max-width: 880px) {
           .desktop-nav, .invite-btn { display: none; }
           .mobile-menu-btn { display: block; }
@@ -138,7 +138,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
           }
           .cta-home, .cta-request { min-height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
           .cta-home { color: var(--marketing-text-strong); background: rgba(148, 163, 184, 0.12); }
-          .cta-request { background: linear-gradient(125deg, #f7d4c4, #d89d8f 45%, #9a5f60); color: #130d11; }
+          .cta-request { color: #130d11; }
         }
       `}</style>
     </div>
