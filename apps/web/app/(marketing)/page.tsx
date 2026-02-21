@@ -86,20 +86,39 @@ export default function HomePage() {
 
       <style jsx>{`
         .marketing-home {
+          min-height: 100svh;
           min-height: 100dvh;
           padding-bottom: env(safe-area-inset-bottom, 16px);
           background:
             linear-gradient(180deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
             url("https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=2048&q=80") center / cover no-repeat fixed;
-          color: #fdfcfb;
+          color: var(--marketing-text-primary);
           font-family: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
 
         :global([data-theme='light']) .marketing-home {
           background:
-            linear-gradient(180deg, rgba(255, 254, 252, 0.72), rgba(245, 240, 233, 0.9)),
+            linear-gradient(180deg, rgba(255, 254, 252, 0.76), rgba(245, 240, 233, 0.92)),
             radial-gradient(circle at 50% 10%, #fffefc 0%, #f5f0e9 100%);
-          color: #2c2122;
+          color: var(--marketing-text-primary);
+        }
+
+
+        :global(:root),
+        :global([data-theme='light']) {
+          --marketing-text-primary: #1a1a1a;
+          --marketing-text-secondary: #3d3d4f;
+          --marketing-kicker: rgba(26, 26, 26, 0.72);
+          --marketing-card-bg: rgba(255, 254, 252, 0.76);
+          --marketing-card-border: rgba(197, 131, 131, 0.55);
+        }
+
+        :global([data-theme='dark']) {
+          --marketing-text-primary: #fdfcfb;
+          --marketing-text-secondary: rgba(253, 252, 251, 0.82);
+          --marketing-kicker: rgba(253, 252, 251, 0.74);
+          --marketing-card-bg: rgba(12, 14, 22, 0.76);
+          --marketing-card-border: rgba(183, 110, 121, 0.8);
         }
 
         .main-header {
@@ -146,6 +165,7 @@ export default function HomePage() {
         }
 
         .hero-shell {
+          min-height: 100svh;
           min-height: 100dvh;
           width: min(1200px, calc(100% - 48px));
           padding-left: 24px;
@@ -167,11 +187,7 @@ export default function HomePage() {
           text-transform: uppercase;
           letter-spacing: 0.2em;
           font-size: 0.78rem;
-          color: rgba(253, 252, 251, 0.74);
-        }
-
-        :global([data-theme='light']) .hero-kicker {
-          color: rgba(44, 33, 34, 0.65);
+          color: var(--marketing-kicker);
         }
 
         .hero-copy h1 {
@@ -181,7 +197,7 @@ export default function HomePage() {
           letter-spacing: 0.15em;
           line-height: 1.02;
           text-transform: uppercase;
-          color: #fdfcfb;
+          color: var(--marketing-text-primary);
         }
 
         .hero-subtitle {
@@ -189,11 +205,7 @@ export default function HomePage() {
           margin: 28px auto 0;
           font-size: clamp(1rem, 2.2vw, 1.2rem);
           line-height: 1.9;
-          color: rgba(253, 252, 251, 0.82);
-        }
-
-        :global([data-theme='light']) .hero-subtitle {
-          color: rgba(44, 33, 34, 0.78);
+          color: var(--marketing-text-secondary);
         }
 
         .hero-actions {
@@ -207,6 +219,7 @@ export default function HomePage() {
         .hero-actions :global(button) {
           min-width: 210px;
           min-height: 52px;
+          padding: 0 18px;
           border: 0.5px solid rgba(212, 175, 55, 0.58);
           background: linear-gradient(135deg, #b76e79 0%, #8c525a 100%);
           color: #fff;
@@ -221,6 +234,20 @@ export default function HomePage() {
           background: transparent;
           color: inherit;
           border-color: rgba(212, 175, 55, 0.4);
+        }
+
+        :global([data-theme='light']) .hero-actions :global(button) {
+          border-color: rgba(140, 82, 90, 0.66);
+          background: linear-gradient(135deg, #b76e79 0%, #8c525a 100%);
+          color: #ffffff;
+          box-shadow: inset 0 1px 0 rgba(255, 241, 237, 0.34), 0 12px 24px rgba(72, 45, 50, 0.22);
+        }
+
+        :global([data-theme='light']) .hero-actions :global(a:last-child button) {
+          background: rgba(255, 255, 255, 0.68);
+          color: #1a1a1a;
+          border-color: rgba(140, 82, 90, 0.5);
+          box-shadow: none;
         }
 
         .hero-actions :global(button:hover) {
@@ -254,8 +281,8 @@ export default function HomePage() {
         .reveal-card {
           padding: 24px;
           border-radius: 20px;
-          border: 0.5px solid rgba(183, 110, 121, 0.8);
-          background: rgba(12, 14, 22, 0.76);
+          border: 0.5px solid var(--marketing-card-border);
+          background: var(--marketing-card-bg);
           backdrop-filter: blur(15px);
           -webkit-backdrop-filter: blur(15px);
           opacity: 0;
@@ -263,10 +290,6 @@ export default function HomePage() {
           transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        :global([data-theme='light']) .reveal-card {
-          background: rgba(255, 254, 252, 0.72);
-          border-color: rgba(197, 131, 131, 0.55);
-        }
 
         .reveal-card.is-visible {
           opacity: 1;
@@ -283,11 +306,7 @@ export default function HomePage() {
         .reveal-card p {
           margin: 14px 0 0;
           line-height: 1.8;
-          color: rgba(243, 236, 227, 0.82);
-        }
-
-        :global([data-theme='light']) .reveal-card p {
-          color: rgba(44, 33, 34, 0.78);
+          color: var(--marketing-text-secondary);
         }
 
         @keyframes silkReveal {
@@ -324,7 +343,9 @@ export default function HomePage() {
           }
 
           .hero-shell {
-            padding: 40px 0 76px;
+            min-height: 100svh;
+            min-height: 100dvh;
+            padding: 40px 0 calc(76px + env(safe-area-inset-bottom, 0px));
           }
         }
       `}</style>

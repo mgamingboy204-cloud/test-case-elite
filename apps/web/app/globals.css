@@ -84,7 +84,9 @@ body {
   color: var(--text);
   line-height: 1.5;
   min-height: 100vh;
+  min-height: 100svh;
   min-height: 100dvh;
+  overflow-x: hidden;
 }
 
 a {
