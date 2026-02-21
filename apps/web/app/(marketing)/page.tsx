@@ -1,62 +1,56 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import { useEffect } from "react";
-import { Button } from "@/app/components/ui/Button";
 
-const revealCards = [
-  { title: "Concierge Introductions", description: "Personal match curation designed around your lifestyle, values, and long-term intent." },
-  { title: "Private by Default", description: "Discretion-first profile controls with verification standards expected by high-net-worth members." },
-  { title: "Global Elite Network", description: "A refined community spanning major cities, private clubs, and executive travel corridors." }
+const featureCards = [
+  {
+    title: "Concierge Introductions",
+    description: "Personal match curation designed around your lifestyle, values, and long-term intent."
+  },
+  {
+    title: "Private by Default",
+    description: "Discretion-first profile controls with verification standards expected by high-net-worth members."
+  },
+  {
+    title: "Global Elite Network",
+    description: "A refined community spanning major cities, private clubs, and executive travel corridors."
+  }
 ];
 
 export default function HomePage() {
-  useEffect(() => {
-    const items = Array.from(document.querySelectorAll<HTMLElement>(".reveal-card"));
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) entry.target.classList.add("is-visible");
-        });
-      },
-      { threshold: 0.2 }
-    );
-    items.forEach((item) => observer.observe(item));
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <div className="marketing-home">
-      <section className="hero-shell" aria-labelledby="hero-title">
-        <Image
-          src="https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=2048&q=80"
-          alt="Elegant couple at sunset"
-          fill
-          priority
-          sizes="100vw"
-          style={{ objectFit: "cover" }}
-        />
-        <div className="hero-overlay" />
-        <div className="hero-copy">
-          <p className="hero-kicker">Invitation-only matchmaking</p>
-          <h1 id="hero-title">START SOMETHING EPIC</h1>
-          <p className="hero-subtitle">A private introduction service for discerning individuals who value elegance, discretion, and exceptional chemistry.</p>
-          <div className="hero-actions">
-            <Link href="/signup"><Button size="lg" className="marketing-rose-btn marketing-tap-target" style={{ borderRadius: 999, minHeight: 44, background: "var(--marketing-button-gradient)", boxShadow: "0 14px 30px rgba(255, 126, 179, 0.4)", border: "1px solid rgba(255,240,245,0.36)", color: "#fff" }}>Request Invitation</Button></Link>
-            <Link href="/login"><Button size="lg" variant="secondary" className="marketing-tap-target" style={{ borderRadius: 999, minHeight: 44 }}>Existing Member</Button></Link>
-          </div>
+      <div className="bg-layer" />
+      <div className="overlay-layer" />
+
+      <section className="hero" aria-labelledby="hero-title">
+        <p className="kicker">Invitation-only matchmaking</p>
+        <h1 id="hero-title">
+          START
+          <br />
+          SOMETHING
+          <br />
+          EPIC.
+        </h1>
+        <p className="subtitle">
+          A private introduction service for discerning individuals who value elegance, discretion, and exceptional chemistry.
+        </p>
+        <div className="hero-actions">
+          <Link href="/signup" className="cta cta-primary marketing-tap-target">
+            Request Invitation
+          </Link>
+          <Link href="/login" className="cta cta-secondary marketing-tap-target">
+            Existing Member
+          </Link>
         </div>
       </section>
 
-      <section className="reveal-shell" aria-labelledby="why-elite-match-title">
-        <div className="reveal-intro">
-          <p className="hero-kicker">Why Elite Match</p>
-          <h2 id="why-elite-match-title">Boutique service for exceptional outcomes.</h2>
-        </div>
-        <div className="reveal-grid">
-          {revealCards.map((card, index) => (
-            <article className="reveal-card marketing-panel" key={card.title} style={{ transitionDelay: `${index * 120}ms` }}>
+      <section className="why" aria-labelledby="why-title">
+        <p className="kicker">Why Elite Match</p>
+        <h2 id="why-title">Boutique service for exceptional outcomes.</h2>
+        <div className="feature-grid">
+          {featureCards.map((card) => (
+            <article key={card.title} className="feature-card">
               <h3>{card.title}</h3>
               <p>{card.description}</p>
             </article>
@@ -66,51 +60,134 @@ export default function HomePage() {
 
       <style jsx>{`
         .marketing-home {
-          min-height: 100dvh;
-          font-family: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          background: linear-gradient(180deg, var(--marketing-bg-start), var(--marketing-bg-end));
-          color: var(--marketing-text-strong);
-        }
-        .hero-shell {
           position: relative;
           min-height: 100dvh;
-          width: min(1200px, calc(100% - 40px));
-          margin: 0 auto;
-          display: grid;
-          place-items: center;
-          overflow: hidden;
-          border-radius: 34px;
-          box-shadow: 0 34px 72px rgba(8, 10, 16, 0.25);
+          color: #f4f2ef;
+          padding: clamp(112px, 14vw, 150px) 24px 0;
+          display: flex;
+          flex-direction: column;
+          isolation: isolate;
         }
-        .hero-overlay {
-          position: absolute;
+        .bg-layer,
+        .overlay-layer {
+          position: fixed;
           inset: 0;
-          background: linear-gradient(180deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5));
+          z-index: -2;
         }
-        .hero-copy {
-          position: relative;
-          z-index: 1;
-          width: min(760px, 100%);
+        .bg-layer {
+          background-image: url('https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=2200&q=80');
+          background-size: cover;
+          background-position: center;
+          transform: scale(1.02);
+        }
+        .overlay-layer {
+          z-index: -1;
+          background: linear-gradient(180deg, rgba(4, 12, 24, 0.64) 0%, rgba(4, 12, 24, 0.74) 52%, rgba(7, 10, 20, 0.82) 100%);
+        }
+        .hero {
+          width: min(860px, 100%);
+          margin: 0 auto;
           text-align: center;
-          padding: 40px 16px;
         }
-        .hero-kicker { margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.24em; font-size: 0.78rem; color: rgba(255, 245, 238, 0.84); }
-        .hero-copy h1 { margin: 0; font-family: var(--font-playfair), "Playfair Display", Georgia, serif; font-size: clamp(2.55rem, 7.2vw, 5.5rem); letter-spacing: -0.02em; line-height: 0.98; font-weight: 700; text-transform: uppercase; color: #fff; text-shadow: 0 10px 34px rgba(0, 0, 0, 0.56); }
-        .hero-subtitle { max-width: 640px; margin: 24px auto 0; font-size: clamp(1rem, 2.2vw, 1.2rem); line-height: 1.8; color: rgba(255, 245, 238, 0.94); }
-        .hero-actions { margin-top: 36px; display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
-        .hero-actions :global(button) { min-width: 210px; transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out; }
-        .hero-actions :global(button:hover) { transform: translateY(-1px) scale(1.01); box-shadow: 0 16px 40px rgba(13, 10, 12, 0.34); }
-        .reveal-shell { width: min(1200px, calc(100% - 40px)); margin: 0 auto; padding: 44px 0 110px; }
-        .reveal-intro h2 { margin: 0; font-family: var(--font-playfair), "Playfair Display", Georgia, serif; letter-spacing: 0.08em; font-size: clamp(1.6rem, 5vw, 2.6rem); text-transform: uppercase; }
-        .reveal-grid { margin-top: 28px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-        .reveal-card { padding: 28px; opacity: 0; transform: translateY(24px); transition: opacity 0.8s ease, transform 0.8s ease; }
-        .reveal-card.is-visible { opacity: 1; transform: translateY(0); }
-        .reveal-card h3 { margin: 0; font-family: var(--font-playfair), "Playfair Display", Georgia, serif; letter-spacing: 0.08em; text-transform: uppercase; }
-        .reveal-card p { margin: 14px 0 0; line-height: 1.8; color: var(--marketing-text-muted); }
-        @media (max-width: 900px) { .reveal-grid { grid-template-columns: 1fr; } }
-        @media (max-width: 767px) {
-          .hero-shell, .reveal-shell { width: calc(100% - 20px); }
-          .hero-shell { border-radius: 22px; }
+        .kicker {
+          text-transform: uppercase;
+          letter-spacing: 0.22em;
+          font-size: 0.84rem;
+          color: rgba(247, 244, 241, 0.82);
+          margin: 0 0 20px;
+        }
+        h1 {
+          margin: 0;
+          font-family: var(--font-playfair), "Playfair Display", Georgia, serif;
+          font-size: clamp(3.1rem, 8.9vw, 7.6rem);
+          line-height: 0.95;
+          letter-spacing: 0.01em;
+          color: #fff;
+        }
+        .subtitle {
+          max-width: 820px;
+          margin: 28px auto 0;
+          font-size: clamp(1.2rem, 2.2vw, 2rem);
+          line-height: 1.5;
+          color: rgba(248, 245, 242, 0.9);
+        }
+        .hero-actions {
+          margin-top: 38px;
+          display: flex;
+          justify-content: center;
+          gap: 14px;
+          flex-wrap: wrap;
+        }
+        .cta {
+          min-width: 270px;
+          min-height: 62px;
+          padding: 0 34px;
+          border-radius: 999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          text-transform: uppercase;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+          font-size: 1.06rem;
+          border: 1px solid transparent;
+        }
+        .cta-primary {
+          background: #ff4f71;
+          color: #fff;
+          box-shadow: 0 18px 36px rgba(239, 79, 124, 0.44);
+        }
+        .cta-secondary {
+          background: rgba(15, 23, 44, 0.93);
+          color: #f6f4f1;
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .why {
+          width: min(1360px, 100%);
+          margin: auto auto 0;
+          padding: clamp(70px, 10vw, 130px) 0 110px;
+        }
+        h2 {
+          margin: 0;
+          font-family: var(--font-playfair), "Playfair Display", Georgia, serif;
+          color: #fff;
+          text-transform: uppercase;
+          font-size: clamp(2.2rem, 4.7vw, 5.3rem);
+          line-height: 1.04;
+          max-width: 1220px;
+        }
+        .feature-grid {
+          margin-top: 32px;
+          display: grid;
+          gap: 16px;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .feature-card {
+          border-radius: 22px;
+          background: rgba(9, 16, 34, 0.88);
+          border: 1px solid rgba(242, 152, 168, 0.45);
+          padding: clamp(24px, 2.4vw, 34px);
+          box-shadow: 0 20px 48px rgba(6, 8, 15, 0.34);
+        }
+        .feature-card h3 {
+          margin: 0;
+          color: #fff;
+          text-transform: uppercase;
+          font-family: var(--font-playfair), "Playfair Display", Georgia, serif;
+          font-size: clamp(1.65rem, 2.4vw, 3rem);
+          line-height: 1.06;
+          letter-spacing: 0.02em;
+        }
+        .feature-card p {
+          margin: 18px 0 0;
+          font-size: clamp(1.02rem, 1.45vw, 1.18rem);
+          line-height: 1.6;
+          color: rgba(241, 238, 232, 0.86);
+        }
+        @media (max-width: 1100px) {
+          .feature-grid {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
     </div>
