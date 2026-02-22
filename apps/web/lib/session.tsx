@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, type CSSProperties, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, refreshAccessToken } from "./api";
 import { clearAccessToken, getAccessToken } from "./authToken";
@@ -38,15 +39,25 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const BLOCKED_STORAGE_DISMISSED_KEY = "em_auth_storage_prompt_dismissed";
 const APP_OPEN_MARKER_KEY = "em_app_has_opened";
 
+const AUTH_ROUTES = new Set(["/login", "/signup", "/otp"]);
+
+function isAuthRoute(pathname: string | null) {
+  if (!pathname) return false;
+  if (AUTH_ROUTES.has(pathname)) return true;
+  return pathname.startsWith("/auth");
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const onAuthRoute = isAuthRoute(pathname);
   const logoutTriggeredRef = useRef(false);
   const [showBlockedStoragePrompt, setShowBlockedStoragePrompt] = useState(false);
   const [isFreshOpen, setIsFreshOpen] = useState(false);
   const [refreshAttempted, setRefreshAttempted] = useState(false);
 
   const meQuery = useQuery({
+    enabled: !onAuthRoute,
     queryKey: queryKeys.me,
     queryFn: () => apiFetch<SessionUser>("/me", { retryOnUnauthorized: true }),
     retry: false,
@@ -69,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // eslint-disable-next-line no-console
       console.debug("[auth-client] bootstrap-refresh", { hasAccessToken });
     }
-    if (hasAccessToken) return;
+    if (onAuthRoute || hasAccessToken) return;
     void refreshAccessToken().then((token) => {
       setRefreshAttempted(true);
       if (process.env.NODE_ENV !== "production") {
@@ -80,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         queryClient.invalidateQueries({ queryKey: queryKeys.me });
       }
     });
-  }, [queryClient]);
+  }, [onAuthRoute, queryClient]);
 
   useEffect(() => {
     if (!meQuery.isError) {
