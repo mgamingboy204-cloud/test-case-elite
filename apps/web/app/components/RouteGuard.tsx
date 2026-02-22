@@ -59,12 +59,7 @@ export default function RouteGuard({
   }, [status, requireAdmin, requireActive, allowedOnboardingSteps, user, router, pathname]);
 
   if (status === "loading") {
-    return (
-      <div className="card">
-        <h2>Checking your session...</h2>
-        <p className="card-subtitle">Hold tight while we verify your account.</p>
-      </div>
-    );
+    return <>{children}</>;
   }
 
   if (status === "logged-out") {

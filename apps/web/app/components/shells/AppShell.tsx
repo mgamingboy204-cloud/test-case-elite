@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTheme } from "@/app/providers";
 import { useSession } from "@/lib/session";
-import { apiFetch } from "@/lib/api";
 import { BottomSheet } from "@/app/components/ui/BottomSheet";
 import { Avatar } from "@/app/components/ui/Avatar";
 import { BottomNav } from "@/app/components/BottomNav";
@@ -23,25 +22,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
   const { user } = useSession();
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
-  const [profileName, setProfileName] = useState<string>("");
+  const profilePhotoUrl = null;
+  const profileName = String(user?.displayName ?? user?.firstName ?? "").trim();
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
-
-  useEffect(() => {
-    const loadProfileMeta = async () => {
-      try {
-        const data = await apiFetch<any>("/profile");
-        const photos = Array.isArray(data?.photos) ? data.photos : [];
-        const firstPhoto = photos[0]?.url;
-        setProfilePhotoUrl(typeof firstPhoto === "string" ? firstPhoto : null);
-        setProfileName(String(data?.profile?.name ?? "").trim());
-      } catch {
-        setProfilePhotoUrl(null);
-      }
-    };
-
-    void loadProfileMeta();
-  }, []);
 
   const mobileTitle = useMemo(() => {
     if (pathname?.startsWith("/discover")) {
