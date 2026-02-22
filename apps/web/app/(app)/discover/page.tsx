@@ -88,7 +88,7 @@ export default function DiscoverPage() {
     (type: "LIKE" | "PASS", direction?: "left" | "right") => {
       if (!currentProfile || animatingOut) return;
 
-      const actionId = `${currentProfile.userId}:${type}`;
+      const actionId = `${currentProfile.userId}:${type}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
       if (committedActionIdsRef.current.has(actionId)) {
         return;
       }
