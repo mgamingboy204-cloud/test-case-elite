@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Card } from "@/app/components/ui/Card";
 import { Avatar } from "@/app/components/ui/Avatar";
@@ -10,19 +10,32 @@ import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { apiFetch } from "@/lib/api";
 
+type MatchStatus = "PENDING" | "CONSENTED" | "PHONE_EXCHANGE_READY" | "DECLINED";
+
 interface Match {
   id: string;
   name: string;
   photo: string;
-  lastActive: string;
-  status: "PENDING" | "ACTIVE" | "EXPIRED";
+  createdAtLabel: string;
+  city: string | null;
+  profession: string | null;
+  status: MatchStatus;
+  phoneExchangeReady: boolean;
 }
 
-const MOCK_MATCHES: Match[] = [
-  { id: "m1", name: "Sophia Rao", photo: "https://picsum.photos/seed/match1/200/200", lastActive: "2 min ago", status: "ACTIVE" },
-  { id: "m2", name: "Aarav Mehta", photo: "https://picsum.photos/seed/match2/200/200", lastActive: "1 hour ago", status: "ACTIVE" },
-  { id: "m3", name: "Priya Das", photo: "https://picsum.photos/seed/match3/200/200", lastActive: "Yesterday", status: "PENDING" },
-];
+function toStatusVariant(status: MatchStatus) {
+  if (status === "DECLINED") return "danger" as const;
+  if (status === "PHONE_EXCHANGE_READY") return "success" as const;
+  if (status === "CONSENTED") return "success" as const;
+  return "warning" as const;
+}
+
+function toStatusLabel(status: MatchStatus) {
+  if (status === "PHONE_EXCHANGE_READY") return "Numbers Ready";
+  if (status === "CONSENTED") return "Mutual Consent";
+  if (status === "DECLINED") return "Declined";
+  return "Pending Consent";
+}
 
 export default function MatchesPage() {
   const [matches, setMatches] = useState<Match[]>([]);
@@ -39,12 +52,16 @@ export default function MatchesPage() {
         id: row.id,
         name: row.user?.name ?? "Member",
         photo: row.user?.primaryPhotoUrl ?? "",
-        lastActive: row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "recently",
-        status: row.consentStatus === "DECLINED" ? "EXPIRED" : row.consentStatus === "PENDING" ? "PENDING" : "ACTIVE",
+        createdAtLabel: row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "recently",
+        city: row.user?.city ?? null,
+        profession: row.user?.profession ?? null,
+        status: row.consentStatus,
+        phoneExchangeReady: Boolean(row.phoneExchangeReady),
       }));
       setMatches(mapped);
     } catch {
-      setMatches(MOCK_MATCHES);
+      setError(true);
+      setMatches([]);
     } finally {
       setLoading(false);
     }
@@ -69,17 +86,22 @@ export default function MatchesPage() {
 
   if (error) return <ErrorState onRetry={fetchMatches} />;
 
+  const pendingCount = useMemo(
+    () => matches.filter((match) => match.status === "PENDING" || match.status === "CONSENTED").length,
+    [matches]
+  );
+
   return (
     <div>
       <PageHeader
         title="Matches"
-        subtitle={`${matches.length} matches`}
+        subtitle={`${matches.length} total · ${pendingCount} awaiting final exchange`}
       />
 
       {matches.length === 0 ? (
         <EmptyState
           title="No matches yet"
-          description="Start swiping to find your first match!"
+          description="Keep discovering profiles and mutual likes will appear here."
           action={{ label: "Discover", onClick: () => window.location.href = "/discover" }}
           icon={
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.5">
@@ -106,17 +128,20 @@ export default function MatchesPage() {
               >
                 <Avatar src={match.photo} name={match.name} size={56} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <h4 style={{ margin: 0, fontSize: 16 }}>{match.name}</h4>
                     <Badge
-                      variant={match.status === "ACTIVE" ? "success" : "warning"}
+                      variant={toStatusVariant(match.status)}
                       style={{ fontSize: 10 }}
                     >
-                      {match.status}
+                      {toStatusLabel(match.status)}
                     </Badge>
                   </div>
                   <p style={{ color: "var(--muted)", fontSize: 13, margin: 0 }}>
-                    Active {match.lastActive}
+                    {[match.city, match.profession].filter(Boolean).join(" · ") || "Profile details available in match"}
+                  </p>
+                  <p style={{ color: "var(--muted)", fontSize: 12, margin: "4px 0 0" }}>
+                    Matched {match.createdAtLabel}
                   </p>
                 </div>
                 <svg
