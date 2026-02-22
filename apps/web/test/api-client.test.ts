@@ -55,4 +55,60 @@ describe("apiFetch client", () => {
     expect(call?.[0]).toBe("/api/me");
   });
 
+  it("uses a single refresh request for parallel 401 responses", async () => {
+    vi.resetModules();
+    const { apiFetch } = await import("../lib/api");
+    const { setAccessToken } = await import("../lib/authToken");
+
+    setAccessToken("stale-token");
+
+    let meCalls = 0;
+    let refreshCalls = 0;
+
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/auth/token/refresh") {
+        refreshCalls += 1;
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => "application/json" },
+          json: async () => ({ ok: true, accessToken: "fresh-token" })
+        };
+      }
+
+      if (url === "/api/me") {
+        meCalls += 1;
+        if (meCalls <= 2) {
+          return {
+            ok: false,
+            status: 401,
+            headers: { get: () => "application/json" },
+            json: async () => ({ message: "Unauthorized" })
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => "application/json" },
+          json: async () => ({ ok: true })
+        };
+      }
+
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => "application/json" },
+        json: async () => ({ ok: true })
+      };
+    });
+
+    const [one, two] = await Promise.all([
+      apiFetch("/me", { retryOnUnauthorized: true }),
+      apiFetch("/me", { retryOnUnauthorized: true })
+    ]);
+
+    expect(one).toEqual({ ok: true });
+    expect(two).toEqual({ ok: true });
+    expect(refreshCalls).toBe(1);
+  });
 });

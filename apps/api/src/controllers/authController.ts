@@ -22,11 +22,19 @@ import { HttpError } from "../utils/httpErrors";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
 
 function logSessionEvent(event: string, details: Record<string, unknown>) {
-  if (env.NODE_ENV !== "production") {
+  if (env.NODE_ENV !== "production" || env.DEV_OTP_LOG === "true" || process.env.AUTH_DEBUG === "1") {
     console.debug(`[auth] ${event}`, details);
   }
 }
 
+function getJwtErrorReason(error: unknown): "expired" | "signature_invalid" | "invalid_cookie" {
+  if (error && typeof error === "object" && "name" in error) {
+    const name = String((error as { name?: string }).name ?? "");
+    if (name === "TokenExpiredError") return "expired";
+    if (name === "JsonWebTokenError" || name === "NotBeforeError") return "signature_invalid";
+  }
+  return "invalid_cookie";
+}
 
 function describeCookieOptions(options: ReturnType<typeof buildRefreshCookieOptions>) {
   return {
@@ -194,17 +202,21 @@ export async function refreshAccessToken(req: Request, res: Response) {
   const { refreshToken: refreshTokenFromBody } = (req.body ?? {}) as { refreshToken?: string };
 
   const cookieHeader = req.headers.cookie ?? "";
-  logSessionEvent("refresh-request", {
+  const requestId = req.requestId;
+  const cookies = parseCookies(req.headers.cookie);
+  const refreshToken = refreshTokenFromBody ?? cookies[refreshCookieName];
+
+  logSessionEvent("refresh.attempt", {
+    requestId,
+    hasRefreshCookie: Boolean(cookies[refreshCookieName]),
     hasCookieHeader: Boolean(cookieHeader),
     includesRefreshCookie: cookieHeader.includes(`${refreshCookieName}=`),
     hasBodyRefreshToken: Boolean(refreshTokenFromBody)
   });
 
-  const cookies = parseCookies(req.headers.cookie);
-  const refreshToken = refreshTokenFromBody ?? cookies[refreshCookieName];
-
   if (!refreshToken) {
-    return res.status(401).json({ message: "Missing refresh token" });
+    logSessionEvent("refresh.fail", { requestId, reason: "missing_cookie" });
+    return res.status(401).json({ message: "Missing refresh token", reason: "missing_cookie" });
   }
 
   let userId: string;
@@ -214,13 +226,18 @@ export async function refreshAccessToken(req: Request, res: Response) {
     const verification = verifyRefreshToken(refreshToken);
     userId = verification.userId;
     rememberMe = verification.rememberMe;
-  } catch {
-    return res.status(401).json({ message: "Invalid refresh token" });
+  } catch (error) {
+    const reason = getJwtErrorReason(error);
+    logSessionEvent("refresh.fail", { requestId, reason });
+    return res.status(401).json({ message: "Invalid refresh token", reason });
   }
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
 
-  if (!user) return res.status(401).json({ message: "Invalid refresh token" });
+  if (!user) {
+    logSessionEvent("refresh.fail", { requestId, userId, reason: "invalid_cookie" });
+    return res.status(401).json({ message: "Invalid refresh token", reason: "invalid_cookie" });
+  }
   if (user.deletedAt) return res.status(403).json({ message: "Account deleted" });
   if (user.deactivatedAt) return res.status(403).json({ message: "Account deactivated" });
   if (user.status === "BANNED") return res.status(403).json({ message: "Banned" });
@@ -232,7 +249,8 @@ export async function refreshAccessToken(req: Request, res: Response) {
   const refreshCookieOptions = buildRefreshCookieOptions(refreshTtlDays);
   res.cookie(refreshCookieName, nextRefreshToken, refreshCookieOptions);
 
-  logSessionEvent("token-refreshed", {
+  logSessionEvent("refresh.success", {
+    requestId,
     userId: user.id,
     rememberMe,
     refreshTtlDays,

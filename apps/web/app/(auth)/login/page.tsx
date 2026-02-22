@@ -7,7 +7,7 @@ import { Input } from "@/app/components/ui/Input";
 import { Button } from "@/app/components/ui/Button";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, resetAuthFailureState } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
 import { getDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
@@ -58,6 +58,7 @@ export default function LoginPage() {
         return;
       }
       if (loginResponse?.accessToken) {
+        resetAuthFailureState();
         setAccessToken(loginResponse.accessToken);
       }
       const user = await refresh();
@@ -94,6 +95,7 @@ export default function LoginPage() {
         auth: "omit",
       });
       if (verificationResponse?.accessToken) {
+        resetAuthFailureState();
         setAccessToken(verificationResponse.accessToken);
       }
       const user = await refresh();
