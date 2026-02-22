@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/app/components/ui/Card";
 import { Avatar } from "@/app/components/ui/Avatar";
 import { Badge } from "@/app/components/ui/Badge";
@@ -10,56 +11,43 @@ import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { queryKeys } from "@/lib/queryKeys";
 
-type MatchStatus = "PENDING" | "CONSENTED" | "PHONE_EXCHANGE_READY" | "DECLINED";
-
-interface Match {
+type Match = {
   id: string;
   name: string;
   photo: string;
   createdAtLabel: string;
   city: string | null;
   profession: string | null;
-  status: MatchStatus;
+  status: string;
   phoneExchangeReady: boolean;
-}
+};
 
-function toStatusVariant(status: MatchStatus) {
+function toStatusVariant(status: string) {
   if (status === "DECLINED") return "danger" as const;
   if (status === "PHONE_EXCHANGE_READY") return "success" as const;
   if (status === "CONSENTED") return "success" as const;
   return "warning" as const;
 }
 
-function toStatusLabel(status: MatchStatus) {
+function toStatusLabel(status: string) {
   if (status === "PHONE_EXCHANGE_READY") return "Numbers Ready";
   if (status === "CONSENTED") return "Mutual Consent";
   if (status === "DECLINED") return "Declined";
-  return "Pending Consent";
+  return "Pending";
 }
 
 export default function MatchesPage() {
   const { status } = useSession();
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [viewState, setViewState] = useState<"idle" | "error" | "unauthenticated">("idle");
 
-  const pendingCount = useMemo(
-    () => matches.filter((match) => match.status === "PENDING" || match.status === "CONSENTED").length,
-    [matches]
-  );
-
-  const fetchMatches = async () => {
-    if (status !== "logged-in") {
-      setLoading(false);
-      setViewState("unauthenticated");
-      setMatches([]);
-      return;
-    }
-
-    setLoading(true);
-    setViewState("idle");
-    try {
+  const matchesQuery = useQuery({
+    queryKey: queryKeys.matches,
+    enabled: status === "logged-in",
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    retry: false,
+    queryFn: async () => {
       const data = await apiFetch<any>("/matches", { retryOnUnauthorized: true });
       const rows = Array.isArray(data?.matches) ? data.matches : [];
       const mapped: Match[] = rows.map((row: any) => ({
@@ -72,24 +60,28 @@ export default function MatchesPage() {
         status: row.consentStatus,
         phoneExchangeReady: Boolean(row.phoneExchangeReady),
       }));
-      setMatches(mapped);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        setViewState("unauthenticated");
-      } else {
-        setViewState("error");
-      }
-      setMatches([]);
-    } finally {
-      setLoading(false);
+      return mapped;
     }
-  };
+  });
 
-  useEffect(() => {
-    fetchMatches();
-  }, [status]);
+  const matches = matchesQuery.data ?? [];
 
-  if (loading) {
+  const pendingCount = useMemo(
+    () => matches.filter((match) => match.status === "PENDING" || match.status === "CONSENTED").length,
+    [matches]
+  );
+
+  if (status !== "logged-in") {
+    return (
+      <EmptyState
+        title="Session expired"
+        description="Please sign in again to view your matches."
+        action={{ label: "Go to login", onClick: () => window.location.assign("/login") }}
+      />
+    );
+  }
+
+  if (matchesQuery.isLoading) {
     return (
       <div>
         <PageHeader title="Matches" />
@@ -102,17 +94,19 @@ export default function MatchesPage() {
     );
   }
 
-  if (viewState === "unauthenticated") {
-    return (
-      <EmptyState
-        title="Session expired"
-        description="Please sign in again to view your matches."
-        action={{ label: "Go to login", onClick: () => window.location.assign("/login") }}
-      />
-    );
+  if (matchesQuery.error) {
+    const unauthorized = matchesQuery.error instanceof ApiError && matchesQuery.error.status === 401;
+    if (unauthorized) {
+      return (
+        <EmptyState
+          title="Session expired"
+          description="Please sign in again to view your matches."
+          action={{ label: "Go to login", onClick: () => window.location.assign("/login") }}
+        />
+      );
+    }
+    return <ErrorState onRetry={() => matchesQuery.refetch()} />;
   }
-
-  if (viewState === "error") return <ErrorState onRetry={fetchMatches} />;
 
   return (
     <div>
@@ -126,14 +120,6 @@ export default function MatchesPage() {
           title="No matches yet"
           description="Keep discovering profiles and mutual likes will appear here."
           action={{ label: "Discover", onClick: () => window.location.href = "/discover" }}
-          icon={
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.5">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-          }
         />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -153,10 +139,7 @@ export default function MatchesPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <h4 style={{ margin: 0, fontSize: 16 }}>{match.name}</h4>
-                    <Badge
-                      variant={toStatusVariant(match.status)}
-                      style={{ fontSize: 10 }}
-                    >
+                    <Badge variant={toStatusVariant(match.status)} style={{ fontSize: 10 }}>
                       {toStatusLabel(match.status)}
                     </Badge>
                   </div>

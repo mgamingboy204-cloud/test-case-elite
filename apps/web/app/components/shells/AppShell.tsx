@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { useTheme } from "@/app/providers";
 import { useSession } from "@/lib/session";
 import { BottomSheet } from "@/app/components/ui/BottomSheet";
@@ -20,11 +20,19 @@ const sidebarLinks = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { theme, toggle } = useTheme();
   const { user } = useSession();
   const profilePhotoUrl = null;
   const profileName = String(user?.displayName ?? user?.firstName ?? "").trim();
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+
+
+  useEffect(() => {
+    router.prefetch("/discover");
+    router.prefetch("/matches");
+    router.prefetch("/likes");
+  }, [router]);
 
   const mobileTitle = useMemo(() => {
     if (pathname?.startsWith("/discover")) {
