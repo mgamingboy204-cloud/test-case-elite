@@ -689,6 +689,77 @@ describe("Profile activation", () => {
 });
 
 describe("Likes, matches, and notifications", () => {
+
+
+  it("returns 401 for likes without auth and persists likes when authenticated", async () => {
+    const anonymousResponse = await request(app).post("/likes").send({
+      toUserId: "2e4e1ffc-6da0-4300-9ce1-1d13d4f98f1f",
+      type: "LIKE"
+    });
+    expect(anonymousResponse.status).toBe(401);
+
+    const agentA = request.agent(app);
+    const agentB = request.agent(app);
+    const tokenA = await registerAndLogin(agentA, "5554100010", "Password@1");
+    await registerAndLogin(agentB, "5554100011", "Password@1");
+
+    const userA = await prisma.user.findUnique({ where: { phone: "5554100010" } });
+    const userB = await prisma.user.findUnique({ where: { phone: "5554100011" } });
+    if (!userA || !userB) throw new Error("Users missing");
+
+    await prisma.user.updateMany({
+      where: { id: { in: [userA.id, userB.id] } },
+      data: {
+        status: "APPROVED",
+        verifiedAt: new Date(),
+        phoneVerifiedAt: new Date(),
+        onboardingStep: "ACTIVE",
+        paymentStatus: "PAID",
+        profileCompletedAt: new Date()
+      }
+    });
+
+    await prisma.profile.createMany({
+      data: [
+        {
+          userId: userA.id,
+          name: "User A",
+          gender: "MALE",
+          age: 28,
+          city: "City",
+          profession: "Engineer",
+          bioShort: "Bio",
+          preferences: {}
+        },
+        {
+          userId: userB.id,
+          name: "User B",
+          gender: "FEMALE",
+          age: 26,
+          city: "City",
+          profession: "Designer",
+          bioShort: "Bio",
+          preferences: {}
+        }
+      ]
+    });
+
+    await prisma.photo.createMany({
+      data: [
+        { userId: userA.id, url: "/uploads/a.jpg" },
+        { userId: userB.id, url: "/uploads/b.jpg" }
+      ]
+    });
+
+    const likeResponse = await withAuth(agentA.post("/likes"), tokenA).send({ toUserId: userB.id, type: "LIKE" });
+    expect(likeResponse.status).toBe(200);
+
+    const persisted = await prisma.like.findFirst({
+      where: { fromUserId: userA.id, toUserId: userB.id, type: "LIKE" }
+    });
+    expect(persisted).toBeTruthy();
+  });
+
   it("enforces idempotent likes and passes, creates matches, and sends notifications", async () => {
     const agentA = request.agent(app);
     const agentB = request.agent(app);

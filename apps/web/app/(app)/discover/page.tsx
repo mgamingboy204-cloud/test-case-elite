@@ -44,6 +44,7 @@ export default function DiscoverPage() {
   const startPos = useRef({ x: 0, y: 0 });
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const [animatingOut, setAnimatingOut] = useState(false);
+  const committedActionIdsRef = useRef(new Set<string>());
 
   const {
     buffer,
@@ -87,10 +88,16 @@ export default function DiscoverPage() {
     (type: "LIKE" | "PASS", direction?: "left" | "right") => {
       if (!currentProfile || animatingOut) return;
 
+      const actionId = `${currentProfile.userId}:${type}`;
+      if (committedActionIdsRef.current.has(actionId)) {
+        return;
+      }
+      committedActionIdsRef.current.add(actionId);
+
       setAnimatingOut(true);
       setSwipeDirection(direction || (type === "PASS" ? "left" : "right"));
       setSwipeX(direction === "left" || type === "PASS" ? -500 : 500);
-      advance(type);
+      advance({ actionId, type });
 
       if (type === "PASS") {
         addToast("Passed", "info");

@@ -22,6 +22,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ message: "Invalid token" });
   }
   req.userId = userId;
+  req.user = { id: userId, userId };
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     return res.status(401).json({ message: "Invalid token" });
