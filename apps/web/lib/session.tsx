@@ -56,8 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isFreshOpen, setIsFreshOpen] = useState(false);
   const [refreshAttempted, setRefreshAttempted] = useState(false);
 
+  const shouldBootstrapRefresh = !onAuthRoute && !getAccessToken();
+  const canRunMeQuery = !onAuthRoute && (!shouldBootstrapRefresh || refreshAttempted);
+
   const meQuery = useQuery({
-    enabled: !onAuthRoute,
+    enabled: canRunMeQuery,
     queryKey: queryKeys.me,
     queryFn: () => apiFetch<SessionUser>("/me", { retryOnUnauthorized: true }),
     retry: false,
@@ -80,7 +83,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // eslint-disable-next-line no-console
       console.debug("[auth-client] bootstrap-refresh", { hasAccessToken });
     }
-    if (onAuthRoute || hasAccessToken) return;
+    if (onAuthRoute || hasAccessToken) {
+      setRefreshAttempted(true);
+      return;
+    }
     void refreshAccessToken().then((token) => {
       setRefreshAttempted(true);
       if (process.env.NODE_ENV !== "production") {
@@ -117,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [isFreshOpen, meQuery.data, meQuery.isLoading, refreshAttempted]);
 
-  const status: SessionStatus = meQuery.isLoading
+  const status: SessionStatus = !canRunMeQuery || meQuery.isLoading
     ? "loading"
     : meQuery.data
       ? "logged-in"

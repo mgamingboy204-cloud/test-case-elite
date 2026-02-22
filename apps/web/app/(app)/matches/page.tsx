@@ -8,7 +8,8 @@ import { Badge } from "@/app/components/ui/Badge";
 import { Skeleton } from "@/app/components/ui/Skeleton";
 import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { PageHeader } from "@/app/components/ui/PageHeader";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
+import { useSession } from "@/lib/session";
 
 type MatchStatus = "PENDING" | "CONSENTED" | "PHONE_EXCHANGE_READY" | "DECLINED";
 
@@ -38,15 +39,28 @@ function toStatusLabel(status: MatchStatus) {
 }
 
 export default function MatchesPage() {
+  const { status } = useSession();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [viewState, setViewState] = useState<"idle" | "error" | "unauthenticated">("idle");
+
+  const pendingCount = useMemo(
+    () => matches.filter((match) => match.status === "PENDING" || match.status === "CONSENTED").length,
+    [matches]
+  );
 
   const fetchMatches = async () => {
+    if (status !== "logged-in") {
+      setLoading(false);
+      setViewState("unauthenticated");
+      setMatches([]);
+      return;
+    }
+
     setLoading(true);
-    setError(false);
+    setViewState("idle");
     try {
-      const data = await apiFetch<any>("/matches");
+      const data = await apiFetch<any>("/matches", { retryOnUnauthorized: true });
       const rows = Array.isArray(data?.matches) ? data.matches : [];
       const mapped: Match[] = rows.map((row: any) => ({
         id: row.id,
@@ -59,8 +73,12 @@ export default function MatchesPage() {
         phoneExchangeReady: Boolean(row.phoneExchangeReady),
       }));
       setMatches(mapped);
-    } catch {
-      setError(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setViewState("unauthenticated");
+      } else {
+        setViewState("error");
+      }
       setMatches([]);
     } finally {
       setLoading(false);
@@ -69,7 +87,7 @@ export default function MatchesPage() {
 
   useEffect(() => {
     fetchMatches();
-  }, []);
+  }, [status]);
 
   if (loading) {
     return (
@@ -84,12 +102,17 @@ export default function MatchesPage() {
     );
   }
 
-  const pendingCount = useMemo(
-    () => matches.filter((match) => match.status === "PENDING" || match.status === "CONSENTED").length,
-    [matches]
-  );
+  if (viewState === "unauthenticated") {
+    return (
+      <EmptyState
+        title="Session expired"
+        description="Please sign in again to view your matches."
+        action={{ label: "Go to login", onClick: () => window.location.assign("/login") }}
+      />
+    );
+  }
 
-  if (error) return <ErrorState onRetry={fetchMatches} />;
+  if (viewState === "error") return <ErrorState onRetry={fetchMatches} />;
 
   return (
     <div>
