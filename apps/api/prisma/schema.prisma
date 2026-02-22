@@ -215,15 +215,18 @@ model DeviceToken {
 model Like {
   id         String   @id @default(uuid())
   actionId   String   @unique
-  fromUserId String
-  toUserId   String
-  type       LikeType
+  actorUserId String @map("fromUserId")
+  targetUserId   String @map("toUserId")
+  action       LikeType @map("type")
   createdAt  DateTime @default(now())
 
-  fromUser User @relation("likesSent", fields: [fromUserId], references: [id])
-  toUser   User @relation("likesReceived", fields: [toUserId], references: [id])
+  actorUser User @relation("likesSent", fields: [actorUserId], references: [id])
+  targetUser   User @relation("likesReceived", fields: [targetUserId], references: [id])
 
-  @@unique([fromUserId, toUserId])
+  @@unique([actorUserId, targetUserId])
+  @@index([targetUserId, action, createdAt(sort: Desc)])
+  @@index([actorUserId, action, createdAt(sort: Desc)])
+  @@index([actorUserId, targetUserId])
 }
 
 model Match {

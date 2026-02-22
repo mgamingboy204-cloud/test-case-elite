@@ -62,7 +62,7 @@ export async function requestRefund(user: User, reason?: string | null) {
     orderBy: { paidAt: "desc" }
   });
   const likesSent = await prisma.like.count({
-    where: { fromUserId: user.id, type: "LIKE" }
+    where: { actorUserId: user.id, action: "LIKE" }
   });
   const successfulEngagementCount = await prisma.phoneExchangeEvent.count({
     where: {

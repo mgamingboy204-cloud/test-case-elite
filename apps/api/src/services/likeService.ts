@@ -1,43 +1,36 @@
 import { prisma } from "../db/prisma";
 
-
 export async function createLike(options: { actorUserId: string; targetUserId: string; action: "LIKE" | "PASS"; actionId: string }) {
-  const oppositeType = options.action === "LIKE" ? "PASS" : "LIKE";
+  const oppositeAction = options.action === "LIKE" ? "PASS" : "LIKE";
 
   const result = await prisma.$transaction(async (tx) => {
     const existingAction = await tx.like.findUnique({ where: { actionId: options.actionId } });
     if (existingAction) {
-      return { like: existingAction, match: null, deduplicated: true };
+      return { like: existingAction, match: null, alreadyProcessed: true };
     }
 
     await tx.like.deleteMany({
       where: {
-        fromUserId: options.actorUserId,
-        toUserId: options.targetUserId,
-        type: oppositeType
+        actorUserId: options.actorUserId,
+        targetUserId: options.targetUserId,
+        action: oppositeAction
       }
     });
 
     const like = await tx.like.upsert({
-      where: { fromUserId_toUserId: { fromUserId: options.actorUserId, toUserId: options.targetUserId } },
-      update: { type: options.action, actionId: options.actionId },
+      where: { actorUserId_targetUserId: { actorUserId: options.actorUserId, targetUserId: options.targetUserId } },
+      update: { action: options.action, actionId: options.actionId },
       create: {
         actionId: options.actionId,
-        fromUserId: options.actorUserId,
-        toUserId: options.targetUserId,
-        type: options.action
+        actorUserId: options.actorUserId,
+        targetUserId: options.targetUserId,
+        action: options.action
       }
     });
 
     if (options.action === "LIKE") {
       await tx.notification.createMany({
-        data: [
-          {
-            userId: options.targetUserId,
-            actorUserId: options.actorUserId,
-            type: "NEW_LIKE"
-          }
-        ],
+        data: [{ userId: options.targetUserId, actorUserId: options.actorUserId, type: "NEW_LIKE" }],
         skipDuplicates: true
       });
     }
@@ -45,7 +38,7 @@ export async function createLike(options: { actorUserId: string; targetUserId: s
     let match = null as { id: string } | null;
     if (options.action === "LIKE") {
       const reciprocal = await tx.like.findFirst({
-        where: { fromUserId: options.targetUserId, toUserId: options.actorUserId, type: "LIKE" }
+        where: { actorUserId: options.targetUserId, targetUserId: options.actorUserId, action: "LIKE" }
       });
       if (reciprocal) {
         const ordered = [options.actorUserId, options.targetUserId].sort();
@@ -56,47 +49,34 @@ export async function createLike(options: { actorUserId: string; targetUserId: s
         });
         await tx.notification.createMany({
           data: [
-            {
-              userId: ordered[0],
-              actorUserId: ordered[1],
-              type: "NEW_MATCH",
-              matchId: match.id
-            },
-            {
-              userId: ordered[1],
-              actorUserId: ordered[0],
-              type: "NEW_MATCH",
-              matchId: match.id
-            }
+            { userId: ordered[0], actorUserId: ordered[1], type: "NEW_MATCH", matchId: match.id },
+            { userId: ordered[1], actorUserId: ordered[0], type: "NEW_MATCH", matchId: match.id }
           ],
           skipDuplicates: true
         });
       }
     }
 
-    return { like, match, deduplicated: false };
+    return { like, match, alreadyProcessed: false };
   });
 
-  return { matchId: result.match?.id ?? null, deduplicated: result.deduplicated };
+  return { matchId: result.match?.id ?? null, alreadyProcessed: result.alreadyProcessed };
 }
 
 export async function getIncomingLikes(userId: string) {
   const incoming = await prisma.like.findMany({
     where: {
-      toUserId: userId,
-      type: "LIKE",
+      targetUserId: userId,
+      action: "LIKE",
       NOT: {
-        fromUser: {
-          likesReceived: {
-            some: {
-              fromUserId: userId
-            }
-          }
-        }
+        OR: [
+          { actorUser: { matchesA: { some: { userBId: userId } } } },
+          { actorUser: { matchesB: { some: { userAId: userId } } } }
+        ]
       }
     },
     include: {
-      fromUser: {
+      actorUser: {
         select: { id: true, phone: true, profile: true }
       }
     },
@@ -105,15 +85,14 @@ export async function getIncomingLikes(userId: string) {
   return { incoming };
 }
 
-
 export async function getOutgoingLikes(userId: string) {
   const outgoing = await prisma.like.findMany({
     where: {
-      fromUserId: userId,
-      type: "LIKE"
+      actorUserId: userId,
+      action: "LIKE"
     },
     include: {
-      toUser: {
+      targetUser: {
         select: { id: true, phone: true, profile: true }
       }
     },
