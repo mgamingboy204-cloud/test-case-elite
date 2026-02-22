@@ -84,12 +84,12 @@ export default function MatchesPage() {
     );
   }
 
-  if (error) return <ErrorState onRetry={fetchMatches} />;
-
   const pendingCount = useMemo(
     () => matches.filter((match) => match.status === "PENDING" || match.status === "CONSENTED").length,
     [matches]
   );
+
+  if (error) return <ErrorState onRetry={fetchMatches} />;
 
   return (
     <div>
