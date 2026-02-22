@@ -7,6 +7,7 @@ import { env } from "./config/env";
 import { updateLastActive } from "./middlewares/activity";
 import { errorHandler } from "./middlewares/errorHandler";
 import { notFound } from "./middlewares/notFound";
+import { requestIdMiddleware } from "./middlewares/requestId";
 import routes from "./routes";
 import { ensureUploadsDir } from "./services/photoService";
 
@@ -67,6 +68,7 @@ const corsOptions: CorsOptions = {
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 app.use(morgan("dev"));
+app.use(requestIdMiddleware);
 app.use((req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
