@@ -32,7 +32,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
     left: 0,
     right: 0,
     background: "linear-gradient(150deg, color-mix(in srgb, var(--surface) 94%, transparent), color-mix(in srgb, var(--surface2) 96%, var(--pearl-panel)) )",
-    borderRadius: "var(--radius-xl) var(--radius-xl) 0 0",
+    borderRadius: "32px 32px 0 0",
     maxHeight: "85vh",
     overflow: "auto",
     boxShadow: "var(--shadow-md)",

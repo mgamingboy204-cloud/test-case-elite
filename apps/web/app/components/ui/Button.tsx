@@ -20,7 +20,7 @@ const variantStyles: Record<Variant, React.CSSProperties> = {
     boxShadow: "var(--shadow-sm)",
   },
   secondary: {
-    background: "color-mix(in srgb, var(--surface2) 88%, var(--pearl-panel))",
+    background: "color-mix(in srgb, var(--surface2) 90%, var(--pearl-panel))",
     color: "var(--text)",
     border: "1px solid var(--border)",
   },
@@ -30,7 +30,7 @@ const variantStyles: Record<Variant, React.CSSProperties> = {
     border: "1px solid transparent",
   },
   danger: {
-    background: "var(--danger)",
+    background: "color-mix(in srgb, var(--roseDeep) 82%, var(--surface2))",
     color: "var(--ctaText)",
     border: "1px solid color-mix(in srgb, var(--danger) 46%, var(--border))",
   },
@@ -54,9 +54,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           justifyContent: "center",
           gap: 8,
           fontWeight: 600,
+          minHeight: 44,
           cursor: disabled || loading ? "not-allowed" : "pointer",
           opacity: disabled || loading ? 0.55 : 1,
-          transition: "transform 180ms ease-out, opacity 160ms ease, box-shadow 180ms ease-out, background-color 180ms ease-out",
+          transition: "transform 180ms ease-out, opacity 180ms ease-out, box-shadow 180ms ease-out, background-color 180ms ease-out, border-color 180ms ease-out",
           width: fullWidth ? "100%" : undefined,
           whiteSpace: "nowrap",
           ...variantStyles[variant],
@@ -79,6 +80,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         }}
         onPointerLeave={(e) => {
           e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = variant === "primary" ? "var(--shadow-sm)" : "none";
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.boxShadow = `0 0 0 3px var(--ring), ${variant === "primary" ? "var(--shadow-sm)" : "none"}`;
+        }}
+        onBlur={(e) => {
           e.currentTarget.style.boxShadow = variant === "primary" ? "var(--shadow-sm)" : "none";
         }}
         {...props}

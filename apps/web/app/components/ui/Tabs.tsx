@@ -37,7 +37,8 @@ export function Tabs({ tabs, active, onChange, style }: TabsProps) {
           onClick={() => onChange(tab.value)}
           style={{
             flex: 1,
-            padding: "10px 16px",
+            padding: "12px 16px",
+            minHeight: 44,
             fontSize: 14,
             fontWeight: active === tab.value ? 600 : 500,
             borderRadius: "var(--radius-full)",

@@ -55,8 +55,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const headerStyle: CSSProperties = {
     height: "var(--app-header-offset)",
-    background: "var(--panel)",
-    borderBottom: "1px solid var(--border)",
+    background: "color-mix(in srgb, var(--surface) 92%, transparent)",
+    borderBottom: "1px solid color-mix(in srgb, var(--border) 78%, var(--accent) 22%)",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -77,15 +77,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button
             onClick={toggle}
             style={{
-              width: 32,
-              height: 32,
+              width: 44,
+              height: 44,
               borderRadius: "var(--radius-sm)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: 16,
               border: "1px solid var(--border)",
-              background: "var(--panel)",
+              background: "color-mix(in srgb, var(--surface) 92%, transparent)",
               color: "var(--text)",
             }}
             aria-label="Toggle theme"
@@ -129,7 +129,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="app-sidebar"
           style={{
             width: 220,
-            background: "var(--panel)",
+            background: "color-mix(in srgb, var(--surface) 92%, transparent)",
             borderRight: "1px solid var(--border)",
             padding: "16px 0",
             display: "flex",
@@ -151,13 +151,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                   display: "flex",
                   alignItems: "center",
                   gap: 12,
-                  padding: "10px 24px",
+                  padding: "12px 24px",
                   fontSize: 14,
                   fontWeight: active ? 600 : 400,
                   color: active ? "var(--primary)" : "var(--text)",
                   background: active ? "var(--primary-light)" : "transparent",
                   borderRight: active ? "3px solid var(--primary)" : "3px solid transparent",
-                  transition: "all 150ms ease",
+                  transition: "all 180ms ease-out",
                 }}
               >
                 <span style={{ fontSize: 18 }}>{link.icon}</span>
@@ -221,7 +221,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             grid-template-columns: 44px 1fr 44px;
             align-items: center;
             gap: 10px;
-            padding: calc(var(--sat) + 8px) max(12px, var(--sal)) 10px max(12px, var(--sal));
+            padding: calc(var(--sat) + 10px) max(12px, var(--sal)) 12px max(12px, var(--sal));
             padding-right: max(12px, var(--sar));
             background: color-mix(in srgb, var(--panel) 82%, transparent);
             backdrop-filter: saturate(140%) blur(14px);
@@ -231,8 +231,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: 9999px;
           }
           .app-mobile-header__title {
@@ -245,11 +245,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             text-overflow: ellipsis;
           }
           .app-mobile-header__filter-btn {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: 9999px;
             border: 1px solid var(--border);
-            background: color-mix(in srgb, var(--surface2) 78%, transparent);
+            background: color-mix(in srgb, var(--surface2) 88%, transparent);
             color: var(--text);
             display: inline-flex;
             align-items: center;
