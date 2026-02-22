@@ -3,6 +3,9 @@ import { errorHandler } from "../src/middlewares/errorHandler";
 import { createLikeHandler } from "../src/controllers/likeController";
 import { createLike } from "../src/services/likeService";
 import { getDiscoverFeed } from "../src/services/discoverService";
+import { likeLimiter } from "../src/middlewares/rateLimiters";
+import express from "express";
+import request from "supertest";
 
 vi.mock("../src/services/likeService", () => ({
   createLike: vi.fn(),
@@ -90,6 +93,21 @@ describe("runtime contracts", () => {
     });
   });
 
+
+
+  it("like limiter key generator does not throw when session is missing", async () => {
+    const app = express();
+    app.use((req, _res, next) => {
+      req.user = { id: "actor-123" };
+      next();
+    });
+    app.use(likeLimiter);
+    app.post("/likes", (_req, res) => res.status(201).json({ ok: true }));
+
+    const response = await request(app).post("/likes");
+
+    expect(response.status).toBe(201);
+  });
 
   it("discover excludes already swiped users", async () => {
     (prisma.profile.findUnique as any).mockResolvedValue({ gender: "MALE" });

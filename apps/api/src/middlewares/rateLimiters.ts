@@ -41,5 +41,5 @@ export const registerLimiter = rateLimit({
 export const likeLimiter = rateLimit({
   windowMs: 1000 * 60,
   limit: 60,
-  keyGenerator: (req) => String(req.session.userId ?? req.ip)
+  keyGenerator: (req) => String(req.user?.id ?? req.session?.userId ?? req.ip)
 });

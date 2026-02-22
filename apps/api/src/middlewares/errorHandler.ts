@@ -42,7 +42,8 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
   }
 
   // 2. Handle Prisma Client Errors (Database)
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+  const PrismaKnownRequestError = Prisma?.PrismaClientKnownRequestError as unknown as (new (...args: any[]) => Error) | undefined;
+  if (PrismaKnownRequestError && err instanceof PrismaKnownRequestError) {
     const mapped = PRISMA_ERROR_MAP[err.code];
     if (mapped) {
       return res.status(mapped.status).json({
@@ -59,7 +60,8 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
   }
 
   // 3. Handle Prisma Validation Errors
-  if (err instanceof Prisma.PrismaClientValidationError) {
+  const PrismaValidationError = Prisma?.PrismaClientValidationError as unknown as (new (...args: any[]) => Error) | undefined;
+  if (PrismaValidationError && err instanceof PrismaValidationError) {
     logger.error("Prisma Validation Error:", err.message);
     return res.status(400).json({
       message: "The provided information does not meet our elite quality standards.",
@@ -86,11 +88,12 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
   }
 
   // 6. Final Fallback (Unhandled)
+  const shouldShowFullStack = req.path === "/likes" || process.env.LIKES_DEBUG_LOGS === "1";
   logger.error("Unhandled Global Error:", {
     requestId: (res.locals.requestId as string | undefined) ?? req.get("x-request-id") ?? null,
-    message: err.message,
-    stack: process.env.NODE_ENV === "production" ? "REDACTED" : err.stack,
     path: req.path,
+    message: err.message,
+    stack: shouldShowFullStack || process.env.NODE_ENV !== "production" ? err.stack : "REDACTED",
     method: req.method,
     userId: req.user?.id ?? null,
   });

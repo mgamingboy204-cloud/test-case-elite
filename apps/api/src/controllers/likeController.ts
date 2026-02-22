@@ -9,45 +9,54 @@ function getRequestId(req: Request, res: Response) {
 
 
 export async function createLikeHandler(req: Request, res: Response) {
-  const requestId = getRequestId(req, res);
-  const userId = req.user?.id ?? null;
-  const hasAuthenticatedUser = Boolean(userId);
+  try {
+    const requestId = getRequestId(req, res);
+    const userId = req.user?.id ?? null;
+    const hasAuthenticatedUser = Boolean(userId);
 
-  const { actionId, targetUserId, action } = req.body as { actionId?: string; targetUserId?: string; action?: "LIKE" | "PASS" };
-  logger.info("likes.entry", {
-    requestId,
-    path: req.path,
-    method: req.method,
-    hasUser: Boolean(req.user),
-    reqUser: req.user ?? null,
-    reqUserId: req.user?.id ?? null,
-    bodyKeys: Object.keys((req.body ?? {}) as Record<string, unknown>)
-  });
+    const { actionId, targetUserId, action } = req.body as { actionId?: string; targetUserId?: string; action?: "LIKE" | "PASS" };
+    logger.info("likes.entry", {
+      requestId,
+      path: req.path,
+      method: req.method,
+      hasUser: Boolean(req.user),
+      reqUser: req.user ?? null,
+      reqUserId: req.user?.id ?? null,
+      bodyKeys: Object.keys((req.body ?? {}) as Record<string, unknown>)
+    });
 
-  if (!userId) {
-    logger.warn("likes.create.unauthenticated", { requestId, marker: "likes_handler_v3", hasAuthenticatedUser, actionId, targetUserId, action, statusCode: 401 });
-    return res.status(401).json({ error: "UNAUTHENTICATED" });
+    if (!userId) {
+      logger.warn("likes.create.unauthenticated", { requestId, marker: "likes_handler_v3", hasAuthenticatedUser, actionId, targetUserId, action, statusCode: 401 });
+      return res.status(401).json({ error: "UNAUTHENTICATED" });
+    }
+
+    if (!actionId || !targetUserId || (action !== "LIKE" && action !== "PASS")) {
+      logger.warn("likes.create.invalid_payload", { requestId, hasAuthenticatedUser, userId, actionId, targetUserId, action, statusCode: 400 });
+      return res.status(400).json({ error: "INVALID_LIKE_PAYLOAD", message: "actionId, targetUserId and action are required." });
+    }
+
+    if (targetUserId === userId) {
+      logger.warn("likes.create.self_action", { requestId, hasAuthenticatedUser, userId, targetUserId, action, statusCode: 400 });
+      throw new HttpError(400, { message: "Cannot act on yourself." });
+    }
+
+    const result = await createLike({
+      actionId,
+      actorUserId: userId,
+      targetUserId,
+      action
+    });
+
+    logger.info("likes.create.success", { requestId, marker: "likes_handler_v3", hasAuthenticatedUser, userId, actionId, targetUserId, action, statusCode: 200, alreadyProcessed: result.alreadyProcessed, matchId: result.matchId ?? null });
+    return res.json({ ok: true, matchId: result.matchId, alreadyProcessed: result.alreadyProcessed });
+  } catch (e) {
+    console.error("likes.crash", {
+      requestId: req.requestId,
+      message: (e as any)?.message,
+      stack: (e as any)?.stack,
+    });
+    throw e;
   }
-
-  if (!actionId || !targetUserId || (action !== "LIKE" && action !== "PASS")) {
-    logger.warn("likes.create.invalid_payload", { requestId, hasAuthenticatedUser, userId, actionId, targetUserId, action, statusCode: 400 });
-    return res.status(400).json({ error: "INVALID_LIKE_PAYLOAD", message: "actionId, targetUserId and action are required." });
-  }
-
-  if (targetUserId === userId) {
-    logger.warn("likes.create.self_action", { requestId, hasAuthenticatedUser, userId, targetUserId, action, statusCode: 400 });
-    throw new HttpError(400, { message: "Cannot act on yourself." });
-  }
-
-  const result = await createLike({
-    actionId,
-    actorUserId: userId,
-    targetUserId,
-    action
-  });
-
-  logger.info("likes.create.success", { requestId, marker: "likes_handler_v3", hasAuthenticatedUser, userId, actionId, targetUserId, action, statusCode: 200, alreadyProcessed: result.alreadyProcessed, matchId: result.matchId ?? null });
-  return res.json({ ok: true, matchId: result.matchId, alreadyProcessed: result.alreadyProcessed });
 }
 
 export async function incomingLikesHandler(req: Request, res: Response) {
