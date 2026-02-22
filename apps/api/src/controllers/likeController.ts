@@ -18,16 +18,26 @@ export async function createLikeHandler(req: Request, res: Response) {
   const userId = getAuthenticatedUserId(req, res);
   const hasAuthenticatedUser = Boolean(userId);
 
-  const { toUserId, type } = req.body as { toUserId?: string; type?: "LIKE" | "PASS" };
+  const { actionId, toUserId, type } = req.body as { actionId?: string; toUserId?: string; type?: "LIKE" | "PASS" };
+  if (process.env.LIKES_DEBUG_LOGS === "1") {
+    logger.info("likes.handler.entry", {
+      requestId,
+      marker: "likes_handler_v3",
+      hasAuthenticatedUser,
+      reqUserPresent: Boolean(req.user),
+      reqUserId: req.userId ?? null,
+      actionId: actionId ?? null
+    });
+  }
 
   if (!userId) {
-    logger.warn("likes.create.unauthenticated", { requestId, hasAuthenticatedUser, toUserId, type, statusCode: 401 });
+    logger.warn("likes.create.unauthenticated", { requestId, marker: "likes_handler_v3", hasAuthenticatedUser, actionId, toUserId, type, statusCode: 401 });
     return res.status(401).json({ error: "UNAUTHENTICATED" });
   }
 
-  if (!toUserId || (type !== "LIKE" && type !== "PASS")) {
-    logger.warn("likes.create.invalid_payload", { requestId, hasAuthenticatedUser, userId, toUserId, type, statusCode: 400 });
-    return res.status(400).json({ error: "INVALID_LIKE_PAYLOAD", message: "toUserId and type are required." });
+  if (!actionId || !toUserId || (type !== "LIKE" && type !== "PASS")) {
+    logger.warn("likes.create.invalid_payload", { requestId, hasAuthenticatedUser, userId, actionId, toUserId, type, statusCode: 400 });
+    return res.status(400).json({ error: "INVALID_LIKE_PAYLOAD", message: "actionId, toUserId and type are required." });
   }
 
   if (toUserId === userId) {
@@ -36,12 +46,13 @@ export async function createLikeHandler(req: Request, res: Response) {
   }
 
   const result = await createLike({
+    actionId,
     fromUserId: userId,
     toUserId,
     type
   });
 
-  logger.info("likes.create.success", { requestId, hasAuthenticatedUser, userId, toUserId, type, statusCode: 200, matchId: result.matchId ?? null });
+  logger.info("likes.create.success", { requestId, marker: "likes_handler_v3", hasAuthenticatedUser, userId, actionId, toUserId, type, statusCode: 200, matchId: result.matchId ?? null });
   return res.json({ ok: true, matchId: result.matchId });
 }
 

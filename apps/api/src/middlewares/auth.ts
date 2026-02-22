@@ -11,6 +11,13 @@ function getBearerToken(req: Request) {
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (process.env.LIKES_DEBUG_LOGS === "1" && req.path === "/likes" && req.method === "POST") {
+    console.info("likes.auth.entry", {
+      marker: "likes_auth_v2",
+      hasAuthorizationHeader: Boolean(req.get("authorization"))
+    });
+  }
+
   const token = getBearerToken(req);
   if (!token) {
     return res.status(401).json({ message: "Missing or invalid authorization header" });

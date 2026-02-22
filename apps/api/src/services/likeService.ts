@@ -5,10 +5,15 @@ function isMissingNotificationTable(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021";
 }
 
-export async function createLike(options: { fromUserId: string; toUserId: string; type: "LIKE" | "PASS" }) {
+export async function createLike(options: { fromUserId: string; toUserId: string; type: "LIKE" | "PASS"; actionId: string }) {
   const oppositeType = options.type === "LIKE" ? "PASS" : "LIKE";
 
   const result = await prisma.$transaction(async (tx) => {
+    const existingAction = await tx.like.findUnique({ where: { actionId: options.actionId } });
+    if (existingAction) {
+      return { like: existingAction, match: null };
+    }
+
     await tx.like.deleteMany({
       where: {
         fromUserId: options.fromUserId,
@@ -19,8 +24,9 @@ export async function createLike(options: { fromUserId: string; toUserId: string
 
     const like = await tx.like.upsert({
       where: { fromUserId_toUserId: { fromUserId: options.fromUserId, toUserId: options.toUserId } },
-      update: { type: options.type },
+      update: { type: options.type, actionId: options.actionId },
       create: {
+        actionId: options.actionId,
         fromUserId: options.fromUserId,
         toUserId: options.toUserId,
         type: options.type
