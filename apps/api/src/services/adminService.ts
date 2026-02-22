@@ -141,7 +141,7 @@ export async function deleteUser(userId: string) {
     await tx.consent.deleteMany({ where: { matchId: { in: matchIds } } });
     await tx.phoneExchangeEvent.deleteMany({ where: { matchId: { in: matchIds } } });
     await tx.match.deleteMany({ where: { id: { in: matchIds } } });
-    await tx.like.deleteMany({ where: { OR: [{ fromUserId: userId }, { toUserId: userId }] } });
+    await tx.like.deleteMany({ where: { OR: [{ actorUserId: userId }, { targetUserId: userId }] } });
     await tx.report.deleteMany({
       where: { OR: [{ reporterId: userId }, { reportedUserId: userId }] }
     });

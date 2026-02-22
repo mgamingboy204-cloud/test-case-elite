@@ -14,16 +14,15 @@ export async function createLikeHandler(req: Request, res: Response) {
   const hasAuthenticatedUser = Boolean(userId);
 
   const { actionId, targetUserId, action } = req.body as { actionId?: string; targetUserId?: string; action?: "LIKE" | "PASS" };
-  if (process.env.LIKES_DEBUG_LOGS === "1") {
-    logger.info("likes.handler.entry", {
-      requestId,
-      marker: "likes_handler_v3",
-      hasAuthenticatedUser,
-      reqUserPresent: Boolean(req.user),
-      reqUserId: req.user?.id ?? null,
-      actionId: actionId ?? null
-    });
-  }
+  logger.info("likes.entry", {
+    requestId,
+    path: req.path,
+    method: req.method,
+    hasUser: Boolean(req.user),
+    reqUser: req.user ?? null,
+    reqUserId: req.user?.id ?? null,
+    bodyKeys: Object.keys((req.body ?? {}) as Record<string, unknown>)
+  });
 
   if (!userId) {
     logger.warn("likes.create.unauthenticated", { requestId, marker: "likes_handler_v3", hasAuthenticatedUser, actionId, targetUserId, action, statusCode: 401 });
@@ -47,8 +46,8 @@ export async function createLikeHandler(req: Request, res: Response) {
     action
   });
 
-  logger.info("likes.create.success", { requestId, marker: "likes_handler_v3", hasAuthenticatedUser, userId, actionId, targetUserId, action, statusCode: 200, deduplicated: result.deduplicated, matchId: result.matchId ?? null });
-  return res.json({ ok: true, matchId: result.matchId, alreadyProcessed: result.deduplicated });
+  logger.info("likes.create.success", { requestId, marker: "likes_handler_v3", hasAuthenticatedUser, userId, actionId, targetUserId, action, statusCode: 200, alreadyProcessed: result.alreadyProcessed, matchId: result.matchId ?? null });
+  return res.json({ ok: true, matchId: result.matchId, alreadyProcessed: result.alreadyProcessed });
 }
 
 export async function incomingLikesHandler(req: Request, res: Response) {

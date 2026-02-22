@@ -51,7 +51,7 @@ function buildDiscoverWhere(options: DiscoverFilterOptions) {
         user: {
           likesReceived: {
             some: {
-              fromUserId: options.userId
+              actorUserId: options.userId
             }
           }
         }

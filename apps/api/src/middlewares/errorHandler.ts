@@ -87,10 +87,12 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
 
   // 6. Final Fallback (Unhandled)
   logger.error("Unhandled Global Error:", {
+    requestId: (res.locals.requestId as string | undefined) ?? req.get("x-request-id") ?? null,
     message: err.message,
     stack: process.env.NODE_ENV === "production" ? "REDACTED" : err.stack,
     path: req.path,
     method: req.method,
+    userId: req.user?.id ?? null,
   });
 
   return res.status(500).json({
