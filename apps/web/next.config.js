@@ -13,6 +13,13 @@ const withPWA = require("next-pwa")({
   cleanupOutdatedCaches: true,
   runtimeCaching: [
     {
+      urlPattern: ({ request }) => request.mode === "navigate",
+      handler: "NetworkOnly",
+      options: {
+        cacheName: "documents-network-only"
+      }
+    },
+    {
       urlPattern: /^\/_next\/static\/.*/i,
       handler: "NetworkFirst",
       options: {
@@ -58,6 +65,7 @@ const withPWA = require("next-pwa")({
 const nextConfig = {
   output: "standalone",
   reactStrictMode: true,
+  productionBrowserSourceMaps: true,
   async rewrites() {
     if (!apiProxyTarget) {
       return [];
