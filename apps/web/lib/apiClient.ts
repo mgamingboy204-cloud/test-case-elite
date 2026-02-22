@@ -1,4 +1,4 @@
-import { getAccessToken, setAccessToken } from "./authToken";
+import { clearAccessToken, getAccessToken, setAccessToken } from "./authToken";
 
 const rawApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -108,6 +108,10 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, hasR
     const refreshed = await refreshAccessToken();
     if (refreshed) {
       return apiFetchWithRetry<T>(path, options, true);
+    }
+    clearAccessToken();
+    if (typeof window !== "undefined") {
+      window.location.assign("/login");
     }
   }
   if (!res.ok) {

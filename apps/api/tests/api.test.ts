@@ -694,8 +694,8 @@ describe("Likes, matches, and notifications", () => {
   it("returns 401 for likes without auth and persists likes when authenticated", async () => {
     const anonymousResponse = await request(app).post("/likes").send({
       actionId: "anon-like-1",
-      toUserId: "2e4e1ffc-6da0-4300-9ce1-1d13d4f98f1f",
-      type: "LIKE"
+      targetUserId: "2e4e1ffc-6da0-4300-9ce1-1d13d4f98f1f",
+      action: "LIKE"
     });
     expect(anonymousResponse.status).toBe(401);
 
@@ -752,7 +752,7 @@ describe("Likes, matches, and notifications", () => {
       ]
     });
 
-    const likeResponse = await withAuth(agentA.post("/likes"), tokenA).send({ actionId: "a-like-main", toUserId: userB.id, type: "LIKE" });
+    const likeResponse = await withAuth(agentA.post("/likes"), tokenA).send({ actionId: "a-like-main", targetUserId: userB.id, action: "LIKE" });
     expect(likeResponse.status).toBe(200);
 
     const persisted = await prisma.like.findFirst({
@@ -813,16 +813,16 @@ describe("Likes, matches, and notifications", () => {
       ]
     });
 
-    await withAuth(agentA.post("/likes"), tokenA).send({ actionId: "a-pass-1", toUserId: userB.id, type: "PASS" });
-    await withAuth(agentA.post("/likes"), tokenA).send({ actionId: "a-pass-2", toUserId: userB.id, type: "PASS" });
+    await withAuth(agentA.post("/likes"), tokenA).send({ actionId: "a-pass-1", targetUserId: userB.id, action: "PASS" });
+    await withAuth(agentA.post("/likes"), tokenA).send({ actionId: "a-pass-2", targetUserId: userB.id, action: "PASS" });
     const passRows = await prisma.like.findMany({
       where: { fromUserId: userA.id, toUserId: userB.id }
     });
     expect(passRows).toHaveLength(1);
     expect(passRows[0]?.type).toBe("PASS");
 
-    await withAuth(agentA.post("/likes"), tokenA).send({ actionId: "a-like-1", toUserId: userB.id, type: "LIKE" });
-    await withAuth(agentA.post("/likes"), tokenA).send({ actionId: "a-like-2", toUserId: userB.id, type: "LIKE" });
+    await withAuth(agentA.post("/likes"), tokenA).send({ actionId: "a-like-1", targetUserId: userB.id, action: "LIKE" });
+    await withAuth(agentA.post("/likes"), tokenA).send({ actionId: "a-like-2", targetUserId: userB.id, action: "LIKE" });
     const likeRows = await prisma.like.findMany({
       where: { fromUserId: userA.id, toUserId: userB.id }
     });
@@ -834,8 +834,8 @@ describe("Likes, matches, and notifications", () => {
     });
     expect(likeNotifications).toHaveLength(1);
 
-    await withAuth(agentB.post("/likes"), tokenB).send({ actionId: "b-like-1", toUserId: userA.id, type: "LIKE" });
-    await withAuth(agentB.post("/likes"), tokenB).send({ actionId: "b-like-2", toUserId: userA.id, type: "LIKE" });
+    await withAuth(agentB.post("/likes"), tokenB).send({ actionId: "b-like-1", targetUserId: userA.id, action: "LIKE" });
+    await withAuth(agentB.post("/likes"), tokenB).send({ actionId: "b-like-2", targetUserId: userA.id, action: "LIKE" });
     const matches = await prisma.match.findMany({
       where: {
         OR: [
