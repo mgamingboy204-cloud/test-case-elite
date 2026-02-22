@@ -17,14 +17,12 @@ export function Card({ children, style, className, onClick }: CardProps) {
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       style={{
-        background: "color-mix(in srgb, var(--panel) 86%, transparent)",
+        background: "color-mix(in srgb, var(--panel) 94%, transparent)",
         borderRadius: "var(--radius-lg)",
         border: "1px solid var(--border)",
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
-        boxShadow: "var(--shadow-md)",
+        boxShadow: "var(--shadow-sm)",
         overflow: "hidden",
-        transition: "box-shadow 220ms ease-in-out, transform 220ms ease-in-out",
+        transition: "box-shadow 220ms ease, transform 220ms ease",
         cursor: onClick ? "pointer" : undefined,
         ...style,
       }}
@@ -35,6 +33,18 @@ export function Card({ children, style, className, onClick }: CardProps) {
             }
           : undefined
       }
+      onPointerEnter={(e) => {
+        if (onClick) {
+          e.currentTarget.style.transform = "translateY(-2px)";
+          e.currentTarget.style.boxShadow = "var(--shadow-md)";
+        }
+      }}
+      onPointerLeave={(e) => {
+        if (onClick) {
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+        }
+      }}
     >
       {children}
     </div>

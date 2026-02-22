@@ -20,7 +20,8 @@ export function Tabs({ tabs, active, onChange, style }: TabsProps) {
       role="tablist"
       style={{
         display: "flex",
-        background: "var(--bg)",
+        background: "color-mix(in srgb, var(--surface2) 84%, transparent)",
+        border: "1px solid var(--border)",
         borderRadius: "var(--radius-full)",
         padding: 3,
         gap: 2,
@@ -36,12 +37,12 @@ export function Tabs({ tabs, active, onChange, style }: TabsProps) {
           onClick={() => onChange(tab.value)}
           style={{
             flex: 1,
-            padding: "8px 16px",
+            padding: "10px 16px",
             fontSize: 14,
-            fontWeight: active === tab.value ? 600 : 400,
+            fontWeight: active === tab.value ? 600 : 500,
             borderRadius: "var(--radius-full)",
             background: active === tab.value ? "var(--panel)" : "transparent",
-            color: active === tab.value ? "var(--text)" : "var(--muted)",
+            color: active === tab.value ? "var(--text)" : "var(--text-secondary)",
             boxShadow: active === tab.value ? "var(--shadow)" : "none",
             transition: "all 200ms ease",
             whiteSpace: "nowrap",

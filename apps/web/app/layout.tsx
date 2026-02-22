@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description: "Premium, verified matchmaking experience.",
   applicationName: "Elite Match",
   manifest: "/manifest.webmanifest",
-  themeColor: "#f26b76",
+  themeColor: "#c27d80",
   appleWebApp: {
     capable: true,
     title: "Elite Match",

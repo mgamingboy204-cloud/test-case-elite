@@ -45,13 +45,14 @@ export function Modal({ open, onClose, title, children, maxWidth = 480 }: ModalP
   };
 
   const contentStyle: CSSProperties = {
-    background: "var(--panel)",
+    background: "color-mix(in srgb, var(--panel) 96%, transparent)",
+    border: "1px solid var(--border)",
     borderRadius: "var(--radius-xl)",
     maxWidth,
     width: "100%",
     maxHeight: "85vh",
     overflow: "auto",
-    boxShadow: "var(--shadow-xl)",
+    boxShadow: "var(--shadow-md)",
     animation: "fadeIn 200ms ease",
   };
 
@@ -70,7 +71,7 @@ export function Modal({ open, onClose, title, children, maxWidth = 480 }: ModalP
             <h3 style={{ margin: 0 }}>{title}</h3>
             <button
               onClick={onClose}
-              style={{ fontSize: 22, color: "var(--muted)", lineHeight: 1 }}
+              style={{ fontSize: 22, color: "var(--text-secondary)", lineHeight: 1 }}
               aria-label="Close modal"
             >
               &times;

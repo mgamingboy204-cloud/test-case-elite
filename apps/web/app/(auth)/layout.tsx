@@ -34,7 +34,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           align-items: center;
           justify-content: flex-end;
           padding: calc(20px + env(safe-area-inset-top, 0px)) calc(22px + env(safe-area-inset-right, 0px)) calc(22px + env(safe-area-inset-bottom, 0px)) calc(22px + env(safe-area-inset-left, 0px));
-          background: linear-gradient(145deg, #121019 0%, #1a141a 44%, #24181f 100%);
+          background: linear-gradient(145deg, var(--bg2) 0%, var(--surface) 44%, var(--surface2) 100%);
         }
         .auth-backdrop,
         .auth-overlay,
@@ -79,7 +79,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           font-size: clamp(1.45rem, 2.4vw, 1.9rem);
           font-weight: 800;
           letter-spacing: 0.02em;
-          color: #fff3ee;
+          color: var(--text);
           text-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
         }
         .theme-btn {
@@ -89,7 +89,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           border: 1px solid rgba(238, 202, 179, 0.42);
           background: rgba(38, 24, 32, 0.58);
           backdrop-filter: blur(16px);
-          color: #fbe6da;
+          color: var(--text-secondary);
           box-shadow: 0 8px 24px rgba(12, 8, 12, 0.35);
           display: grid;
           place-items: center;
@@ -105,7 +105,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           box-shadow: 0 28px 68px rgba(8, 6, 10, 0.62);
         }
         :global([data-theme='light']) .auth-shell {
-          background: linear-gradient(145deg, #f6f2ec 0%, #f3ede5 48%, #f2e8df 100%);
+          background: linear-gradient(145deg, var(--bg) 0%, var(--surface2) 48%, var(--surface) 100%);
         }
         :global([data-theme='light']) .auth-backdrop {
           background-image: url('https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=2200&q=80');
@@ -125,11 +125,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           background: radial-gradient(circle at 80% 80%, rgba(202, 171, 150, 0.24), rgba(202, 171, 150, 0) 38%);
         }
         :global([data-theme='light']) .brand {
-          color: #2f2421;
+          color: var(--text);
           text-shadow: none;
         }
         :global([data-theme='light']) .theme-btn {
-          color: #3b2c29;
+          color: var(--text-secondary);
           border-color: rgba(185, 154, 132, 0.45);
           background: rgba(255, 250, 245, 0.72);
           box-shadow: 0 10px 24px rgba(143, 118, 95, 0.18);

@@ -17,7 +17,7 @@ export default function LearnPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {steps.map((step) => (
           <article key={step.num} className="marketing-panel marketing-interactive" style={{ display: "grid", gridTemplateColumns: "70px 1fr", gap: 16, alignItems: "center", padding: 22 }}>
-            <div style={{ width: 52, height: 52, borderRadius: "50%", display: "grid", placeItems: "center", border: "1px solid var(--marketing-glass-border)", background: "rgba(148,163,184,0.12)", fontWeight: 700 }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", display: "grid", placeItems: "center", border: "1px solid var(--marketing-glass-border)", background: "var(--primary-light)", fontWeight: 700 }}>
               {step.num}
             </div>
             <div>

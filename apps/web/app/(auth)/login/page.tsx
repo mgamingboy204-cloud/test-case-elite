@@ -287,8 +287,8 @@ const inputStyle = {
 const buttonStyle = {
   marginTop: 24,
   borderRadius: 999,
-  background: "linear-gradient(100deg, #d78a84 0%, #e6b18c 55%, #cf7f79 100%)",
-  color: "#fff8f3",
-  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35), 0 16px 30px rgba(186, 111, 104, 0.35)",
+  background: "linear-gradient(120deg, var(--primary), var(--primary-hover))",
+  color: "var(--ctaText)",
+  boxShadow: "var(--shadow-md)",
   letterSpacing: "0.01em",
 };

@@ -217,7 +217,7 @@ export default function ProfilePage() {
                     fontWeight: 700,
                     padding: "2px 6px",
                     background: "var(--primary)",
-                    color: "#fff",
+                    color: "var(--ctaText)",
                     borderRadius: "var(--radius-full)",
                   }}
                 >
