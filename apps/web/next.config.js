@@ -9,7 +9,17 @@ const withPWA = require("next-pwa")({
   disable: process.env.NODE_ENV === "development",
   register: true,
   skipWaiting: true,
+  clientsClaim: true,
+  cleanupOutdatedCaches: true,
   runtimeCaching: [
+    {
+      urlPattern: /^\/_next\/static\/.*/i,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "next-static-network-first",
+        networkTimeoutSeconds: 10
+      }
+    },
     {
       urlPattern: ({ url }) => {
         if (!apiProxyTarget) {
