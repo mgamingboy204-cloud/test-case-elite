@@ -7,6 +7,7 @@ function randomRequestId() {
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction) {
   const incoming = req.get("x-request-id");
   const requestId = incoming && incoming.trim().length ? incoming.trim() : randomRequestId();
+  req.requestId = requestId;
   res.locals.requestId = requestId;
   res.setHeader("x-request-id", requestId);
   next();
