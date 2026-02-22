@@ -18,6 +18,7 @@ const EnvSchema = z
     SUPABASE_URL: z.string().optional(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
     WEB_ORIGIN: z.string().min(1, "WEB_ORIGIN is required"),
+    API_ORIGIN: z.string().optional(),
     ADMIN_ORIGIN: z.string().optional(),
     AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().default(1000 * 60 * 15),
     AUTH_REGISTER_LIMIT: z.coerce.number().default(5),
@@ -46,12 +47,30 @@ const EnvSchema = z
           message: "ADMIN_ORIGIN must be https in production."
         });
       }
+      if (value.API_ORIGIN && !value.API_ORIGIN.startsWith("https://")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["API_ORIGIN"],
+          message: "API_ORIGIN must be https in production."
+        });
+      }
     } else {
       if (!value.WEB_ORIGIN.startsWith("https://") && !isLocal(value.WEB_ORIGIN)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["WEB_ORIGIN"],
           message: "WEB_ORIGIN must be https (unless localhost)."
+        });
+      }
+      if (
+        value.API_ORIGIN &&
+        !value.API_ORIGIN.startsWith("https://") &&
+        !isLocal(value.API_ORIGIN)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["API_ORIGIN"],
+          message: "API_ORIGIN must be https (unless localhost)."
         });
       }
       if (

@@ -20,6 +20,10 @@ type ApiFetchOptions = RequestInit & {
   retryOnUnauthorized?: boolean;
 };
 
+let refreshPromise: Promise<string | null> | null = null;
+let authFailed = false;
+let logoutTriggered = false;
+
 function extractErrorMessage(payload: any, fallback: string) {
   if (!payload) return fallback;
   if (typeof payload === "string") return payload;
@@ -50,6 +54,29 @@ export class ApiError extends Error {
     this.fieldErrors = options?.fieldErrors;
     this.status = options?.status;
   }
+}
+
+function triggerAuthFailure(reason: string) {
+  if (authFailed) return;
+  authFailed = true;
+  clearAccessToken();
+  if (process.env.NODE_ENV !== "production") {
+    logAuthRequest("state", { tokenPresent: Boolean(getAccessToken()), refreshAttempted: true, authFailed: true, reason });
+  }
+  if (typeof window === "undefined" || logoutTriggered) return;
+  logoutTriggered = true;
+  void fetch(`${API_URL}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+    cache: "no-store"
+  }).catch(() => undefined).finally(() => {
+    window.location.assign("/login");
+  });
+}
+
+export function resetAuthFailureState() {
+  authFailed = false;
+  logoutTriggered = false;
 }
 
 export async function apiFetch<T = any>(path: string, options: ApiFetchOptions = {}) {
@@ -92,58 +119,73 @@ async function apiFetchWithRetry<T>(path: string, options: ApiFetchOptions, hasR
     }
   );
 
-  if (process.env.NODE_ENV !== "production" && path.startsWith("/auth/")) {
-    logAuthRequest("request", {
-      path,
-      requestUrl: `${API_URL}${path}`,
-      credentials: "include",
-      configuredApiBaseUrl: rawApiUrl ?? null,
-      status: res.status
-    });
-  }
-
   const contentType = res.headers.get("content-type") ?? "";
   const payload = contentType.includes("application/json") ? await res.json() : await res.text();
+
   if (res.status === 401 && options.retryOnUnauthorized && !hasRetried) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
       return apiFetchWithRetry<T>(path, options, true);
     }
-    clearAccessToken();
-    if (typeof window !== "undefined") {
-      window.location.assign("/login");
-    }
+    triggerAuthFailure("refresh_failed_after_401");
+    throw new ApiError("Authentication required.", { status: 401 });
   }
+
   if (!res.ok) {
     const message = extractErrorMessage(payload, "Request failed. Please try again.");
     const fieldErrors = payload?.fieldErrors ?? payload?.error?.fieldErrors ?? undefined;
     throw new ApiError(message, { fieldErrors, status: res.status });
   }
+
   return payload as T;
 }
 
 export async function refreshAccessToken() {
-  const requestUrl = `${API_URL}/auth/token/refresh`;
-  const res = await fetch(requestUrl, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store"
-  });
-  if (process.env.NODE_ENV !== "production") {
-    logAuthRequest("refresh", {
-      requestUrl,
-      credentials: "include",
-      configuredApiBaseUrl: rawApiUrl ?? null,
-      status: res.status
-    });
-  }
-  if (!res.ok) {
+  if (authFailed) {
     return null;
   }
-  const payload = (await res.json()) as { ok?: boolean; accessToken?: string };
-  if (payload.accessToken) {
-    setAccessToken(payload.accessToken);
-    return payload.accessToken;
+
+  if (refreshPromise) {
+    return refreshPromise;
   }
-  return null;
+
+  refreshPromise = (async () => {
+    const requestUrl = `${API_URL}/auth/token/refresh`;
+    const res = await fetch(requestUrl, {
+      method: "POST",
+      credentials: "include",
+      cache: "no-store"
+    });
+
+    if (process.env.NODE_ENV !== "production") {
+      logAuthRequest("refresh.attempt", {
+        requestUrl,
+        credentials: "include",
+        configuredApiBaseUrl: rawApiUrl ?? null,
+        status: res.status,
+        authFailed
+      });
+    }
+
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        triggerAuthFailure(`refresh_${res.status}`);
+      }
+      return null;
+    }
+
+    const payload = (await res.json()) as { ok?: boolean; accessToken?: string };
+    if (payload.accessToken) {
+      authFailed = false;
+      setAccessToken(payload.accessToken);
+      return payload.accessToken;
+    }
+    return null;
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
 }

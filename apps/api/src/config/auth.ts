@@ -2,6 +2,9 @@ import { env } from "./env";
 
 const isProd = env.NODE_ENV === "production";
 
+const isCrossOrigin = Boolean(env.API_ORIGIN && env.API_ORIGIN !== env.WEB_ORIGIN);
+const refreshSameSite = isCrossOrigin ? ("none" as const) : ("lax" as const);
+
 export const deviceCookieName = "em_device";
 
 export const deviceCookieOptions = {
@@ -27,7 +30,7 @@ export const refreshCookieName = "em_refresh";
 export function buildRefreshCookieOptions(ttlDays: number) {
   return {
     httpOnly: true,
-    sameSite: "lax" as const,
+    sameSite: refreshSameSite,
     secure: isProd,
     path: "/",
     maxAge: 1000 * 60 * 60 * 24 * ttlDays
