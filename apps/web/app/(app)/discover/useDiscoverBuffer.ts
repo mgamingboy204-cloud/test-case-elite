@@ -22,7 +22,7 @@ type DiscoverFeedResponse = {
 
 const BATCH_SIZE = 20;
 const LOW_WATERMARK = 5;
-const MAX_RETRY_ATTEMPTS = 6;
+const MAX_RETRY_ATTEMPTS = 5;
 
 function toCard(item: any): DiscoverCard {
   return {
@@ -55,7 +55,8 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
 
   const cursorRef = useRef<string | undefined>(undefined);
   const hasMoreRef = useRef(true);
-  const queuedSwipesRef = useRef<Array<{ toUserId: string; type: SwipeType; attempts: number; nextAttemptAt: number }>>([]);
+  const queuedSwipesRef = useRef<Array<{ actionId: string; toUserId: string; type: SwipeType; attempts: number; nextAttemptAt: number }>>([]);
+  const knownActionIdsRef = useRef(new Set<string>());
   const processingQueueRef = useRef(false);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightFetchRef = useRef(false);
@@ -97,14 +98,20 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
             retryOnUnauthorized: true,
             body: { toUserId: next.toUserId, type: next.type } as never,
           });
-          queuedSwipesRef.current.shift();
+          const processed = queuedSwipesRef.current.shift();
+          if (processed) {
+            knownActionIdsRef.current.delete(processed.actionId);
+          }
           setAuthRequired(false);
           if (queuedSwipesRef.current.length === 0) {
             setSyncWarning(false);
           }
         } catch (error) {
           if (error instanceof ApiError && error.status === 401) {
-            queuedSwipesRef.current.shift();
+            const unauthorized = queuedSwipesRef.current.shift();
+            if (unauthorized) {
+              knownActionIdsRef.current.delete(unauthorized.actionId);
+            }
             setAuthRequired(true);
             setSyncWarning(false);
             continue;
@@ -112,7 +119,10 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
 
           next.attempts += 1;
           if (next.attempts >= MAX_RETRY_ATTEMPTS) {
-            queuedSwipesRef.current.shift();
+            const dropped = queuedSwipesRef.current.shift();
+            if (dropped) {
+              knownActionIdsRef.current.delete(dropped.actionId);
+            }
           } else {
             next.nextAttemptAt = now + computeBackoffMs(next.attempts);
           }
@@ -125,7 +135,11 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
   }, [clearRetryTimer]);
 
   const enqueueSwipe = useCallback(
-    (payload: { toUserId: string; type: SwipeType }) => {
+    (payload: { actionId: string; toUserId: string; type: SwipeType }) => {
+      if (knownActionIdsRef.current.has(payload.actionId)) {
+        return;
+      }
+      knownActionIdsRef.current.add(payload.actionId);
       queuedSwipesRef.current.push({ ...payload, attempts: 0, nextAttemptAt: Date.now() });
       void processSwipeQueue();
     },
@@ -201,11 +215,11 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
   }, [clearRetryTimer]);
 
   const advance = useCallback(
-    (type: SwipeType) => {
+    (options: { actionId: string; type: SwipeType }) => {
       const nextCard = buffer[0];
       if (!nextCard) return null;
       setBuffer((prev) => prev.slice(1));
-      enqueueSwipe({ toUserId: nextCard.userId, type });
+      enqueueSwipe({ actionId: options.actionId, toUserId: nextCard.userId, type: options.type });
       return nextCard;
     },
     [buffer, enqueueSwipe]
