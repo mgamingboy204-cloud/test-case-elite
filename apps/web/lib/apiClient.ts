@@ -24,6 +24,13 @@ let refreshPromise: Promise<string | null> | null = null;
 let authFailed = false;
 let logoutTriggered = false;
 
+const AUTH_ROUTES = new Set(["/login", "/signup", "/otp"]);
+
+function isAuthRoute(pathname: string) {
+  if (AUTH_ROUTES.has(pathname)) return true;
+  return pathname.startsWith("/auth");
+}
+
 function extractErrorMessage(payload: any, fallback: string) {
   if (!payload) return fallback;
   if (typeof payload === "string") return payload;
@@ -64,6 +71,12 @@ function triggerAuthFailure(reason: string) {
     logAuthRequest("state", { tokenPresent: Boolean(getAccessToken()), refreshAttempted: true, authFailed: true, reason });
   }
   if (typeof window === "undefined" || logoutTriggered) return;
+  if (isAuthRoute(window.location.pathname)) {
+    if (process.env.NODE_ENV !== "production") {
+      logAuthRequest("redirect.skipped", { reason, pathname: window.location.pathname });
+    }
+    return;
+  }
   logoutTriggered = true;
   void fetch(`${API_URL}/auth/logout`, {
     method: "POST",
