@@ -93,10 +93,14 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
         }
 
         try {
+          if (process.env.NODE_ENV !== "production") {
+            // eslint-disable-next-line no-console
+            console.debug("likes.request.auth_state", { hasToken: Boolean(window.localStorage.getItem("em_access_token")) });
+          }
           await apiFetch("/likes", {
             method: "POST",
-            retryOnUnauthorized: false,
-            body: { actionId: next.actionId, toUserId: next.toUserId, type: next.type } as never,
+            retryOnUnauthorized: true,
+            body: { actionId: next.actionId, targetUserId: next.toUserId, action: next.type } as never,
           });
           const processed = queuedSwipesRef.current.shift();
           if (processed) {

@@ -77,7 +77,7 @@ export default function LikesPage() {
       await apiFetch("/likes", {
         method: "POST",
         retryOnUnauthorized: true,
-        body: { actionId: `likes-page:${like.userId}:${type}:${Date.now()}`, toUserId: like.userId, type } as never,
+        body: { actionId: `likes-page:${like.userId}:${type}:${Date.now()}`, targetUserId: like.userId, action: type } as never,
       });
       setIncomingLikes((prev) => prev.filter((l) => l.id !== like.id));
       addToast(type === "LIKE" ? `You liked ${like.name}!` : `Passed on ${like.name}`, type === "LIKE" ? "success" : "info");

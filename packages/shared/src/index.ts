@@ -44,8 +44,8 @@ export const ProfileSchema = z
 
 export const LikeSchema = z.object({
   actionId: z.string().min(1).max(128),
-  toUserId: z.string().uuid(),
-  type: z.enum(["LIKE", "PASS"])
+  targetUserId: z.string().uuid(),
+  action: z.enum(["LIKE", "PASS"])
 });
 
 export const ConsentSchema = z.object({

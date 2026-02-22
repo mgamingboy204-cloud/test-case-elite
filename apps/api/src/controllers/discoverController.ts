@@ -4,7 +4,7 @@ import { getDiscoverFeed, getDiscoverProfileDetail, getDiscoverProfiles } from "
 export async function discoverProfiles(req: Request, res: Response) {
   const { city, page, pageSize } = req.query as Record<string, string | number | undefined>;
   const result = await getDiscoverProfiles({
-    userId: res.locals.user.id,
+    userId: req.user!.id,
     city: typeof city === "string" ? city : undefined,
     page: typeof page === "number" ? page : undefined,
     pageSize: typeof pageSize === "number" ? pageSize : undefined,
@@ -19,7 +19,7 @@ export async function discoverFeed(req: Request, res: Response) {
     string | number | undefined
   >;
   const result = await getDiscoverFeed({
-    userId: res.locals.user.id,
+    userId: req.user!.id,
     city: typeof city === "string" ? city : undefined,
     cursor: typeof cursor === "string" ? cursor : undefined,
     limit: typeof limit === "number" ? limit : undefined,
@@ -32,7 +32,7 @@ export async function discoverFeed(req: Request, res: Response) {
 export async function discoverProfileDetail(req: Request, res: Response) {
   const targetUserId = req.params.userId;
   const profile = await getDiscoverProfileDetail({
-    userId: res.locals.user.id,
+    userId: req.user!.id,
     targetUserId,
     baseUrl: `${req.protocol}://${req.get("host")}`
   });
