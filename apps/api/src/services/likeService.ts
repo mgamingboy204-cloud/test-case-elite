@@ -120,3 +120,20 @@ export async function getIncomingLikes(userId: string) {
   });
   return { incoming };
 }
+
+
+export async function getOutgoingLikes(userId: string) {
+  const outgoing = await prisma.like.findMany({
+    where: {
+      fromUserId: userId,
+      type: "LIKE"
+    },
+    include: {
+      toUser: {
+        select: { id: true, phone: true, profile: true }
+      }
+    },
+    orderBy: { createdAt: "desc" }
+  });
+  return { outgoing };
+}

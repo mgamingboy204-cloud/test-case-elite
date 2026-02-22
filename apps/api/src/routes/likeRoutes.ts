@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { LikeSchema } from "@elite/shared";
-import { createLikeHandler, incomingLikesHandler } from "../controllers/likeController";
+import { createLikeHandler, incomingLikesHandler, outgoingLikesHandler } from "../controllers/likeController";
 import { requireAuth } from "../middlewares/auth";
 import { requireActive } from "../middlewares/onboarding";
 import { likeLimiter } from "../middlewares/rateLimiters";
@@ -18,5 +18,6 @@ router.post(
   asyncHandler(createLikeHandler)
 );
 router.get("/likes/incoming", requireAuth, requireActive, asyncHandler(incomingLikesHandler));
+router.get("/likes/outgoing", requireAuth, requireActive, asyncHandler(outgoingLikesHandler));
 
 export default router;

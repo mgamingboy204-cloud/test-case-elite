@@ -1,20 +1,18 @@
 import { Request, Response } from "express";
 import { HttpError } from "../utils/httpErrors";
 import { logger } from "../utils/logger";
-import { createLike, getIncomingLikes } from "../services/likeService";
+import { createLike, getIncomingLikes, getOutgoingLikes } from "../services/likeService";
 
-function getRequestId(req: Request) {
-  const headerRequestId = req.get("x-request-id");
-  if (headerRequestId) return headerRequestId;
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+function getRequestId(req: Request, res: Response) {
+  return (res.locals.requestId as string | undefined) ?? req.get("x-request-id") ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function getAuthenticatedUserId(req: Request, res: Response) {
-  return req.user?.id ?? req.user?.userId ?? res.locals.user?.id ?? req.userId ?? null;
+  return req.user?.id ?? res.locals.user?.id ?? null;
 }
 
 export async function createLikeHandler(req: Request, res: Response) {
-  const requestId = getRequestId(req);
+  const requestId = getRequestId(req, res);
   const userId = getAuthenticatedUserId(req, res);
   const hasAuthenticatedUser = Boolean(userId);
 
@@ -25,7 +23,7 @@ export async function createLikeHandler(req: Request, res: Response) {
       marker: "likes_handler_v3",
       hasAuthenticatedUser,
       reqUserPresent: Boolean(req.user),
-      reqUserId: req.userId ?? null,
+      reqUserId: req.user?.id ?? null,
       actionId: actionId ?? null
     });
   }
@@ -63,5 +61,15 @@ export async function incomingLikesHandler(req: Request, res: Response) {
   }
 
   const result = await getIncomingLikes(userId);
+  return res.json(result);
+}
+
+export async function outgoingLikesHandler(req: Request, res: Response) {
+  const userId = getAuthenticatedUserId(req, res);
+  if (!userId) {
+    return res.status(401).json({ error: "UNAUTHENTICATED" });
+  }
+
+  const result = await getOutgoingLikes(userId);
   return res.json(result);
 }

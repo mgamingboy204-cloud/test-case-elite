@@ -10,10 +10,17 @@ function getBearerToken(req: Request) {
   return match[1].trim();
 }
 
+function isLikesDebugRequest(req: Request) {
+  return process.env.LIKES_DEBUG_LOGS === "1" && req.path === "/likes" && req.method === "POST";
+}
+
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (process.env.LIKES_DEBUG_LOGS === "1" && req.path === "/likes" && req.method === "POST") {
+  const requestId = (res.locals.requestId as string | undefined) ?? req.get("x-request-id") ?? "unknown";
+
+  if (isLikesDebugRequest(req)) {
     console.info("likes.auth.entry", {
-      marker: "likes_auth_v2",
+      marker: "likes_auth_v3",
+      requestId,
       hasAuthorizationHeader: Boolean(req.get("authorization"))
     });
   }
@@ -22,18 +29,21 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   if (!token) {
     return res.status(401).json({ message: "Missing or invalid authorization header" });
   }
+
   let userId: string;
   try {
     userId = verifyAccessToken(token);
   } catch (error) {
     return res.status(401).json({ message: "Invalid token" });
   }
-  req.userId = userId;
-  req.user = { id: userId, userId };
+
+  req.user = { id: userId };
+
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     return res.status(401).json({ message: "Invalid token" });
   }
+
   if (user.deletedAt) {
     return res.status(403).json({ message: "Account deleted" });
   }
@@ -43,7 +53,17 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   if (user.status === "BANNED") {
     return res.status(403).json({ message: "Banned" });
   }
+
   res.locals.user = user;
+
+  if (isLikesDebugRequest(req)) {
+    console.info("likes.auth.resolved", {
+      marker: "likes_auth_v3",
+      requestId,
+      resolvedUserId: userId
+    });
+  }
+
   return next();
 }
 

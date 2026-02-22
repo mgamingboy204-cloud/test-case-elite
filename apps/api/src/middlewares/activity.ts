@@ -5,7 +5,7 @@ import { verifyAccessToken } from "../utils/jwt";
 const ACTIVITY_THROTTLE_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function updateLastActive(req: Request, res: Response, next: NextFunction) {
-  const userId = req.userId;
+  const userId = req.user?.id;
 
   if (userId) {
     const user = res.locals.user || await prisma.user.findUnique({

@@ -33,6 +33,7 @@ This snapshot captures the production-ready auth response shapes and core routes
 - `GET /profiles` → `{ profiles: [{ userId, name, gender, age, city, profession, bioShort, preferences, primaryPhotoUrl, photos }] }`
 - `POST /likes` → `{ ok: true, matchId: string | null }` or `{ error: string }`
 - `GET /likes/incoming` → `{ incoming }`
+- `GET /likes/outgoing` → `{ outgoing }`
 
 ## Matches & Consent
 - `GET /matches` → `{ matches }`

@@ -258,7 +258,7 @@ export async function debugCookies(req: Request, res: Response) {
 }
 
 export async function whoAmI(req: Request, res: Response) {
-  const userId = req.userId;
+  const userId = req.user?.id;
   if (!userId) return res.status(401).json({ message: "Invalid token" });
 
   const user =
