@@ -38,6 +38,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const BLOCKED_STORAGE_DISMISSED_KEY = "em_auth_storage_prompt_dismissed";
 const APP_OPEN_MARKER_KEY = "em_app_has_opened";
 
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const logoutTriggeredRef = useRef(false);

@@ -111,4 +111,31 @@ describe("apiFetch client", () => {
     expect(two).toEqual({ ok: true });
     expect(refreshCalls).toBe(1);
   });
+
+  it("does not redirect away from auth routes when refresh is unauthorized", async () => {
+    vi.resetModules();
+
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 401,
+      headers: { get: () => "application/json" },
+      json: async () => ({ message: "missing_cookie" })
+    });
+
+    const assignMock = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        pathname: "/login",
+        assign: assignMock
+      }
+    });
+
+    const { refreshAccessToken } = await import("../lib/api");
+    const token = await refreshAccessToken();
+
+    expect(token).toBeNull();
+    expect(assignMock).not.toHaveBeenCalled();
+  });
+
 });
