@@ -92,7 +92,7 @@ export default function HomePage() {
           position: relative;
           display: grid;
           place-items: center;
-          box-shadow: 0 30px 90px rgba(20, 14, 15, 0.34);
+          box-shadow: var(--shadow-md);
           border: 1px solid var(--marketing-glass-border);
         }
 
@@ -201,7 +201,7 @@ export default function HomePage() {
         :global(.cta):active { transform: translateY(1px); }
 
         :global(.cta-primary) {
-          color: #fff;
+          color: var(--ctaText);
           background: linear-gradient(120deg, var(--cta), var(--primary-hover));
           box-shadow: 0 14px 32px color-mix(in srgb, var(--cta) 42%, transparent);
         }
@@ -278,7 +278,7 @@ export default function HomePage() {
         .feature-card:hover {
           transform: translateY(-4px);
           border-color: color-mix(in srgb, var(--accent2) 62%, transparent);
-          box-shadow: 0 22px 42px rgba(26, 18, 14, 0.24);
+          box-shadow: var(--shadow-md);
         }
 
         .feature-card h3 {

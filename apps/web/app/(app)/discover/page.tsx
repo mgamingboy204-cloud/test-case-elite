@@ -209,7 +209,7 @@ export default function DiscoverPage() {
     alignItems: "center",
     justifyContent: "center",
     fontSize: size * 0.4,
-    color: "#fff",
+    color: "var(--ctaText)",
     boxShadow: "var(--shadow-md)",
     cursor: "pointer",
     transition: "transform 150ms ease, box-shadow 150ms ease",
@@ -319,7 +319,7 @@ export default function DiscoverPage() {
                   fontSize: 28,
                   transform: "rotate(-20deg)",
                   opacity: Math.min(swipeX / 100, 1),
-                  background: "rgba(255,255,255,0.9)",
+                  background: "color-mix(in srgb, var(--surface) 88%, transparent)",
                 }}
               >
                 LIKE
@@ -339,7 +339,7 @@ export default function DiscoverPage() {
                   fontSize: 28,
                   transform: "rotate(20deg)",
                   opacity: Math.min(Math.abs(swipeX) / 100, 1),
-                  background: "rgba(255,255,255,0.9)",
+                  background: "color-mix(in srgb, var(--surface) 88%, transparent)",
                 }}
               >
                 NOPE
@@ -354,7 +354,7 @@ export default function DiscoverPage() {
                 left: 0,
                 right: 0,
                 height: "45%",
-                background: "linear-gradient(transparent, rgba(0,0,0,0.75))",
+                background: "linear-gradient(transparent, color-mix(in srgb, var(--bg) 82%, transparent))",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "flex-end",
@@ -362,7 +362,7 @@ export default function DiscoverPage() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <h2 style={{ color: "#fff", margin: 0, fontSize: 26 }}>
+                <h2 style={{ color: "var(--ctaText)", margin: 0, fontSize: 26 }}>
                   {currentProfile.name}, {currentProfile.age}
                 </h2>
                 {currentProfile.verified && (
@@ -372,10 +372,10 @@ export default function DiscoverPage() {
                   <Badge variant="primary" style={{ fontSize: 11 }}>Premium</Badge>
                 )}
               </div>
-              <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, marginBottom: 4 }}>
+              <p style={{ color: "color-mix(in srgb, var(--ctaText) 80%, transparent)", fontSize: 14, marginBottom: 4 }}>
                 {currentProfile.city}
               </p>
-              <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>
+              <p style={{ color: "color-mix(in srgb, var(--ctaText) 70%, transparent)", fontSize: 14, margin: 0 }}>
                 {currentProfile.bio}
               </p>
             </div>
@@ -411,7 +411,7 @@ export default function DiscoverPage() {
             style={actionBtnStyle("var(--danger)", 54)}
             aria-label="Pass"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--ctaText)" strokeWidth="3" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
@@ -420,7 +420,7 @@ export default function DiscoverPage() {
             style={actionBtnStyle("var(--success)", 54)}
             aria-label="Like"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff" stroke="#fff" strokeWidth="1">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--ctaText)" stroke="var(--ctaText)" strokeWidth="1">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
           </button>

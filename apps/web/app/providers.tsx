@@ -120,9 +120,10 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
           style={{
             background:
               toast.type === "success" ? "var(--success)" : toast.type === "error" ? "var(--danger)" : "var(--text)",
-            color: "#fff",
+            color: "var(--ctaText)",
             padding: "12px 16px",
             borderRadius: "var(--radius-md)",
+            border: "1px solid var(--border)",
             fontSize: 14,
             fontWeight: 500,
             boxShadow: "var(--shadow-md)",

@@ -12,7 +12,7 @@ export function MarketingContentPage({
   return (
     <section className="marketing-page">
       <div className="marketing-container">
-        <header className="marketing-panel" style={{ padding: "clamp(22px, 5vw, 38px)", marginBottom: 24, boxShadow: "0 22px 58px rgba(10,12,19,0.16)" }}>
+        <header className="marketing-panel" style={{ padding: "clamp(22px, 5vw, 38px)", marginBottom: 24, boxShadow: "var(--shadow-md)" }}>
           <p className="marketing-kicker" style={{ marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.16em", fontSize: 13 }}>
             Elite Match
           </p>

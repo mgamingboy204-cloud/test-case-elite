@@ -101,7 +101,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         .marketing-header.is-compact {
           inset: calc(env(safe-area-inset-top, 0px) + 6px) 20px auto;
           transform: translateY(-1px);
-          box-shadow: 0 12px 36px rgba(28, 18, 16, 0.24);
+          box-shadow: var(--shadow-md);
         }
         .shell-main { flex: 1; }
         .nav-row { max-width: 1240px; margin: 0 auto; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; transition: min-height 250ms ease, padding 250ms ease; }
@@ -124,7 +124,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         .mobile-menu-sheet { width: 100%; border-radius: 22px 22px 0 0; padding: 16px 20px calc(24px + env(safe-area-inset-bottom)); border-top: 1px solid var(--marketing-glass-border); background: var(--marketing-glass); backdrop-filter: blur(22px); display: flex; flex-direction: column; gap: 10px; }
         .sheet-handle { width: 46px; height: 5px; border-radius: 999px; background: var(--marketing-text-muted); opacity: 0.5; margin: 0 auto 6px; }
         .sheet-link { color: var(--marketing-text-strong); padding: 14px 0; border-bottom: 1px solid var(--marketing-glass-border); font-weight: 500; min-height: 44px; display: flex; align-items: center; }
-        .sheet-signin { margin-top: 4px; text-align: center; padding: 13px; border-radius: 999px; color: #fff; background: linear-gradient(120deg, var(--cta), var(--primary-hover)); font-weight: 700; min-height: 44px; }
+        .sheet-signin { margin-top: 4px; text-align: center; padding: 13px; border-radius: 999px; color: var(--ctaText); background: linear-gradient(120deg, var(--cta), var(--primary-hover)); font-weight: 700; min-height: 44px; }
         .sheet-subtle { text-align: center; padding: 8px; color: var(--marketing-text-muted); min-height: 44px; display: grid; place-items: center; }
 
         @media (max-width: 880px) {
