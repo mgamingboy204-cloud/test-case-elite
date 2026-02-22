@@ -280,7 +280,7 @@ export default function DiscoverPage() {
                 style={{
                   position: "absolute",
                   inset: 0,
-                  background: "linear-gradient(120deg, rgba(255,255,255,0.08), rgba(255,255,255,0.22), rgba(255,255,255,0.08))",
+                  background: "linear-gradient(120deg, var(--pearl-panel), color-mix(in srgb, var(--pearl-panel) 65%, var(--text)), var(--pearl-panel))",
                 }}
               />
             )}

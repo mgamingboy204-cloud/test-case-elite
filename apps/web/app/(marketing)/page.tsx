@@ -102,8 +102,8 @@ export default function HomePage() {
           background:
             radial-gradient(72% 78% at var(--mx) var(--my), color-mix(in srgb, var(--accent2) 30%, transparent), transparent 58%),
             radial-gradient(70% 84% at 20% 84%, color-mix(in srgb, var(--accent) 54%, transparent), transparent 62%),
-            radial-gradient(72% 82% at 78% 22%, rgba(133, 79, 88, 0.4), transparent 64%),
-            linear-gradient(135deg, color-mix(in srgb, var(--marketing-bg-start) 75%, #161824), color-mix(in srgb, var(--marketing-bg-end) 72%, #111622) 44%, #0b0d14 85%);
+            radial-gradient(72% 82% at 78% 22%, var(--rose-glow), transparent 64%),
+            linear-gradient(135deg, color-mix(in srgb, var(--marketing-bg-start) 75%, var(--surface2)), color-mix(in srgb, var(--marketing-bg-end) 72%, var(--surface)) 44%, var(--bg) 85%);
           transform: scale(1.04);
           animation: floatBg 12s ease-in-out infinite alternate;
           filter: saturate(106%) blur(2px);
@@ -113,7 +113,7 @@ export default function HomePage() {
           content: "";
           position: absolute;
           inset: 0;
-          background: linear-gradient(180deg, color-mix(in srgb, var(--marketing-overlay) 72%, transparent), color-mix(in srgb, var(--marketing-overlay) 94%, #090a10));
+          background: linear-gradient(180deg, color-mix(in srgb, var(--marketing-overlay) 72%, transparent), color-mix(in srgb, var(--marketing-overlay) 94%, var(--bg)));
           z-index: 1;
         }
 
@@ -121,7 +121,7 @@ export default function HomePage() {
           position: absolute;
           inset: 0;
           z-index: 1;
-          background-image: radial-gradient(rgba(255, 255, 255, 0.06) 0.5px, transparent 0.5px);
+          background-image: radial-gradient(var(--pearl-panel) 0.5px, transparent 0.5px);
           background-size: 3px 3px;
           opacity: 0.2;
           pointer-events: none;
@@ -155,8 +155,8 @@ export default function HomePage() {
           line-height: 0.95;
           text-wrap: balance;
           font-size: clamp(2.2rem, 10.8vw, 7.2rem);
-          color: color-mix(in srgb, var(--marketing-text-strong) 96%, #fff);
-          text-shadow: 0 8px 25px rgba(11, 8, 10, 0.56);
+          color: color-mix(in srgb, var(--marketing-text-strong) 96%, var(--surface));
+          text-shadow: var(--shadow-sm);
         }
 
         .hero-subtext {
@@ -194,7 +194,7 @@ export default function HomePage() {
 
         :global(.cta):focus-visible {
           outline: none;
-          box-shadow: 0 0 0 2px color-mix(in srgb, var(--bg2) 88%, #fff), 0 0 0 5px var(--ring);
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--bg2) 88%, var(--surface)), 0 0 0 5px var(--ring);
         }
 
         :global(.cta):hover { transform: translateY(-2px); }
@@ -216,7 +216,7 @@ export default function HomePage() {
         }
 
         :global(.cta-secondary) {
-          color: color-mix(in srgb, var(--marketing-text-strong) 96%, #fff);
+          color: color-mix(in srgb, var(--marketing-text-strong) 96%, var(--surface));
           border: 1px solid color-mix(in srgb, var(--marketing-glass-border) 85%, transparent);
           background: color-mix(in srgb, var(--surface2) 78%, transparent);
           box-shadow: 0 12px 28px color-mix(in srgb, var(--bg) 46%, transparent);

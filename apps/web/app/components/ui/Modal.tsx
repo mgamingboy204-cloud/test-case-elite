@@ -45,8 +45,8 @@ export function Modal({ open, onClose, title, children, maxWidth = 480 }: ModalP
   };
 
   const contentStyle: CSSProperties = {
-    background: "color-mix(in srgb, var(--panel) 96%, transparent)",
-    border: "1px solid var(--border)",
+    background: "linear-gradient(155deg, color-mix(in srgb, var(--surface) 94%, transparent), color-mix(in srgb, var(--surface2) 94%, var(--pearl-panel)))",
+    border: "1px solid color-mix(in srgb, var(--border) 80%, var(--accent) 20%)",
     borderRadius: "var(--radius-xl)",
     maxWidth,
     width: "100%",

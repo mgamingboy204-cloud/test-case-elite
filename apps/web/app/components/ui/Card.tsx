@@ -17,10 +17,11 @@ export function Card({ children, style, className, onClick }: CardProps) {
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       style={{
-        background: "color-mix(in srgb, var(--panel) 94%, transparent)",
+        background: "linear-gradient(150deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface2) 96%, var(--pearl-panel)) )",
         borderRadius: "var(--radius-lg)",
-        border: "1px solid var(--border)",
+        border: "1px solid color-mix(in srgb, var(--border) 82%, var(--accent) 18%)",
         boxShadow: "var(--shadow-sm)",
+        position: "relative",
         overflow: "hidden",
         transition: "box-shadow 220ms ease, transform 220ms ease",
         cursor: onClick ? "pointer" : undefined,

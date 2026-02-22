@@ -41,7 +41,7 @@ export function Tabs({ tabs, active, onChange, style }: TabsProps) {
             fontSize: 14,
             fontWeight: active === tab.value ? 600 : 500,
             borderRadius: "var(--radius-full)",
-            background: active === tab.value ? "var(--panel)" : "transparent",
+            background: active === tab.value ? "color-mix(in srgb, var(--surface) 94%, var(--pearl-panel))" : "transparent",
             color: active === tab.value ? "var(--text)" : "var(--text-secondary)",
             boxShadow: active === tab.value ? "var(--shadow)" : "none",
             transition: "all 200ms ease",
