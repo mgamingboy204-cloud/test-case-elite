@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, refreshAccessToken } from "./api";
 import { clearAccessToken, getAccessToken } from "./authToken";
 import { queryKeys } from "./queryKeys";
+import { ApiError } from "./apiClient";
 
 export type SessionStatus = "loading" | "logged-in" | "logged-out";
 
@@ -64,8 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: queryKeys.me,
     queryFn: () => apiFetch<SessionUser>("/me", { retryOnUnauthorized: true }),
     retry: false,
-    staleTime: 15000,
-    refetchOnWindowFocus: true
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false
   });
 
   useEffect(() => {
@@ -100,7 +102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [onAuthRoute, queryClient]);
 
   useEffect(() => {
-    if (!meQuery.isError) {
+    const error = meQuery.error;
+    const isUnauthorized = error instanceof ApiError && (error.status === 401 || error.status === 403);
+
+    if (!isUnauthorized) {
       logoutTriggeredRef.current = false;
       return;
     }
@@ -108,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logoutTriggeredRef.current = true;
     void apiFetch("/auth/logout", { method: "POST", auth: "omit" }).catch(() => undefined);
     clearAccessToken();
-  }, [meQuery.isError]);
+  }, [meQuery.error]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -123,11 +128,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [isFreshOpen, meQuery.data, meQuery.isLoading, refreshAttempted]);
 
+  const meError = meQuery.error;
+  const meUnauthorized = meError instanceof ApiError && (meError.status === 401 || meError.status === 403);
+  const shouldForceLoggedOut = meUnauthorized || (!getAccessToken() && refreshAttempted && !meQuery.data);
+
   const status: SessionStatus = !canRunMeQuery || meQuery.isLoading
     ? "loading"
     : meQuery.data
       ? "logged-in"
-      : "logged-out";
+      : shouldForceLoggedOut
+        ? "logged-out"
+        : "loading";
   const user = meQuery.data ?? null;
 
   const refresh = useCallback(async () => {

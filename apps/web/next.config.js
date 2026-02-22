@@ -21,10 +21,9 @@ const withPWA = require("next-pwa")({
     },
     {
       urlPattern: /^\/_next\/static\/.*/i,
-      handler: "NetworkFirst",
+      handler: "NetworkOnly",
       options: {
-        cacheName: "next-static-network-first",
-        networkTimeoutSeconds: 10
+        cacheName: "next-static-network-only"
       }
     },
     {
