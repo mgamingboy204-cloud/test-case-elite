@@ -18,10 +18,11 @@ export function Card({ children, style, className, onClick }: CardProps) {
       tabIndex={onClick ? 0 : undefined}
       style={{
         background: "linear-gradient(150deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface2) 96%, var(--pearl-panel)) )",
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "30px",
         border: "1px solid color-mix(in srgb, var(--border) 82%, var(--accent) 18%)",
         boxShadow: "var(--shadow-sm)",
         position: "relative",
+        isolation: "isolate",
         overflow: "hidden",
         transition: "box-shadow 220ms ease, transform 220ms ease",
         cursor: onClick ? "pointer" : undefined,
@@ -47,6 +48,7 @@ export function Card({ children, style, className, onClick }: CardProps) {
         }
       }}
     >
+      <div style={{ position: "absolute", inset: 0, borderRadius: "inherit", border: "1px solid color-mix(in srgb, var(--accent-light) 34%, transparent)", boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--accent-light) 28%, transparent)", pointerEvents: "none" }} />
       {children}
     </div>
   );

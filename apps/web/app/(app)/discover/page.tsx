@@ -187,7 +187,7 @@ export default function DiscoverPage() {
     height: "clamp(520px, 70vh, 640px)",
     borderRadius: 30,
     overflow: "hidden",
-    boxShadow: "var(--shadow-xl)",
+    boxShadow: "var(--shadow-md)",
     position: "relative",
     margin: "0 auto",
     touchAction: "none",
@@ -204,7 +204,7 @@ export default function DiscoverPage() {
     height: size,
     borderRadius: "50%",
     background: bg,
-    border: "none",
+    border: "1px solid color-mix(in srgb, var(--border) 72%, var(--accent) 28%)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -280,7 +280,7 @@ export default function DiscoverPage() {
                 style={{
                   position: "absolute",
                   inset: 0,
-                  background: "linear-gradient(120deg, var(--pearl-panel), color-mix(in srgb, var(--pearl-panel) 65%, var(--text)), var(--pearl-panel))",
+                  background: "linear-gradient(120deg, color-mix(in srgb, var(--surface2) 92%, transparent), color-mix(in srgb, var(--surface) 80%, transparent), color-mix(in srgb, var(--surface2) 92%, transparent))",
                 }}
               />
             )}
@@ -303,6 +303,14 @@ export default function DiscoverPage() {
               crossOrigin="anonymous"
               draggable={false}
             />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "linear-gradient(180deg, color-mix(in srgb, var(--bg) 8%, transparent) 0%, transparent 35%, color-mix(in srgb, var(--bg) 42%, transparent) 100%)",
+                pointerEvents: "none",
+              }}
+            />
 
             {/* Swipe indicators */}
             {swipeX > 30 && (
@@ -312,8 +320,8 @@ export default function DiscoverPage() {
                   top: 40,
                   left: 24,
                   padding: "8px 16px",
-                  border: "3px solid var(--success)",
-                  color: "var(--success)",
+                  border: "2px solid var(--accent)",
+                  color: "var(--accent)",
                   borderRadius: "var(--radius-md)",
                   fontWeight: 800,
                   fontSize: 28,
@@ -332,8 +340,8 @@ export default function DiscoverPage() {
                   top: 40,
                   right: 24,
                   padding: "8px 16px",
-                  border: "3px solid var(--danger)",
-                  color: "var(--danger)",
+                  border: "2px solid var(--text-secondary)",
+                  color: "var(--text-secondary)",
                   borderRadius: "var(--radius-md)",
                   fontWeight: 800,
                   fontSize: 28,
@@ -354,7 +362,7 @@ export default function DiscoverPage() {
                 left: 0,
                 right: 0,
                 height: "45%",
-                background: "linear-gradient(transparent, color-mix(in srgb, var(--bg) 82%, transparent))",
+                background: "linear-gradient(transparent 20%, color-mix(in srgb, var(--bg) 88%, transparent))",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "flex-end",
@@ -408,16 +416,16 @@ export default function DiscoverPage() {
           </button>
           <button
             onClick={() => handleAction("PASS", "left")}
-            style={actionBtnStyle("var(--danger)", 54)}
+            style={actionBtnStyle("color-mix(in srgb, var(--surface2) 90%, var(--rose-glow))", 54)}
             aria-label="Pass"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--ctaText)" strokeWidth="3" strokeLinecap="round">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text)" strokeWidth="3" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
           <button
             onClick={() => handleAction("LIKE", "right")}
-            style={actionBtnStyle("var(--success)", 54)}
+            style={actionBtnStyle("var(--accent)", 56)}
             aria-label="Like"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--ctaText)" stroke="var(--ctaText)" strokeWidth="1">

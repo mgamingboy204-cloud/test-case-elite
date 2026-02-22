@@ -13,7 +13,7 @@ type ThemeCtx = {
   toggle: () => void;
 };
 
-const ThemeContext = createContext<ThemeCtx>({ theme: "light", toggle: () => undefined });
+const ThemeContext = createContext<ThemeCtx>({ theme: "dark", toggle: () => undefined });
 
 export function useTheme() {
   return useContext(ThemeContext);
@@ -43,7 +43,7 @@ export function useToast() {
 
 export default function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => createQueryClient());
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   useEffect(() => {
@@ -119,11 +119,11 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
           className="fade-in"
           style={{
             background:
-              toast.type === "success" ? "var(--success)" : toast.type === "error" ? "var(--danger)" : "var(--text)",
-            color: "var(--ctaText)",
+              toast.type === "success" ? "color-mix(in srgb, var(--surface2) 82%, var(--rose-glow))" : toast.type === "error" ? "color-mix(in srgb, var(--surface2) 74%, var(--accent-deep))" : "color-mix(in srgb, var(--surface2) 90%, var(--text))",
+            color: "var(--text)",
             padding: "12px 16px",
             borderRadius: "var(--radius-md)",
-            border: "1px solid var(--border)",
+            border: "1px solid color-mix(in srgb, var(--border) 76%, var(--accent) 24%)",
             fontSize: 14,
             fontWeight: 500,
             boxShadow: "var(--shadow-md)",

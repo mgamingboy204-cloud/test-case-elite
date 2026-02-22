@@ -12,7 +12,7 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-const STORAGE_KEY = "elite-match-theme";
+const STORAGE_KEY = "em_theme";
 
 function applyTheme(theme: ThemeMode) {
   if (typeof document === "undefined") return;
@@ -21,7 +21,7 @@ function applyTheme(theme: ThemeMode) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>("light");
+  const [theme, setThemeState] = useState<ThemeMode>("dark");
 
   useEffect(() => {
     const stored = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
@@ -30,7 +30,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       applyTheme(stored);
       return;
     }
-    applyTheme("light");
+    const systemPrefersDark =
+      typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    applyTheme(systemPrefersDark ? "dark" : "light");
+    setThemeState(systemPrefersDark ? "dark" : "light");
   }, []);
 
   const setTheme = (next: ThemeMode) => {
