@@ -183,7 +183,7 @@ export default function DiscoverPage() {
     process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEBUG_DISCOVER_STATUS === "true";
 
   const cardStyle: CSSProperties = {
-    width: "min(92vw, 380px)",
+    width: "min(100%, 430px)",
     height: "clamp(520px, 70vh, 640px)",
     borderRadius: 30,
     overflow: "hidden",
@@ -221,8 +221,9 @@ export default function DiscoverPage() {
         display: "flex",
         flexDirection: "column",
         minHeight: "calc(100dvh - var(--app-header-offset))",
-        overflow: "hidden",
-        paddingBottom: "calc(var(--bn) + var(--sab) + 90px)",
+        overflowX: "hidden",
+        padding: "10px 0 0",
+        paddingBottom: "calc(var(--app-bottom-nav-height) + var(--sab) + 24px)",
       }}
     >
       {/* Card area */}
@@ -233,14 +234,14 @@ export default function DiscoverPage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          padding: "8px 0",
+          padding: "4px 0 10px",
           position: "relative",
         }}
       >
         {loading ? (
           <div
             style={{
-              width: "min(92vw, 380px)",
+              width: "min(100%, 430px)",
               height: "clamp(520px, 70vh, 640px)",
               borderRadius: 30,
               overflow: "hidden",
@@ -399,8 +400,8 @@ export default function DiscoverPage() {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            gap: 16,
-            padding: "12px 0",
+            gap: 18,
+            padding: "14px 0 6px",
           }}
         >
           <button
