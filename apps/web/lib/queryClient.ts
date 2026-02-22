@@ -4,7 +4,12 @@ export const createQueryClient = () =>
   new QueryClient({
     defaultOptions: {
       queries: {
-        retry: (failureCount) => failureCount < 1,
+        retry: (failureCount, _error, query) => {
+          if (query.queryKey[0] === "me") {
+            return false;
+          }
+          return failureCount < 1;
+        },
         staleTime: 15000,
         refetchOnWindowFocus: true
       },
