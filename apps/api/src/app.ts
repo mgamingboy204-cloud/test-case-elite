@@ -58,12 +58,13 @@ const corsOptions: CorsOptions = {
       return;
     }
     if (allowedOrigins.includes(origin)) {
-      callback(null, true);
+      callback(null, origin);
       return;
     }
     callback(new Error("Not allowed by CORS"));
   },
-  credentials: true
+  credentials: true,
+  allowedHeaders: ["Authorization", "Content-Type", "X-Request-Id"]
 };
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));

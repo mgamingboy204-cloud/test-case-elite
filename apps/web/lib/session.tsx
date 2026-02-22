@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const meQuery = useQuery({
     queryKey: queryKeys.me,
     queryFn: () => apiFetch<SessionUser>("/me", { retryOnUnauthorized: true }),
+    retry: 0,
     staleTime: 15000,
     refetchOnWindowFocus: true
   });
@@ -115,7 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const result = await queryClient.fetchQuery({
         queryKey: queryKeys.me,
-        queryFn: () => apiFetch<SessionUser>("/me", { retryOnUnauthorized: true })
+        queryFn: () => apiFetch<SessionUser>("/me", { retryOnUnauthorized: true }),
+        retry: 0
       });
       return result ?? null;
     } catch {
