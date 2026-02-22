@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: elite-api
+    runtime: node
+    rootDir: .
+    buildCommand: npm run render:build
+    startCommand: npm run render:start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: LIKES_DEBUG_LOGS
+        value: "1"
+      - key: BUILD_TIMESTAMP
+        value: "2026-02-22T00:00:00.000Z"

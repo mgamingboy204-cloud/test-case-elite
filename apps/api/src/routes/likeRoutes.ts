@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { LikeSchema } from "@elite/shared";
 import { createLikeHandler, incomingLikesHandler } from "../controllers/likeController";
-import { requireAuth, requireAuthHeader } from "../middlewares/auth";
+import { requireAuth } from "../middlewares/auth";
 import { requireActive } from "../middlewares/onboarding";
 import { likeLimiter } from "../middlewares/rateLimiters";
 import { validateBody } from "../middlewares/validate";
@@ -12,7 +12,6 @@ const router = Router();
 router.post(
   "/likes",
   requireAuth,
-  requireAuthHeader,
   requireActive,
   likeLimiter,
   validateBody(LikeSchema),

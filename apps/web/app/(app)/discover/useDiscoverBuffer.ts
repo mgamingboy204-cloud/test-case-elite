@@ -95,8 +95,8 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
         try {
           await apiFetch("/likes", {
             method: "POST",
-            retryOnUnauthorized: true,
-            body: { toUserId: next.toUserId, type: next.type } as never,
+            retryOnUnauthorized: false,
+            body: { actionId: next.actionId, toUserId: next.toUserId, type: next.type } as never,
           });
           const processed = queuedSwipesRef.current.shift();
           if (processed) {

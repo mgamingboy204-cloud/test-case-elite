@@ -43,6 +43,7 @@ export const ProfileSchema = z
   });
 
 export const LikeSchema = z.object({
+  actionId: z.string().min(1).max(128),
   toUserId: z.string().uuid(),
   type: z.enum(["LIKE", "PASS"])
 });
