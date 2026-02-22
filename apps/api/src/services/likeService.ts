@@ -77,12 +77,30 @@ export async function getIncomingLikes(userId: string) {
     },
     include: {
       actorUser: {
-        select: { id: true, phone: true, profile: true }
+        select: {
+          id: true,
+          phone: true,
+          profile: true,
+          photos: {
+            select: { url: true },
+            orderBy: { createdAt: "desc" },
+            take: 1
+          }
+        }
       }
     },
     orderBy: { createdAt: "desc" }
   });
-  return { incoming };
+
+  return {
+    incoming: incoming.map((item) => ({
+      id: item.id,
+      createdAt: item.createdAt,
+      action: item.action,
+      actorUser: item.actorUser,
+      fromUser: item.actorUser
+    }))
+  };
 }
 
 export async function getOutgoingLikes(userId: string) {
@@ -93,10 +111,28 @@ export async function getOutgoingLikes(userId: string) {
     },
     include: {
       targetUser: {
-        select: { id: true, phone: true, profile: true }
+        select: {
+          id: true,
+          phone: true,
+          profile: true,
+          photos: {
+            select: { url: true },
+            orderBy: { createdAt: "desc" },
+            take: 1
+          }
+        }
       }
     },
     orderBy: { createdAt: "desc" }
   });
-  return { outgoing };
+
+  return {
+    outgoing: outgoing.map((item) => ({
+      id: item.id,
+      createdAt: item.createdAt,
+      action: item.action,
+      targetUser: item.targetUser,
+      toUser: item.targetUser
+    }))
+  };
 }

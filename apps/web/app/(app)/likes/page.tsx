@@ -43,20 +43,20 @@ export default function LikesPage() {
 
       setIncomingLikes(incoming.map((item: any) => ({
         id: item.id,
-        userId: item.fromUser?.id,
-        name: item.fromUser?.profile?.name ?? "Member",
-        city: item.fromUser?.profile?.city ?? "",
-        profession: item.fromUser?.profile?.profession ?? "",
-        photo: item.fromUser?.profile?.photos?.[0]?.url ?? "",
+        userId: item.fromUser?.id ?? item.actorUser?.id,
+        name: item.fromUser?.profile?.name ?? item.actorUser?.profile?.name ?? "Member",
+        city: item.fromUser?.profile?.city ?? item.actorUser?.profile?.city ?? "",
+        profession: item.fromUser?.profile?.profession ?? item.actorUser?.profile?.profession ?? "",
+        photo: item.fromUser?.photos?.[0]?.url ?? item.actorUser?.photos?.[0]?.url ?? "",
       })).filter((item: LikeUser) => Boolean(item.userId)));
 
       setOutgoingLikes(outgoing.map((item: any) => ({
         id: item.id,
-        userId: item.toUser?.id,
-        name: item.toUser?.profile?.name ?? "Member",
-        city: item.toUser?.profile?.city ?? "",
-        profession: item.toUser?.profile?.profession ?? "",
-        photo: item.toUser?.profile?.photos?.[0]?.url ?? "",
+        userId: item.toUser?.id ?? item.targetUser?.id,
+        name: item.toUser?.profile?.name ?? item.targetUser?.profile?.name ?? "Member",
+        city: item.toUser?.profile?.city ?? item.targetUser?.profile?.city ?? "",
+        profession: item.toUser?.profile?.profession ?? item.targetUser?.profile?.profession ?? "",
+        photo: item.toUser?.photos?.[0]?.url ?? item.targetUser?.photos?.[0]?.url ?? "",
       })).filter((item: LikeUser) => Boolean(item.userId)));
     } catch {
       setError(true);
