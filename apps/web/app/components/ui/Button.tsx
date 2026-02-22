@@ -14,13 +14,13 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<Variant, React.CSSProperties> = {
   primary: {
-    background: "linear-gradient(135deg, var(--primary), var(--primary-hover))",
+    background: "linear-gradient(135deg, var(--accent-light), var(--accent), var(--accent-deep))",
     color: "var(--ctaText)",
-    border: "1px solid color-mix(in srgb, var(--rose-200) 26%, transparent)",
+    border: "1px solid color-mix(in srgb, var(--accent) 52%, var(--border))",
     boxShadow: "var(--shadow-sm)",
   },
   secondary: {
-    background: "color-mix(in srgb, var(--surface2) 88%, transparent)",
+    background: "color-mix(in srgb, var(--surface2) 88%, var(--pearl-panel))",
     color: "var(--text)",
     border: "1px solid var(--border)",
   },
@@ -56,7 +56,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           fontWeight: 600,
           cursor: disabled || loading ? "not-allowed" : "pointer",
           opacity: disabled || loading ? 0.55 : 1,
-          transition: "transform 180ms ease, opacity 160ms ease, box-shadow 180ms ease, background-color 180ms ease",
+          transition: "transform 180ms ease-out, opacity 160ms ease, box-shadow 180ms ease-out, background-color 180ms ease-out",
           width: fullWidth ? "100%" : undefined,
           whiteSpace: "nowrap",
           ...variantStyles[variant],
@@ -65,7 +65,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         }}
         onPointerEnter={(e) => {
           if (!disabled && !loading && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-            e.currentTarget.style.transform = "translateY(-1px)";
+            e.currentTarget.style.transform = "var(--interactive-raise)";
+            e.currentTarget.style.boxShadow = "var(--shadow-md)";
           }
         }}
         onPointerDown={(e) => {
@@ -74,10 +75,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           }
         }}
         onPointerUp={(e) => {
-          e.currentTarget.style.transform = "scale(1)";
+          e.currentTarget.style.transform = "translateY(0)";
         }}
         onPointerLeave={(e) => {
-          e.currentTarget.style.transform = "scale(1)";
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = variant === "primary" ? "var(--shadow-sm)" : "none";
         }}
         {...props}
       >

@@ -37,6 +37,13 @@
   --border: rgba(0, 0, 0, 0.08);
   --accent: var(--rose-500);
   --accent2: var(--rose-300);
+  --pearl-panel: rgba(255,255,255,0.06);
+  --accent-light: var(--rose-300);
+  --accent-deep: var(--rose-600);
+  --rose-glow: rgba(194,125,128,0.10);
+  --rose-glow-2: rgba(215,151,152,0.08);
+  --metal-trim: linear-gradient(135deg, color-mix(in srgb, var(--accent-light) 55%, transparent), color-mix(in srgb, var(--accent) 58%, transparent), color-mix(in srgb, var(--accent-deep) 56%, transparent));
+  --interactive-raise: translateY(-2px);
   --ring: color-mix(in srgb, var(--rose-500) 68%, transparent);
   --cta: var(--rose-500);
   --ctaText: #fffdfb;
@@ -94,9 +101,16 @@
   --text: rgba(255, 255, 255, 0.92);
   --text-secondary: rgba(255, 255, 255, 0.72);
   --muted: rgba(255, 255, 255, 0.55);
-  --border: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.10);
   --accent: var(--rose-500);
   --accent2: var(--rose-300);
+  --pearl-panel: rgba(255,255,255,0.06);
+  --accent-light: var(--rose-300);
+  --accent-deep: var(--rose-600);
+  --rose-glow: rgba(194,125,128,0.10);
+  --rose-glow-2: rgba(215,151,152,0.08);
+  --metal-trim: linear-gradient(135deg, color-mix(in srgb, var(--accent-light) 52%, transparent), color-mix(in srgb, var(--accent) 56%, transparent), color-mix(in srgb, var(--accent-deep) 62%, transparent));
+  --interactive-raise: translateY(-2px);
   --ring: color-mix(in srgb, var(--rose-300) 58%, transparent);
   --cta: var(--rose-500);
   --ctaText: #fff8f6;
@@ -318,7 +332,7 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
 @media (hover: hover) {
   .marketing-interactive:hover {
     transform: scale(1.02);
-    box-shadow: 0 20px 46px rgba(28, 20, 14, 0.2);
+    box-shadow: var(--shadow-md);
   }
 }
 
@@ -329,9 +343,9 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
   right: 0;
   height: calc(var(--bn) + var(--sab));
   padding: 8px max(12px, var(--sal)) calc(var(--sab) + 4px) max(12px, var(--sar));
-  background: color-mix(in srgb, var(--surface) 93%, var(--rose-200) 7%);
-  border-top: 1px solid var(--border);
-  box-shadow: 0 -12px 28px color-mix(in srgb, var(--bg) 48%, transparent);
+  background: color-mix(in srgb, var(--surface) 92%, var(--pearl-panel));
+  border-top: 1px solid color-mix(in srgb, var(--border) 80%, var(--accent) 20%);
+  box-shadow: 0 -12px 28px color-mix(in srgb, var(--bg) 58%, transparent);
   backdrop-filter: saturate(140%) blur(10px);
   display: flex;
   align-items: center;
@@ -350,7 +364,7 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
   padding: 4px 12px;
   border-radius: 16px;
   text-decoration: none;
-  transition: transform 160ms ease, background-color 160ms ease;
+  transition: transform 180ms ease-out, background-color 180ms ease-out, color 180ms ease-out;
 }
 
 .app-mobile-bottom-nav__label {

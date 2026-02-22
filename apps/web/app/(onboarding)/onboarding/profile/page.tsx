@@ -165,7 +165,7 @@ export default function ProfileWizardPage() {
             width: `${progress}%`,
             height: "100%",
             background:
-              "linear-gradient(90deg, color-mix(in srgb, var(--accent) 50%, #b76e79), color-mix(in srgb, var(--primary) 62%, #f2d4b7))",
+              "linear-gradient(90deg, color-mix(in srgb, var(--accent-deep) 68%, transparent), color-mix(in srgb, var(--accent-light) 75%, transparent))",
             transition: reducedMotion ? "none" : "width 260ms ease"
           }}
         />

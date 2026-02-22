@@ -53,17 +53,17 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           opacity: 0.45;
         }
         .auth-overlay {
-          background: linear-gradient(125deg, rgba(17, 13, 18, 0.86), rgba(28, 18, 24, 0.72));
+          background: linear-gradient(125deg, color-mix(in srgb, var(--bg) 88%, transparent), color-mix(in srgb, var(--surface) 76%, transparent));
           backdrop-filter: blur(2px);
         }
         .auth-vignette {
-          background: radial-gradient(circle at center, rgba(255,255,255,0) 38%, rgba(5,4,7,0.65) 100%);
+          background: radial-gradient(circle at center, transparent 38%, color-mix(in srgb, var(--bg) 66%, transparent) 100%);
         }
         .auth-glow-top {
-          background: radial-gradient(circle at 18% 16%, rgba(238, 177, 147, 0.2), rgba(238, 177, 147, 0) 42%);
+          background: radial-gradient(circle at 18% 16%, var(--rose-glow-2), transparent 42%);
         }
         .auth-glow-bottom {
-          background: radial-gradient(circle at 82% 84%, rgba(199, 130, 121, 0.18), rgba(199, 130, 121, 0) 40%);
+          background: radial-gradient(circle at 82% 84%, var(--rose-glow), transparent 40%);
         }
         .top-row {
           position: absolute;
@@ -80,17 +80,17 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           font-weight: 800;
           letter-spacing: 0.02em;
           color: var(--text);
-          text-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+          text-shadow: var(--shadow-sm);
         }
         .theme-btn {
           width: 42px;
           height: 42px;
           border-radius: 999px;
-          border: 1px solid rgba(238, 202, 179, 0.42);
-          background: rgba(38, 24, 32, 0.58);
+          border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+          background: color-mix(in srgb, var(--surface2) 76%, var(--pearl-panel));
           backdrop-filter: blur(16px);
           color: var(--text-secondary);
-          box-shadow: 0 8px 24px rgba(12, 8, 12, 0.35);
+          box-shadow: var(--shadow-sm);
           display: grid;
           place-items: center;
         }
@@ -99,10 +99,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           z-index: 3;
           width: min(92vw, 430px);
           border-radius: 32px;
-          border: 1px solid rgba(244, 210, 186, 0.22);
-          background: linear-gradient(145deg, rgba(35, 25, 34, 0.84), rgba(26, 20, 30, 0.8));
+          border: 1px solid color-mix(in srgb, var(--border) 78%, var(--accent) 22%);
+          background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 86%, transparent), color-mix(in srgb, var(--surface2) 82%, var(--pearl-panel)));
           backdrop-filter: blur(24px);
-          box-shadow: 0 28px 68px rgba(8, 6, 10, 0.62);
+          box-shadow: var(--shadow-md);
         }
         :global([data-theme='light']) .auth-shell {
           background: linear-gradient(145deg, var(--bg) 0%, var(--surface2) 48%, var(--surface) 100%);
@@ -113,16 +113,16 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           opacity: 0.34;
         }
         :global([data-theme='light']) .auth-overlay {
-          background: linear-gradient(135deg, rgba(247, 240, 231, 0.86), rgba(244, 234, 225, 0.8));
+          background: linear-gradient(135deg, color-mix(in srgb, var(--surface) 90%, transparent), color-mix(in srgb, var(--surface2) 86%, transparent));
         }
         :global([data-theme='light']) .auth-vignette {
-          background: radial-gradient(circle at center, rgba(255,255,255,0) 42%, rgba(228, 215, 202, 0.46) 100%);
+          background: radial-gradient(circle at center, transparent 42%, color-mix(in srgb, var(--surface2) 46%, transparent) 100%);
         }
         :global([data-theme='light']) .auth-glow-top {
-          background: radial-gradient(circle at 14% 14%, rgba(215, 181, 160, 0.32), rgba(215, 181, 160, 0) 44%);
+          background: radial-gradient(circle at 14% 14%, var(--rose-glow-2), transparent 44%);
         }
         :global([data-theme='light']) .auth-glow-bottom {
-          background: radial-gradient(circle at 80% 80%, rgba(202, 171, 150, 0.24), rgba(202, 171, 150, 0) 38%);
+          background: radial-gradient(circle at 80% 80%, var(--rose-glow), transparent 38%);
         }
         :global([data-theme='light']) .brand {
           color: var(--text);
@@ -130,14 +130,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         }
         :global([data-theme='light']) .theme-btn {
           color: var(--text-secondary);
-          border-color: rgba(185, 154, 132, 0.45);
-          background: rgba(255, 250, 245, 0.72);
-          box-shadow: 0 10px 24px rgba(143, 118, 95, 0.18);
+          border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
+          background: color-mix(in srgb, var(--surface) 84%, transparent);
+          box-shadow: var(--shadow-sm);
         }
         :global([data-theme='light']) .auth-panel {
-          border-color: rgba(198, 166, 142, 0.35);
-          background: linear-gradient(145deg, rgba(255, 251, 247, 0.86), rgba(250, 243, 236, 0.8));
-          box-shadow: 0 24px 50px rgba(98, 77, 59, 0.16);
+          border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+          background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 90%, transparent), color-mix(in srgb, var(--surface2) 86%, transparent));
+          box-shadow: var(--shadow-md);
         }
         @media (max-width: 900px) {
           .auth-shell {

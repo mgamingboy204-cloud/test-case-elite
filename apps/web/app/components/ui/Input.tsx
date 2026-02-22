@@ -14,7 +14,7 @@ const inputStyle: CSSProperties = {
   fontSize: 15,
   borderRadius: "var(--radius-md)",
   border: "1px solid var(--border)",
-  background: "color-mix(in srgb, var(--surface2) 82%, transparent)",
+  background: "color-mix(in srgb, var(--surface2) 90%, var(--pearl-panel))",
   color: "var(--text)",
   outline: "none",
   transition: "border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease",

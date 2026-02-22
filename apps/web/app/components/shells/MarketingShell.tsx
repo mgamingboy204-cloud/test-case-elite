@@ -111,7 +111,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         .nav-link { color: var(--marketing-text-strong); font-size: 15px; padding: 10px 6px; border-radius: 999px; }
         .actions { display: flex; align-items: center; gap: 10px; }
         .theme-btn { width: 44px; height: 44px; border-radius: 999px; border: 1px solid var(--marketing-glass-border); background: color-mix(in srgb, var(--surface2) 55%, transparent); color: var(--marketing-text-strong); }
-        .invite-btn { min-height: 44px; display: inline-flex; align-items: center; padding: 0 18px; border-radius: 999px; background: linear-gradient(120deg, var(--cta), var(--primary-hover)); color: var(--ctaText); font-size: 14px; font-weight: 700; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bg2) 65%, #fff), 0 10px 26px color-mix(in srgb, var(--cta) 34%, transparent); }
+        .invite-btn { min-height: 44px; display: inline-flex; align-items: center; padding: 0 18px; border-radius: 999px; background: linear-gradient(120deg, var(--cta), var(--primary-hover)); color: var(--ctaText); font-size: 14px; font-weight: 700; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bg2) 65%, var(--surface)), 0 10px 26px color-mix(in srgb, var(--cta) 34%, transparent); }
         .mobile-menu-btn { display: none; color: var(--marketing-text-strong); font-size: 24px; min-width: 44px; min-height: 44px; }
 
         .marketing-footer { border-top: 1px solid var(--marketing-glass-border); background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent2) 16%, transparent)); }

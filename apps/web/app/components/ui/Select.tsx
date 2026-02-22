@@ -31,14 +31,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             fontSize: 15,
             borderRadius: "var(--radius-md)",
             border: `1px solid ${error ? "var(--danger)" : "var(--border)"}`,
-            background: "var(--panel)",
+            background: "color-mix(in srgb, var(--surface2) 88%, var(--pearl-panel))",
             color: "var(--text)",
             outline: "none",
             appearance: "none",
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238E8E9A' strokeWidth='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "right 14px center",
-            paddingRight: 40,
+            paddingRight: 16,
             ...style,
           }}
           {...props}
