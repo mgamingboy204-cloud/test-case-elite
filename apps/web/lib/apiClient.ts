@@ -25,10 +25,26 @@ let authFailed = false;
 let logoutTriggered = false;
 
 const AUTH_ROUTES = new Set(["/login", "/signup", "/otp"]);
+const PUBLIC_ROUTES = new Set([
+  "/",
+  "/learn",
+  "/safety",
+  "/faq",
+  "/support",
+  "/terms",
+  "/privacy",
+  "/cookie-policy",
+  "/contact"
+]);
 
 function isAuthRoute(pathname: string) {
   if (AUTH_ROUTES.has(pathname)) return true;
   return pathname.startsWith("/auth");
+}
+
+function isPublicRoute(pathname: string) {
+  if (PUBLIC_ROUTES.has(pathname)) return true;
+  return pathname.startsWith("/(marketing)");
 }
 
 function extractErrorMessage(payload: any, fallback: string) {
@@ -71,7 +87,7 @@ function triggerAuthFailure(reason: string) {
     logAuthRequest("state", { tokenPresent: Boolean(getAccessToken()), refreshAttempted: true, authFailed: true, reason });
   }
   if (typeof window === "undefined" || logoutTriggered) return;
-  if (isAuthRoute(window.location.pathname)) {
+  if (isAuthRoute(window.location.pathname) || isPublicRoute(window.location.pathname)) {
     if (process.env.NODE_ENV !== "production") {
       logAuthRequest("redirect.skipped", { reason, pathname: window.location.pathname });
     }
