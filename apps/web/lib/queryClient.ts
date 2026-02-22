@@ -11,8 +11,9 @@ export const createQueryClient = () =>
           }
           return failureCount < 1;
         },
-        staleTime: 15000,
-        refetchOnWindowFocus: true
+        staleTime: 60_000,
+        gcTime: 5 * 60_000,
+        refetchOnWindowFocus: false
       },
       mutations: {
         retry: 0

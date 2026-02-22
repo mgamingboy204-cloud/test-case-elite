@@ -4,7 +4,7 @@ import { createContext, type CSSProperties, ReactNode, useCallback, useContext, 
 import { usePathname } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, refreshAccessToken } from "./api";
-import { clearAccessToken, getAccessToken } from "./authToken";
+import { clearAccessToken, getAccessToken, hasPersistentStorageAccess } from "./authToken";
 import { queryKeys } from "./queryKeys";
 import { ApiError } from "./apiClient";
 
@@ -57,8 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isFreshOpen, setIsFreshOpen] = useState(false);
   const [refreshAttempted, setRefreshAttempted] = useState(false);
 
-  const shouldBootstrapRefresh = !onAuthRoute && !getAccessToken();
-  const canRunMeQuery = !onAuthRoute && (!shouldBootstrapRefresh || refreshAttempted);
+  const hasAccessToken = Boolean(getAccessToken());
+  const shouldBootstrapRefresh = !onAuthRoute && !hasAccessToken;
+  const canRunMeQuery = !onAuthRoute && (hasAccessToken || refreshAttempted);
 
   const meQuery = useQuery({
     enabled: canRunMeQuery,
@@ -80,7 +81,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const hasAccessToken = Boolean(getAccessToken());
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.debug("[auth-client] bootstrap-refresh", { hasAccessToken });
@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         queryClient.invalidateQueries({ queryKey: queryKeys.me });
       }
     });
-  }, [onAuthRoute, queryClient]);
+  }, [hasAccessToken, onAuthRoute, queryClient]);
 
   useEffect(() => {
     const error = meQuery.error;
@@ -118,19 +118,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!isFreshOpen || !refreshAttempted) return;
-    if (getAccessToken()) return;
+    if (hasAccessToken) return;
     if (meQuery.isLoading) return;
     if (meQuery.data) return;
+    if (hasPersistentStorageAccess()) return;
 
-    const dismissed = window.localStorage.getItem(BLOCKED_STORAGE_DISMISSED_KEY) === "1";
+    let dismissed = false;
+    try {
+      dismissed = window.localStorage.getItem(BLOCKED_STORAGE_DISMISSED_KEY) === "1";
+    } catch {
+      dismissed = false;
+    }
+
     if (!dismissed) {
       setShowBlockedStoragePrompt(true);
     }
-  }, [isFreshOpen, meQuery.data, meQuery.isLoading, refreshAttempted]);
+  }, [hasAccessToken, isFreshOpen, meQuery.data, meQuery.isLoading, refreshAttempted]);
 
   const meError = meQuery.error;
   const meUnauthorized = meError instanceof ApiError && (meError.status === 401 || meError.status === 403);
-  const shouldForceLoggedOut = meUnauthorized || (!getAccessToken() && refreshAttempted && !meQuery.data);
+  const shouldForceLoggedOut = meUnauthorized || (!hasAccessToken && refreshAttempted && !meQuery.data);
 
   const status: SessionStatus = !canRunMeQuery || meQuery.isLoading
     ? "loading"
@@ -158,14 +165,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleBlockedStorageEnable = useCallback(async () => {
     setShowBlockedStoragePrompt(false);
-    window.localStorage.setItem(BLOCKED_STORAGE_DISMISSED_KEY, "1");
+    try {
+      window.localStorage.setItem(BLOCKED_STORAGE_DISMISSED_KEY, "1");
+    } catch {
+      // Ignore blocked storage and continue with refresh attempt.
+    }
     await refreshAccessToken();
     await queryClient.invalidateQueries({ queryKey: queryKeys.me });
   }, [queryClient]);
 
   const handleBlockedStorageDismiss = useCallback(() => {
     setShowBlockedStoragePrompt(false);
-    window.localStorage.setItem(BLOCKED_STORAGE_DISMISSED_KEY, "1");
+    try {
+      window.localStorage.setItem(BLOCKED_STORAGE_DISMISSED_KEY, "1");
+    } catch {
+      // Ignore blocked storage and continue with refresh attempt.
+    }
   }, []);
 
   return (
