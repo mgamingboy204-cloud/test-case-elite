@@ -30,7 +30,7 @@ const variantStyles: Record<Variant, React.CSSProperties> = {
     border: "1px solid transparent",
   },
   danger: {
-    background: "color-mix(in srgb, var(--roseDeep) 82%, var(--surface2))",
+    background: "color-mix(in srgb, var(--danger) 82%, var(--surface2))",
     color: "var(--ctaText)",
     border: "1px solid color-mix(in srgb, var(--danger) 46%, var(--border))",
   },
