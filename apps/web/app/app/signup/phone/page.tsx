@@ -7,7 +7,9 @@ import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import styles from "./phone.module.css";
 
-const PHONE_STORAGE_KEY = "app-signup-phone";
+const PHONE_STORAGE_KEY = "em_signup_phone";
+const COUNTRY_STORAGE_KEY = "em_signup_country";
+const COUNTRY_CODE = "+91";
 
 export default function AppSignupPhonePage() {
   const router = useRouter();
@@ -39,7 +41,8 @@ export default function AppSignupPhonePage() {
       });
 
       sessionStorage.setItem(PHONE_STORAGE_KEY, cleanedPhone);
-      router.push(`/app/signup/verify?phone=${encodeURIComponent(cleanedPhone)}`);
+      sessionStorage.setItem(COUNTRY_STORAGE_KEY, COUNTRY_CODE);
+      router.push("/app/signup/verify");
     } catch (err: unknown) {
       addToast(err instanceof Error ? err.message : "Could not send code", "error");
     } finally {
@@ -62,7 +65,7 @@ export default function AppSignupPhonePage() {
         <p className={styles.subtitle}>We&apos;ll text you a code to verify.</p>
 
         <div className={styles.phoneRow}>
-          <span className={styles.countryPill}>+91</span>
+          <span className={styles.countryPill}>{COUNTRY_CODE}</span>
           <input
             className={styles.phoneInput}
             type="tel"

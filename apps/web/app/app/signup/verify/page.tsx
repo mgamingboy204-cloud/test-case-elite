@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ClipboardEvent, KeyboardEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/app/providers";
 import { apiFetch, resetAuthFailureState } from "@/lib/api";
@@ -10,13 +10,12 @@ import { getDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
 import styles from "./verify.module.css";
 
-const PHONE_STORAGE_KEY = "app-signup-phone";
+const PHONE_STORAGE_KEY = "em_signup_phone";
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 30;
 
 export default function AppSignupVerifyPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { addToast } = useToast();
   const { refresh } = useSession();
 
@@ -27,9 +26,7 @@ export default function AppSignupVerifyPage() {
 
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
-  const phoneFromQuery = searchParams.get("phone")?.replace(/\D/g, "") ?? "";
-  const [phoneFromStorage, setPhoneFromStorage] = useState("");
-  const cleanedPhone = phoneFromQuery || phoneFromStorage;
+  const [cleanedPhone, setCleanedPhone] = useState("");
   const otpValue = otpDigits.join("");
 
   const maskedPhone = useMemo(() => {
@@ -47,7 +44,7 @@ export default function AppSignupVerifyPage() {
   }, []);
 
   useEffect(() => {
-    setPhoneFromStorage(sessionStorage.getItem(PHONE_STORAGE_KEY) ?? "");
+    setCleanedPhone((sessionStorage.getItem(PHONE_STORAGE_KEY) ?? "").replace(/\D/g, ""));
     inputRefs.current[0]?.focus();
   }, []);
 
@@ -56,6 +53,7 @@ export default function AppSignupVerifyPage() {
       router.replace("/app/signup/phone");
       return;
     }
+
     sessionStorage.setItem(PHONE_STORAGE_KEY, cleanedPhone);
   }, [cleanedPhone, router]);
 
@@ -149,7 +147,7 @@ export default function AppSignupVerifyPage() {
   return (
     <main className={`${styles.screen} entry-screen`} aria-label="OTP verification">
       <div className={styles.chrome}>
-        <Link href={`/app/signup/phone?phone=${encodeURIComponent(cleanedPhone)}`} className={styles.backButton} aria-label="Go back">
+        <Link href="/app/signup/phone" className={styles.backButton} aria-label="Go back">
           ←
         </Link>
         <span />
