@@ -239,7 +239,8 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
 
 [data-app-shell="1"] body.app-entry-no-scroll {
   overflow: hidden;
-  position: fixed;
+  overscroll-behavior: none;
+  touch-action: none;
   width: 100%;
 }
 
