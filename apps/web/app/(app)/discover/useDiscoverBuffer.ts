@@ -44,14 +44,17 @@ function computeBackoffMs(attempt: number) {
   return base + jitter;
 }
 
-export function useDiscoverBuffer(options: { intent: string; distance: number; selectedInterests: string[] }) {
-  const { intent, distance, selectedInterests } = options;
+type QueueEvent = { type: "retrying" | "dropped"; attempts: number };
+
+export function useDiscoverBuffer(options: { intent: string; distance: number; selectedInterests: string[]; onQueueEvent?: (event: QueueEvent) => void }) {
+  const { intent, distance, selectedInterests, onQueueEvent } = options;
   const [buffer, setBuffer] = useState<DiscoverCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [syncWarning, setSyncWarning] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [authRequired, setAuthRequired] = useState(false);
+  const [queueDepth, setQueueDepth] = useState(0);
 
   const cursorRef = useRef<string | undefined>(undefined);
   const hasMoreRef = useRef(true);
@@ -106,6 +109,7 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
           if (processed) {
             knownActionIdsRef.current.delete(processed.actionId);
           }
+          setQueueDepth(queuedSwipesRef.current.length);
           setAuthRequired(false);
           if (queuedSwipesRef.current.length === 0) {
             setSyncWarning(false);
@@ -116,6 +120,7 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
             if (unauthorized) {
               knownActionIdsRef.current.delete(unauthorized.actionId);
             }
+            setQueueDepth(queuedSwipesRef.current.length);
             setAuthRequired(true);
             setSyncWarning(false);
             continue;
@@ -127,8 +132,11 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
             if (dropped) {
               knownActionIdsRef.current.delete(dropped.actionId);
             }
+            setQueueDepth(queuedSwipesRef.current.length);
+            onQueueEvent?.({ type: "dropped", attempts: next.attempts });
           } else {
             next.nextAttemptAt = now + computeBackoffMs(next.attempts);
+            onQueueEvent?.({ type: "retrying", attempts: next.attempts });
           }
           setSyncWarning(true);
         }
@@ -145,6 +153,7 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
       }
       knownActionIdsRef.current.add(payload.actionId);
       queuedSwipesRef.current.push({ ...payload, attempts: 0, nextAttemptAt: Date.now() });
+      setQueueDepth(queuedSwipesRef.current.length);
       void processSwipeQueue();
     },
     [processSwipeQueue]
@@ -239,6 +248,7 @@ export function useDiscoverBuffer(options: { intent: string; distance: number; s
     hasMore,
     batchSize: BATCH_SIZE,
     lowWatermark: LOW_WATERMARK,
+    queueDepth,
     advance,
     reload: () => fetchBatch({ reset: true }),
   };
