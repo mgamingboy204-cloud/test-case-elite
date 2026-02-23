@@ -16,7 +16,7 @@
   --sar: env(safe-area-inset-right, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
-  --bn: 82px;
+  --bn: 86px;
   --app-header-height: 60px;
   --app-bottom-nav-base-height: var(--bn);
   --app-bottom-nav-height: calc(var(--bn) + var(--sab));
@@ -364,12 +364,17 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 52px;
-  min-width: 70px;
-  padding: 6px 12px;
-  border-radius: 16px;
+  min-height: 56px;
+  min-width: 78px;
+  padding: 8px 14px;
+  border-radius: 18px;
   text-decoration: none;
   transition: transform 180ms ease-out, background-color 180ms ease-out, color 180ms ease-out, box-shadow 180ms ease-out;
+}
+
+.app-mobile-bottom-nav__link[aria-current="page"] {
+  background: color-mix(in srgb, var(--surface2) 78%, var(--accent) 22%);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .app-mobile-bottom-nav__label {
@@ -378,6 +383,27 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
   font-weight: 500;
 }
 
+
+
+.discover-action-button {
+  transform: translate3d(0,0,0);
+}
+
+.discover-action-button:active {
+  transform: scale(0.94);
+}
+
+.discover-action-button--like {
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.discover-action-button--pass {
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--text-secondary) 20%, transparent);
+}
+
+.discover-action-button--neutral {
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--border) 50%, transparent);
+}
 
 .discover-swipe-actions {
   position: static;
