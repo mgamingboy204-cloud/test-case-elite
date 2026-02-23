@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { appNavigate } from "@/lib/appNavigation";
 import { useLayoutEffect, useMemo, useState } from "react";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
@@ -42,7 +43,7 @@ export default function AppSignupPhonePage() {
 
       sessionStorage.setItem(PHONE_STORAGE_KEY, cleanedPhone);
       sessionStorage.setItem(COUNTRY_STORAGE_KEY, COUNTRY_CODE);
-      router.push("/app/signup/verify");
+      router.push(appNavigate("/app/signup/verify"));
     } catch (err: unknown) {
       addToast(err instanceof Error ? err.message : "Could not send code", "error");
     } finally {
@@ -53,7 +54,7 @@ export default function AppSignupPhonePage() {
   return (
     <main className={`${styles.screen} entry-screen`} aria-label="Phone signup">
       <div className={styles.chrome}>
-        <Link href="/app/get-started" className={styles.backButton} aria-label="Go back">
+        <Link href={appNavigate("/app/get-started")} className={styles.backButton} aria-label="Go back">
           ←
         </Link>
         <p className={styles.brand}>Elite Match</p>

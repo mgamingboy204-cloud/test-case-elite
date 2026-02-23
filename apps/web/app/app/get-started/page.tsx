@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./get-started.module.css";
+import { appNavigate } from "@/lib/appNavigation";
 
 const BACKGROUND_IMAGES = [
   "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1440&q=80",
@@ -29,8 +30,8 @@ export default function AppGetStartedPage() {
   }, []);
 
   useEffect(() => {
-    void router.prefetch("/app/login");
-    void router.prefetch("/app/signup/phone");
+    void router.prefetch(appNavigate("/app/login"));
+    void router.prefetch(appNavigate("/app/signup/phone"));
   }, [router]);
 
   return (
@@ -45,10 +46,10 @@ export default function AppGetStartedPage() {
         <p className={styles.sub}>Private. Curated. Exceptional.</p>
 
         <div className={styles.actions}>
-          <Link className={`${styles.actionBtn} ${styles.primary}`} href="/app/signup/phone">
+          <Link className={`${styles.actionBtn} ${styles.primary}`} href={appNavigate("/app/signup/phone")}>
             Create account
           </Link>
-          <Link className={`${styles.actionBtn} ${styles.secondary}`} href="/app/login">
+          <Link className={`${styles.actionBtn} ${styles.secondary}`} href={appNavigate("/app/login")}>
             I have an account
           </Link>
         </div>
