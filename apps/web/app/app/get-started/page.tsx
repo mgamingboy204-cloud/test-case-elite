@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./get-started.module.css";
 
@@ -20,20 +20,22 @@ export default function AppGetStartedPage() {
     return BACKGROUND_IMAGES[imageIndex] ?? BACKGROUND_IMAGES[0];
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.body.classList.add("app-entry-no-scroll");
-
-    void router.prefetch("/app/login");
-    void router.prefetch("/signup");
 
     return () => {
       document.body.classList.remove("app-entry-no-scroll");
     };
+  }, []);
+
+  useEffect(() => {
+    void router.prefetch("/app/login");
+    void router.prefetch("/signup");
   }, [router]);
 
   return (
     <main className={`${styles.shell} entry-screen`} aria-label="Get started">
-      <img className={styles.image} src={backgroundImage} alt="" aria-hidden="true" />
+      <img className={styles.getStartedBg} src={backgroundImage} alt="" aria-hidden="true" />
       <div className={styles.overlay} aria-hidden="true" />
 
       <header className={styles.top}>Elite Match</header>

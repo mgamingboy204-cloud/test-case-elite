@@ -4,21 +4,30 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: calc(18px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px));
+  overscroll-behavior: none;
+  touch-action: none;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) 0 calc(20px + env(safe-area-inset-left, 0px));
   isolation: isolate;
 }
 
-.image {
+.getStartedBg {
   position: fixed;
   inset: 0;
   z-index: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scale(1.03);
+  transform: translateZ(0) scale(1.03);
   filter: blur(6px) saturate(1.06);
   opacity: 0.95;
+  will-change: auto;
+  transition: none !important;
   pointer-events: none;
+}
+
+.getStartedBg,
+.getStartedBg * {
+  transition: none !important;
 }
 
 .overlay {
@@ -52,12 +61,13 @@
 }
 
 .bottom {
+  max-width: 420px;
   width: min(92vw, 420px);
   margin-top: auto;
   display: grid;
   gap: 12px;
-  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
-  transform: translateY(12px);
+  padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(24px);
 }
 
 .bottom h1 {
