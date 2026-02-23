@@ -2,13 +2,16 @@
   "name": "Elite Match",
   "short_name": "Elite Match",
   "description": "Elite Match is a premium, verified matchmaking platform for discerning singles.",
-  "start_url": "/?source=pwa",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#f6f4f2",
   "theme_color": "#f26b76",
-  "categories": ["lifestyle", "social"],
+  "categories": [
+    "lifestyle",
+    "social"
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",
