@@ -227,6 +227,27 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
 .sp-24 { padding: 24px; }
 .sp-32 { padding: 32px; }
 
+
+[data-app-shell="1"] {
+  height: 100%;
+}
+
+[data-app-shell="1"] body {
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+[data-app-shell="1"] body.app-entry-no-scroll {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+[data-app-shell="1"] .entry-screen {
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
