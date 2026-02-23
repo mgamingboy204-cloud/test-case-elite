@@ -20,30 +20,40 @@ export default function AppGetStartedPage() {
   }, []);
 
   useEffect(() => {
+    document.body.classList.add("app-entry-no-scroll");
+    document.documentElement.classList.add("app-entry-no-scroll");
+
     void router.prefetch("/app/login");
     void router.prefetch("/signup");
+
+    return () => {
+      document.body.classList.remove("app-entry-no-scroll");
+      document.documentElement.classList.remove("app-entry-no-scroll");
+    };
   }, [router]);
 
   return (
     <>
-      <main className="app-get-started-shell" aria-label="Get started">
+      <main className="app-get-started-shell entry-screen" aria-label="Get started">
         <img className="app-get-started-image" src={backgroundImage} alt="" aria-hidden="true" />
         <div className="app-get-started-overlay" aria-hidden="true" />
 
         <header className="app-get-started-top">Elite Match</header>
+        <div className="app-get-started-spacer" aria-hidden="true" />
 
-        <section className="app-get-started-center">
+        <section className="app-get-started-bottom" aria-label="Get started actions">
           <h1>Start something epic.</h1>
-          <p>Private. Curated. Exceptional.</p>
-        </section>
+          <p className="app-get-started-sub">Private. Curated. Exceptional.</p>
 
-        <section className="app-get-started-actions" aria-label="Get started actions">
-          <Link className="action-btn action-btn-primary" href="/signup">
-            Create account
-          </Link>
-          <Link className="action-btn action-btn-secondary" href="/app/login">
-            I have an account
-          </Link>
+          <div className="app-get-started-actions">
+            <Link className="action-btn action-btn-primary" href="/signup">
+              Create account
+            </Link>
+            <Link className="action-btn action-btn-secondary" href="/app/login">
+              I have an account
+            </Link>
+          </div>
+
           <p className="terms-text">By continuing, you agree to our Terms &amp; Privacy Policy.</p>
         </section>
       </main>
@@ -51,10 +61,12 @@ export default function AppGetStartedPage() {
       <style jsx>{`
         .app-get-started-shell {
           position: relative;
-          min-height: 100dvh;
-          display: grid;
-          grid-template-rows: auto 1fr auto;
+          height: 100dvh;
+          display: flex;
+          flex-direction: column;
           overflow: hidden;
+          overscroll-behavior: none;
+          touch-action: none;
           padding: calc(18px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px));
           isolation: isolate;
         }
@@ -89,8 +101,7 @@ export default function AppGetStartedPage() {
         }
 
         .app-get-started-top,
-        .app-get-started-center,
-        .app-get-started-actions {
+        .app-get-started-bottom {
           position: relative;
           z-index: 2;
           width: min(420px, 100%);
@@ -103,22 +114,28 @@ export default function AppGetStartedPage() {
           letter-spacing: 0.02em;
         }
 
-        .app-get-started-center {
-          align-self: center;
-          display: grid;
-          gap: 12px;
+        .app-get-started-spacer {
+          flex: 1;
+          min-height: 18dvh;
         }
 
-        .app-get-started-center h1 {
+        .app-get-started-bottom {
+          display: grid;
+          gap: 12px;
+          padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .app-get-started-bottom h1 {
           margin: 0;
           color: #ffffff;
-          font-size: clamp(2.65rem, 11vw, 3.25rem);
+          font-size: clamp(2.3rem, 10vw, 3.25rem);
           line-height: 1.06;
           letter-spacing: -0.025em;
           font-weight: 650;
+          max-width: 10ch;
         }
 
-        .app-get-started-center p {
+        .app-get-started-sub {
           margin: 0;
           color: rgba(255, 255, 255, 0.8);
           font-size: clamp(1rem, 3.4vw, 1.12rem);
@@ -127,9 +144,9 @@ export default function AppGetStartedPage() {
         }
 
         .app-get-started-actions {
-          align-self: end;
           display: grid;
           gap: 10px;
+          margin-top: 4px;
         }
 
         .action-btn {
@@ -175,6 +192,13 @@ export default function AppGetStartedPage() {
           font-size: clamp(0.76rem, 2.9vw, 0.82rem);
           line-height: 1.4;
           color: rgba(255, 255, 255, 0.62);
+        }
+
+        :global(html.app-entry-no-scroll),
+        :global(body.app-entry-no-scroll) {
+          overflow: hidden;
+          height: 100%;
+          overscroll-behavior: none;
         }
       `}</style>
     </>
