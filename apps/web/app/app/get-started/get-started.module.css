@@ -41,26 +41,28 @@
 .bottom {
   position: relative;
   z-index: 2;
-  width: min(420px, 100%);
 }
 
 .top {
-  color: rgba(255, 255, 255, 0.88);
+  width: min(420px, 100%);
+  color: color-mix(in srgb, var(--text-secondary) 78%, var(--surface));
   font-size: clamp(0.88rem, 2.8vw, 1rem);
   font-weight: 500;
   letter-spacing: 0.02em;
 }
 
 .bottom {
+  width: min(92vw, 420px);
   margin-top: auto;
   display: grid;
   gap: 12px;
-  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(12px);
 }
 
 .bottom h1 {
   margin: 0;
-  color: rgba(255, 255, 255, 0.99);
+  color: var(--text);
   font-size: clamp(2.35rem, 10vw, 3.3rem);
   line-height: 1.05;
   letter-spacing: -0.025em;
@@ -70,7 +72,7 @@
 
 .sub {
   margin: 0;
-  color: rgba(255, 255, 255, 0.83);
+  color: color-mix(in srgb, var(--text-secondary) 84%, var(--surface));
   font-size: clamp(1rem, 3.4vw, 1.12rem);
   line-height: 1.35;
   font-weight: 500;
@@ -100,14 +102,14 @@
 }
 
 .primary {
-  color: #151515;
-  background: linear-gradient(170deg, rgba(255, 255, 255, 0.98) 0%, rgba(243, 243, 243, 0.92) 100%);
+  color: var(--ctaText);
+  background: var(--primary);
 }
 
 .secondary {
-  color: rgba(255, 255, 255, 0.96);
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.32);
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 66%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 92%, transparent);
   backdrop-filter: blur(8px);
 }
 
@@ -116,5 +118,5 @@
   text-align: center;
   font-size: clamp(0.76rem, 2.9vw, 0.82rem);
   line-height: 1.4;
-  color: rgba(255, 255, 255, 0.64);
+  color: color-mix(in srgb, var(--text-secondary) 74%, var(--surface));
 }
