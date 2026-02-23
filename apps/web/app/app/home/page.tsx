@@ -4,21 +4,20 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { isStandaloneDisplayMode } from "@/lib/displayMode";
 
-export default function AppHome() {
+export default function AppNativeHomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isStandaloneDisplayMode()) {
-      router.replace("/app/splash");
+    if (!isStandaloneDisplayMode()) {
+      router.replace("/discover");
       return;
     }
-    router.replace("/discover");
+    router.replace("/app/discover");
   }, [router]);
 
   return (
     <div className="card">
-      <h2>Loading your dashboard...</h2>
-      <p className="card-subtitle">Preparing your premium experience.</p>
+      <h2>Opening your feed…</h2>
     </div>
   );
 }
