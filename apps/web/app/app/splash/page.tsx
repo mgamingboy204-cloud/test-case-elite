@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { getAccessToken } from "@/lib/authToken";
 import { queryKeys } from "@/lib/queryKeys";
+import { appNavigate } from "@/lib/appNavigation";
 import type { SessionUser } from "@/lib/session";
 
 const MIN_SPLASH_MS = 800;
@@ -19,6 +20,10 @@ export default function AppSplashPage() {
   const startedAtRef = useRef<number>(Date.now());
   const redirectedRef = useRef(false);
   const [authState, setAuthState] = useState<AuthState>("pending");
+
+  useEffect(() => {
+    document.cookie = "em_app=1; Path=/; Max-Age=31536000; SameSite=Lax";
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +57,7 @@ export default function AppSplashPage() {
     redirectedRef.current = true;
     const elapsed = Date.now() - startedAtRef.current;
     const waitMs = Math.max(0, MIN_SPLASH_MS - elapsed);
-    const nextPath = authState === "logged-in" ? "/app/home" : "/app/get-started";
+    const nextPath = authState === "logged-in" ? appNavigate("/app/home") : appNavigate("/app/get-started");
 
     void router.prefetch(nextPath);
 

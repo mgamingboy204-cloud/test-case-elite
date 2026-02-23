@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isStandaloneDisplayMode } from "@/lib/displayMode";
+import { appNavigate } from "@/lib/appNavigation";
 
 export default function AppGatewayPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isStandaloneDisplayMode()) return;
-    router.replace("/app/splash");
+    router.replace(appNavigate("/app/splash"));
   }, [router]);
 
   return (
@@ -19,8 +18,8 @@ export default function AppGatewayPage() {
         <h1>Open Elite Match</h1>
         <p>Install the app for the native launch flow, or continue in the browser.</p>
         <div className="app-gateway-actions">
-          <Link href="/login">Sign in</Link>
-          <Link href="/signup">Create account</Link>
+          <Link href={appNavigate("/app/login")}>Sign in</Link>
+          <Link href={appNavigate("/app/signup/phone")}>Create account</Link>
         </div>
       </div>
       <style jsx>{`
