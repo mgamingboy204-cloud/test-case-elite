@@ -1,41 +1,33 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
-const DARK_IMAGE = "/icons/icon-512.png";
-const LIGHT_IMAGE = "/icons/apple-touch-icon.png";
+const BACKGROUND_IMAGES = [
+  "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1440&q=80",
+  "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=1440&q=80",
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1440&q=80",
+  "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1440&q=80",
+  "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1440&q=80",
+] as const;
 
 export default function AppGetStartedPage() {
   const router = useRouter();
+  const backgroundImage = useMemo(() => {
+    const imageIndex = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
+    return BACKGROUND_IMAGES[imageIndex] ?? BACKGROUND_IMAGES[0];
+  }, []);
+
   useEffect(() => {
     void router.prefetch("/app/login");
-    void router.prefetch("/app/signup");
+    void router.prefetch("/signup");
   }, [router]);
 
   return (
     <>
-      <div className="app-get-started-shell" aria-label="Get started">
-        <Image
-          className="app-get-started-image app-get-started-image-dark"
-          src={DARK_IMAGE}
-          alt=""
-          fill
-          priority
-          fetchPriority="high"
-          sizes="100vw"
-        />
-        <Image
-          className="app-get-started-image app-get-started-image-light"
-          src={LIGHT_IMAGE}
-          alt=""
-          fill
-          priority
-          fetchPriority="high"
-          sizes="100vw"
-        />
+      <main className="app-get-started-shell" aria-label="Get started">
+        <img className="app-get-started-image" src={backgroundImage} alt="" aria-hidden="true" />
         <div className="app-get-started-overlay" aria-hidden="true" />
 
         <header className="app-get-started-top">Elite Match</header>
@@ -54,53 +46,46 @@ export default function AppGetStartedPage() {
           </Link>
           <p className="terms-text">By continuing, you agree to our Terms &amp; Privacy Policy.</p>
         </section>
-      </div>
+      </main>
 
       <style jsx>{`
         .app-get-started-shell {
           position: relative;
-          min-height: 100vh;
           min-height: 100dvh;
-          overflow: hidden;
           display: grid;
           grid-template-rows: auto 1fr auto;
-          padding: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px));
+          overflow: hidden;
+          padding: calc(18px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px));
           isolation: isolate;
         }
 
         .app-get-started-image {
+          position: fixed;
+          inset: 0;
+          z-index: 0;
+          width: 100%;
+          height: 100%;
           object-fit: cover;
-          object-position: center;
           transform: scale(1.03);
-          filter: blur(1px) saturate(0.88) contrast(1.02);
-        }
-
-        .app-get-started-image-light {
-          opacity: 0;
-        }
-
-        [data-theme="light"] .app-get-started-image-dark {
-          opacity: 0;
-        }
-
-        [data-theme="light"] .app-get-started-image-light {
-          opacity: 1;
-          filter: blur(0.6px) saturate(0.9) brightness(1.08);
+          filter: blur(8px) saturate(1.05);
+          opacity: 0.95;
+          pointer-events: none;
         }
 
         .app-get-started-overlay {
-          position: absolute;
+          position: fixed;
           inset: 0;
           z-index: 1;
           background:
-            radial-gradient(65% 42% at 50% 44%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 78%),
-            linear-gradient(180deg, rgba(10, 10, 14, 0.75) 0%, rgba(10, 10, 14, 0.38) 40%, rgba(10, 10, 14, 0.8) 100%);
+            radial-gradient(circle at center, transparent 20%, rgba(0, 0, 0, 0.55) 100%),
+            linear-gradient(180deg, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.35) 45%, rgba(0, 0, 0, 0.75) 100%);
+          pointer-events: none;
         }
 
         [data-theme="light"] .app-get-started-overlay {
           background:
-            radial-gradient(60% 40% at 50% 44%, color-mix(in srgb, var(--accent2) 16%, transparent), transparent 78%),
-            linear-gradient(180deg, rgba(240, 236, 232, 0.66) 0%, rgba(246, 242, 236, 0.34) 40%, rgba(240, 234, 228, 0.72) 100%);
+            radial-gradient(circle at center, transparent 22%, rgba(0, 0, 0, 0.38) 100%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(0, 0, 0, 0.2) 48%, rgba(0, 0, 0, 0.56) 100%);
         }
 
         .app-get-started-top,
@@ -109,39 +94,36 @@ export default function AppGetStartedPage() {
           position: relative;
           z-index: 2;
           width: min(420px, 100%);
-          margin: 0 auto;
         }
 
         .app-get-started-top {
-          padding-top: 4px;
-          color: color-mix(in srgb, var(--text) 86%, transparent);
-          font-size: 0.95rem;
-          font-weight: 600;
-          letter-spacing: 0.03em;
+          color: rgba(255, 255, 255, 0.85);
+          font-size: clamp(0.88rem, 2.8vw, 1rem);
+          font-weight: 500;
+          letter-spacing: 0.02em;
         }
 
         .app-get-started-center {
           align-self: center;
           display: grid;
-          gap: 10px;
+          gap: 12px;
         }
 
         .app-get-started-center h1 {
           margin: 0;
-          color: var(--text);
-          font-size: clamp(2rem, 7vw, 2.4rem);
-          line-height: 1.1;
+          color: #ffffff;
+          font-size: clamp(2.65rem, 11vw, 3.25rem);
+          line-height: 1.06;
+          letter-spacing: -0.025em;
           font-weight: 650;
-          letter-spacing: -0.01em;
-          text-wrap: balance;
         }
 
         .app-get-started-center p {
           margin: 0;
-          color: color-mix(in srgb, var(--text) 72%, transparent);
-          font-size: 0.98rem;
+          color: rgba(255, 255, 255, 0.8);
+          font-size: clamp(1rem, 3.4vw, 1.12rem);
+          line-height: 1.35;
           font-weight: 500;
-          letter-spacing: 0.01em;
         }
 
         .app-get-started-actions {
@@ -151,12 +133,13 @@ export default function AppGetStartedPage() {
         }
 
         .action-btn {
-          min-height: 56px;
-          border-radius: 18px;
+          min-height: 54px;
+          border-radius: 17px;
           display: grid;
           place-items: center;
           font-size: 1rem;
           font-weight: 600;
+          text-decoration: none;
           transition: transform 150ms ease, opacity 150ms ease, background-color 150ms ease, border-color 150ms ease;
           -webkit-tap-highlight-color: transparent;
         }
@@ -166,37 +149,32 @@ export default function AppGetStartedPage() {
         }
 
         .action-btn-primary {
-          color: #fff9f7;
-          background: linear-gradient(
-            145deg,
-            color-mix(in srgb, var(--accent) 92%, #cfab72 8%),
-            color-mix(in srgb, var(--accent-deep) 78%, #a6844f 22%)
-          );
-          box-shadow: 0 14px 34px color-mix(in srgb, var(--accent) 28%, transparent);
-        }
-
-        [data-theme="light"] .action-btn-primary {
-          color: color-mix(in srgb, #332714 82%, var(--text) 18%);
-          background: linear-gradient(
-            145deg,
-            color-mix(in srgb, var(--accent2) 44%, #e3c38f 56%),
-            color-mix(in srgb, var(--accent) 36%, #cfab72 64%)
-          );
+          color: #111;
+          background: linear-gradient(170deg, rgba(255, 255, 255, 0.96) 0%, rgba(242, 242, 242, 0.92) 100%);
         }
 
         .action-btn-secondary {
-          color: color-mix(in srgb, var(--text) 90%, transparent);
-          background: color-mix(in srgb, var(--surface) 20%, transparent);
-          border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+          color: rgba(255, 255, 255, 0.94);
+          background: rgba(255, 255, 255, 0.12);
+          border: 1px solid rgba(255, 255, 255, 0.28);
           backdrop-filter: blur(8px);
         }
 
+        [data-theme="light"] .app-get-started-top {
+          color: rgba(255, 255, 255, 0.92);
+        }
+
+        [data-theme="light"] .action-btn-primary {
+          color: #111;
+          background: linear-gradient(170deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 245, 245, 0.93) 100%);
+        }
+
         .terms-text {
-          margin: 4px 6px 0;
+          margin: 6px 4px 0;
           text-align: center;
-          font-size: 0.76rem;
+          font-size: clamp(0.76rem, 2.9vw, 0.82rem);
           line-height: 1.4;
-          color: color-mix(in srgb, var(--text) 56%, transparent);
+          color: rgba(255, 255, 255, 0.62);
         }
       `}</style>
     </>
