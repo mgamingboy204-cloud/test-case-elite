@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/Card";
 import { Input } from "@/app/components/ui/Input";
 import { Textarea } from "@/app/components/ui/Textarea";
@@ -35,6 +36,7 @@ const initialData: WizardData = {
 };
 
 export default function ProfileWizardPage() {
+  const router = useRouter();
   const { refresh } = useSession();
   const { addToast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
@@ -127,7 +129,7 @@ export default function ProfileWizardPage() {
 
       await apiFetch("/profile/complete", { method: "POST" });
       await refresh();
-      window.location.href = "/discover";
+      router.replace("/discover");
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Failed to save profile";
       addToast(message, "error");

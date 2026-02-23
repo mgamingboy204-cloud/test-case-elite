@@ -12,12 +12,8 @@ export default function AppNativeHomePage() {
       router.replace("/discover");
       return;
     }
-    router.replace("/app/discover");
+    router.replace("/app/splash");
   }, [router]);
 
-  return (
-    <div className="card">
-      <h2>Opening your feed…</h2>
-    </div>
-  );
+  return null;
 }
