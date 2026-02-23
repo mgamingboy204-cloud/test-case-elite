@@ -1,45 +1,64 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "@/lib/session";
+import { useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api";
+import { getAccessToken } from "@/lib/authToken";
+import { queryKeys } from "@/lib/queryKeys";
+import type { SessionUser } from "@/lib/session";
 
 const MIN_SPLASH_MS = 800;
 
+type AuthState = "pending" | "logged-in" | "logged-out";
+
 export default function AppSplashPage() {
   const router = useRouter();
-  const { status } = useSession();
-  const startedAtRef = useRef<number | null>(null);
+  const queryClient = useQueryClient();
+  const startedAtRef = useRef<number>(Date.now());
   const redirectedRef = useRef(false);
-  const prefetchedRef = useRef(false);
+  const [authState, setAuthState] = useState<AuthState>("pending");
 
   useEffect(() => {
-    if (startedAtRef.current === null) {
-      startedAtRef.current = Date.now();
-    }
-  }, []);
+    let cancelled = false;
+
+    const runAuthCheck = async () => {
+      const token = getAccessToken();
+      if (!token) {
+        if (!cancelled) setAuthState("logged-out");
+        return;
+      }
+
+      try {
+        const me = await apiFetch<SessionUser>("/me", { retryOnUnauthorized: false });
+        queryClient.setQueryData(queryKeys.me, me);
+        if (!cancelled) setAuthState("logged-in");
+      } catch {
+        if (!cancelled) setAuthState("logged-out");
+      }
+    };
+
+    void runAuthCheck();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [queryClient]);
 
   useEffect(() => {
-    if (prefetchedRef.current) return;
-    prefetchedRef.current = true;
-    router.prefetch("/app/get-started");
-    router.prefetch("/app/home");
-  }, [router]);
-
-  useEffect(() => {
-    if (redirectedRef.current || status === "loading") return;
+    if (authState === "pending" || redirectedRef.current) return;
 
     redirectedRef.current = true;
-    const elapsed = Date.now() - (startedAtRef.current ?? Date.now());
+    const elapsed = Date.now() - startedAtRef.current;
     const waitMs = Math.max(0, MIN_SPLASH_MS - elapsed);
-    const nextPath = status === "logged-in" ? "/app/home" : "/app/get-started";
+    const nextPath = authState === "logged-in" ? "/app/home" : "/app/get-started";
 
     const timer = window.setTimeout(() => {
       router.replace(nextPath);
     }, waitMs);
 
     return () => window.clearTimeout(timer);
-  }, [router, status]);
+  }, [authState, router]);
 
   return (
     <>
@@ -56,8 +75,8 @@ export default function AppSplashPage() {
           display: grid;
           place-items: center;
           padding: calc(20px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px));
-          background: radial-gradient(160% 120% at 0% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 58%),
-            linear-gradient(160deg, var(--bg), color-mix(in srgb, var(--surface2) 88%, black 12%));
+          background: radial-gradient(140% 120% at 0% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 58%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg) 96%, black 4%), var(--bg));
           background-color: var(--bg);
         }
 

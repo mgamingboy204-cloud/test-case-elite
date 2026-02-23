@@ -41,9 +41,11 @@ const BLOCKED_STORAGE_DISMISSED_KEY = "em_auth_storage_prompt_dismissed";
 const APP_OPEN_MARKER_KEY = "em_app_has_opened";
 
 const AUTH_ROUTES = new Set(["/login", "/signup", "/otp"]);
+const APP_ENTRY_ROUTES = new Set(["/app", "/app/splash", "/app/get-started", "/app/login"]);
 
 function isAuthRoute(pathname: string | null) {
   if (!pathname) return false;
+  if (APP_ENTRY_ROUTES.has(pathname)) return true;
   if (AUTH_ROUTES.has(pathname)) return true;
   return pathname.startsWith("/auth");
 }
@@ -58,7 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [refreshAttempted, setRefreshAttempted] = useState(false);
 
   const hasAccessToken = Boolean(getAccessToken());
-  const shouldBootstrapRefresh = !onAuthRoute && !hasAccessToken;
   const canRunMeQuery = !onAuthRoute && (hasAccessToken || refreshAttempted);
 
   const meQuery = useQuery({
