@@ -240,7 +240,7 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
 [data-app-shell="1"] body.app-entry-no-scroll {
   overflow: hidden;
   overscroll-behavior: none;
-  touch-action: none;
+  touch-action: manipulation;
   width: 100%;
 }
 
