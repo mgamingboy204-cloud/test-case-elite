@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { type CSSProperties, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { isStandalone } from "@/lib/displayMode";
 
 const featureCards = [
   {
@@ -19,8 +21,15 @@ const featureCards = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
   const [x, setX] = useState(50);
   const [y, setY] = useState(50);
+
+
+  useEffect(() => {
+    if (!isStandalone()) return;
+    router.replace("/app");
+  }, [router]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -53,8 +62,8 @@ export default function HomePage() {
             A private introduction service for discerning members who value elegance, discretion, and exceptional chemistry.
           </p>
           <div className="hero-actions">
-            <Link href="/signup" className="cta cta-primary">REQUEST INVITATION</Link>
-            <Link href="/login" className="cta cta-secondary">EXISTING MEMBER</Link>
+            <Link href="/request" className="cta cta-primary">REQUEST INVITATION</Link>
+            <Link href="/app/login" className="cta cta-secondary">EXISTING MEMBER / SIGN IN</Link>
           </div>
         </div>
       </section>

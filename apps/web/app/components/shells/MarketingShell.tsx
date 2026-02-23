@@ -5,7 +5,7 @@ import { useTheme } from "@/app/providers";
 import { type ReactNode, useEffect, useState } from "react";
 
 const navLinks = [
-  { href: "/learn", label: "How It Works" },
+  { href: "/why", label: "Why Elite Match" },
   { href: "/safety", label: "Safety" },
   { href: "/faq", label: "FAQ" },
   { href: "/support", label: "Support" }
@@ -48,7 +48,8 @@ export function MarketingShell({ children }: { children: ReactNode }) {
             <button onClick={toggle} className="theme-btn marketing-interactive" aria-label="Toggle theme">
               {theme === "light" ? "☾" : "☀"}
             </button>
-            <Link href="/login" className="invite-btn marketing-interactive">Sign In</Link>
+            <Link href="/request" className="invite-btn marketing-interactive">Request Invitation</Link>
+            <Link href="/app/login" className="invite-btn marketing-interactive" style={{ background: "transparent", color: "var(--marketing-text-strong)", border: "1px solid var(--marketing-glass-border)", boxShadow: "none" }}>Sign In</Link>
             <button className="mobile-menu-btn" onClick={() => setMenuOpen(true)} aria-label="Open menu">☰</button>
           </div>
         </div>
@@ -79,10 +80,10 @@ export function MarketingShell({ children }: { children: ReactNode }) {
                 {link.label}
               </Link>
             ))}
-            <Link href="/login" className="sheet-signin" onClick={() => setMenuOpen(false)}>
+            <Link href="/app/login" className="sheet-signin" onClick={() => setMenuOpen(false)}>
               Sign In
             </Link>
-            <Link href="/signup" className="sheet-subtle" onClick={() => setMenuOpen(false)}>
+            <Link href="/request" className="sheet-subtle" onClick={() => setMenuOpen(false)}>
               Request Invitation
             </Link>
           </div>
