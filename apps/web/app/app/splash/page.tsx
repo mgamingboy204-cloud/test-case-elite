@@ -11,12 +11,20 @@ export default function AppSplashPage() {
   const { status } = useSession();
   const startedAtRef = useRef<number | null>(null);
   const redirectedRef = useRef(false);
+  const prefetchedRef = useRef(false);
 
   useEffect(() => {
     if (startedAtRef.current === null) {
       startedAtRef.current = Date.now();
     }
   }, []);
+
+  useEffect(() => {
+    if (prefetchedRef.current) return;
+    prefetchedRef.current = true;
+    router.prefetch("/app/get-started");
+    router.prefetch("/app/home");
+  }, [router]);
 
   useEffect(() => {
     if (redirectedRef.current || status === "loading") return;
@@ -50,6 +58,7 @@ export default function AppSplashPage() {
           padding: calc(20px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px));
           background: radial-gradient(160% 120% at 0% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 58%),
             linear-gradient(160deg, var(--bg), color-mix(in srgb, var(--surface2) 88%, black 12%));
+          background-color: var(--bg);
         }
 
         .app-splash-brand {

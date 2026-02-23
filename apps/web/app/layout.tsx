@@ -5,11 +5,16 @@ import Providers from "./providers";
 const themeScript = `
   (function() {
     try {
+      document.documentElement.classList.add("theme-preload");
       var stored = localStorage.getItem("em_theme");
-      var theme = stored === "light" ? "light" : "dark";
+      var systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var theme = stored === "light" || stored === "dark" ? stored : (systemDark ? "dark" : "light");
       document.documentElement.dataset.theme = theme;
       document.documentElement.style.colorScheme = theme;
       document.documentElement.style.backgroundColor = theme === "dark" ? "#0B0B10" : "#FAFAFB";
+      requestAnimationFrame(function() {
+        document.documentElement.classList.remove("theme-preload");
+      });
     } catch (e) {}
   })();
 `;
@@ -43,8 +48,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body>
         <Providers>
           <main className="site-main">{children}</main>
         </Providers>

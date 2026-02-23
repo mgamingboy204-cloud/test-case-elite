@@ -1,21 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/app/components/ui/Button";
-import { useSession } from "@/lib/session";
 
 export default function AppGetStartedPage() {
-  const router = useRouter();
-  const { status } = useSession();
-
-  useEffect(() => {
-    if (status === "logged-in") {
-      router.replace("/app/home");
-    }
-  }, [router, status]);
-
   return (
     <>
       <div className="app-get-started-shell" aria-label="Get started">

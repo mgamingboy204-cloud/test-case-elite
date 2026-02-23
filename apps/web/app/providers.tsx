@@ -43,7 +43,11 @@ export function useToast() {
 
 export default function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => createQueryClient());
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof document === "undefined") return "dark";
+    const current = document.documentElement.dataset.theme;
+    return current === "light" ? "light" : "dark";
+  });
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   useEffect(() => {
