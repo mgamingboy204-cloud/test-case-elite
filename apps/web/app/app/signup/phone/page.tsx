@@ -9,8 +9,13 @@ import { apiFetch } from "@/lib/api";
 import styles from "./phone.module.css";
 
 const PHONE_STORAGE_KEY = "em_signup_phone";
+const SIGNUP_TX_STORAGE_KEY = "em_signup_tx";
 const COUNTRY_STORAGE_KEY = "em_signup_country";
 const COUNTRY_CODE = "+91";
+
+function buildAppSignupPassword(phone: string) {
+  return `AppOnly!${phone}`;
+}
 
 export default function AppSignupPhonePage() {
   const router = useRouter();
@@ -35,13 +40,14 @@ export default function AppSignupPhonePage() {
 
     setLoading(true);
     try {
-      await apiFetch("/auth/otp/send", {
+      await apiFetch("/auth/register", {
         method: "POST",
-        body: { phone: cleanedPhone } as never,
+        body: { phone: cleanedPhone, password: buildAppSignupPassword(cleanedPhone) } as never,
         auth: "omit"
       });
 
       sessionStorage.setItem(PHONE_STORAGE_KEY, cleanedPhone);
+      sessionStorage.setItem(SIGNUP_TX_STORAGE_KEY, cleanedPhone);
       sessionStorage.setItem(COUNTRY_STORAGE_KEY, COUNTRY_CODE);
       router.push(appNavigate("/app/signup/verify"));
     } catch (err: unknown) {

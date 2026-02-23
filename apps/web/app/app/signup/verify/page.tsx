@@ -12,6 +12,7 @@ import { useSession } from "@/lib/session";
 import styles from "./verify.module.css";
 
 const PHONE_STORAGE_KEY = "em_signup_phone";
+const SIGNUP_TX_STORAGE_KEY = "em_signup_tx";
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 30;
 
@@ -45,7 +46,9 @@ export default function AppSignupVerifyPage() {
   }, []);
 
   useEffect(() => {
-    setCleanedPhone((sessionStorage.getItem(PHONE_STORAGE_KEY) ?? "").replace(/\D/g, ""));
+    const storedPhone = (sessionStorage.getItem(PHONE_STORAGE_KEY) ?? "").replace(/\D/g, "");
+    const storedSignupTx = (sessionStorage.getItem(SIGNUP_TX_STORAGE_KEY) ?? "").replace(/\D/g, "");
+    setCleanedPhone(storedPhone || storedSignupTx);
     inputRefs.current[0]?.focus();
   }, []);
 
@@ -56,6 +59,7 @@ export default function AppSignupVerifyPage() {
     }
 
     sessionStorage.setItem(PHONE_STORAGE_KEY, cleanedPhone);
+    sessionStorage.setItem(SIGNUP_TX_STORAGE_KEY, cleanedPhone);
   }, [cleanedPhone, router]);
 
   useEffect(() => {

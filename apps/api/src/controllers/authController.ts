@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import {
+  buildClearRefreshCookieOptions,
   buildRefreshCookieOptions,
   deviceCookieName,
   deviceCookieOptions,
@@ -193,7 +194,7 @@ export async function login(req: Request, res: Response) {
 
 export async function logout(req: Request, res: Response) {
   // Clear refresh cookie
-  res.clearCookie(refreshCookieName, buildRefreshCookieOptions(env.REFRESH_TOKEN_TTL_DAYS));
+  res.clearCookie(refreshCookieName, buildClearRefreshCookieOptions());
 
   return res.json({ ok: true });
 }
