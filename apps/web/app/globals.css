@@ -486,3 +486,135 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
   z-index: -1;
   pointer-events: none;
 }
+
+html,
+body,
+.site-main {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  overscroll-behavior-y: none;
+}
+
+.site-main {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.onboarding-shell,
+.onboarding-screen {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.onboarding-screen {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.onboarding-topbar {
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 12px;
+}
+
+.onboarding-progress-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 80%, transparent);
+  overflow: hidden;
+}
+
+.onboarding-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  transition: width 180ms ease;
+}
+
+.onboarding-icon-btn,
+.onboarding-skip-btn {
+  height: 36px;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.onboarding-skip-btn {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.onboarding-skip-placeholder {
+  display: block;
+  width: 48px;
+  height: 36px;
+}
+
+.onboarding-scroll-area {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 20px 20px;
+}
+
+.onboarding-content-stack {
+  display: grid;
+  gap: 14px;
+  align-content: center;
+  min-height: 100%;
+}
+
+.onboarding-muted {
+  color: var(--muted);
+}
+
+.onboarding-list {
+  display: grid;
+  gap: 10px;
+}
+
+.onboarding-list li {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 1px solid var(--border);
+}
+
+.onboarding-photo-drop {
+  border: 1px dashed var(--border);
+  border-radius: 20px;
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.onboarding-photo-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.onboarding-cta-shell {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--bg) 94%, transparent) 24%);
+}
+
+.onboarding-cta-btn {
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.onboarding-cta-btn:active {
+  transform: scale(0.985);
+}

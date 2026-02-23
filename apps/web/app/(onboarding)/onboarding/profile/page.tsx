@@ -1,58 +1,76 @@
 "use client";
 
-import { ChangeEvent, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card } from "@/app/components/ui/Card";
 import { Input } from "@/app/components/ui/Input";
 import { Textarea } from "@/app/components/ui/Textarea";
 import { Select } from "@/app/components/ui/Select";
 import { Button } from "@/app/components/ui/Button";
 import { useToast } from "@/app/providers";
 import { ApiError, apiFetch } from "@/lib/api";
+import { INITIAL_PROFILE_DRAFT, ONBOARDING_PROFILE_FIELDS, type ProfileDraft } from "@/lib/onboardingFlow";
 import { useSession } from "@/lib/session";
 
-const STEPS = ["Photo", "Basics", "About", "Intent", "Review"] as const;
+const DRAFT_KEY = "em_onboarding_profile_draft";
 
-type WizardData = {
-  photoUrl: string;
-  name: string;
-  age: string;
-  gender: "MALE" | "FEMALE" | "NON_BINARY" | "OTHER" | "";
-  city: string;
-  profession: string;
-  bio: string;
-  intent: "dating" | "friends" | "all";
-};
-
-const initialData: WizardData = {
-  photoUrl: "",
-  name: "",
-  age: "",
-  gender: "",
-  city: "",
-  profession: "",
-  bio: "",
-  intent: "dating"
-};
+const STEP_IDS = ONBOARDING_PROFILE_FIELDS.filter((step) => step.stepId !== "welcome").map((step) => step.stepId);
 
 export default function ProfileWizardPage() {
   const router = useRouter();
   const { refresh } = useSession();
   const { addToast } = useToast();
+
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [data, setData] = useState<WizardData>(initialData);
+  const [draft, setDraft] = useState<ProfileDraft>(INITIAL_PROFILE_DRAFT);
 
-  const reducedMotion = useMemo(
-    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    []
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(DRAFT_KEY);
+      if (!stored) return;
+      const parsed = JSON.parse(stored) as Partial<ProfileDraft>;
+      setDraft({ ...INITIAL_PROFILE_DRAFT, ...parsed });
+    } catch {
+      setDraft(INITIAL_PROFILE_DRAFT);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }, [draft]);
+
+  const stepId = STEP_IDS[currentStep] ?? STEP_IDS[0];
+  const currentField = useMemo(
+    () => ONBOARDING_PROFILE_FIELDS.find((step) => step.stepId === stepId),
+    [stepId]
   );
 
-  const step = STEPS[currentStep];
+  const progress = ((currentStep + 1) / STEP_IDS.length) * 100;
 
-  const updateField = <K extends keyof WizardData>(key: K, value: WizardData[K]) => {
-    setData((prev) => ({ ...prev, [key]: value }));
+  const updateDraft = <K extends keyof ProfileDraft>(key: K, value: ProfileDraft[K]) => {
+    setDraft((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const canContinue = () => {
+    switch (stepId) {
+      case "photo":
+        return Boolean(draft.photoUrl);
+      case "displayName":
+        return draft.displayName.trim().length > 0;
+      case "gender":
+        return Boolean(draft.gender);
+      case "age":
+        return Number(draft.age) >= 18;
+      case "city":
+        return draft.city.trim().length > 0;
+      case "profession":
+        return draft.profession.trim().length > 0;
+      case "bioShort":
+        return draft.bioShort.trim().length >= 10;
+      default:
+        return true;
+    }
   };
 
   const handleUploadPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -68,14 +86,11 @@ export default function ProfileWizardPage() {
     reader.onload = async () => {
       try {
         const dataUrl = String(reader.result ?? "");
-        if (!dataUrl.startsWith("data:image/")) {
-          throw new Error("invalid-data-url");
-        }
         const response = await apiFetch<{ photo?: { url: string } }>("/photos/upload", {
           method: "POST",
           body: { filename: file.name, dataUrl } as never
         });
-        updateField("photoUrl", response.photo?.url ?? "");
+        updateDraft("photoUrl", response.photo?.url ?? "");
         addToast("Photo uploaded", "success");
       } catch (error) {
         const message = error instanceof ApiError ? error.message : "Failed to upload photo";
@@ -84,250 +99,124 @@ export default function ProfileWizardPage() {
         setUploading(false);
       }
     };
-    reader.onerror = () => {
-      setUploading(false);
-      addToast("Failed to read image", "error");
-    };
     reader.readAsDataURL(file);
   };
 
-  const canProceed = () => {
-    switch (step) {
-      case "Photo":
-        return Boolean(data.photoUrl);
-      case "Basics":
-        return Boolean(data.name && data.age && data.gender && data.city && data.profession);
-      case "About":
-        return data.bio.trim().length >= 10;
-      case "Intent":
-        return Boolean(data.intent);
-      default:
-        return true;
-    }
-  };
-
-  const handleComplete = async () => {
-    if (!canProceed()) {
-      addToast("Please complete required fields", "error");
-      return;
-    }
-
+  const handleFinalSubmit = async () => {
     setLoading(true);
     try {
       await apiFetch("/profile", {
         method: "PUT",
         body: {
-          name: data.name.trim(),
-          age: Number(data.age),
-          gender: data.gender,
-          city: data.city.trim(),
-          profession: data.profession.trim(),
-          bioShort: data.bio.trim(),
-          intent: data.intent
+          displayName: draft.displayName.trim(),
+          age: Number(draft.age),
+          gender: draft.gender,
+          city: draft.city.trim(),
+          profession: draft.profession.trim(),
+          bioShort: draft.bioShort.trim(),
+          intent: draft.intent
         } as never
       });
 
       await apiFetch("/profile/complete", { method: "POST" });
+      window.localStorage.removeItem(DRAFT_KEY);
       await refresh();
       router.replace("/discover");
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to save profile";
+      const message = error instanceof ApiError ? error.message : "Failed to complete profile";
       addToast(message, "error");
+    } finally {
       setLoading(false);
     }
   };
 
-  const progress = ((currentStep + 1) / STEPS.length) * 100;
+  const handleNext = async () => {
+    if (!canContinue()) return;
+    if (currentStep === STEP_IDS.length - 1) {
+      await handleFinalSubmit();
+      return;
+    }
+    setCurrentStep((value) => value + 1);
+  };
+
+  const renderStep = () => {
+    switch (stepId) {
+      case "photo":
+        return (
+          <>
+            <h1>Choose your best photo</h1>
+            <p className="onboarding-muted">Profiles with clear photos get more matches.</p>
+            <label htmlFor="profile-photo" className="onboarding-photo-drop">
+              {draft.photoUrl ? <img src={draft.photoUrl} alt="Profile" className="onboarding-photo-preview" /> : <span>Tap to upload</span>}
+            </label>
+            <input id="profile-photo" type="file" accept="image/*" onChange={handleUploadPhoto} />
+            {uploading ? <p className="onboarding-muted">Uploading…</p> : null}
+          </>
+        );
+      case "displayName":
+        return <Input label="Display name" value={draft.displayName} onChange={(event) => updateDraft("displayName", event.target.value)} placeholder="How people should see you" />;
+      case "gender":
+        return (
+          <Select
+            label="Gender"
+            value={draft.gender}
+            onChange={(event) => updateDraft("gender", event.target.value as ProfileDraft["gender"])}
+            placeholder="Select one"
+            options={[
+              { value: "MALE", label: "Male" },
+              { value: "FEMALE", label: "Female" },
+              { value: "NON_BINARY", label: "Non-binary" },
+              { value: "OTHER", label: "Other" }
+            ]}
+          />
+        );
+      case "age":
+        return <Input label="Age" type="number" min="18" max="99" value={draft.age} onChange={(event) => updateDraft("age", event.target.value)} />;
+      case "city":
+        return <Input label="City" value={draft.city} onChange={(event) => updateDraft("city", event.target.value)} />;
+      case "profession":
+        return <Input label="Profession" value={draft.profession} onChange={(event) => updateDraft("profession", event.target.value)} />;
+      case "bioShort":
+        return <Textarea label="Short bio" rows={5} value={draft.bioShort} onChange={(event) => updateDraft("bioShort", event.target.value)} />;
+      case "intent":
+        return (
+          <Select
+            label="What are you looking for?"
+            value={draft.intent}
+            onChange={(event) => updateDraft("intent", event.target.value as ProfileDraft["intent"])}
+            options={[
+              { value: "dating", label: "Dating" },
+              { value: "friends", label: "Friends" },
+              { value: "all", label: "Open to anything" }
+            ]}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div
-      style={{
-        paddingBottom: 28,
-        maxWidth: 640,
-        margin: "0 auto"
-      }}
-    >
-      <h1 style={{ marginBottom: 8 }}>Build Your Profile</h1>
-      <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 18 }}>
-        Step {currentStep + 1} of {STEPS.length}: {step}
-      </p>
-
-      <div
-        style={{
-          height: 10,
-          borderRadius: 999,
-          background: "color-mix(in srgb, var(--border) 74%, transparent)",
-          overflow: "hidden",
-          marginBottom: 24,
-          border: "1px solid color-mix(in srgb, var(--accent) 22%, var(--border))"
-        }}
-      >
-        <div
-          style={{
-            width: `${progress}%`,
-            height: "100%",
-            background:
-              "linear-gradient(90deg, color-mix(in srgb, var(--accent-deep) 68%, transparent), color-mix(in srgb, var(--accent-light) 75%, transparent))",
-            transition: reducedMotion ? "none" : "width 260ms ease"
-          }}
-        />
-      </div>
-
-      <Card
-        style={{
-          padding: 20,
-          marginBottom: 16,
-          border: "1px solid color-mix(in srgb, var(--accent) 20%, var(--border))",
-          background: "linear-gradient(145deg, color-mix(in srgb, var(--surface2) 92%, var(--accent) 8%), var(--panel))"
-        }}
-      >
-        <div
-          key={step}
-          style={{
-            animation: reducedMotion ? "none" : "stepEnter 200ms ease",
-            transform: "translateZ(0)"
-          }}
-        >
-          {step === "Photo" && (
-            <div>
-              <h3 style={{ marginBottom: 8 }}>Upload your photo</h3>
-              <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 16 }}>
-                We support one profile photo.
-              </p>
-              <label
-                htmlFor="profile-photo-input"
-                style={{
-                  display: "block",
-                  border: "2px dashed var(--border)",
-                  borderRadius: 16,
-                  padding: 12,
-                  cursor: "pointer"
-                }}
-              >
-                {data.photoUrl ? (
-                  <img
-                    src={data.photoUrl}
-                    alt="Profile preview"
-                    style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", borderRadius: 12 }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      minHeight: 220,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "var(--muted)",
-                      fontWeight: 600
-                    }}
-                  >
-                    Tap to upload a photo
-                  </div>
-                )}
-              </label>
-              <input id="profile-photo-input" type="file" accept="image/*" onChange={handleUploadPhoto} style={{ marginTop: 12 }} />
-              {uploading && <p style={{ color: "var(--muted)", marginTop: 8 }}>Uploading...</p>}
-            </div>
-          )}
-
-          {step === "Basics" && (
-            <div style={{ display: "grid", gap: 12 }}>
-              <Input label="Name" value={data.name} onChange={(e) => updateField("name", e.target.value)} placeholder="Your name" />
-              <Input label="Age" type="number" min="18" max="99" value={data.age} onChange={(e) => updateField("age", e.target.value)} />
-              <Select
-                label="Gender"
-                value={data.gender}
-                onChange={(e) => updateField("gender", e.target.value as WizardData["gender"])}
-                placeholder="Select gender"
-                options={[
-                  { value: "MALE", label: "Male" },
-                  { value: "FEMALE", label: "Female" },
-                  { value: "NON_BINARY", label: "Non-binary" },
-                  { value: "OTHER", label: "Other" }
-                ]}
-              />
-              <Input label="City" value={data.city} onChange={(e) => updateField("city", e.target.value)} />
-              <Input label="Profession" value={data.profession} onChange={(e) => updateField("profession", e.target.value)} />
-            </div>
-          )}
-
-          {step === "About" && (
-            <Textarea
-              label="Bio"
-              rows={5}
-              value={data.bio}
-              onChange={(e) => updateField("bio", e.target.value)}
-              maxLength={300}
-              charCount={{ current: data.bio.length, max: 300 }}
-            />
-          )}
-
-          {step === "Intent" && (
-            <Select
-              label="Intent"
-              value={data.intent}
-              onChange={(e) => updateField("intent", e.target.value as WizardData["intent"])}
-              options={[
-                { value: "dating", label: "Dating" },
-                { value: "friends", label: "Friends" },
-                { value: "all", label: "Open to anything" }
-              ]}
-            />
-          )}
-
-          {step === "Review" && (
-            <div style={{ display: "grid", gap: 10 }}>
-              <Review label="Photo" value={data.photoUrl ? "Uploaded" : "Missing"} />
-              <Review label="Name" value={data.name} />
-              <Review label="Age" value={data.age} />
-              <Review label="Gender" value={data.gender} />
-              <Review label="City" value={data.city} />
-              <Review label="Profession" value={data.profession} />
-              <Review label="Bio" value={data.bio} />
-              <Review label="Intent" value={data.intent} />
-            </div>
-          )}
-        </div>
-      </Card>
-
-      <div className="safe-bottom" style={{ display: "flex", gap: 10 }}>
-        {currentStep > 0 && (
-          <Button variant="secondary" fullWidth size="lg" onClick={() => setCurrentStep((v) => v - 1)}>
-            Back
-          </Button>
-        )}
-        {currentStep < STEPS.length - 1 ? (
-          <Button fullWidth size="lg" onClick={() => setCurrentStep((v) => v + 1)} disabled={!canProceed() || uploading}>
-            Continue
-          </Button>
+    <div className="onboarding-screen">
+      <header className="onboarding-topbar">
+        <button className="onboarding-icon-btn" onClick={() => (currentStep === 0 ? router.push("/onboarding/start") : setCurrentStep((value) => value - 1))} aria-label="Back">
+          ←
+        </button>
+        <div className="onboarding-progress-track"><div className="onboarding-progress-fill" style={{ width: `${progress}%` }} /></div>
+        {currentField?.allowsSkip ? (
+          <button className="onboarding-skip-btn" onClick={handleNext}>Skip</button>
         ) : (
-          <Button fullWidth size="lg" loading={loading} onClick={handleComplete}>
-            Complete Profile
-          </Button>
+          <span className="onboarding-skip-placeholder" />
         )}
-      </div>
+      </header>
 
-      <style jsx>{`
-        @keyframes stepEnter {
-          from {
-            opacity: 0;
-            transform: translateY(8px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
-    </div>
-  );
-}
+      <section className="onboarding-scroll-area onboarding-content-stack">{renderStep()}</section>
 
-function Review({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
-      <span style={{ color: "var(--muted)" }}>{label}</span>
-      <span style={{ fontWeight: 600, textAlign: "right" }}>{value || "—"}</span>
+      <footer className="onboarding-cta-shell">
+        <Button fullWidth size="lg" onClick={handleNext} disabled={!canContinue() || uploading} loading={loading} className="onboarding-cta-btn">
+          {currentStep === STEP_IDS.length - 1 ? "Complete profile" : "Continue"}
+        </Button>
+      </footer>
     </div>
   );
 }

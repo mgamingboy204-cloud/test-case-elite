@@ -2,6 +2,19 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "./providers";
 
+const mobileInteractionScript = `
+  (function() {
+    var lastTouch = 0;
+    document.addEventListener("touchend", function(event) {
+      var now = Date.now();
+      if (now - lastTouch <= 320) {
+        event.preventDefault();
+      }
+      lastTouch = now;
+    }, { passive: false });
+  })();
+`;
+
 const themeScript = `
   (function() {
     try {
@@ -42,13 +55,16 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  viewportFit: "cover"
+  viewportFit: "cover",
+  maximumScale: 1,
+  userScalable: false
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: mobileInteractionScript }} />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
