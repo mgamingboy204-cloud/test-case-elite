@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { isStandaloneDisplayMode } from "@/lib/displayMode";
 
-export default function AppHome() {
+export default function AppGatewayPage() {
   const router = useRouter();
 
   useEffect(() => {
@@ -15,10 +15,5 @@ export default function AppHome() {
     router.replace("/discover");
   }, [router]);
 
-  return (
-    <div className="card">
-      <h2>Loading your dashboard...</h2>
-      <p className="card-subtitle">Preparing your premium experience.</p>
-    </div>
-  );
+  return null;
 }
