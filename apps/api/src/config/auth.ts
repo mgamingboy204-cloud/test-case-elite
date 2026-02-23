@@ -36,3 +36,12 @@ export function buildRefreshCookieOptions(ttlDays: number) {
     maxAge: 1000 * 60 * 60 * 24 * ttlDays
   };
 }
+
+export function buildClearRefreshCookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: refreshSameSite,
+    secure: isProd,
+    path: "/"
+  };
+}
