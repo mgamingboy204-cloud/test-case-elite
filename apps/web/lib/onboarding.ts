@@ -12,7 +12,7 @@ export type OnboardingStep =
   | "ACTIVE";
 
 const onboardingRouteMap: Record<OnboardingStep, string> = {
-  PHONE_VERIFIED: "/onboarding/video-verification",
+  PHONE_VERIFIED: "/onboarding/start",
   VIDEO_VERIFICATION_PENDING: "/onboarding/video-verification",
   VIDEO_VERIFIED: "/onboarding/payment",
   PAYMENT_PENDING: "/onboarding/payment",
@@ -23,7 +23,7 @@ const onboardingRouteMap: Record<OnboardingStep, string> = {
 
 export function getOnboardingRoute(step?: string | null) {
   if (!step || !(step in onboardingRouteMap)) {
-    return "/onboarding/video-verification";
+    return "/onboarding/start";
   }
   return onboardingRouteMap[step as OnboardingStep];
 }
