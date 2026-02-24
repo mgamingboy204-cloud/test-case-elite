@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import RouteGuard from "../components/RouteGuard";
 import AppShell from "../components/AppShell";
 
-const APP_ENTRY_ROUTES = new Set(["/app", "/app/splash", "/app/get-started", "/app/login", "/app/signup/phone", "/app/signup/verify"]);
+const APP_ENTRY_ROUTES = new Set(["/pwa_app", "/pwa_app/splash", "/pwa_app/get-started", "/pwa_app/login", "/pwa_app/signup/phone", "/pwa_app/signup/verify"]);
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

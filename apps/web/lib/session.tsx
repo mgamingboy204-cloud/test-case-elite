@@ -41,7 +41,7 @@ const BLOCKED_STORAGE_DISMISSED_KEY = "em_auth_storage_prompt_dismissed";
 const APP_OPEN_MARKER_KEY = "em_app_has_opened";
 
 const AUTH_ROUTES = new Set(["/login", "/signup", "/otp"]);
-const APP_ENTRY_ROUTES = new Set(["/app", "/app/splash", "/app/get-started", "/app/login"]);
+const APP_ENTRY_ROUTES = new Set(["/pwa_app", "/pwa_app/splash", "/pwa_app/get-started", "/pwa_app/login"]);
 
 function isAuthRoute(pathname: string | null) {
   if (!pathname) return false;
