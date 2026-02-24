@@ -21,11 +21,22 @@ const onboardingRouteMap: Record<OnboardingStep, string> = {
   ACTIVE: "/discover"
 };
 
-export function getOnboardingRoute(step?: string | null) {
-  if (!step || !(step in onboardingRouteMap)) {
-    return "/onboarding/video-verification";
+const pwaOnboardingRouteMap: Record<OnboardingStep, string> = {
+  PHONE_VERIFIED: "/pwa_app/onboarding/video-verification",
+  VIDEO_VERIFICATION_PENDING: "/pwa_app/onboarding/video-verification",
+  VIDEO_VERIFIED: "/pwa_app/onboarding/payment",
+  PAYMENT_PENDING: "/pwa_app/onboarding/payment",
+  PAID: "/pwa_app/onboarding/profile",
+  PROFILE_PENDING: "/pwa_app/onboarding/profile",
+  ACTIVE: "/pwa_app/discover"
+};
+
+export function getOnboardingRoute(step?: string | null, isPwa = false) {
+  const routeMap = isPwa ? pwaOnboardingRouteMap : onboardingRouteMap;
+  if (!step || !(step in routeMap)) {
+    return isPwa ? "/pwa_app/onboarding/video-verification" : "/onboarding/video-verification";
   }
-  return onboardingRouteMap[step as OnboardingStep];
+  return routeMap[step as OnboardingStep];
 }
 
 export function isOnboardingComplete(user: SessionUser | null) {
@@ -33,13 +44,13 @@ export function isOnboardingComplete(user: SessionUser | null) {
 }
 
 export function getOnboardingStartRoute(isPwa = false): string {
-  return isPwa ? "/pwa_app/onboarding/profile" : "/onboarding/profile";
+  return getOnboardingRoute("PAID", isPwa);
 }
 
 export function getDefaultRoute(user: SessionUser | null): string {
   if (!user?.onboardingStep) return "/login";
   if (!isOnboardingComplete(user)) {
-    return getOnboardingStartRoute(false);
+    return getOnboardingRoute(user.onboardingStep, false);
   }
   return "/discover";
 }
@@ -47,7 +58,7 @@ export function getDefaultRoute(user: SessionUser | null): string {
 export function getPwaDefaultRoute(user: SessionUser | null): string {
   if (!user?.onboardingStep) return "/pwa_app/get-started";
   if (!isOnboardingComplete(user)) {
-    return getOnboardingStartRoute(true);
+    return getOnboardingRoute(user.onboardingStep, true);
   }
   return "/pwa_app/discover";
 }

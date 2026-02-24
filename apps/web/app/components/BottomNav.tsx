@@ -49,15 +49,17 @@ const tabs = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const isPwa = pathname?.startsWith("/pwa_app") ?? false;
 
   return (
     <nav className="app-mobile-bottom-nav" aria-label="Main navigation">
       {tabs.map((tab) => {
-        const active = pathname.startsWith(tab.href);
+        const href = isPwa ? `/pwa_app${tab.href}` : tab.href;
+        const active = pathname.startsWith(href);
         return (
           <Link
             key={tab.href}
-            href={tab.href}
+            href={href}
             className="app-mobile-bottom-nav__link"
             aria-current={active ? "page" : undefined}
           >

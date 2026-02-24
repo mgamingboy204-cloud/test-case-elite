@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { Button } from "@/app/components/ui/Button";
@@ -10,7 +10,7 @@ import { useToast } from "@/app/providers";
 import { ApiError } from "@/lib/apiClient";
 import { apiFetch, resetAuthFailureState } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
-import { getDefaultRoute } from "@/lib/onboarding";
+import { getDefaultRoute, getPwaDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
 import styles from "./page.module.css";
 
@@ -22,7 +22,10 @@ const TOKEN_STORAGE_KEY = "em_signup_token";
 export default function SignupPage() {
   const router = useRouter();
   const { addToast } = useToast();
+  const searchParams = useSearchParams();
   const { refresh } = useSession();
+
+  const isPwaFlow = searchParams.get("pwa") === "1";
 
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -130,7 +133,7 @@ export default function SignupPage() {
       sessionStorage.removeItem(TOKEN_STORAGE_KEY);
       const user = await refresh();
       addToast("Account created", "success");
-      router.replace(getDefaultRoute(user));
+      router.replace(isPwaFlow ? getPwaDefaultRoute(user) : getDefaultRoute(user));
     } catch (err: unknown) {
       const message = err instanceof ApiError ? err.message : "Failed to complete signup";
       setErrors({ password: message });
@@ -205,7 +208,7 @@ export default function SignupPage() {
         ) : null}
 
         <p className={styles.switchWrap}>
-          Already have an account? <Link href="/login" className={styles.linkPrimary}>Sign In</Link>
+          Already have an account? <Link href={isPwaFlow ? "/pwa_app/login" : "/login"} className={styles.linkPrimary}>Sign In</Link>
         </p>
       </div>
 

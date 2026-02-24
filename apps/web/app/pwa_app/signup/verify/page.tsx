@@ -8,7 +8,7 @@ export default function DeprecatedPwaSignupVerify() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/signup");
+    router.replace("/signup?pwa=1");
   }, [router]);
 
   return <SplashScreen subtitle="Preparing sign up" />;

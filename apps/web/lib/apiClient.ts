@@ -46,6 +46,7 @@ const PUBLIC_ROUTES = new Set([
 
 function isAuthRoute(pathname: string) {
   if (PWA_AUTH_ROUTES.has(pathname)) return true;
+  if (pathname.startsWith("/pwa_app/signup")) return true;
   if (AUTH_ROUTES.has(pathname)) return true;
   return pathname.startsWith("/auth");
 }

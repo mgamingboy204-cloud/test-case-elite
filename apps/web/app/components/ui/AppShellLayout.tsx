@@ -26,7 +26,8 @@ const railItems = [
 
 function getTitle(pathname: string | null) {
   if (!pathname) return "Discover";
-  const match = titleMap.find((item) => pathname.startsWith(item.prefix));
+  const normalizedPath = pathname.startsWith("/pwa_app") ? pathname.replace("/pwa_app", "") || "/" : pathname;
+  const match = titleMap.find((item) => normalizedPath.startsWith(item.prefix));
   return match?.title ?? "Discover";
 }
 
@@ -90,6 +91,11 @@ function RailIcon({ type }: { type: string }) {
   }
 }
 
+
+function withPrefix(path: string, isPwa: boolean) {
+  return isPwa ? `/pwa_app${path}` : path;
+}
+
 type AppShellLayoutProps = {
   children: ReactNode;
   rightPanel?: ReactNode;
@@ -104,22 +110,24 @@ export default function AppShellLayout({
   const pathname = usePathname();
   const { user } = useSession();
   const title = getTitle(pathname);
+  const isPwa = pathname?.startsWith("/pwa_app") ?? false;
   const isAdmin = user?.role === "ADMIN" || user?.isAdmin;
 
   return (
     <div className="app-shell-layout">
       {showMobileShell ? <MobileShell title={title} /> : null}
       <aside className="app-rail" aria-label="Primary">
-        <Link className="rail-brand" href="/discover">
+        <Link className="rail-brand" href={withPrefix("/discover", isPwa)}>
           ELITE MATCH
         </Link>
         <nav className="rail-nav">
           {railItems.map((item) => {
-            const isActive = pathname?.startsWith(item.href);
+            const targetHref = withPrefix(item.href, isPwa);
+            const isActive = pathname?.startsWith(targetHref);
             return (
               <SidebarNavItem
                 key={item.href}
-                href={item.href}
+                href={withPrefix(item.href, isPwa)}
                 label={item.label}
                 icon={<RailIcon type={item.icon} />}
                 active={isActive}
@@ -128,10 +136,10 @@ export default function AppShellLayout({
           })}
           {isAdmin ? (
             <SidebarNavItem
-              href="/admin"
+              href={withPrefix("/admin", isPwa)}
               label="Admin Control"
               icon={<RailIcon type="shield" />}
-              active={pathname?.startsWith("/admin")}
+              active={Boolean(pathname?.startsWith(withPrefix("/admin", isPwa)))}
             />
           ) : null}
         </nav>

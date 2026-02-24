@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/Card";
 import { Input } from "@/app/components/ui/Input";
 import { Button } from "@/app/components/ui/Button";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
-import { getDefaultRoute } from "@/lib/onboarding";
+import { getDefaultRoute, getPwaDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
 
 const benefits = [
@@ -21,6 +21,8 @@ const benefits = [
 
 export default function PaymentPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const isPwaPath = pathname?.startsWith("/pwa_app") ?? false;
   const { addToast } = useToast();
   const { refresh } = useSession();
   const [coupon, setCoupon] = useState("");
@@ -64,7 +66,7 @@ export default function PaymentPage() {
     try {
       await apiFetch("/payments/mock/confirm", { method: "POST" });
       const refreshedUser = await refresh();
-      const nextRoute = getDefaultRoute(refreshedUser);
+      const nextRoute = isPwaPath ? getPwaDefaultRoute(refreshedUser) : getDefaultRoute(refreshedUser);
       addToast("Payment successful!", "success");
       router.replace(nextRoute);
     } catch {

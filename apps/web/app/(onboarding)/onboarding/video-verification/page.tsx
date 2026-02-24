@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/Card";
 import { Button } from "@/app/components/ui/Button";
 import { Badge } from "@/app/components/ui/Badge";
@@ -10,7 +10,7 @@ import { Skeleton } from "@/app/components/ui/Skeleton";
 import { ErrorState } from "@/app/components/ui/States";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
-import { getDefaultRoute } from "@/lib/onboarding";
+import { getDefaultRoute, getPwaDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
 import styles from "./page.module.css";
 
@@ -27,6 +27,8 @@ const statusConfig: Record<VStatus, { label: string; variant: "default" | "prima
 
 export default function VideoVerificationPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const isPwaPath = pathname?.startsWith("/pwa_app") ?? false;
   const { addToast } = useToast();
   const { user, refresh } = useSession();
   const [status, setStatus] = useState<VStatus>("NOT_REQUESTED");
@@ -46,8 +48,9 @@ export default function VideoVerificationPage() {
       setLastUpdatedAt(new Date());
       const refreshedUser = await refresh();
       if (refreshedUser) {
-        const nextRoute = getDefaultRoute(refreshedUser);
-        if (nextRoute !== "/onboarding/video-verification") {
+        const nextRoute = isPwaPath ? getPwaDefaultRoute(refreshedUser) : getDefaultRoute(refreshedUser);
+        const currentStepRoute = isPwaPath ? "/pwa_app/onboarding/video-verification" : "/onboarding/video-verification";
+        if (nextRoute !== currentStepRoute) {
           router.replace(nextRoute);
         }
       }
@@ -60,7 +63,7 @@ export default function VideoVerificationPage() {
 
   useEffect(() => {
     void fetchStatus(true);
-  }, []);
+  }, [isPwaPath]);
 
   useEffect(() => {
     if (!user || (user.onboardingStep && user.onboardingStep !== "VIDEO_VERIFICATION_PENDING" && user.onboardingStep !== "PHONE_VERIFIED")) {
@@ -70,7 +73,7 @@ export default function VideoVerificationPage() {
       void fetchStatus(false);
     }, 7000);
     return () => window.clearInterval(timer);
-  }, [user?.id, user?.onboardingStep]);
+  }, [user?.id, user?.onboardingStep, isPwaPath]);
 
   const handleRequest = async () => {
     setRequesting(true);
@@ -139,7 +142,7 @@ export default function VideoVerificationPage() {
 
         {isVerified && (
           <div className="safe-bottom">
-            <Link href="/onboarding/payment">
+            <Link href={isPwaPath ? "/pwa_app/onboarding/payment" : "/onboarding/payment"}>
               <Button fullWidth size="lg">Continue to Payment</Button>
             </Link>
           </div>

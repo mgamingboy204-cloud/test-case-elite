@@ -4,7 +4,7 @@ import { ReactNode, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "../../lib/session";
 import SplashScreen from "./SplashScreen";
-import { getOnboardingRoute, getOnboardingStartRoute } from "../../lib/onboarding";
+import { getOnboardingRoute } from "../../lib/onboarding";
 
 type RouteGuardProps = {
   children: ReactNode;
@@ -43,7 +43,7 @@ export default function RouteGuard({
     }
     if (status === "logged-in" && user?.onboardingStep) {
       const isPwaPath = Boolean(pathname && pathname.startsWith("/pwa_app"));
-      const target = isPwaPath ? getOnboardingStartRoute(true) : getOnboardingRoute(user.onboardingStep);
+      const target = getOnboardingRoute(user.onboardingStep, isPwaPath);
       if (requireActive && user.onboardingStep !== "ACTIVE") {
         if (pathname !== target) {
           router.replace(target);
@@ -54,7 +54,8 @@ export default function RouteGuard({
         router.replace(target);
         return;
       }
-      if (allowedOnboardingSteps && pathname && pathname.startsWith("/onboarding") && pathname !== target) {
+      const onOnboardingPath = Boolean(pathname && (pathname.startsWith("/onboarding") || pathname.startsWith("/pwa_app/onboarding")));
+      if (allowedOnboardingSteps && onOnboardingPath && pathname !== target) {
         router.replace(target);
         return;
       }
