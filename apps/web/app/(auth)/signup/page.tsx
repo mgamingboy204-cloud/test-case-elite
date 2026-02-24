@@ -140,7 +140,7 @@ export default function SignupPage() {
   };
 
   return (
-    <main className={styles.root} aria-label="Signup">
+    <div className={styles.root} aria-label="Signup">
       <div className={styles.container}>
         <h2 className={styles.title}>Create account</h2>
         <p className={styles.subtitle}>{step === "phone" ? "Enter your phone number" : step === "otp" ? "Verify OTP" : "Set your password"}</p>
@@ -205,7 +205,7 @@ export default function SignupPage() {
         </p>
       </div>
 
-    </main>
+    </div>
   );
 }
 
