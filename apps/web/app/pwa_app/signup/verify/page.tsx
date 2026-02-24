@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ClipboardEvent, KeyboardEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/app/providers";
+import { ApiError } from "@/lib/apiClient";
 import { apiFetch, resetAuthFailureState } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
 import { getPwaDefaultRoute } from "@/lib/onboarding";
@@ -44,14 +45,20 @@ export default function AppSignupVerifyPage() {
   }, []);
 
   useEffect(() => {
-    setCleanedPhone((sessionStorage.getItem(PHONE_STORAGE_KEY) ?? "").replace(/\D/g, ""));
+    const storedPhone = (sessionStorage.getItem(PHONE_STORAGE_KEY) ?? "").replace(/\D/g, "");
+    if (!storedPhone) {
+      addToast("Please enter your phone number first.", "info");
+    }
+    setCleanedPhone(storedPhone);
     inputRefs.current[0]?.focus();
-  }, []);
+  }, [addToast]);
 
   useEffect(() => {
     if (!cleanedPhone) {
-      router.replace("/pwa_app/signup/phone");
-      return;
+      const timeout = window.setTimeout(() => {
+        router.replace("/pwa_app/signup/phone");
+      }, 0);
+      return () => window.clearTimeout(timeout);
     }
 
     sessionStorage.setItem(PHONE_STORAGE_KEY, cleanedPhone);
@@ -137,8 +144,11 @@ export default function AppSignupVerifyPage() {
       const user = await refresh();
       addToast("Phone verified!", "success");
       router.replace(getPwaDefaultRoute(user));
-    } catch {
-      setError("Invalid code. Please try again.");
+    } catch (err: unknown) {
+      const message = err instanceof ApiError
+        ? err.message
+        : "Invalid code. Please try again.";
+      setError(message);
     } finally {
       setLoading(false);
     }

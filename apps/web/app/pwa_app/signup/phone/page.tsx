@@ -30,7 +30,11 @@ export default function AppSignupPhonePage() {
   const isPhoneValid = cleanedPhone.length === 10;
 
   const handleContinue = async () => {
-    if (!isPhoneValid || loading) return;
+    if (loading) return;
+    if (!isPhoneValid) {
+      addToast("Enter a valid 10-digit phone number", "error");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -42,7 +46,7 @@ export default function AppSignupPhonePage() {
 
       sessionStorage.setItem(PHONE_STORAGE_KEY, cleanedPhone);
       sessionStorage.setItem(COUNTRY_STORAGE_KEY, COUNTRY_CODE);
-      router.push("/pwa_app/signup/verify");
+      router.replace("/pwa_app/signup/verify");
     } catch (err: unknown) {
       addToast(err instanceof Error ? err.message : "Could not send code", "error");
     } finally {

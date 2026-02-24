@@ -25,6 +25,14 @@ let authFailed = false;
 let logoutTriggered = false;
 
 const AUTH_ROUTES = new Set(["/login", "/signup", "/otp"]);
+const PWA_AUTH_ROUTES = new Set([
+  "/pwa_app",
+  "/pwa_app/splash",
+  "/pwa_app/get-started",
+  "/pwa_app/login",
+  "/pwa_app/signup/phone",
+  "/pwa_app/signup/verify"
+]);
 const PUBLIC_ROUTES = new Set([
   "/",
   "/learn",
@@ -38,6 +46,7 @@ const PUBLIC_ROUTES = new Set([
 ]);
 
 function isAuthRoute(pathname: string) {
+  if (PWA_AUTH_ROUTES.has(pathname)) return true;
   if (AUTH_ROUTES.has(pathname)) return true;
   return pathname.startsWith("/auth");
 }
