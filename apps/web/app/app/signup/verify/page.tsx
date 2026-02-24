@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { appNavigate } from "@/lib/appNavigation";
 import { ClipboardEvent, KeyboardEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/app/providers";
 import { apiFetch, resetAuthFailureState } from "@/lib/api";
@@ -56,7 +55,7 @@ export default function AppSignupVerifyPage() {
     if (!cleanedPhone) {
       if (!redirectedRef.current) {
         redirectedRef.current = true;
-        router.replace(appNavigate("/app/signup/phone"));
+        router.replace("/auth/phone");
       }
       return;
     }
@@ -145,7 +144,7 @@ export default function AppSignupVerifyPage() {
 
       await refresh();
       addToast("Phone verified!", "success");
-      router.replace(appNavigate("/app/onboarding/start"));
+      router.replace("/verification/video");
     } catch {
       setError("Invalid code. Please try again.");
     } finally {
@@ -156,11 +155,11 @@ export default function AppSignupVerifyPage() {
   return (
     <main className={`${styles.screen} entry-screen`} aria-label="OTP verification">
       <div className={styles.chrome}>
-        <Link href={appNavigate("/app/signup/phone")} className={styles.backButton} aria-label="Go back">
+        <Link href="/auth/phone" className={styles.backButton} aria-label="Go back">
           ←
         </Link>
         <span />
-        <Link href={appNavigate("/app/signup/phone")} className={styles.changeLink}>Change number</Link>
+        <Link href="/auth/phone" className={styles.changeLink}>Change number</Link>
       </div>
 
       <section className={styles.content}>

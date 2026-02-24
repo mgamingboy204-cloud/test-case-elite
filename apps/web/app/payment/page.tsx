@@ -1,21 +1,3 @@
-"use client";
+import PaymentPage from "@/app/(onboarding)/onboarding/payment/page";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-
-export default function PaymentRedirectPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/onboarding/payment");
-  }, [router]);
-
-  return (
-    <div className="public-shell">
-      <div className="card">
-        <h2>Redirecting...</h2>
-        <p className="card-subtitle">Payment is managed in onboarding.</p>
-      </div>
-    </div>
-  );
-}
+export default PaymentPage;

@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 export default function AuthPage() {
   const router = useRouter();
   useEffect(() => {
-    router.replace("/login");
+    router.replace("/get-started");
   }, [router]);
 
   return (
     <div className="card">
       <h2>Redirecting...</h2>
-      <p className="card-subtitle">Sending you to the new login experience.</p>
+      <p className="card-subtitle">Sending you to the mobile signup flow.</p>
     </div>
   );
 }

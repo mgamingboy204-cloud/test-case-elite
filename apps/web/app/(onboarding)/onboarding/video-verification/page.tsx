@@ -49,7 +49,7 @@ export default function VideoVerificationPage() {
       const refreshedUser = await refresh();
       if (refreshedUser) {
         const nextRoute = getDefaultRoute(refreshedUser);
-        if (nextRoute !== "/onboarding/video-verification") {
+        if (nextRoute !== "/verification/video") {
           router.replace(nextRoute);
         }
       }
@@ -149,7 +149,7 @@ export default function VideoVerificationPage() {
 
         {isVerified && (
           <div className="safe-bottom">
-            <Link href={appPathFor(pathname, "/onboarding/payment")}>
+            <Link href={appPathFor(pathname, "/payment")}>
               <Button fullWidth size="lg">Continue to Payment</Button>
             </Link>
           </div>

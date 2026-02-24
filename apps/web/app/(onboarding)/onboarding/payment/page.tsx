@@ -7,6 +7,7 @@ import { Input } from "@/app/components/ui/Input";
 import { Button } from "@/app/components/ui/Button";
 import { Badge } from "@/app/components/ui/Badge";
 import { useToast } from "@/app/providers";
+import { appPathFor } from "@/lib/appNavigation";
 import { apiFetch } from "@/lib/api";
 import { getDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
@@ -69,7 +70,7 @@ export default function PaymentPage() {
       const nextRoute = getDefaultRoute(refreshedUser);
       setStep("done");
       addToast("Payment successful!", "success");
-      if (nextRoute !== "/onboarding/profile") {
+      if (nextRoute !== "/onboarding") {
         addToast("Payment processed. Redirecting to your next required step.", "info");
       }
     } catch {
@@ -83,8 +84,8 @@ export default function PaymentPage() {
     const refreshedUser = await refresh();
     const nextRoute = getDefaultRoute(refreshedUser);
 
-    if (nextRoute === "/onboarding/profile") {
-      router.push(appPathFor(pathname, "/onboarding/profile"));
+    if (nextRoute === "/onboarding") {
+      router.push(appPathFor(pathname, "/onboarding"));
       return;
     }
 

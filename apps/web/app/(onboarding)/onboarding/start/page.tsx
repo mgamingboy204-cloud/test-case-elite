@@ -28,7 +28,7 @@ export default function OnboardingStartPage() {
       window.localStorage.setItem(DRAFT_KEY, JSON.stringify(nextDraft));
     }
     addToast("Great. Let’s build your profile.", "success");
-    router.push(appPathFor(pathname, "/onboarding/profile"));
+    router.push(appPathFor(pathname, "/onboarding"));
   };
 
   return (

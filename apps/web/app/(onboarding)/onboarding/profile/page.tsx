@@ -10,6 +10,7 @@ import { useToast } from "@/app/providers";
 import { ApiError, apiFetch } from "@/lib/api";
 import { INITIAL_PROFILE_DRAFT, ONBOARDING_PROFILE_FIELDS, type ProfileDraft } from "@/lib/onboardingFlow";
 import { useSession } from "@/lib/session";
+import { appPathFor } from "@/lib/appNavigation";
 
 const DRAFT_KEY = "em_onboarding_profile_draft";
 
@@ -122,7 +123,7 @@ export default function ProfileWizardPage() {
       await apiFetch("/profile/complete", { method: "POST" });
       window.localStorage.removeItem(DRAFT_KEY);
       await refresh();
-      router.replace(appPathFor(pathname, "/discover"));
+      router.replace(appPathFor(pathname, "/app"));
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Failed to complete profile";
       addToast(message, "error");
@@ -200,7 +201,7 @@ export default function ProfileWizardPage() {
   return (
     <div className="onboarding-screen">
       <header className="onboarding-topbar">
-        <button className="onboarding-icon-btn" onClick={() => (currentStep === 0 ? router.push(appPathFor(pathname, "/onboarding/start")) : setCurrentStep((value) => value - 1))} aria-label="Back">
+        <button className="onboarding-icon-btn" onClick={() => (currentStep === 0 ? router.push(appPathFor(pathname, "/onboarding")) : setCurrentStep((value) => value - 1))} aria-label="Back">
           ←
         </button>
         <div className="onboarding-progress-track"><div className="onboarding-progress-fill" style={{ width: `${progress}%` }} /></div>

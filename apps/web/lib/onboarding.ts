@@ -12,29 +12,29 @@ export type OnboardingStep =
   | "ACTIVE";
 
 const onboardingRouteMap: Record<OnboardingStep, string> = {
-  PHONE_VERIFIED: "/onboarding/start",
-  VIDEO_VERIFICATION_PENDING: "/onboarding/video-verification",
-  VIDEO_VERIFIED: "/onboarding/payment",
-  PAYMENT_PENDING: "/onboarding/payment",
-  PAID: "/onboarding/profile",
-  PROFILE_PENDING: "/onboarding/profile",
-  ACTIVE: "/discover"
+  PHONE_VERIFIED: "/verification/video",
+  VIDEO_VERIFICATION_PENDING: "/verification/video",
+  VIDEO_VERIFIED: "/payment",
+  PAYMENT_PENDING: "/payment",
+  PAID: "/onboarding",
+  PROFILE_PENDING: "/onboarding",
+  ACTIVE: "/app"
 };
 
 export function getOnboardingRoute(step?: string | null) {
   if (!step || !(step in onboardingRouteMap)) {
-    return "/onboarding/start";
+    return "/auth/otp";
   }
   return onboardingRouteMap[step as OnboardingStep];
 }
 
 export function getDefaultRoute(user: SessionUser | null) {
-  if (!user?.onboardingStep) return "/login";
+  if (!user?.onboardingStep) return "/get-started";
   if (user.onboardingStep === "ACTIVE" && !user.profileCompletedAt) {
-    return "/onboarding/profile";
+    return "/onboarding";
   }
   if (user.onboardingStep === "ACTIVE") {
-    return "/discover";
+    return "/app";
   }
   return getOnboardingRoute(user.onboardingStep);
 }

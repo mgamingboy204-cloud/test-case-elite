@@ -4,7 +4,7 @@ import { ReactNode, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "../../lib/session";
 import { getOnboardingRoute } from "../../lib/onboarding";
-import { appAuthRedirect } from "../../lib/appNavigation";
+import { FUNNEL_ROUTES, isAppRoute, nextRequiredRoute } from "../../lib/funnelRoutes";
 
 type RouteGuardProps = {
   children: ReactNode;
@@ -36,8 +36,19 @@ export default function RouteGuard({
 
   useEffect(() => {
     if (status === "logged-out") {
-      router.replace(appAuthRedirect());
+      router.replace(FUNNEL_ROUTES.getStarted);
       return;
+    }
+    if (status === "logged-in") {
+      const requiredRoute = nextRequiredRoute(user);
+      if (requiredRoute !== FUNNEL_ROUTES.app && isAppRoute(pathname)) {
+        router.replace(requiredRoute);
+        return;
+      }
+      if (requiredRoute === FUNNEL_ROUTES.app && pathname?.startsWith("/onboarding")) {
+        router.replace(FUNNEL_ROUTES.app);
+        return;
+      }
     }
     if (status === "logged-in" && user?.onboardingStep) {
       const target = getOnboardingRoute(user.onboardingStep);

@@ -1,3 +1,3 @@
-import OnboardingStartPage from "../../../../(onboarding)/onboarding/start/page";
+import OnboardingStartPage from "../../../(onboarding)/onboarding/start/page";
 
 export default OnboardingStartPage;
