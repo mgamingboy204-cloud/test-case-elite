@@ -43,14 +43,16 @@ export function useToast() {
 
 export default function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => createQueryClient());
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof document === "undefined") return "dark";
-    const current = document.documentElement.dataset.theme;
-    return current === "light" ? "light" : "dark";
-  });
+  const [theme, setTheme] = useState<Theme>("dark");
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   useEffect(() => {
+    const current = document.documentElement.dataset.theme;
+    if (current === "light" || current === "dark") {
+      setTheme(current);
+      return;
+    }
+
     const stored = localStorage.getItem("em_theme") as Theme | null;
     if (stored === "light" || stored === "dark") {
       setTheme(stored);

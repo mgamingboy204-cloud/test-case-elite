@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTheme } from "@/app/providers";
 import { isStandaloneDisplayMode } from "@/lib/displayMode";
 import AppViewportShell from "@/app/components/AppViewportShell";
+import { useMounted } from "@/app/components/useMounted";
 import styles from "./layout.module.css";
 
 function DesktopAuthShell({ children }: { children: React.ReactNode }) {
@@ -58,6 +59,7 @@ function MobileAuthShell({ children }: { children: React.ReactNode }) {
 }
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const mounted = useMounted();
   const [useMobileShell, setUseMobileShell] = useState(false);
 
   useEffect(() => {
@@ -75,10 +77,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     };
   }, []);
 
-  return (
-    <>
-      {useMobileShell ? <MobileAuthShell>{children}</MobileAuthShell> : <DesktopAuthShell>{children}</DesktopAuthShell>}
+  const shouldUseMobileShell = mounted && useMobileShell;
 
-    </>
-  );
+  return shouldUseMobileShell ? <MobileAuthShell>{children}</MobileAuthShell> : <DesktopAuthShell>{children}</DesktopAuthShell>;
 }
