@@ -50,7 +50,7 @@ export default function AppSignupVerifyPage() {
 
   useEffect(() => {
     if (!cleanedPhone) {
-      router.replace("/app/signup/phone");
+      router.replace("/pwa_app/signup/phone");
       return;
     }
 
@@ -147,11 +147,11 @@ export default function AppSignupVerifyPage() {
   return (
     <main className={`${styles.screen} entry-screen`} aria-label="OTP verification">
       <div className={styles.chrome}>
-        <Link href="/app/signup/phone" className={styles.backButton} aria-label="Go back">
+        <Link href="/pwa_app/signup/phone" className={styles.backButton} aria-label="Go back">
           ←
         </Link>
         <span />
-        <Link href="/app/signup/phone" className={styles.changeLink}>Change number</Link>
+        <Link href="/pwa_app/signup/phone" className={styles.changeLink}>Change number</Link>
       </div>
 
       <section className={styles.content}>

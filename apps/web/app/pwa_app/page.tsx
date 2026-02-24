@@ -10,7 +10,7 @@ export default function AppGatewayPage() {
 
   useEffect(() => {
     if (!isStandaloneDisplayMode()) return;
-    router.replace("/app/splash");
+    router.replace("/pwa_app/splash");
   }, [router]);
 
   return (

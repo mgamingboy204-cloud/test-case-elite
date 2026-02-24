@@ -12,7 +12,7 @@ function onboardingRedirectForStep(step: string) {
     case "PROFILE_PENDING":
       return "/onboarding/profile";
     case "ACTIVE":
-      return "/app/discover";
+      return "/pwa_app/discover";
     default:
       return "/onboarding/video-verification";
   }
