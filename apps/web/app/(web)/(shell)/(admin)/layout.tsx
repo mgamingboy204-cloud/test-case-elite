@@ -2,8 +2,8 @@
 
 import React from "react"
 
-import { AdminShell } from "@/app/components/shells/AdminShell";
-import RouteGuard from "@/app/components/RouteGuard";
+import { AdminShell } from "@/components/web/AdminShell";
+import RouteGuard from "@/components/shared/RouteGuard";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (

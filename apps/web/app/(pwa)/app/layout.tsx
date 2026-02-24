@@ -2,8 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import RouteGuard from "../components/RouteGuard";
-import AppShell from "../components/AppShell";
+import RouteGuard from "@/components/shared/RouteGuard";
+import { AppShell } from "@/components/pwa/AppShell";
 
 const APP_ENTRY_ROUTES = new Set(["/app", "/app/splash", "/app/get-started", "/app/login", "/app/signup/phone", "/app/signup/verify"]);
 

@@ -7,7 +7,7 @@ import { useTheme } from "@/app/providers";
 import { useSession } from "@/lib/session";
 import { BottomSheet } from "@/app/components/ui/BottomSheet";
 import { Avatar } from "@/app/components/ui/Avatar";
-import { BottomNav } from "@/app/components/BottomNav";
+import { BottomNav } from "@/components/pwa/BottomNav";
 import type { ReactNode, CSSProperties } from "react";
 
 const sidebarLinks = [
