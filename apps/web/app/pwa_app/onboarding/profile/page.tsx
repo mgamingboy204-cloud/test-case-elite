@@ -2,6 +2,6 @@
 
 import ProfileWizard from "@/app/components/onboarding/ProfileWizard";
 
-export default function ProfileWizardPage() {
-  return <ProfileWizard mode="desktop" />;
+export default function PwaProfileWizardPage() {
+  return <ProfileWizard mode="pwa" />;
 }
