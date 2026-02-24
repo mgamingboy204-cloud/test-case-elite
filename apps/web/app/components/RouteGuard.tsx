@@ -41,7 +41,8 @@ export default function RouteGuard({
       return;
     }
     if (status === "logged-in" && user?.onboardingStep) {
-      const target = getOnboardingRoute(user.onboardingStep);
+      const isPwaPath = Boolean(pathname && pathname.startsWith("/pwa_app"));
+      const target = isPwaPath ? "/pwa_app/get-started" : getOnboardingRoute(user.onboardingStep);
       if (requireActive && user.onboardingStep !== "ACTIVE") {
         router.replace(target);
         return;

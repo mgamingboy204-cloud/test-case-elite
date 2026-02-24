@@ -9,14 +9,8 @@ import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { useToast } from "@/app/providers";
 import { apiFetch, resetAuthFailureState } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
-import { getOnboardingRoute } from "@/lib/onboarding";
+import { getPwaDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
-
-function getPwaDefaultRoute(user: Awaited<ReturnType<ReturnType<typeof useSession>["refresh"]>>) {
-  if (!user?.onboardingStep) return "/pwa_app/get-started";
-  if (user.onboardingStep === "ACTIVE") return "/pwa_app/discover";
-  return getOnboardingRoute(user.onboardingStep);
-}
 
 export default function AppLoginPage() {
   const router = useRouter();
@@ -130,7 +124,7 @@ export default function AppLoginPage() {
             </div>
             <Button fullWidth size="lg" loading={loading} onClick={handleLogin}>Sign In</Button>
             <div className="auth-links">
-              <Link href="/otp" className="otp-link">Sign in with OTP instead</Link>
+              <Link href="/pwa_app/get-started" className="otp-link">Need help signing in?</Link>
               <p className="switch-link-wrap">{"Don't have an account? "}<Link href="/pwa_app/signup/phone" className="switch-link">Sign Up</Link></p>
             </div>
           </>
