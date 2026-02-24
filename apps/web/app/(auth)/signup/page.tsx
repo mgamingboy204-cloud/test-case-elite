@@ -47,10 +47,16 @@ export default function SignupPage() {
   useLayoutEffect(() => {
     if (!isMobileUi) return;
     document.body.classList.add("app-entry-no-scroll");
+    const authShell = document.querySelector(".auth-shell");
+    const authTopRow = document.querySelector(".top-row");
     const authPanel = document.querySelector(".auth-panel");
+    authShell?.classList.add("auth-shell--mobile-entry");
+    authTopRow?.classList.add("top-row--mobile-entry");
     authPanel?.classList.add("auth-panel--mobile-sheet");
     return () => {
       document.body.classList.remove("app-entry-no-scroll");
+      authShell?.classList.remove("auth-shell--mobile-entry");
+      authTopRow?.classList.remove("top-row--mobile-entry");
       authPanel?.classList.remove("auth-panel--mobile-sheet");
     };
   }, [isMobileUi]);
@@ -233,39 +239,58 @@ export default function SignupPage() {
         .auth-form-card { width: 100%; }
         .auth-form-inner { padding: clamp(24px, 5vw, 34px); }
         .mobile-screen {
-          position: fixed; inset: 0; min-height: 100svh; height: 100dvh;
-          overflow-x: hidden; overflow-y: auto;
-          display: grid;
-          grid-template-rows: auto 1fr;
+          position: fixed;
+          inset: 0;
+          height: 100vh;
+          height: 100svh;
+          height: 100dvh;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
           padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 0;
-          background: linear-gradient(180deg, var(--bg2), var(--bg)); overscroll-behavior: none; touch-action: manipulation;
+          background: linear-gradient(180deg, var(--bg2), var(--bg));
+          overscroll-behavior: none;
+          touch-action: manipulation;
           animation: entryPush 180ms ease-out;
         }
         .mobile-header {
           width: min(100%, 420px);
-          min-height: 56px;
+          min-height: clamp(34px, 10vh, 58px);
           margin: 0 auto;
         }
         .mobile-content {
-          width: min(100%, 420px);
+          width: 100%;
+          max-width: 420px;
           margin: 0 auto;
-          align-self: end;
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
           border-radius: 28px 28px 0 0;
           border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
           border-bottom: none;
           background: linear-gradient(160deg, color-mix(in srgb, var(--surface) 88%, transparent), color-mix(in srgb, var(--surface2) 84%, transparent));
           backdrop-filter: blur(16px);
-          padding: 18px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+          padding: 16px 14px calc(12px + env(safe-area-inset-bottom, 0px));
         }
-        .auth-title { margin-bottom: 6px; font-size: clamp(1.8rem, 7vw, 2rem); line-height: 1.1; }
-        .auth-subtitle { color: color-mix(in srgb, var(--text) 78%, transparent); font-size: 15px; margin-bottom: 14px; }
-        .field-stack, .otp-stack { display: flex; flex-direction: column; gap: 14px; }
+        .auth-title { margin-bottom: 4px; font-size: clamp(1.6rem, 7vw, 1.95rem); line-height: 1.08; }
+        .auth-subtitle { color: color-mix(in srgb, var(--text) 78%, transparent); font-size: 14px; margin-bottom: 10px; }
+        .field-stack, .otp-stack { display: flex; flex-direction: column; gap: 12px; }
         .otp-copy, .back-link { font-size: 14px; color: var(--muted); text-align: center; }
-        .switch-link-wrap { font-size: 14px; color: var(--muted); text-align: center; margin-top: 8px; }
+        .switch-link-wrap { font-size: 14px; color: var(--muted); text-align: center; margin-top: 4px; }
         .switch-link { color: var(--primary); font-weight: 600; }
+        :global(.auth-shell.auth-shell--mobile-entry) {
+          min-height: 100svh;
+          min-height: 100dvh;
+          height: 100svh;
+          height: 100dvh;
+          padding: 0;
+        }
+        :global(.auth-shell.auth-shell--mobile-entry .top-row.top-row--mobile-entry) {
+          top: calc(10px + env(safe-area-inset-top, 0px));
+          left: calc(14px + env(safe-area-inset-left, 0px));
+          right: calc(14px + env(safe-area-inset-right, 0px));
+        }
         :global(.auth-panel.auth-panel--mobile-sheet) {
           width: 100%;
           max-width: none;
@@ -274,6 +299,15 @@ export default function SignupPage() {
           background: transparent;
           backdrop-filter: none;
           box-shadow: none;
+        }
+        @media (max-height: 700px) {
+          .mobile-screen { padding-top: calc(4px + env(safe-area-inset-top, 0px)); }
+          .mobile-header { min-height: clamp(20px, 8vh, 34px); }
+          .mobile-content { padding: 14px 12px calc(10px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
+          .auth-title { font-size: clamp(1.35rem, 6vw, 1.65rem); margin-bottom: 2px; }
+          .auth-subtitle { font-size: 13px; margin-bottom: 8px; }
+          .field-stack, .otp-stack { gap: 8px; }
+          .otp-copy, .back-link, .switch-link-wrap { font-size: 13px; }
         }
         :global(.auth-mobile-root input) { font-size: 16px !important; }
         @keyframes entryPush { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -300,17 +334,17 @@ const buttonStyle = {
 };
 
 const mobileInputStyle = {
-  height: 56,
+  height: 52,
   borderRadius: "16px",
   border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
   background: "color-mix(in srgb, var(--surface) 85%, transparent)",
   padding: "0 16px",
-  fontSize: 22,
+  fontSize: 16,
   letterSpacing: "0.03em"
 };
 
 const mobileButtonStyle = {
-  height: 54,
+  height: 52,
   borderRadius: 17,
   border: "none",
   fontSize: 16,
