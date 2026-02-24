@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo } from "react";
+import { resolveNextRoute } from "@/lib/onboarding";
+import { useSession } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import styles from "./get-started.module.css";
 
@@ -15,6 +17,8 @@ const BACKGROUND_IMAGES = [
 
 export default function AppGetStartedPage() {
   const router = useRouter();
+  const { status, user } = useSession();
+
   const backgroundImage = useMemo(() => {
     const imageIndex = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
     return BACKGROUND_IMAGES[imageIndex] ?? BACKGROUND_IMAGES[0];
@@ -28,6 +32,11 @@ export default function AppGetStartedPage() {
     };
   }, []);
 
+
+  useEffect(() => {
+    if (status !== "logged-in") return;
+    router.replace(resolveNextRoute(user, { loggedOutRoute: "/pwa_app/get-started" }));
+  }, [status, user, router]);
   useEffect(() => {
     void router.prefetch("/login");
     void router.prefetch("/signup");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Input } from "@/app/components/ui/Input";
@@ -16,8 +16,13 @@ import styles from "./page.module.css";
 export default function LoginPage() {
   const router = useRouter();
   const { addToast } = useToast();
-  const { refresh } = useSession();
+  const { status, user, refresh } = useSession();
 
+
+  useEffect(() => {
+    if (status !== "logged-in") return;
+    router.replace(getDefaultRoute(user));
+  }, [status, user, router]);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -64,7 +69,7 @@ export default function LoginPage() {
       }
       const user = await refresh();
       addToast("Logged in successfully!", "success");
-      router.push(getDefaultRoute(user));
+      router.replace(getDefaultRoute(user));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Login failed";
       addToast(msg, "error");
@@ -101,7 +106,7 @@ export default function LoginPage() {
       }
       const user = await refresh();
       addToast("Verified!", "success");
-      router.push(getDefaultRoute(user));
+      router.replace(getDefaultRoute(user));
     } catch {
       addToast("Invalid OTP", "error");
     } finally {

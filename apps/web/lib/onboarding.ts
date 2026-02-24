@@ -28,19 +28,34 @@ export function getOnboardingRoute(step?: string | null) {
   return onboardingRouteMap[step as OnboardingStep];
 }
 
-export function getDefaultRoute(user: SessionUser | null) {
-  if (!user?.onboardingStep) return "/login";
+type ResolveNextRouteOptions = {
+  loggedOutRoute?: string;
+  activeHomeRoute?: string;
+};
+
+export function resolveNextRoute(user: SessionUser | null, options: ResolveNextRouteOptions = {}) {
+  const {
+    loggedOutRoute = "/login",
+    activeHomeRoute = "/discover"
+  } = options;
+
+  if (!user?.onboardingStep) return loggedOutRoute;
+
   if (user.onboardingStep === "ACTIVE" && !user.profileCompletedAt) {
     return "/onboarding/profile";
   }
+
   if (user.onboardingStep === "ACTIVE") {
-    return "/discover";
+    return activeHomeRoute;
   }
+
   return getOnboardingRoute(user.onboardingStep);
 }
 
+export function getDefaultRoute(user: SessionUser | null) {
+  return resolveNextRoute(user, { loggedOutRoute: "/login" });
+}
+
 export function getPwaDefaultRoute(user: SessionUser | null) {
-  if (!user?.onboardingStep) return "/pwa_app/get-started";
-  if (user.onboardingStep === "ACTIVE") return "/discover";
-  return getOnboardingRoute(user.onboardingStep);
+  return resolveNextRoute(user, { loggedOutRoute: "/pwa_app/get-started" });
 }
