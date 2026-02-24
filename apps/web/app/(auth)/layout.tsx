@@ -133,7 +133,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           justify-content: space-between;
         }
         .brand {
-          font-size: clamp(1.45rem, 2.4vw, 1.9rem);
+          font-size: clamp(1.1rem, 3vw, 1.9rem);
           font-weight: 800;
           letter-spacing: 0.02em;
           color: var(--text);
