@@ -1,5 +1,6 @@
 /* =========================
    GET STARTED = DARK ONLY
+   + CINEMATIC CROSSFADE
    ========================= */
 
 .shell {
@@ -33,6 +34,7 @@
   --ctaText: #ffffff;
 }
 
+/* Base background layer (both images share this) */
 .getStartedBg {
   position: fixed;
   inset: 0;
@@ -40,17 +42,19 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+
   transform: translateZ(0) scale(1.03);
   filter: blur(6px) saturate(1.06);
   opacity: 0.95;
-  will-change: auto;
-  transition: none !important;
+
   pointer-events: none;
+  will-change: opacity;
 }
 
+/* DO NOT kill transitions. You had "transition: none" before — that destroys fades. */
 .getStartedBg,
 .getStartedBg * {
-  transition: none !important;
+  transition: none;
 }
 
 .overlay {
@@ -94,11 +98,9 @@
 
   /* bottom dock */
   padding-bottom: max(18px, env(safe-area-inset-bottom, 0px));
-
-  /* remove fake spacing hack that creates dead space */
-  transform: none;
 }
 
+/* Typography */
 .bottom h1 {
   margin: 0;
   color: var(--text);
@@ -158,4 +160,24 @@
   font-size: clamp(0.76rem, 2.9vw, 0.82rem);
   line-height: 1.4;
   color: color-mix(in srgb, var(--text-secondary) 74%, var(--surface));
+}
+
+/* =========================
+   CROSSFADE LAYERS
+   ========================= */
+
+/* Front image sits visible */
+.bgA {
+  opacity: 1;
+}
+
+/* Back image fades IN slowly */
+.bgB {
+  opacity: 0;
+  transition: opacity 1800ms ease-in-out;
+}
+
+/* When active, it becomes visible */
+.bgBVisible {
+  opacity: 1;
 }
