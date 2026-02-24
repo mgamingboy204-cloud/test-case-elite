@@ -272,14 +272,14 @@ body.app-entry-no-scroll {
   width: 100%;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 767px) {
   body.app-entry-no-scroll {
     position: fixed;
     inset: 0;
   }
 }
 
-@media (display-mode: standalone) and (max-width: 1024px) {
+@media (display-mode: standalone) {
   body.app-entry-no-scroll {
     position: fixed;
     inset: 0;
