@@ -61,7 +61,7 @@ export default function OtpPage() {
       }
       const user = await refresh();
       addToast("Verified!", "success");
-      router.push(getDefaultRoute(user));
+      router.replace(getDefaultRoute(user));
     } catch {
       addToast("Invalid code", "error");
     } finally {

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/Card";
 import { Input } from "@/app/components/ui/Input";
 import { Button } from "@/app/components/ui/Button";
-import { Badge } from "@/app/components/ui/Badge";
 import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import { getDefaultRoute } from "@/lib/onboarding";
@@ -27,7 +26,7 @@ export default function PaymentPage() {
   const [coupon, setCoupon] = useState("");
   const [couponValid, setCouponValid] = useState<boolean | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
-  const [step, setStep] = useState<"plan" | "confirm" | "done">("plan");
+  const [step, setStep] = useState<"plan" | "confirm">("plan");
   const [loading, setLoading] = useState(false);
 
   const handleValidateCoupon = async () => {
@@ -66,29 +65,13 @@ export default function PaymentPage() {
       await apiFetch("/payments/mock/confirm", { method: "POST" });
       const refreshedUser = await refresh();
       const nextRoute = getDefaultRoute(refreshedUser);
-      setStep("done");
       addToast("Payment successful!", "success");
-      if (nextRoute !== "/onboarding/profile") {
-        addToast("Payment processed. Redirecting to your next required step.", "info");
-      }
+      router.replace(nextRoute);
     } catch {
       addToast("Payment failed", "error");
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSetupProfile = async () => {
-    const refreshedUser = await refresh();
-    const nextRoute = getDefaultRoute(refreshedUser);
-
-    if (nextRoute === "/onboarding/profile") {
-      router.push("/onboarding/profile");
-      return;
-    }
-
-    addToast("We are syncing your onboarding status. Taking you to the right step.", "info");
-    router.replace(nextRoute);
   };
 
   return (
@@ -235,49 +218,6 @@ export default function PaymentPage() {
         </Card>
       )}
 
-      {step === "done" && (
-        <Card
-          style={{
-            padding: 32,
-            textAlign: "center",
-            border: "1px solid color-mix(in srgb, var(--accent) 30%, var(--border))",
-            background: "linear-gradient(145deg, color-mix(in srgb, var(--surface2) 88%, var(--accent) 12%), var(--panel))",
-            boxShadow: "var(--shadow-lg)",
-          }}
-        >
-          <div
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: "50%",
-              background: "var(--success-light)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 20px",
-              fontSize: 32,
-              color: "var(--success)",
-            }}
-          >
-            {"\u2713"}
-          </div>
-          <h2 style={{ marginBottom: 8 }}>Welcome to Premium!</h2>
-          <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 8 }}>
-            Your membership is now active.
-          </p>
-          <Badge variant="success">Active</Badge>
-          <div className="safe-bottom" style={{ marginTop: 24 }}>
-            <Button
-              size="lg"
-              fullWidth
-              onClick={handleSetupProfile}
-              style={{ minHeight: 52, fontWeight: 700 }}
-            >
-              Set Up Your Profile
-            </Button>
-          </div>
-        </Card>
-      )}
     </div>
   );
 }

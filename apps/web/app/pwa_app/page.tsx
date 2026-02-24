@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api";
 import { getAccessToken } from "@/lib/authToken";
 import { queryKeys } from "@/lib/queryKeys";
 import type { SessionUser } from "@/lib/session";
+import { getPwaDefaultRoute } from "@/lib/onboarding";
 
 const MIN_SPLASH_MS = 800;
 
@@ -52,7 +53,7 @@ export default function AppGatewayPage() {
     redirectedRef.current = true;
     const elapsed = Date.now() - startedAtRef.current;
     const waitMs = Math.max(0, MIN_SPLASH_MS - elapsed);
-    const nextPath = authState === "logged-in" ? "/pwa_app/discover" : "/pwa_app/get-started";
+    const nextPath = authState === "logged-in" ? getPwaDefaultRoute(queryClient.getQueryData<SessionUser>(queryKeys.me) ?? null) : "/pwa_app/get-started";
 
     void router.prefetch(nextPath);
 

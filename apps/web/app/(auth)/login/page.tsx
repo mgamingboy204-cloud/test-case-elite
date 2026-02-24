@@ -64,7 +64,7 @@ export default function LoginPage() {
       }
       const user = await refresh();
       addToast("Logged in successfully!", "success");
-      router.push(getDefaultRoute(user));
+      router.replace(getDefaultRoute(user));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Login failed";
       addToast(msg, "error");
@@ -101,7 +101,7 @@ export default function LoginPage() {
       }
       const user = await refresh();
       addToast("Verified!", "success");
-      router.push(getDefaultRoute(user));
+      router.replace(getDefaultRoute(user));
     } catch {
       addToast("Invalid OTP", "error");
     } finally {
