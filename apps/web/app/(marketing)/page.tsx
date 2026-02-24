@@ -27,7 +27,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (isStandaloneDisplayMode()) {
-      router.replace("/app");
+      router.replace("/discover");
     }
   }, [router]);
 
