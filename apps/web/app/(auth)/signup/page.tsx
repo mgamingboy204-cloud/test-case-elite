@@ -22,7 +22,7 @@ const TOKEN_STORAGE_KEY = "em_signup_token";
 export default function SignupPage() {
   const router = useRouter();
   const { addToast } = useToast();
-  const { refresh } = useSession();
+  const { status, user, refresh } = useSession();
 
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -32,6 +32,12 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+
+  useEffect(() => {
+    if (status !== "logged-in") return;
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    router.replace(getDefaultRoute(user));
+  }, [status, user, router]);
   useEffect(() => {
     const storedPhone = (sessionStorage.getItem(PHONE_STORAGE_KEY) ?? "").replace(/\D/g, "");
     const storedToken = sessionStorage.getItem(TOKEN_STORAGE_KEY) ?? "";

@@ -9,6 +9,7 @@ import { Select } from "@/app/components/ui/Select";
 import { Button } from "@/app/components/ui/Button";
 import { useToast } from "@/app/providers";
 import { ApiError, apiFetch } from "@/lib/api";
+import { getDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
 
 const STEPS = ["Photo", "Basics", "About", "Intent", "Review"] as const;
@@ -128,8 +129,8 @@ export default function ProfileWizardPage() {
       });
 
       await apiFetch("/profile/complete", { method: "POST" });
-      await refresh();
-      router.replace("/discover");
+      const refreshedUser = await refresh();
+      router.replace(getDefaultRoute(refreshedUser));
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Failed to save profile";
       addToast(message, "error");

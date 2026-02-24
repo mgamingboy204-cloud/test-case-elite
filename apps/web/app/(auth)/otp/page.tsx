@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/Card";
@@ -17,7 +17,12 @@ import styles from "./page.module.css";
 export default function OtpPage() {
   const router = useRouter();
   const { addToast } = useToast();
-  const { refresh } = useSession();
+  const { status, user, refresh } = useSession();
+
+  useEffect(() => {
+    if (status !== "logged-in") return;
+    router.replace(getDefaultRoute(user));
+  }, [status, user, router]);
   const [phone, setPhone] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -61,7 +66,7 @@ export default function OtpPage() {
       }
       const user = await refresh();
       addToast("Verified!", "success");
-      router.push(getDefaultRoute(user));
+      router.replace(getDefaultRoute(user));
     } catch {
       addToast("Invalid code", "error");
     } finally {
