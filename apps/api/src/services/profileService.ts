@@ -57,45 +57,25 @@ export async function updateProfile(options: { userId: string; paymentStatus: st
     create: { ...profileData, userId: options.userId }
   });
 
-  const photoCount = await prisma.photo.count({ where: { userId: options.userId } });
-  let user = await prisma.user.findUnique({ where: { id: options.userId } });
+  const user = await prisma.user.findUnique({ where: { id: options.userId } });
   if (!user) {
     throw new HttpError(404, { message: "User not found" });
   }
 
-  const baseUserUpdate = {
-    displayName: displayName || user.displayName,
-    firstName,
-    lastName,
-    gender: normalized.gender ?? user.gender
-  };
+  const updatedUser = await prisma.user.update({
+    where: { id: options.userId },
+    data: {
+      displayName: displayName || user.displayName,
+      firstName,
+      lastName,
+      gender: normalized.gender ?? user.gender,
+      profileCompletedAt: user.profileCompletedAt ?? new Date(),
+      onboardingStep: "ACTIVE",
+      status: "APPROVED"
+    }
+  });
 
-  if (photoCount > 0) {
-    user = await prisma.user.update({
-      where: { id: options.userId },
-      data: {
-        ...baseUserUpdate,
-        profileCompletedAt: user.profileCompletedAt ?? new Date(),
-        onboardingStep: "ACTIVE",
-        status: "APPROVED"
-      }
-    });
-  } else if (user.onboardingStep !== "PROFILE_PENDING") {
-    user = await prisma.user.update({
-      where: { id: options.userId },
-      data: {
-        onboardingStep: "PROFILE_PENDING",
-        ...baseUserUpdate
-      }
-    });
-  } else {
-    user = await prisma.user.update({
-      where: { id: options.userId },
-      data: baseUserUpdate
-    });
-  }
-
-  return { profile, requiresPhoto: photoCount === 0, onboardingStep: user.onboardingStep };
+  return { profile, requiresPhoto: false, onboardingStep: updatedUser.onboardingStep };
 }
 
 export async function completeProfile(options: {
@@ -116,11 +96,6 @@ export async function completeProfile(options: {
   const profile = await prisma.profile.findUnique({ where: { userId: options.userId } });
   if (!profile) {
     throw new HttpError(400, { message: "Profile must be completed first." });
-  }
-
-  const photoCount = await prisma.photo.count({ where: { userId: options.userId } });
-  if (photoCount === 0) {
-    throw new HttpError(400, { message: "At least one photo is required to activate your profile." });
   }
 
   const user = await prisma.user.update({
