@@ -6,8 +6,8 @@
   "scope": "/pwa_app/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#f6f4f2",
-  "theme_color": "#f26b76",
+  "background_color": "#0B0B10",
+  "theme_color": "#0B0B10",
   "categories": [
     "lifestyle",
     "social"

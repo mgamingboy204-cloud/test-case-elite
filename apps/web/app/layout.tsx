@@ -24,7 +24,6 @@ export const metadata: Metadata = {
   description: "Premium, verified matchmaking experience.",
   applicationName: "Elite Match",
   manifest: "/manifest.webmanifest",
-  themeColor: "black",
   appleWebApp: {
     capable: true,
     title: "Elite Match",
@@ -41,6 +40,10 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   width: "device-width",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0B0B10" },
+    { media: "(prefers-color-scheme: light)", color: "#FAFAFB" }
+  ],
   initialScale: 1,
   viewportFit: "cover",
   maximumScale: 1,
@@ -49,11 +52,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning style={{ backgroundColor: "#0B0B10" }}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body>
+      <body style={{ backgroundColor: "#0B0B10" }}>
+        <div className="boot-shell" aria-hidden="true">
+          <div className="boot-shell__mark" />
+        </div>
         <Providers>
           <main className="site-main">{children}</main>
         </Providers>

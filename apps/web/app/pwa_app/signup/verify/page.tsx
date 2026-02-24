@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import SplashScreen from "@/app/components/SplashScreen";
 
 export default function DeprecatedPwaSignupVerify() {
   const router = useRouter();
@@ -10,5 +11,5 @@ export default function DeprecatedPwaSignupVerify() {
     router.replace("/signup");
   }, [router]);
 
-  return null;
+  return <SplashScreen subtitle="Preparing sign up" />;
 }
