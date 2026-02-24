@@ -1,67 +1,65 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { isStandaloneDisplayMode } from "@/lib/displayMode";
+import { useQueryClient } from "@tanstack/react-query";
+import SplashScreen from "@/app/components/SplashScreen";
+import { apiFetch } from "@/lib/api";
+import { getAccessToken } from "@/lib/authToken";
+import { queryKeys } from "@/lib/queryKeys";
+import type { SessionUser } from "@/lib/session";
+
+const MIN_SPLASH_MS = 800;
+
+type AuthState = "pending" | "logged-in" | "logged-out";
 
 export default function AppGatewayPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const startedAtRef = useRef<number>(Date.now());
+  const redirectedRef = useRef(false);
+  const [authState, setAuthState] = useState<AuthState>("pending");
 
   useEffect(() => {
-    if (!isStandaloneDisplayMode()) return;
-    router.replace("/pwa_app/splash");
-  }, [router]);
+    let cancelled = false;
 
-  return (
-    <div className="app-gateway-shell">
-      <div className="app-gateway-card">
-        <h1>Open Elite Match</h1>
-        <p>Install the app for the native launch flow, or continue in the browser.</p>
-        <div className="app-gateway-actions">
-          <Link href="/login">Sign in</Link>
-          <Link href="/signup">Create account</Link>
-        </div>
-      </div>
-      <style jsx>{`
-        .app-gateway-shell {
-          min-height: 100vh;
-          min-height: 100dvh;
-          display: grid;
-          place-items: center;
-          padding: 24px;
-        }
+    const runAuthCheck = async () => {
+      const token = getAccessToken();
+      if (!token) {
+        if (!cancelled) setAuthState("logged-out");
+        return;
+      }
 
-        .app-gateway-card {
-          width: min(92vw, 420px);
-          border-radius: var(--radius-lg);
-          border: 1px solid var(--border);
-          padding: 24px;
-          background: var(--panel);
-          box-shadow: var(--shadow-sm);
-        }
+      try {
+        const me = await apiFetch<SessionUser>("/me", { retryOnUnauthorized: false });
+        queryClient.setQueryData(queryKeys.me, me);
+        if (!cancelled) setAuthState("logged-in");
+      } catch {
+        if (!cancelled) setAuthState("logged-out");
+      }
+    };
 
-        h1 {
-          margin: 0;
-        }
+    void runAuthCheck();
 
-        p {
-          margin: 10px 0 0;
-          color: var(--muted);
-        }
+    return () => {
+      cancelled = true;
+    };
+  }, [queryClient]);
 
-        .app-gateway-actions {
-          margin-top: 18px;
-          display: flex;
-          gap: 12px;
-        }
+  useEffect(() => {
+    if (authState === "pending" || redirectedRef.current) return;
 
-        .app-gateway-actions a {
-          color: var(--accent);
-          font-weight: 600;
-          text-decoration: none;
-        }
-      `}</style>
-    </div>
-  );
+    redirectedRef.current = true;
+    const elapsed = Date.now() - startedAtRef.current;
+    const waitMs = Math.max(0, MIN_SPLASH_MS - elapsed);
+    const nextPath = authState === "logged-in" ? "/pwa_app/discover" : "/pwa_app/get-started";
+
+    void router.prefetch(nextPath);
+
+    window.setTimeout(() => {
+      router.replace(nextPath);
+    }, waitMs);
+  }, [authState, router]);
+
+  return <SplashScreen />;
 }

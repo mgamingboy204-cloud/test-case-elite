@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useState } from "react";
-import { isStandaloneDisplayMode } from "@/lib/displayMode";
 
 const featureCards = [
   {
@@ -21,15 +19,9 @@ const featureCards = [
 ];
 
 export default function HomePage() {
-  const router = useRouter();
   const [x, setX] = useState(50);
   const [y, setY] = useState(50);
 
-  useEffect(() => {
-    if (isStandaloneDisplayMode()) {
-      router.replace("/pwa_app");
-    }
-  }, [router]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
