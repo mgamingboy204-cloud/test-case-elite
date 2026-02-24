@@ -46,7 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const headerStyle: CSSProperties = {
     height: "var(--app-header-offset)",
-    background: "color-mix(in srgb, var(--surface) 92%, transparent)",
+    background: "color-mix(in srgb, var(--surface-1) 94%, var(--bg) 6%)",
     borderBottom: "1px solid color-mix(in srgb, var(--border) 78%, var(--accent) 22%)",
     display: "flex",
     alignItems: "center",
@@ -59,7 +59,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div className="shell-page" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <header style={headerStyle} className="app-header">
         <Link href="/discover" style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}>
           Elite Match
@@ -76,7 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               justifyContent: "center",
               fontSize: 16,
               border: "1px solid var(--border)",
-              background: "color-mix(in srgb, var(--surface) 92%, transparent)",
+              background: "color-mix(in srgb, var(--surface-1) 94%, var(--bg) 6%)",
               color: "var(--text)",
             }}
             aria-label="Toggle theme"
@@ -120,8 +120,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="app-sidebar"
           style={{
             width: 220,
-            background: "color-mix(in srgb, var(--surface) 92%, transparent)",
-            borderRight: "1px solid var(--border)",
+            background: "color-mix(in srgb, var(--surface-1) 94%, var(--bg) 6%)",
+            borderRight: "1px solid color-mix(in srgb, var(--border) 84%, var(--accent) 16%)",
             padding: "16px 0",
             display: "flex",
             flexDirection: "column",
@@ -184,7 +184,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClick={toggle}
             style={{
               border: "1px solid var(--border)",
-              background: "var(--surface2)",
+              background: "color-mix(in srgb, var(--surface-2) 90%, var(--surface-1) 10%)",
               borderRadius: "var(--radius-md)",
               padding: "12px 14px",
               textAlign: "left",
@@ -214,7 +214,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             gap: 10px;
             padding: calc(var(--sat) + 10px) max(12px, var(--sal)) 12px max(12px, var(--sal));
             padding-right: max(12px, var(--sar));
-            background: color-mix(in srgb, var(--panel) 82%, transparent);
+            background: color-mix(in srgb, var(--surface-1) 90%, var(--bg) 10%);
             backdrop-filter: saturate(140%) blur(14px);
             border-bottom: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
           }
@@ -240,7 +240,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             height: 44px;
             border-radius: 9999px;
             border: 1px solid var(--border);
-            background: color-mix(in srgb, var(--surface2) 88%, transparent);
+            background: color-mix(in srgb, var(--surface-2) 90%, var(--surface-1) 10%);
             color: var(--text);
             display: inline-flex;
             align-items: center;

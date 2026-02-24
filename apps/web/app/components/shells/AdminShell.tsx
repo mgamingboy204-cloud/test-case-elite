@@ -24,13 +24,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div className="shell-page" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       {/* Header */}
       <header
         style={{
           height: "var(--app-header-offset)",
-          background: "var(--panel)",
-          borderBottom: "1px solid var(--border)",
+          background: "color-mix(in srgb, var(--surface-1) 94%, var(--bg) 6%)",
+          borderBottom: "1px solid color-mix(in srgb, var(--border) 84%, var(--accent) 16%)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -75,7 +75,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               justifyContent: "center",
               fontSize: 16,
               border: "1px solid var(--border)",
-              background: "var(--panel)",
+              background: "color-mix(in srgb, var(--surface-1) 94%, var(--bg) 6%)",
               color: "var(--text)",
             }}
             aria-label="Toggle theme"
@@ -118,8 +118,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
           className="admin-sidebar"
           style={{
             width: 200,
-            background: "var(--panel)",
-            borderLeft: "1px solid var(--border)",
+            background: "color-mix(in srgb, var(--surface-1) 94%, var(--bg) 6%)",
+            borderLeft: "1px solid color-mix(in srgb, var(--border) 84%, var(--accent) 16%)",
             padding: "16px 0",
             position: "sticky",
             top: "var(--app-header-offset)",
