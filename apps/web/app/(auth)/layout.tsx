@@ -141,16 +141,56 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         }
         @media (max-width: 900px) {
           .auth-shell {
-            justify-content: center;
-            align-items: center;
-            padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+            min-height: 100vh;
+            min-height: 100svh;
+            min-height: 100dvh;
+            height: 100vh;
+            height: 100svh;
+            height: 100dvh;
+            justify-content: flex-start;
+            align-items: stretch;
+            overflow: hidden;
+            overscroll-behavior: none;
+            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
           }
           .top-row {
-            top: calc(14px + env(safe-area-inset-top, 0px));
+            top: calc(10px + env(safe-area-inset-top, 0px));
+            left: calc(14px + env(safe-area-inset-left, 0px));
+            right: calc(14px + env(safe-area-inset-right, 0px));
           }
           .auth-panel {
-            width: min(92vw, 420px);
-            border-radius: 28px;
+            width: 100%;
+            max-width: none;
+            margin-top: auto;
+            border-radius: 28px 28px 0 0;
+            border-bottom: none;
+          }
+        }
+        @media (display-mode: standalone) and (max-width: 1024px) {
+          .auth-shell {
+            min-height: 100vh;
+            min-height: 100svh;
+            min-height: 100dvh;
+            height: 100vh;
+            height: 100svh;
+            height: 100dvh;
+            justify-content: flex-start;
+            align-items: stretch;
+            overflow: hidden;
+            overscroll-behavior: none;
+            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+          }
+          .top-row {
+            top: calc(10px + env(safe-area-inset-top, 0px));
+            left: calc(14px + env(safe-area-inset-left, 0px));
+            right: calc(14px + env(safe-area-inset-right, 0px));
+          }
+          .auth-panel {
+            width: 100%;
+            max-width: none;
+            margin-top: auto;
+            border-radius: 28px 28px 0 0;
+            border-bottom: none;
           }
         }
       `}</style>

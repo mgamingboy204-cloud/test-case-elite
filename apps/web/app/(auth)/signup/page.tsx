@@ -47,17 +47,8 @@ export default function SignupPage() {
   useLayoutEffect(() => {
     if (!isMobileUi) return;
     document.body.classList.add("app-entry-no-scroll");
-    const authShell = document.querySelector(".auth-shell");
-    const authTopRow = document.querySelector(".top-row");
-    const authPanel = document.querySelector(".auth-panel");
-    authShell?.classList.add("auth-shell--mobile-entry");
-    authTopRow?.classList.add("top-row--mobile-entry");
-    authPanel?.classList.add("auth-panel--mobile-sheet");
     return () => {
       document.body.classList.remove("app-entry-no-scroll");
-      authShell?.classList.remove("auth-shell--mobile-entry");
-      authTopRow?.classList.remove("top-row--mobile-entry");
-      authPanel?.classList.remove("auth-panel--mobile-sheet");
     };
   }, [isMobileUi]);
 
@@ -255,14 +246,11 @@ export default function SignupPage() {
           animation: entryPush 180ms ease-out;
         }
         .mobile-header {
-          width: min(100%, 420px);
+          width: 100%;
           min-height: clamp(34px, 10vh, 58px);
-          margin: 0 auto;
         }
         .mobile-content {
           width: 100%;
-          max-width: 420px;
-          margin: 0 auto;
           display: flex;
           flex-direction: column;
           gap: 10px;
@@ -279,27 +267,6 @@ export default function SignupPage() {
         .otp-copy, .back-link { font-size: 14px; color: var(--muted); text-align: center; }
         .switch-link-wrap { font-size: 14px; color: var(--muted); text-align: center; margin-top: 4px; }
         .switch-link { color: var(--primary); font-weight: 600; }
-        :global(.auth-shell.auth-shell--mobile-entry) {
-          min-height: 100svh;
-          min-height: 100dvh;
-          height: 100svh;
-          height: 100dvh;
-          padding: 0;
-        }
-        :global(.auth-shell.auth-shell--mobile-entry .top-row.top-row--mobile-entry) {
-          top: calc(10px + env(safe-area-inset-top, 0px));
-          left: calc(14px + env(safe-area-inset-left, 0px));
-          right: calc(14px + env(safe-area-inset-right, 0px));
-        }
-        :global(.auth-panel.auth-panel--mobile-sheet) {
-          width: 100%;
-          max-width: none;
-          border: 0;
-          border-radius: 0;
-          background: transparent;
-          backdrop-filter: none;
-          box-shadow: none;
-        }
         @media (max-height: 700px) {
           .mobile-screen { padding-top: calc(4px + env(safe-area-inset-top, 0px)); }
           .mobile-header { min-height: clamp(20px, 8vh, 34px); }
