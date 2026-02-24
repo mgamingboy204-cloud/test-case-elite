@@ -12,6 +12,7 @@ import { apiFetch, resetAuthFailureState } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
 import { getDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
+import styles from "./page.module.css";
 
 export default function OtpPage() {
   const router = useRouter();
@@ -69,10 +70,10 @@ export default function OtpPage() {
   };
 
   return (
-    <Card style={{ maxWidth: 420, width: "100%", padding: 0 }}>
-      <div style={{ padding: "32px 28px" }}>
-        <h2 style={{ marginBottom: 4 }}>OTP Sign In</h2>
-        <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
+    <Card className={styles.card}>
+      <div className={styles.container}>
+        <h2 className={styles.title}>OTP Sign In</h2>
+        <p className={styles.subtitle}>
           {otpSent ? "Enter the code we sent you" : "Sign in with a one-time code"}
         </p>
 
@@ -93,19 +94,19 @@ export default function OtpPage() {
               size="lg"
               loading={loading}
               onClick={handleSendOtp}
-              style={{ marginTop: 20 }}
+              className={styles.button}
             >
               Send Code
             </Button>
           </>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, cursor: "pointer" }}>
+          <div className={styles.stack}>
+            <label className={styles.checkRow}>
               <input
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                style={{ accentColor: "var(--primary)", width: 16, height: 16 }}
+                className={styles.checkbox}
               />
               Keep me signed in on this device
             </label>
@@ -114,15 +115,8 @@ export default function OtpPage() {
           </div>
         )}
 
-        <p
-          style={{
-            fontSize: 14,
-            color: "var(--muted)",
-            textAlign: "center",
-            marginTop: 24,
-          }}
-        >
-          <Link href="/login" style={{ color: "var(--primary)", fontWeight: 600 }}>
+        <p className={styles.footer}>
+          <Link href="/login" className={styles.backLink}>
             Back to Sign In
           </Link>
         </p>
