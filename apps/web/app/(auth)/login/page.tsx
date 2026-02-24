@@ -208,6 +208,7 @@ const inputStyle = {
   background: "color-mix(in srgb, var(--panel) 84%, transparent)",
   borderColor: "color-mix(in srgb, var(--border) 88%, transparent)",
   padding: "13px 16px",
+  fontSize: "var(--auth-input-font-size, 15px)",
 };
 
 const buttonStyle = {
@@ -217,4 +218,5 @@ const buttonStyle = {
   color: "var(--ctaText)",
   boxShadow: "var(--shadow-md)",
   letterSpacing: "0.01em",
+  minHeight: 46,
 };

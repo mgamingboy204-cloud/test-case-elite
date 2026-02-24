@@ -60,7 +60,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   const [useMobileShell, setUseMobileShell] = useState(false);
 
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 900px)");
+    const media = window.matchMedia("(max-width: 767px)");
     const applyMode = () => {
       setUseMobileShell(media.matches || isStandaloneDisplayMode());
     };

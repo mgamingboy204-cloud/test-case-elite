@@ -76,3 +76,54 @@
   color: var(--muted);
   text-align: center;
 }
+
+@media (max-width: 767px), (display-mode: standalone) {
+  .root {
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    overflow-x: hidden;
+    --auth-input-font-size: 16px;
+  }
+
+  .container {
+    padding: 18px 10px 8px;
+  }
+
+  .title {
+    font-size: clamp(1.56rem, 7vw, 1.9rem);
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    margin-bottom: 18px;
+  }
+
+  .field {
+    gap: 12px;
+  }
+
+  .checkRow {
+    font-size: 13px;
+    align-items: flex-start;
+  }
+
+  .checkStack {
+    gap: 8px;
+  }
+
+  .showPassword {
+    top: 40px;
+    right: 12px;
+  }
+
+  .root :global(input),
+  .root :global(button) {
+    min-height: 44px;
+  }
+
+  .links {
+    margin-top: 16px;
+    gap: 10px;
+  }
+}
