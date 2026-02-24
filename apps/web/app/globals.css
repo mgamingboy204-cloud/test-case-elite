@@ -265,6 +265,27 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
   width: 100%;
 }
 
+body.app-entry-no-scroll {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  body.app-entry-no-scroll {
+    position: fixed;
+    inset: 0;
+  }
+}
+
+@media (display-mode: standalone) and (max-width: 1024px) {
+  body.app-entry-no-scroll {
+    position: fixed;
+    inset: 0;
+  }
+}
+
 [data-app-shell="1"] .entry-screen {
   min-height: 100dvh;
   overflow: hidden;
