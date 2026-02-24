@@ -11,6 +11,7 @@ type RouteGuardProps = {
   requireActive?: boolean;
   allowedOnboardingSteps?: string[];
   autoRefreshMs?: number;
+  loggedOutRedirect?: string;
 };
 
 export default function RouteGuard({
@@ -18,7 +19,8 @@ export default function RouteGuard({
   requireAdmin = false,
   requireActive = false,
   allowedOnboardingSteps,
-  autoRefreshMs = 0
+  autoRefreshMs = 0,
+  loggedOutRedirect = "/login"
 }: RouteGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -35,7 +37,7 @@ export default function RouteGuard({
 
   useEffect(() => {
     if (status === "logged-out") {
-      router.replace("/login");
+      router.replace(loggedOutRedirect);
       return;
     }
     if (status === "logged-in" && user?.onboardingStep) {
@@ -56,7 +58,7 @@ export default function RouteGuard({
     if (requireAdmin && status === "logged-in" && user?.role !== "ADMIN" && !user?.isAdmin) {
       router.replace("/");
     }
-  }, [status, requireAdmin, requireActive, allowedOnboardingSteps, user, router, pathname]);
+  }, [status, requireAdmin, requireActive, allowedOnboardingSteps, user, router, pathname, loggedOutRedirect]);
 
   if (status === "loading") {
     return <>{children}</>;

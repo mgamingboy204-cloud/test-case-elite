@@ -1,5 +1,1 @@
-import { redirect } from "next/navigation";
-
-export default function LikesRedirectPage() {
-  redirect("/likes");
-}
+export { default } from "../../(app)/likes/page";

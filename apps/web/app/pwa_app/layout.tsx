@@ -24,7 +24,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <RouteGuard requireActive>
+    <RouteGuard requireActive loggedOutRedirect="/pwa_app/get-started">
       <AppShell>{children}</AppShell>
     </RouteGuard>
   );
