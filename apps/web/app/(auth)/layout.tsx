@@ -1,35 +1,15 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import { useTheme } from "@/app/providers";
 import { isStandaloneDisplayMode } from "@/lib/displayMode";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+function DesktopAuthShell({ children }: { children: React.ReactNode }) {
   const { theme, toggle } = useTheme();
-  const pathname = usePathname();
-  const [useNativeSignupMobileShell, setUseNativeSignupMobileShell] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 900px)");
-    const applyMode = () => {
-      const shouldUseNativeShell = pathname === "/signup" && (media.matches || isStandaloneDisplayMode());
-      setUseNativeSignupMobileShell(shouldUseNativeShell);
-    };
-
-    applyMode();
-    media.addEventListener("change", applyMode);
-    window.addEventListener("resize", applyMode);
-    return () => {
-      media.removeEventListener("change", applyMode);
-      window.removeEventListener("resize", applyMode);
-    };
-  }, [pathname]);
 
   return (
-    <div className={useNativeSignupMobileShell ? "auth-shell auth-shell-native" : "auth-shell"}>
+    <div className="auth-shell">
       <div className="auth-backdrop" aria-hidden="true" />
       <div className="auth-overlay" aria-hidden="true" />
       <div className="auth-vignette" aria-hidden="true" />
@@ -43,7 +23,63 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </button>
       </header>
 
-      <main className={useNativeSignupMobileShell ? "auth-panel auth-panel-native" : "auth-panel"}>{children}</main>
+      <main className="auth-panel">{children}</main>
+    </div>
+  );
+}
+
+function MobileAuthShell({ children }: { children: React.ReactNode }) {
+  const { theme, toggle } = useTheme();
+
+  useEffect(() => {
+    document.body.classList.add("app-entry-no-scroll");
+    return () => {
+      document.body.classList.remove("app-entry-no-scroll");
+    };
+  }, []);
+
+  return (
+    <div className="mobile-auth-shell">
+      <div className="mobile-auth-bg" aria-hidden="true" />
+      <div className="mobile-auth-overlay" aria-hidden="true" />
+
+      <header className="mobile-top-row">
+        <Link href="/" className="brand">Elite Match</Link>
+        <button onClick={toggle} className="theme-btn" aria-label="Toggle theme">
+          {theme === "light" ? "☾" : "☀"}
+        </button>
+      </header>
+
+      <main className="mobile-auth-sheet">{children}</main>
+    </div>
+  );
+}
+
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const getMobileMode = useMemo(
+    () => () => window.matchMedia("(max-width: 900px)").matches || isStandaloneDisplayMode(),
+    []
+  );
+  const [useMobileShell, setUseMobileShell] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px)");
+    const applyMode = () => {
+      setUseMobileShell(getMobileMode());
+    };
+
+    applyMode();
+    media.addEventListener("change", applyMode);
+    window.addEventListener("resize", applyMode);
+    return () => {
+      media.removeEventListener("change", applyMode);
+      window.removeEventListener("resize", applyMode);
+    };
+  }, [getMobileMode]);
+
+  return (
+    <>
+      {useMobileShell ? <MobileAuthShell>{children}</MobileAuthShell> : <DesktopAuthShell>{children}</DesktopAuthShell>}
 
       <style jsx>{`
         .auth-shell {
@@ -56,13 +92,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           justify-content: flex-end;
           padding: calc(20px + env(safe-area-inset-top, 0px)) calc(22px + env(safe-area-inset-right, 0px)) calc(22px + env(safe-area-inset-bottom, 0px)) calc(22px + env(safe-area-inset-left, 0px));
           background: linear-gradient(145deg, var(--bg2) 0%, var(--surface) 44%, var(--surface2) 100%);
-        }
-        .auth-shell-native {
-          justify-content: flex-start;
-          align-items: stretch;
-          padding: 0;
-          overflow: hidden;
-          overscroll-behavior: none;
         }
         .auth-backdrop,
         .auth-overlay,
@@ -132,23 +161,59 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           backdrop-filter: blur(24px);
           box-shadow: var(--shadow-md);
         }
-        .auth-panel-native {
+
+        .mobile-auth-shell {
+          position: fixed;
+          inset: 0;
           width: 100%;
-          max-width: none;
+          min-height: 100vh;
+          min-height: 100svh;
+          min-height: 100dvh;
           height: 100vh;
           height: 100svh;
           height: 100dvh;
-          border: none;
-          border-radius: 0;
-          background: transparent;
-          box-shadow: none;
-          backdrop-filter: none;
+          overflow: hidden;
+          overscroll-behavior: none;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
+          background: linear-gradient(160deg, var(--bg2) 0%, var(--surface) 45%, var(--bg) 100%);
         }
-        .auth-shell-native .top-row {
-          top: calc(10px + env(safe-area-inset-top, 0px));
-          left: calc(14px + env(safe-area-inset-left, 0px));
-          right: calc(14px + env(safe-area-inset-right, 0px));
+        .mobile-auth-bg,
+        .mobile-auth-overlay {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
         }
+        .mobile-auth-bg {
+          background: radial-gradient(circle at 12% 12%, var(--rose-glow-2), transparent 38%),
+            radial-gradient(circle at 86% 88%, var(--rose-glow), transparent 40%);
+          opacity: 0.7;
+        }
+        .mobile-auth-overlay {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 44%, transparent), color-mix(in srgb, var(--bg2) 78%, transparent));
+        }
+        .mobile-top-row {
+          position: relative;
+          z-index: 4;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: calc(8px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px)) 10px calc(14px + env(safe-area-inset-left, 0px));
+        }
+        .mobile-auth-sheet {
+          position: relative;
+          z-index: 4;
+          width: 100%;
+          margin-top: auto;
+          border-radius: 28px 28px 0 0;
+          border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
+          border-bottom: none;
+          background: linear-gradient(160deg, color-mix(in srgb, var(--surface) 90%, transparent), color-mix(in srgb, var(--surface2) 86%, transparent));
+          backdrop-filter: blur(18px);
+          padding: 0 max(12px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+        }
+
         :global([data-theme='light']) .auth-shell {
           background: linear-gradient(145deg, var(--bg) 0%, var(--surface2) 48%, var(--surface) 100%);
         }
@@ -179,66 +244,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           background: color-mix(in srgb, var(--surface) 84%, transparent);
           box-shadow: var(--shadow-sm);
         }
-        :global([data-theme='light']) .auth-panel {
+        :global([data-theme='light']) .auth-panel,
+        :global([data-theme='light']) .mobile-auth-sheet {
           border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
           background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 90%, transparent), color-mix(in srgb, var(--surface2) 86%, transparent));
-          box-shadow: var(--shadow-md);
-        }
-        @media (max-width: 900px) {
-          .auth-shell {
-            min-height: 100vh;
-            min-height: 100svh;
-            min-height: 100dvh;
-            height: 100vh;
-            height: 100svh;
-            height: 100dvh;
-            justify-content: flex-start;
-            align-items: stretch;
-            overflow: hidden;
-            overscroll-behavior: none;
-            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
-          }
-          .top-row {
-            top: calc(10px + env(safe-area-inset-top, 0px));
-            left: calc(14px + env(safe-area-inset-left, 0px));
-            right: calc(14px + env(safe-area-inset-right, 0px));
-          }
-          .auth-panel {
-            width: 100%;
-            max-width: none;
-            margin-top: auto;
-            border-radius: 28px 28px 0 0;
-            border-bottom: none;
-          }
-        }
-        @media (display-mode: standalone) and (max-width: 1024px) {
-          .auth-shell {
-            min-height: 100vh;
-            min-height: 100svh;
-            min-height: 100dvh;
-            height: 100vh;
-            height: 100svh;
-            height: 100dvh;
-            justify-content: flex-start;
-            align-items: stretch;
-            overflow: hidden;
-            overscroll-behavior: none;
-            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
-          }
-          .top-row {
-            top: calc(10px + env(safe-area-inset-top, 0px));
-            left: calc(14px + env(safe-area-inset-left, 0px));
-            right: calc(14px + env(safe-area-inset-right, 0px));
-          }
-          .auth-panel {
-            width: 100%;
-            max-width: none;
-            margin-top: auto;
-            border-radius: 28px 28px 0 0;
-            border-bottom: none;
-          }
         }
       `}</style>
-    </div>
+    </>
   );
 }

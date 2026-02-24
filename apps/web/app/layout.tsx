@@ -29,6 +29,9 @@ export const metadata: Metadata = {
     title: "Elite Match",
     statusBarStyle: "black-translucent"
   },
+  other: {
+    "mobile-web-app-capable": "yes"
+  },
   icons: {
     icon: [
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
