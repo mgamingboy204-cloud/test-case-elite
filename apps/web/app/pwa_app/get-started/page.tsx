@@ -30,7 +30,7 @@ export default function AppGetStartedPage() {
 
   useEffect(() => {
     void router.prefetch("/pwa_app/login");
-    void router.prefetch("/pwa_app/signup/phone");
+    void router.prefetch("/signup");
   }, [router]);
 
   return (
@@ -45,7 +45,7 @@ export default function AppGetStartedPage() {
         <p className={styles.sub}>Private. Curated. Exceptional.</p>
 
         <div className={styles.actions}>
-          <Link className={`${styles.actionBtn} ${styles.primary}`} href="/pwa_app/signup/phone">
+          <Link className={`${styles.actionBtn} ${styles.primary}`} href="/signup">
             Create account
           </Link>
           <Link className={`${styles.actionBtn} ${styles.secondary}`} href="/pwa_app/login">

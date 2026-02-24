@@ -125,7 +125,7 @@ export default function AppLoginPage() {
             <Button fullWidth size="lg" loading={loading} onClick={handleLogin}>Sign In</Button>
             <div className="auth-links">
               <Link href="/pwa_app/get-started" className="otp-link">Need help signing in?</Link>
-              <p className="switch-link-wrap">{"Don't have an account? "}<Link href="/pwa_app/signup/phone" className="switch-link">Sign Up</Link></p>
+              <p className="switch-link-wrap">{"Don't have an account? "}<Link href="/signup" className="switch-link">Sign Up</Link></p>
             </div>
           </>
         ) : (

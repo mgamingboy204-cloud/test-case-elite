@@ -17,3 +17,15 @@ export const OtpVerifySchema = z.object({
 export const RefreshTokenSchema = z.object({
   refreshToken: z.string().optional()
 });
+
+export const SignupStartSchema = OtpSendSchema;
+
+export const SignupVerifySchema = z.object({
+  phone: z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits."),
+  code: z.string().regex(/^\d{6}$/, "OTP must be exactly 6 digits.")
+});
+
+export const SignupCompleteSchema = z.object({
+  signupToken: z.string().min(10),
+  password: z.string().min(8)
+});

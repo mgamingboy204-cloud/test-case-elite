@@ -30,8 +30,7 @@ const PWA_AUTH_ROUTES = new Set([
   "/pwa_app/splash",
   "/pwa_app/get-started",
   "/pwa_app/login",
-  "/pwa_app/signup/phone",
-  "/pwa_app/signup/verify"
+  "/signup"
 ]);
 const PUBLIC_ROUTES = new Set([
   "/",
