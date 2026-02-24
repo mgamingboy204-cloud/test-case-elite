@@ -1,334 +1,429 @@
 "use client";
 
-import { ChangeEvent, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card } from "@/app/components/ui/Card";
-import { Input } from "@/app/components/ui/Input";
-import { Textarea } from "@/app/components/ui/Textarea";
-import { Select } from "@/app/components/ui/Select";
 import { Button } from "@/app/components/ui/Button";
+import { Input } from "@/app/components/ui/Input";
+import { Modal } from "@/app/components/ui/Modal";
 import { useToast } from "@/app/providers";
 import { ApiError, apiFetch } from "@/lib/api";
 import { getDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
 
-const STEPS = ["Photo", "Basics", "About", "Intent", "Review"] as const;
+const STORAGE_KEY = "em_onboarding_profile_v2";
+const MIN_AGE = 18;
+const MAX_AGE = 100;
 
-type WizardData = {
-  photoUrl: string;
-  name: string;
-  age: string;
-  gender: "MALE" | "FEMALE" | "NON_BINARY" | "OTHER" | "";
-  city: string;
-  profession: string;
-  bio: string;
-  intent: "dating" | "friends" | "all";
+type GenderOption = "MALE" | "FEMALE" | "NON_BINARY" | "OTHER";
+
+type OnboardingDraft = {
+  firstName: string;
+  day: string;
+  month: string;
+  year: string;
+  gender: GenderOption | "";
+  showGender: boolean;
 };
 
-const initialData: WizardData = {
-  photoUrl: "",
-  name: "",
-  age: "",
+const INITIAL_DRAFT: OnboardingDraft = {
+  firstName: "",
+  day: "",
+  month: "",
+  year: "",
   gender: "",
-  city: "",
-  profession: "",
-  bio: "",
-  intent: "dating"
+  showGender: true
 };
+
+const GENDER_OPTIONS: { value: GenderOption; label: string; subtitle: string }[] = [
+  { value: "MALE", label: "Man", subtitle: "He / Him" },
+  { value: "FEMALE", label: "Woman", subtitle: "She / Her" },
+  { value: "NON_BINARY", label: "Beyond Binary", subtitle: "They / Them" },
+  { value: "OTHER", label: "Other", subtitle: "Tell us in your profile later" }
+];
+
+function calculateAge(year: number, month: number, day: number) {
+  const now = new Date();
+  let age = now.getFullYear() - year;
+  const monthDelta = now.getMonth() + 1 - month;
+  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < day)) {
+    age -= 1;
+  }
+  return age;
+}
+
+function parseBirthday(draft: OnboardingDraft) {
+  const day = Number(draft.day);
+  const month = Number(draft.month);
+  const year = Number(draft.year);
+  if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return null;
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  const age = calculateAge(year, month, day);
+  if (age < MIN_AGE || age > MAX_AGE) return null;
+  return { day, month, year, age };
+}
+
+function isMobileViewport() {
+  if (typeof window === "undefined") return true;
+  return window.matchMedia("(max-width: 920px)").matches;
+}
 
 export default function ProfileWizardPage() {
   const router = useRouter();
-  const { refresh } = useSession();
+  const { refresh, user } = useSession();
   const { addToast } = useToast();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [data, setData] = useState<WizardData>(initialData);
+  const firstNameInputRef = useRef<HTMLInputElement | null>(null);
+  const [isMobile, setIsMobile] = useState(true);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [draft, setDraft] = useState<OnboardingDraft>(INITIAL_DRAFT);
 
-  const reducedMotion = useMemo(
-    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    []
-  );
+  useEffect(() => {
+    setIsMobile(isMobileViewport());
+    const media = window.matchMedia("(max-width: 920px)");
+    const handler = () => setIsMobile(media.matches);
+    media.addEventListener("change", handler);
+    return () => media.removeEventListener("change", handler);
+  }, []);
 
-  const step = STEPS[currentStep];
-
-  const updateField = <K extends keyof WizardData>(key: K, value: WizardData[K]) => {
-    setData((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleUploadPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      addToast("Please choose a valid image file", "error");
-      return;
-    }
-
-    const reader = new FileReader();
-    setUploading(true);
-    reader.onload = async () => {
+  useEffect(() => {
+    const loadExisting = async () => {
       try {
-        const dataUrl = String(reader.result ?? "");
-        if (!dataUrl.startsWith("data:image/")) {
-          throw new Error("invalid-data-url");
+        const response = await apiFetch<{
+          profile?: { age?: number; gender?: GenderOption; city?: string; profession?: string; bioShort?: string; intent?: string; name?: string } | null;
+          user?: { firstName?: string | null; displayName?: string | null; gender?: GenderOption | null } | null;
+        }>("/profile");
+
+        let initial = { ...INITIAL_DRAFT };
+        try {
+          const persisted = window.localStorage.getItem(STORAGE_KEY);
+          if (persisted) {
+            initial = { ...initial, ...(JSON.parse(persisted) as OnboardingDraft) };
+          }
+        } catch {
+          // no-op
         }
-        const response = await apiFetch<{ photo?: { url: string } }>("/photos/upload", {
-          method: "POST",
-          body: { filename: file.name, dataUrl } as never
-        });
-        updateField("photoUrl", response.photo?.url ?? "");
-        addToast("Photo uploaded", "success");
-      } catch (error) {
-        const message = error instanceof ApiError ? error.message : "Failed to upload photo";
-        addToast(message, "error");
-      } finally {
-        setUploading(false);
+
+        const sourceName = response.user?.firstName || response.user?.displayName || response.profile?.name || "";
+        if (!initial.firstName && sourceName) {
+          initial.firstName = String(sourceName).trim().split(" ")[0] ?? "";
+        }
+
+        if (!initial.gender && (response.user?.gender || response.profile?.gender)) {
+          initial.gender = (response.user?.gender || response.profile?.gender || "") as GenderOption;
+        }
+
+        if ((!initial.day || !initial.month || !initial.year) && response.profile?.age) {
+          const now = new Date();
+          const syntheticYear = now.getFullYear() - response.profile.age;
+          initial.day = "01";
+          initial.month = "01";
+          initial.year = String(syntheticYear);
+        }
+
+        setDraft(initial);
+      } catch {
+        // keep defaults
       }
     };
-    reader.onerror = () => {
-      setUploading(false);
-      addToast("Failed to read image", "error");
-    };
-    reader.readAsDataURL(file);
-  };
 
-  const canProceed = () => {
-    switch (step) {
-      case "Photo":
-        return Boolean(data.photoUrl);
-      case "Basics":
-        return Boolean(data.name && data.age && data.gender && data.city && data.profession);
-      case "About":
-        return data.bio.trim().length >= 10;
-      case "Intent":
-        return Boolean(data.intent);
-      default:
-        return true;
-    }
-  };
+    void loadExisting();
+  }, []);
 
-  const handleComplete = async () => {
-    if (!canProceed()) {
-      addToast("Please complete required fields", "error");
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+  }, [draft]);
+
+  const birthday = useMemo(() => parseBirthday(draft), [draft]);
+
+  const canContinue =
+    stepIndex === 0
+      ? draft.firstName.trim().length > 0
+      : stepIndex === 1
+        ? Boolean(birthday)
+        : Boolean(draft.gender);
+
+  const handleExit = async () => {
+    if (document.referrer && document.referrer.startsWith(window.location.origin)) {
+      router.back();
       return;
     }
 
-    setLoading(true);
+    const refreshedUser = await refresh();
+    if (refreshedUser?.paymentStatus === "PAID") {
+      router.replace("/discover");
+      return;
+    }
+
+    const fallback = getDefaultRoute(refreshedUser);
+    router.replace(fallback === "/onboarding/profile" ? "/" : fallback);
+  };
+
+  const handleNext = async () => {
+    if (!canContinue || saving) return;
+
+    if (stepIndex === 0) {
+      setShowWelcome(true);
+      return;
+    }
+
+    if (stepIndex < 2) {
+      setStepIndex((prev) => prev + 1);
+      return;
+    }
+
+    if (!birthday) return;
+
+    setSaving(true);
     try {
       await apiFetch("/profile", {
         method: "PUT",
         body: {
-          name: data.name.trim(),
-          age: Number(data.age),
-          gender: data.gender,
-          city: data.city.trim(),
-          profession: data.profession.trim(),
-          bioShort: data.bio.trim(),
-          intent: data.intent
+          displayName: draft.firstName.trim(),
+          firstName: draft.firstName.trim(),
+          gender: draft.gender,
+          age: birthday.age,
+          city: "Unknown",
+          profession: "Not set",
+          bioShort: draft.showGender ? "Ready to meet people." : "",
+          intent: "dating"
         } as never
       });
 
       await apiFetch("/profile/complete", { method: "POST" });
+      window.localStorage.removeItem(STORAGE_KEY);
       const refreshedUser = await refresh();
       router.replace(getDefaultRoute(refreshedUser));
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : "Failed to save profile";
+      const message = error instanceof ApiError ? error.message : "Unable to save profile. Please try again.";
       addToast(message, "error");
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const progress = ((currentStep + 1) / STEPS.length) * 100;
+  const title = stepIndex === 0 ? "What should we call you?" : stepIndex === 1 ? "Your b-day?" : "How do you identify?";
+  const subtitle =
+    stepIndex === 0
+      ? "This is how your profile starts."
+      : stepIndex === 1
+        ? "Your profile shows your age, not your birth date."
+        : "Choose what feels right. You can change this later.";
 
   return (
-    <div
-      style={{
-        paddingBottom: 28,
-        maxWidth: 640,
-        margin: "0 auto"
-      }}
-    >
-      <h1 style={{ marginBottom: 8 }}>Build Your Profile</h1>
-      <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 18 }}>
-        Step {currentStep + 1} of {STEPS.length}: {step}
-      </p>
+    <div className={isMobile ? "onboarding-native" : "onboarding-desktop"}>
+      <div className="onboarding-surface">
+        <button type="button" className="onboarding-close" onClick={handleExit} aria-label="Exit onboarding">
+          ✕
+        </button>
 
-      <div
-        style={{
-          height: 10,
-          borderRadius: 999,
-          background: "color-mix(in srgb, var(--border) 74%, transparent)",
-          overflow: "hidden",
-          marginBottom: 24,
-          border: "1px solid color-mix(in srgb, var(--accent) 22%, var(--border))"
-        }}
-      >
-        <div
-          style={{
-            width: `${progress}%`,
-            height: "100%",
-            background:
-              "linear-gradient(90deg, color-mix(in srgb, var(--accent-deep) 68%, transparent), color-mix(in srgb, var(--accent-light) 75%, transparent))",
-            transition: reducedMotion ? "none" : "width 260ms ease"
-          }}
-        />
-      </div>
+        <section className="onboarding-head">
+          <h1>{title}</h1>
+          <p>{subtitle}</p>
+        </section>
 
-      <Card
-        style={{
-          padding: 20,
-          marginBottom: 16,
-          border: "1px solid color-mix(in srgb, var(--accent) 20%, var(--border))",
-          background: "linear-gradient(145deg, color-mix(in srgb, var(--surface2) 92%, var(--accent) 8%), var(--panel))"
-        }}
-      >
-        <div
-          key={step}
-          style={{
-            animation: reducedMotion ? "none" : "stepEnter 200ms ease",
-            transform: "translateZ(0)"
-          }}
-        >
-          {step === "Photo" && (
-            <div>
-              <h3 style={{ marginBottom: 8 }}>Upload your photo</h3>
-              <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 16 }}>
-                We support one profile photo.
-              </p>
-              <label
-                htmlFor="profile-photo-input"
-                style={{
-                  display: "block",
-                  border: "2px dashed var(--border)",
-                  borderRadius: 16,
-                  padding: 12,
-                  cursor: "pointer"
-                }}
-              >
-                {data.photoUrl ? (
-                  <img
-                    src={data.photoUrl}
-                    alt="Profile preview"
-                    style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", borderRadius: 12 }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      minHeight: 220,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "var(--muted)",
-                      fontWeight: 600
-                    }}
-                  >
-                    Tap to upload a photo
-                  </div>
-                )}
-              </label>
-              <input id="profile-photo-input" type="file" accept="image/*" onChange={handleUploadPhoto} style={{ marginTop: 12 }} />
-              {uploading && <p style={{ color: "var(--muted)", marginTop: 8 }}>Uploading...</p>}
-            </div>
+        <section className="onboarding-body" key={stepIndex}>
+          {stepIndex === 0 && (
+            <Input
+              ref={firstNameInputRef}
+              placeholder="First name"
+              value={draft.firstName}
+              autoFocus
+              maxLength={32}
+              onChange={(event) => setDraft((prev) => ({ ...prev, firstName: event.target.value }))}
+            />
           )}
 
-          {step === "Basics" && (
-            <div style={{ display: "grid", gap: 12 }}>
-              <Input label="Name" value={data.name} onChange={(e) => updateField("name", e.target.value)} placeholder="Your name" />
-              <Input label="Age" type="number" min="18" max="99" value={data.age} onChange={(e) => updateField("age", e.target.value)} />
-              <Select
-                label="Gender"
-                value={data.gender}
-                onChange={(e) => updateField("gender", e.target.value as WizardData["gender"])}
-                placeholder="Select gender"
-                options={[
-                  { value: "MALE", label: "Male" },
-                  { value: "FEMALE", label: "Female" },
-                  { value: "NON_BINARY", label: "Non-binary" },
-                  { value: "OTHER", label: "Other" }
-                ]}
+          {stepIndex === 1 && (
+            <div className="birthday-row">
+              <Input
+                inputMode="numeric"
+                placeholder="DD"
+                maxLength={2}
+                value={draft.day}
+                onChange={(event) => setDraft((prev) => ({ ...prev, day: event.target.value.replace(/\D/g, "") }))}
               />
-              <Input label="City" value={data.city} onChange={(e) => updateField("city", e.target.value)} />
-              <Input label="Profession" value={data.profession} onChange={(e) => updateField("profession", e.target.value)} />
+              <Input
+                inputMode="numeric"
+                placeholder="MM"
+                maxLength={2}
+                value={draft.month}
+                onChange={(event) => setDraft((prev) => ({ ...prev, month: event.target.value.replace(/\D/g, "") }))}
+              />
+              <Input
+                inputMode="numeric"
+                placeholder="YYYY"
+                maxLength={4}
+                value={draft.year}
+                onChange={(event) => setDraft((prev) => ({ ...prev, year: event.target.value.replace(/\D/g, "") }))}
+              />
             </div>
           )}
 
-          {step === "About" && (
-            <Textarea
-              label="Bio"
-              rows={5}
-              value={data.bio}
-              onChange={(e) => updateField("bio", e.target.value)}
-              maxLength={300}
-              charCount={{ current: data.bio.length, max: 300 }}
-            />
-          )}
-
-          {step === "Intent" && (
-            <Select
-              label="Intent"
-              value={data.intent}
-              onChange={(e) => updateField("intent", e.target.value as WizardData["intent"])}
-              options={[
-                { value: "dating", label: "Dating" },
-                { value: "friends", label: "Friends" },
-                { value: "all", label: "Open to anything" }
-              ]}
-            />
-          )}
-
-          {step === "Review" && (
-            <div style={{ display: "grid", gap: 10 }}>
-              <Review label="Photo" value={data.photoUrl ? "Uploaded" : "Missing"} />
-              <Review label="Name" value={data.name} />
-              <Review label="Age" value={data.age} />
-              <Review label="Gender" value={data.gender} />
-              <Review label="City" value={data.city} />
-              <Review label="Profession" value={data.profession} />
-              <Review label="Bio" value={data.bio} />
-              <Review label="Intent" value={data.intent} />
+          {stepIndex === 2 && (
+            <div className="gender-list">
+              {GENDER_OPTIONS.map((option) => {
+                const active = draft.gender === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={active ? "gender-card active" : "gender-card"}
+                    onClick={() => setDraft((prev) => ({ ...prev, gender: option.value }))}
+                  >
+                    <strong>{option.label}</strong>
+                    <span>{option.subtitle}</span>
+                  </button>
+                );
+              })}
+              <label className="gender-checkbox">
+                <input
+                  type="checkbox"
+                  checked={draft.showGender}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, showGender: event.target.checked }))}
+                />
+                Show gender on profile
+              </label>
             </div>
           )}
-        </div>
-      </Card>
+        </section>
 
-      <div className="safe-bottom" style={{ display: "flex", gap: 10 }}>
-        {currentStep > 0 && (
-          <Button variant="secondary" fullWidth size="lg" onClick={() => setCurrentStep((v) => v - 1)}>
-            Back
+        <footer className="onboarding-footer safe-bottom safe-x">
+          <Button fullWidth size="lg" onClick={handleNext} disabled={!canContinue} loading={saving} style={{ borderRadius: 999 }}>
+            Next
           </Button>
-        )}
-        {currentStep < STEPS.length - 1 ? (
-          <Button fullWidth size="lg" onClick={() => setCurrentStep((v) => v + 1)} disabled={!canProceed() || uploading}>
-            Continue
-          </Button>
-        ) : (
-          <Button fullWidth size="lg" loading={loading} onClick={handleComplete}>
-            Complete Profile
-          </Button>
-        )}
+        </footer>
       </div>
+
+      <Modal open={showWelcome} onClose={() => setShowWelcome(false)} title={`Welcome, ${draft.firstName.trim()}!`}>
+        <div style={{ display: "grid", gap: 12 }}>
+          <Button
+            fullWidth
+            onClick={() => {
+              setShowWelcome(false);
+              setStepIndex(1);
+            }}
+          >
+            Let&apos;s go
+          </Button>
+          <Button
+            fullWidth
+            variant="secondary"
+            onClick={() => {
+              setShowWelcome(false);
+              setStepIndex(0);
+              setTimeout(() => firstNameInputRef.current?.focus(), 10);
+            }}
+          >
+            Edit name
+          </Button>
+        </div>
+      </Modal>
 
       <style jsx>{`
-        @keyframes stepEnter {
-          from {
-            opacity: 0;
-            transform: translateY(8px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        .onboarding-native {
+          min-height: 100svh;
+          min-height: 100dvh;
+          height: 100dvh;
+          overflow: hidden;
+          overscroll-behavior: none;
+          background: linear-gradient(180deg, var(--bg), color-mix(in srgb, var(--surface2) 74%, var(--bg)));
+        }
+
+        .onboarding-desktop {
+          min-height: 100dvh;
+          padding: 30px 20px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(180deg, var(--bg), color-mix(in srgb, var(--surface2) 74%, var(--bg)));
+        }
+
+        .onboarding-surface {
+          position: relative;
+          min-height: 100dvh;
+          display: grid;
+          grid-template-rows: auto auto 1fr auto;
+          background: color-mix(in srgb, var(--surface) 94%, var(--bg));
+          border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+          box-shadow: var(--shadow-md);
+        }
+
+        .onboarding-desktop .onboarding-surface {
+          width: min(560px, 100%);
+          min-height: 720px;
+          border-radius: 28px;
+          overflow: hidden;
+        }
+
+        .onboarding-close {
+          position: absolute;
+          top: max(16px, var(--sat));
+          left: max(12px, var(--sal));
+          width: 42px;
+          height: 42px;
+          border-radius: 999px;
+          border: 1px solid var(--border);
+          background: color-mix(in srgb, var(--surface2) 88%, var(--pearl-panel));
+        }
+
+        .onboarding-head {
+          padding: max(74px, calc(var(--sat) + 58px)) max(20px, var(--sal)) 18px;
+        }
+
+        .onboarding-head p { color: var(--muted); margin-top: 8px; }
+
+        .onboarding-body {
+          padding: 8px max(20px, var(--sal));
+          display: grid;
+          align-content: start;
+          gap: 14px;
+          animation: stepIn 220ms ease;
+        }
+
+        .birthday-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1.4fr;
+          gap: 10px;
+        }
+
+        .gender-list { display: grid; gap: 10px; }
+
+        .gender-card {
+          border: 1px solid var(--border);
+          border-radius: 18px;
+          padding: 14px;
+          text-align: left;
+          background: color-mix(in srgb, var(--surface2) 82%, var(--surface));
+          display: grid;
+          gap: 2px;
+        }
+
+        .gender-card span { color: var(--muted); font-size: 13px; }
+        .gender-card.active {
+          border-color: color-mix(in srgb, var(--accent) 58%, var(--border));
+          background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+        }
+
+        .gender-checkbox {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 4px;
+          color: var(--text-secondary);
+        }
+
+        .onboarding-footer {
+          position: sticky;
+          bottom: 0;
+          padding-top: 8px;
+          background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--surface) 95%, var(--bg)) 40%);
+        }
+
+        @keyframes stepIn {
+          from { opacity: 0; transform: translateX(10px); }
+          to { opacity: 1; transform: translateX(0); }
         }
       `}</style>
-    </div>
-  );
-}
-
-function Review({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
-      <span style={{ color: "var(--muted)" }}>{label}</span>
-      <span style={{ fontWeight: 600, textAlign: "right" }}>{value || "—"}</span>
     </div>
   );
 }

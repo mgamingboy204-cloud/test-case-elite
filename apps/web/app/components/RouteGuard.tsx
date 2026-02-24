@@ -46,7 +46,8 @@ export default function RouteGuard({
       const target = resolveNextRoute(user, {
         loggedOutRoute: isPwaPath ? "/pwa_app/get-started" : loggedOutRedirect
       });
-      if (requireActive && user.onboardingStep !== "ACTIVE") {
+      const treatPaidAsActive = user.paymentStatus === "PAID" && (user.onboardingStep === "PAID" || user.onboardingStep === "PROFILE_PENDING");
+      if (requireActive && user.onboardingStep !== "ACTIVE" && !treatPaidAsActive) {
         router.replace(target);
         return;
       }
