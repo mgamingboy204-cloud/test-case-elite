@@ -178,7 +178,7 @@ describe("apiFetch client", () => {
     Object.defineProperty(window, "location", {
       configurable: true,
       value: {
-        pathname: "/pwa_app/signup/verify",
+        pathname: "/pwa_app/get-started",
         assign: assignMock
       }
     });

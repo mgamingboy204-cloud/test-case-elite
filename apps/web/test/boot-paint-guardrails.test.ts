@@ -13,10 +13,11 @@ describe("boot paint guardrails", () => {
     expect(source).toContain("suppressHydrationWarning");
   });
 
-  test("legacy pwa redirects do not render null", () => {
-    const phonePage = readFileSync(resolve(appRoot, "pwa_app/signup/phone/page.tsx"), "utf8");
-    const verifyPage = readFileSync(resolve(appRoot, "pwa_app/signup/verify/page.tsx"), "utf8");
-    expect(phonePage).not.toContain("return null");
-    expect(verifyPage).not.toContain("return null");
+  test("pwa shell keeps only the minimal entry pages", () => {
+    const pwaPage = readFileSync(resolve(appRoot, "pwa_app/page.tsx"), "utf8");
+    const getStartedPage = readFileSync(resolve(appRoot, "pwa_app/get-started/page.tsx"), "utf8");
+    expect(pwaPage).toContain('"/discover"');
+    expect(getStartedPage).toContain('href="/login"');
+    expect(getStartedPage).toContain('href="/signup"');
   });
 });

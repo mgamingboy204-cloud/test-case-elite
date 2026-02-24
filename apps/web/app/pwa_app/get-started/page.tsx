@@ -29,7 +29,7 @@ export default function AppGetStartedPage() {
   }, []);
 
   useEffect(() => {
-    void router.prefetch("/pwa_app/login");
+    void router.prefetch("/login");
     void router.prefetch("/signup");
   }, [router]);
 
@@ -48,12 +48,10 @@ export default function AppGetStartedPage() {
           <Link className={`${styles.actionBtn} ${styles.primary}`} href="/signup">
             Create account
           </Link>
-          <Link className={`${styles.actionBtn} ${styles.secondary}`} href="/pwa_app/login">
-            I have an account
+          <Link className={`${styles.actionBtn} ${styles.secondary}`} href="/login">
+            Sign in
           </Link>
         </div>
-
-        <p className={styles.termsText}>By continuing, you agree to our Terms &amp; Privacy Policy.</p>
       </section>
     </main>
   );

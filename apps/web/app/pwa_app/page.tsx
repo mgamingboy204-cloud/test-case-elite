@@ -52,7 +52,7 @@ export default function AppGatewayPage() {
     redirectedRef.current = true;
     const elapsed = Date.now() - startedAtRef.current;
     const waitMs = Math.max(0, MIN_SPLASH_MS - elapsed);
-    const nextPath = authState === "logged-in" ? "/pwa_app/discover" : "/pwa_app/get-started";
+    const nextPath = authState === "logged-in" ? "/discover" : "/pwa_app/get-started";
 
     void router.prefetch(nextPath);
 
