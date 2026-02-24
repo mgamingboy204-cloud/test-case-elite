@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTheme } from "@/app/providers";
 import { isStandaloneDisplayMode } from "@/lib/displayMode";
 
@@ -28,7 +29,7 @@ function DesktopAuthShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function MobileAuthShell({ children }: { children: React.ReactNode }) {
+function MobileAuthShell({ children, fullscreen }: { children: React.ReactNode; fullscreen?: boolean }) {
   const { theme, toggle } = useTheme();
 
   useEffect(() => {
@@ -52,13 +53,15 @@ function MobileAuthShell({ children }: { children: React.ReactNode }) {
         </button>
       </header>
 
-      <main className="mobile-auth-sheet">{children}</main>
+      <main className={`mobile-auth-sheet${fullscreen ? " mobile-auth-sheet--fullscreen" : ""}`}>{children}</main>
     </div>
   );
 }
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const [useMobileShell, setUseMobileShell] = useState(false);
+  const pathname = usePathname();
+  const useFullscreenMobileAuth = pathname === "/signup";
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 900px)");
@@ -77,7 +80,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <>
-      {useMobileShell ? <MobileAuthShell>{children}</MobileAuthShell> : <DesktopAuthShell>{children}</DesktopAuthShell>}
+      {useMobileShell ? <MobileAuthShell fullscreen={useFullscreenMobileAuth}>{children}</MobileAuthShell> : <DesktopAuthShell>{children}</DesktopAuthShell>}
 
       <style jsx>{`
         .auth-shell {
@@ -212,6 +215,17 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           backdrop-filter: blur(18px);
           padding: 0 max(12px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
           box-shadow: 0 -20px 48px color-mix(in srgb, var(--bg) 58%, transparent);
+        }
+        .mobile-auth-sheet--fullscreen {
+          flex: 1;
+          border: none;
+          border-radius: 0;
+          background: transparent;
+          backdrop-filter: none;
+          box-shadow: none;
+          padding: 0;
+          display: flex;
+          min-height: 0;
         }
 
         :global(html.app-mobile-auth-locked),
