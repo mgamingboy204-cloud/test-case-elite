@@ -156,9 +156,14 @@ html {
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  width: 100%;
+  min-height: 100%;
 }
 
 html, body {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
   background-color: var(--bg);
 }
 
@@ -192,6 +197,18 @@ body {
   min-height: 100svh;
   min-height: 100dvh;
   overflow-x: hidden;
+}
+
+body > div {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  transform: none;
+}
+
+.site-main {
+  width: 100%;
+  min-height: 100dvh;
 }
 
 a {
@@ -289,6 +306,21 @@ body.app-entry-no-scroll {
 [data-app-shell="1"] .entry-screen {
   min-height: 100dvh;
   overflow: hidden;
+}
+
+
+.app-viewport-shell {
+  width: 100%;
+  min-height: 100dvh;
+}
+
+@media (max-width: 767px), (display-mode: standalone) {
+  .app-viewport-shell {
+    min-height: 100dvh;
+    overflow-x: hidden;
+    padding-left: max(0px, var(--sal));
+    padding-right: max(0px, var(--sar));
+  }
 }
 
 /* Scrollbar styling */

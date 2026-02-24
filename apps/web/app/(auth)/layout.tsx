@@ -4,13 +4,14 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTheme } from "@/app/providers";
 import { isStandaloneDisplayMode } from "@/lib/displayMode";
+import AppViewportShell from "@/app/components/AppViewportShell";
 import styles from "./layout.module.css";
 
 function DesktopAuthShell({ children }: { children: React.ReactNode }) {
   const { theme, toggle } = useTheme();
 
   return (
-    <div className={styles.authShell}>
+    <AppViewportShell className={styles.authShell}>
       <div className={styles.authBackdrop} aria-hidden="true" />
       <div className={styles.authOverlay} aria-hidden="true" />
       <div className={styles.authVignette} aria-hidden="true" />
@@ -25,7 +26,7 @@ function DesktopAuthShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <main className={styles.authPanel}>{children}</main>
-    </div>
+    </AppViewportShell>
   );
 }
 
@@ -40,7 +41,7 @@ function MobileAuthShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className={styles.mobileAuthShell}>
+    <AppViewportShell className={styles.mobileAuthShell}>
       <div className={styles.mobileAuthBackground} aria-hidden="true" />
       <div className={styles.mobileAuthOverlay} aria-hidden="true" />
 
@@ -52,7 +53,7 @@ function MobileAuthShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <main className={styles.mobileAuthSheet}>{children}</main>
-    </div>
+    </AppViewportShell>
   );
 }
 
