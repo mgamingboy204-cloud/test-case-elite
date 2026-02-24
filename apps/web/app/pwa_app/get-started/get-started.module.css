@@ -1,11 +1,16 @@
 /* =========================
    GET STARTED = DARK ONLY
    + CINEMATIC CROSSFADE
+   + iOS VIEWPORT FIX
    ========================= */
 
 .shell {
   position: relative;
-  min-height: 100svh;
+
+  /* iOS-safe real viewport height (set from JS) */
+  height: calc(var(--app-vh, 1vh) * 100);
+  min-height: calc(var(--app-vh, 1vh) * 100);
+
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -19,6 +24,9 @@
     calc(20px + env(safe-area-inset-right, 0px))
     0
     calc(20px + env(safe-area-inset-left, 0px));
+
+  /* also stabilize bottom math on iOS */
+  padding-bottom: max(18px, env(safe-area-inset-bottom, 0px));
 
   /* FORCE DARK on this screen regardless of app theme */
   color-scheme: dark;
@@ -51,7 +59,7 @@
   will-change: opacity;
 }
 
-/* DO NOT kill transitions. You had "transition: none" before — that destroys fades. */
+/* DO NOT kill transitions here. */
 .getStartedBg,
 .getStartedBg * {
   transition: none;
@@ -166,7 +174,7 @@
    CROSSFADE LAYERS
    ========================= */
 
-/* Front image sits visible */
+/* Front image */
 .bgA {
   opacity: 1;
 }
@@ -177,7 +185,7 @@
   transition: opacity 1800ms ease-in-out;
 }
 
-/* When active, it becomes visible */
+/* When active */
 .bgBVisible {
   opacity: 1;
 }
