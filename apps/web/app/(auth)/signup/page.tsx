@@ -158,9 +158,11 @@ export default function SignupPage() {
               inputMode="numeric"
               style={inputStyle}
             />
-            <Button fullWidth size="lg" loading={loading} onClick={handleSendOtp} style={buttonStyle}>
-              Continue
-            </Button>
+            <div className={styles.primaryAction}>
+              <Button fullWidth size="lg" loading={loading} onClick={handleSendOtp} style={buttonStyle}>
+                Continue
+              </Button>
+            </div>
           </>
         ) : null}
 
@@ -193,9 +195,11 @@ export default function SignupPage() {
               error={errors.confirmPassword}
               style={inputStyle}
             />
-            <Button fullWidth size="lg" loading={loading} onClick={handleSetPassword} style={buttonStyle}>
-              Create account
-            </Button>
+            <div className={styles.primaryAction}>
+              <Button fullWidth size="lg" loading={loading} onClick={handleSetPassword} style={buttonStyle}>
+                Create account
+              </Button>
+            </div>
             <button onClick={() => setStep("otp")} className={styles.backLink}>Back to OTP</button>
           </div>
         ) : null}
@@ -219,7 +223,7 @@ const inputStyle = {
 };
 
 const buttonStyle = {
-  marginTop: 8,
+  marginTop: 0,
   borderRadius: 999,
   background: "linear-gradient(120deg, var(--primary), var(--primary-hover))",
   color: "var(--ctaText)",
