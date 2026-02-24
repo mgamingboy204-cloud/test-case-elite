@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
+import LoginPage from "../../(auth)/login/page";
 
-export default function AppLoginPage() {
-  redirect("/login");
-}
+export default LoginPage;

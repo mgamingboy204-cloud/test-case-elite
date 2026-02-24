@@ -7,7 +7,6 @@ import { ClipboardEvent, KeyboardEvent, useEffect, useLayoutEffect, useMemo, use
 import { useToast } from "@/app/providers";
 import { apiFetch, resetAuthFailureState } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
-import { getDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
 import styles from "./verify.module.css";
 
@@ -27,6 +26,7 @@ export default function AppSignupVerifyPage() {
   const [resendIn, setResendIn] = useState(RESEND_SECONDS);
 
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const redirectedRef = useRef(false);
 
   const [cleanedPhone, setCleanedPhone] = useState("");
   const otpValue = otpDigits.join("");
@@ -54,10 +54,14 @@ export default function AppSignupVerifyPage() {
 
   useEffect(() => {
     if (!cleanedPhone) {
-      router.replace(appNavigate("/app/signup/phone"));
+      if (!redirectedRef.current) {
+        redirectedRef.current = true;
+        router.replace(appNavigate("/app/signup/phone"));
+      }
       return;
     }
 
+    redirectedRef.current = false;
     sessionStorage.setItem(PHONE_STORAGE_KEY, cleanedPhone);
     sessionStorage.setItem(SIGNUP_TX_STORAGE_KEY, cleanedPhone);
   }, [cleanedPhone, router]);
@@ -139,9 +143,9 @@ export default function AppSignupVerifyPage() {
         setAccessToken(verificationResponse.accessToken);
       }
 
-      const user = await refresh();
+      await refresh();
       addToast("Phone verified!", "success");
-      router.replace(getDefaultRoute(user));
+      router.replace(appNavigate("/app/onboarding/start"));
     } catch {
       setError("Invalid code. Please try again.");
     } finally {

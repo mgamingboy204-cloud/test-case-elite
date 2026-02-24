@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/Card";
 import { Input } from "@/app/components/ui/Input";
 import { Button } from "@/app/components/ui/Button";
@@ -22,6 +22,7 @@ const benefits = [
 
 export default function PaymentPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { addToast } = useToast();
   const { refresh } = useSession();
   const [coupon, setCoupon] = useState("");
@@ -83,7 +84,7 @@ export default function PaymentPage() {
     const nextRoute = getDefaultRoute(refreshedUser);
 
     if (nextRoute === "/onboarding/profile") {
-      router.push("/onboarding/profile");
+      router.push(appPathFor(pathname, "/onboarding/profile"));
       return;
     }
 

@@ -1,16 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { Button } from "@/app/components/ui/Button";
 import { useToast } from "@/app/providers";
 import { INITIAL_PROFILE_DRAFT } from "@/lib/onboardingFlow";
+import { appPathFor } from "@/lib/appNavigation";
 
 const DRAFT_KEY = "em_onboarding_profile_draft";
 
 export default function OnboardingStartPage() {
   const router = useRouter();
   const { addToast } = useToast();
+  const pathname = usePathname();
   const rules = useMemo(
     () => [
       "Keep interactions respectful and authentic.",
@@ -26,7 +28,7 @@ export default function OnboardingStartPage() {
       window.localStorage.setItem(DRAFT_KEY, JSON.stringify(nextDraft));
     }
     addToast("Great. Let’s build your profile.", "success");
-    router.push("/onboarding/profile");
+    router.push(appPathFor(pathname, "/onboarding/profile"));
   };
 
   return (

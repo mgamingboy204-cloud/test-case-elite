@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 
+import { appNavigate } from "@/lib/appNavigation";
+
 export default function AppNativeHomePage() {
-  redirect("/discover");
+  redirect(appNavigate("/app/discover"));
 }

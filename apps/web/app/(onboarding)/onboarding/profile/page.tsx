@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Input } from "@/app/components/ui/Input";
 import { Textarea } from "@/app/components/ui/Textarea";
 import { Select } from "@/app/components/ui/Select";
@@ -17,6 +17,7 @@ const STEP_IDS = ONBOARDING_PROFILE_FIELDS.filter((step) => step.stepId !== "wel
 
 export default function ProfileWizardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { refresh } = useSession();
   const { addToast } = useToast();
 
@@ -121,7 +122,7 @@ export default function ProfileWizardPage() {
       await apiFetch("/profile/complete", { method: "POST" });
       window.localStorage.removeItem(DRAFT_KEY);
       await refresh();
-      router.replace("/discover");
+      router.replace(appPathFor(pathname, "/discover"));
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Failed to complete profile";
       addToast(message, "error");
@@ -199,7 +200,7 @@ export default function ProfileWizardPage() {
   return (
     <div className="onboarding-screen">
       <header className="onboarding-topbar">
-        <button className="onboarding-icon-btn" onClick={() => (currentStep === 0 ? router.push("/onboarding/start") : setCurrentStep((value) => value - 1))} aria-label="Back">
+        <button className="onboarding-icon-btn" onClick={() => (currentStep === 0 ? router.push(appPathFor(pathname, "/onboarding/start")) : setCurrentStep((value) => value - 1))} aria-label="Back">
           ←
         </button>
         <div className="onboarding-progress-track"><div className="onboarding-progress-fill" style={{ width: `${progress}%` }} /></div>

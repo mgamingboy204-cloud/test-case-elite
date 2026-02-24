@@ -1,5 +1,9 @@
 const APP_ROOT_PATH = "/app";
 
+export function appAuthRedirect(): string {
+  return "/app/login";
+}
+
 export function appNavigate(path: string): string {
   if (path.startsWith(APP_ROOT_PATH)) {
     return path;
@@ -10,4 +14,12 @@ export function appNavigate(path: string): string {
   }
 
   return APP_ROOT_PATH;
+}
+
+export function appPathFor(pathname: string | null, path: string): string {
+  if (pathname?.startsWith("/app")) {
+    return appNavigate(`/app${path}`);
+  }
+
+  return path;
 }

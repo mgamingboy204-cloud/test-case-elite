@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { appPathFor } from "@/lib/appNavigation";
 import { useRouter } from "next/navigation";
 import { Card } from "@/app/components/ui/Card";
 import { Button } from "@/app/components/ui/Button";
@@ -25,6 +27,7 @@ const statusConfig: Record<VStatus, { label: string; variant: "default" | "prima
 };
 
 export default function VideoVerificationPage() {
+  const pathname = usePathname();
   const router = useRouter();
   const { addToast } = useToast();
   const { user, refresh } = useSession();
@@ -146,7 +149,7 @@ export default function VideoVerificationPage() {
 
         {isVerified && (
           <div className="safe-bottom">
-            <Link href="/onboarding/payment">
+            <Link href={appPathFor(pathname, "/onboarding/payment")}>
               <Button fullWidth size="lg">Continue to Payment</Button>
             </Link>
           </div>
