@@ -1,86 +1,85 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Input } from "@/app/components/ui/Input";
-import { Button } from "@/app/components/ui/Button";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
+import { Button } from "@/app/components/ui/Button";
+import { Input } from "@/app/components/ui/Input";
 import { useToast } from "@/app/providers";
+import { isStandaloneDisplayMode } from "@/lib/displayMode";
+import { ApiError } from "@/lib/apiClient";
 import { apiFetch, resetAuthFailureState } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
 import { getDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
 
-type Step = "account" | "otp";
+type Step = "phone" | "otp" | "password";
+
+const PHONE_STORAGE_KEY = "em_signup_phone";
+const TOKEN_STORAGE_KEY = "em_signup_token";
 
 export default function SignupPage() {
   const router = useRouter();
   const { addToast } = useToast();
   const { refresh } = useSession();
-  const [step, setStep] = useState<Step>("account");
+
+  const [step, setStep] = useState<Step>("phone");
+  const [phone, setPhone] = useState("");
+  const [signupToken, setSignupToken] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const isMobileUi = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 900px)").matches || isStandaloneDisplayMode();
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isMobileUi) return;
+    document.body.classList.add("app-entry-no-scroll");
+    return () => {
+      document.body.classList.remove("app-entry-no-scroll");
+    };
+  }, [isMobileUi]);
+
+  useEffect(() => {
+    const storedPhone = (sessionStorage.getItem(PHONE_STORAGE_KEY) ?? "").replace(/\D/g, "");
+    const storedToken = sessionStorage.getItem(TOKEN_STORAGE_KEY) ?? "";
+    if (storedPhone) {
+      setPhone(storedPhone);
+    }
+    if (storedToken && storedPhone) {
+      setSignupToken(storedToken);
+      setStep("password");
+    } else if (storedPhone) {
+      setStep("otp");
+    }
+  }, []);
 
   const cleanedPhone = useMemo(() => phone.replace(/\D/g, ""), [phone]);
 
-  const validateAccountStep = () => {
-    const nextErrors: Record<string, string> = {};
-
-    if (!name.trim()) {
-      nextErrors.name = "Name is required";
-    }
-
+  const handleSendOtp = async () => {
     if (!/^\d{10}$/.test(cleanedPhone)) {
-      nextErrors.phone = "Phone number must be exactly 10 digits";
+      setErrors({ phone: "Phone number must be exactly 10 digits" });
+      return;
     }
-
-    if (email.trim()) {
-      const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-      if (!isEmailValid) {
-        nextErrors.email = "Enter a valid email address";
-      }
-    }
-
-    if (password.length < 8) {
-      nextErrors.password = "Password must be at least 8 characters";
-    }
-
-    if (password !== confirmPassword) {
-      nextErrors.confirmPassword = "Passwords do not match";
-    }
-
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const handleRegister = async () => {
-    if (!validateAccountStep()) return;
-
     setLoading(true);
+    setErrors({});
     try {
-      await apiFetch("/auth/register", {
+      await apiFetch("/auth/signup/start", {
         method: "POST",
-        body: {
-          name: name.trim(),
-          phone: cleanedPhone,
-          email: email.trim() || null,
-          password
-        } as never,
+        body: { phone: cleanedPhone } as never,
         auth: "omit"
       });
-
-      addToast("Account created. Verify OTP to activate your account.", "success");
+      sessionStorage.setItem(PHONE_STORAGE_KEY, cleanedPhone);
       setStep("otp");
+      addToast("Code sent", "success");
     } catch (err: unknown) {
-      addToast(err instanceof Error ? err.message : "Registration failed", "error");
+      const message = err instanceof ApiError ? err.message : "Could not send code";
+      setErrors({ phone: message });
     } finally {
       setLoading(false);
     }
@@ -89,20 +88,18 @@ export default function SignupPage() {
   const handleVerifyOtp = async (code: string) => {
     setLoading(true);
     try {
-      const verificationResponse = await apiFetch<{ accessToken?: string }>("/auth/otp/verify", {
+      const response = await apiFetch<{ signupToken: string }>("/auth/signup/verify", {
         method: "POST",
-        body: { phone: cleanedPhone, code, rememberMe } as never,
+        body: { phone: cleanedPhone, code } as never,
         auth: "omit"
       });
-      if (verificationResponse?.accessToken) {
-        resetAuthFailureState();
-        setAccessToken(verificationResponse.accessToken);
-      }
-      const user = await refresh();
-      addToast("Phone verified!", "success");
-      router.push(getDefaultRoute(user));
-    } catch {
-      addToast("Invalid OTP", "error");
+      sessionStorage.setItem(PHONE_STORAGE_KEY, cleanedPhone);
+      sessionStorage.setItem(TOKEN_STORAGE_KEY, response.signupToken);
+      setSignupToken(response.signupToken);
+      setStep("password");
+      addToast("Phone verified", "success");
+    } catch (err: unknown) {
+      addToast(err instanceof ApiError ? err.message : "Invalid OTP", "error");
     } finally {
       setLoading(false);
     }
@@ -110,184 +107,136 @@ export default function SignupPage() {
 
   const handleResendOtp = async () => {
     try {
-      await apiFetch("/auth/otp/send", {
+      await apiFetch("/auth/signup/start", {
         method: "POST",
         body: { phone: cleanedPhone } as never,
         auth: "omit"
       });
       addToast("OTP resent", "info");
-    } catch {
-      addToast("Failed to resend OTP", "error");
+    } catch (err: unknown) {
+      addToast(err instanceof ApiError ? err.message : "Could not resend OTP", "error");
+    }
+  };
+
+  const handleSetPassword = async () => {
+    const nextErrors: Record<string, string> = {};
+    if (password.length < 8) nextErrors.password = "Password must be at least 8 characters";
+    if (password !== confirmPassword) nextErrors.confirmPassword = "Passwords do not match";
+    if (!signupToken) nextErrors.password = "Signup session expired. Verify OTP again.";
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    setLoading(true);
+    setErrors({});
+    try {
+      const response = await apiFetch<{ accessToken?: string }>("/auth/signup/complete", {
+        method: "POST",
+        body: { signupToken, password } as never,
+        auth: "omit"
+      });
+      if (response?.accessToken) {
+        resetAuthFailureState();
+        setAccessToken(response.accessToken);
+      }
+      sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+      const user = await refresh();
+      addToast("Account created", "success");
+      router.replace(getDefaultRoute(user));
+    } catch (err: unknown) {
+      const message = err instanceof ApiError ? err.message : "Failed to complete signup";
+      setErrors({ password: message });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="auth-form-card">
-      <div className="auth-form-inner">
+    <main className={isMobileUi ? "mobile-screen entry-screen" : "auth-form-card"} aria-label="Signup">
+      <div className={isMobileUi ? "mobile-content" : "auth-form-inner"}>
         <h2 className="auth-title">Create account</h2>
-        <p className="auth-subtitle">
-          {step === "account"
-            ? "Step 1: Create pending signup using phone, optional email, and password"
-            : "Step 2: Verify OTP to create your user account and start onboarding"}
-        </p>
+        <p className="auth-subtitle">{step === "phone" ? "Enter your phone number" : step === "otp" ? "Verify OTP" : "Set your password"}</p>
 
-        <div className="step-indicator" aria-hidden="true">
-          {["account", "otp"].map((s, i) => (
-            <div
-              key={s}
-              style={{
-                flex: 1,
-                height: 4,
-                borderRadius: 999,
-                background: i <= (step === "account" ? 0 : 1) ? "var(--primary)" : "var(--border)",
-                transition: "background 300ms ease"
-              }}
-            />
-          ))}
-        </div>
-
-        {step === "account" ? (
+        {step === "phone" ? (
           <>
-            <div className="field-stack">
-              <Input
-                label="Full Name"
-                placeholder="Your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                error={errors.name}
-                style={inputStyle}
-              />
-              <Input
-                label="Phone Number"
-                type="tel"
-                placeholder="1234567890"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                error={errors.phone}
-                maxLength={10}
-                inputMode="numeric"
-                style={inputStyle}
-              />
-              <Input
-                label="Email (optional)"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                error={errors.email}
-                style={inputStyle}
-              />
-              <Input
-                label="Password"
-                type="password"
-                placeholder="Minimum 8 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                error={errors.password}
-                style={inputStyle}
-              />
-              <Input
-                label="Confirm Password"
-                type="password"
-                placeholder="Repeat your password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                error={errors.confirmPassword}
-                style={inputStyle}
-              />
-            </div>
-
-            <Button fullWidth size="lg" loading={loading} onClick={handleRegister} style={buttonStyle}>
-              Continue to OTP Verification
+            <Input
+              label="Phone Number"
+              type="tel"
+              placeholder="1234567890"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              error={errors.phone}
+              maxLength={10}
+              inputMode="numeric"
+              style={isMobileUi ? mobileInputStyle : inputStyle}
+            />
+            <Button fullWidth size="lg" loading={loading} onClick={handleSendOtp} style={isMobileUi ? mobileButtonStyle : buttonStyle}>
+              Continue
             </Button>
-
-            <p className="switch-link-wrap" style={{ marginTop: 20 }}>
-              Already have an account?{" "}
-              <Link href="/login" className="switch-link">
-                Sign In
-              </Link>
-            </p>
           </>
-        ) : (
-          <div className="otp-stack">
+        ) : null}
+
+        {step === "otp" ? (
+          <div className="otp-stack fade-in">
             <p className="otp-copy">OTP sent to {cleanedPhone}. Enter the 6-digit code.</p>
-
-            <label className="check-row">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                style={{ accentColor: "var(--primary)", width: 16, height: 16 }}
-              />
-              Keep me signed in on this device
-            </label>
-
             <OtpInput onComplete={handleVerifyOtp} disabled={loading} />
             <ResendTimer onResend={handleResendOtp} />
-
-            <button onClick={() => setStep("account")} className="back-link">
-              Back to account details
-            </button>
+            <button onClick={() => setStep("phone")} className="back-link">Change number</button>
           </div>
-        )}
+        ) : null}
+
+        {step === "password" ? (
+          <div className="field-stack fade-in">
+            <Input
+              label="Password"
+              type="password"
+              placeholder="Minimum 8 characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={errors.password}
+              style={isMobileUi ? mobileInputStyle : inputStyle}
+            />
+            <Input
+              label="Confirm Password"
+              type="password"
+              placeholder="Repeat your password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              error={errors.confirmPassword}
+              style={isMobileUi ? mobileInputStyle : inputStyle}
+            />
+            <Button fullWidth size="lg" loading={loading} onClick={handleSetPassword} style={isMobileUi ? mobileButtonStyle : buttonStyle}>
+              Create account
+            </Button>
+            <button onClick={() => setStep("otp")} className="back-link">Back to OTP</button>
+          </div>
+        ) : null}
+
+        <p className="switch-link-wrap">
+          Already have an account? <Link href="/login" className="switch-link">Sign In</Link>
+        </p>
       </div>
 
       <style jsx>{`
-        .auth-form-card {
-          width: 100%;
+        .auth-form-card { width: 100%; }
+        .auth-form-inner { padding: clamp(24px, 5vw, 34px); }
+        .mobile-screen {
+          position: fixed; inset: 0; height: 100dvh; overflow: hidden; display: grid;
+          align-content: center; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px calc(12px + env(safe-area-inset-bottom, 0px));
+          background: linear-gradient(180deg, var(--bg2), var(--bg)); overscroll-behavior: none; touch-action: manipulation;
+          animation: entryPush 180ms ease-out;
         }
-        .auth-form-inner {
-          padding: clamp(24px, 5vw, 34px);
-        }
-        .auth-title {
-          margin-bottom: 6px;
-          font-size: clamp(1.6rem, 4vw, 2rem);
-          line-height: 1.2;
-        }
-        .auth-subtitle {
-          color: var(--muted);
-          font-size: 0.92rem;
-          margin-bottom: 20px;
-        }
-        .step-indicator {
-          display: flex;
-          gap: 8px;
-          margin-bottom: 24px;
-        }
-        .field-stack {
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-        }
-        .otp-stack {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        .otp-copy,
-        .back-link {
-          font-size: 14px;
-          color: var(--muted);
-          text-align: center;
-        }
-        .check-row {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-size: 14px;
-          cursor: pointer;
-        }
-        .switch-link-wrap {
-          font-size: 14px;
-          color: var(--muted);
-          text-align: center;
-        }
-        .switch-link {
-          color: var(--primary);
-          font-weight: 600;
-        }
+        .mobile-content { width: min(92vw, 420px); justify-self: center; display: flex; flex-direction: column; gap: 14px; }
+        .auth-title { margin-bottom: 6px; font-size: clamp(1.8rem, 7vw, 2rem); line-height: 1.1; }
+        .auth-subtitle { color: color-mix(in srgb, var(--text) 78%, transparent); font-size: 15px; margin-bottom: 20px; }
+        .field-stack, .otp-stack { display: flex; flex-direction: column; gap: 14px; }
+        .otp-copy, .back-link { font-size: 14px; color: var(--muted); text-align: center; }
+        .switch-link-wrap { font-size: 14px; color: var(--muted); text-align: center; margin-top: 12px; }
+        .switch-link { color: var(--primary); font-weight: 600; }
+        @keyframes entryPush { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
-    </div>
+    </main>
   );
 }
 
@@ -296,14 +245,34 @@ const inputStyle = {
   borderRadius: "14px",
   background: "color-mix(in srgb, var(--panel) 84%, transparent)",
   borderColor: "color-mix(in srgb, var(--border) 88%, transparent)",
-  padding: "13px 16px",
+  padding: "13px 16px"
 };
 
 const buttonStyle = {
-  marginTop: 24,
+  marginTop: 8,
   borderRadius: 999,
   background: "linear-gradient(120deg, var(--primary), var(--primary-hover))",
   color: "var(--ctaText)",
   boxShadow: "var(--shadow-md)",
-  letterSpacing: "0.01em",
+  letterSpacing: "0.01em"
+};
+
+const mobileInputStyle = {
+  height: 56,
+  borderRadius: "16px",
+  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
+  background: "color-mix(in srgb, var(--surface) 85%, transparent)",
+  padding: "0 16px",
+  fontSize: 22,
+  letterSpacing: "0.03em"
+};
+
+const mobileButtonStyle = {
+  height: 54,
+  borderRadius: 17,
+  border: "none",
+  fontSize: 16,
+  fontWeight: 700,
+  color: "var(--ctaText)",
+  background: "linear-gradient(120deg, var(--primary), var(--primary-hover))"
 };

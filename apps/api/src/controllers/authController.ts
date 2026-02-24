@@ -11,15 +11,18 @@ import { env } from "../config/env";
 import { parseCookies } from "../utils/cookies";
 import { prisma } from "../db/prisma";
 import {
+  completeSignupWithPassword,
   createDeviceToken,
   registerPendingUser,
+  requestSignupOtp,
   requestOtp,
   resolveOnboardingStep,
   validateLogin,
+  verifyOtpCodeOnly,
   verifyOtpAndGetUser
 } from "../services/authService";
 import { HttpError } from "../utils/httpErrors";
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
+import { signAccessToken, signRefreshToken, signSignupToken, verifyRefreshToken, verifySignupToken } from "../utils/jwt";
 
 function logSessionEvent(event: string, details: Record<string, unknown>) {
   if (env.NODE_ENV !== "production" || env.DEV_OTP_LOG === "true" || process.env.AUTH_DEBUG === "1") {
@@ -126,6 +129,39 @@ export async function register(req: Request, res: Response) {
   await registerPendingUser({ phone, email, password });
 
   return res.json({ ok: true, otpRequired: true });
+}
+
+export async function signupStart(req: Request, res: Response) {
+  const { phone } = req.body as { phone: string };
+  await requestSignupOtp(phone);
+  return res.json({ ok: true });
+}
+
+export async function signupVerify(req: Request, res: Response) {
+  const { phone, code } = req.body as { phone: string; code: string };
+  await verifyOtpCodeOnly(phone, code);
+  const signupToken = signSignupToken(phone);
+  return res.json({ ok: true, signupToken });
+}
+
+export async function signupComplete(req: Request, res: Response) {
+  const { signupToken, password } = req.body as { signupToken: string; password: string };
+
+  let phone: string;
+  try {
+    phone = verifySignupToken(signupToken);
+  } catch {
+    throw new HttpError(401, { message: "Signup session expired. Please verify OTP again." });
+  }
+
+  const user = await completeSignupWithPassword({ phone, password });
+
+  const accessToken = signAccessToken(user.id, { rememberMe: true });
+  const refreshToken = signRefreshToken(user.id, { rememberMe: true });
+  const refreshCookieOptions = buildRefreshCookieOptions(env.REFRESH_TOKEN_TTL_DAYS);
+  res.cookie(refreshCookieName, refreshToken, refreshCookieOptions);
+
+  return res.json({ ok: true, accessToken });
 }
 
 export async function login(req: Request, res: Response) {

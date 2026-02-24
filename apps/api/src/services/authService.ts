@@ -170,6 +170,59 @@ export async function requestOtp(phone: string) {
   await upsertOtpCode(phone);
 }
 
+export async function requestSignupOtp(phone: string) {
+  const existing = await prisma.user.findUnique({ where: { phone } });
+  if (existing) {
+    throw new HttpError(400, { message: "Phone already registered" });
+  }
+  await upsertOtpCode(phone);
+}
+
+export async function verifyOtpCodeOnly(phone: string, code: string) {
+  const record = await prisma.otpCode.findUnique({ where: { phone } });
+  if (!record) {
+    throw new HttpError(401, { message: "OTP not found. Please request a new code." });
+  }
+  if (record.expiresAt < new Date()) {
+    throw new HttpError(401, { message: "OTP expired. Please request a new code." });
+  }
+  if (record.attempts >= 5) {
+    throw new HttpError(401, { message: "Too many attempts. Request a new OTP." });
+  }
+
+  const valid = await bcrypt.compare(code, record.codeHash);
+  if (!valid) {
+    await prisma.otpCode.update({
+      where: { phone },
+      data: { attempts: record.attempts + 1 }
+    });
+    throw new HttpError(401, { message: "Invalid OTP. Please try again." });
+  }
+
+  await prisma.otpCode.delete({ where: { phone } });
+}
+
+export async function completeSignupWithPassword(options: { phone: string; password: string }) {
+  const existing = await prisma.user.findUnique({ where: { phone: options.phone } });
+  if (existing) {
+    throw new HttpError(400, { message: "Phone already registered" });
+  }
+  const passwordHash = await bcrypt.hash(options.password, 10);
+  const user = await prisma.user.create({
+    data: {
+      phone: options.phone,
+      passwordHash,
+      phoneVerifiedAt: new Date(),
+      verifiedAt: new Date(),
+      onboardingStep: "PHONE_VERIFIED",
+      videoVerificationStatus: "NOT_REQUESTED",
+      paymentStatus: "NOT_STARTED"
+    }
+  });
+  await prisma.pendingUser.deleteMany({ where: { phone: options.phone } });
+  return user;
+}
+
 export async function validateLogin(options: {
   phone: string;
   password: string;

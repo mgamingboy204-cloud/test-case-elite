@@ -3,8 +3,9 @@ import { env } from "../config/env";
 
 type TokenPayload = JwtPayload & {
   sub: string;
-  type: "access" | "refresh";
+  type: "access" | "refresh" | "signup";
   rememberMe?: boolean;
+  phone?: string;
 };
 
 export function signAccessToken(userId: string, options?: { rememberMe?: boolean }) {
@@ -36,4 +37,18 @@ export function verifyRefreshToken(token: string) {
     throw new Error("Invalid refresh token");
   }
   return { userId: payload.sub, rememberMe: payload.rememberMe ?? false };
+}
+
+export function signSignupToken(phone: string) {
+  return jwt.sign({ sub: phone, type: "signup", phone }, env.JWT_ACCESS_SECRET, {
+    expiresIn: "15m"
+  });
+}
+
+export function verifySignupToken(token: string) {
+  const payload = jwt.verify(token, env.JWT_ACCESS_SECRET) as TokenPayload;
+  if (!payload?.sub || payload.type !== "signup" || !payload.phone) {
+    throw new Error("Invalid signup token");
+  }
+  return payload.phone;
 }

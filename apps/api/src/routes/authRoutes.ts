@@ -1,6 +1,26 @@
 import { Router } from "express";
-import { LoginBodySchema, OtpSendSchema, OtpVerifySchema, RefreshTokenSchema, RegisterBodySchema } from "../validators/authValidators";
-import { debugCookies, login, logout, refreshAccessToken, register, sendOtp, verifyOtp } from "../controllers/authController";
+import {
+  LoginBodySchema,
+  OtpSendSchema,
+  OtpVerifySchema,
+  RefreshTokenSchema,
+  RegisterBodySchema,
+  SignupCompleteSchema,
+  SignupStartSchema,
+  SignupVerifySchema
+} from "../validators/authValidators";
+import {
+  debugCookies,
+  login,
+  logout,
+  refreshAccessToken,
+  register,
+  sendOtp,
+  signupComplete,
+  signupStart,
+  signupVerify,
+  verifyOtp
+} from "../controllers/authController";
 import { loginLimiter, otpLimiterByIp, otpLimiterByPhone, otpVerifyLimiter, registerLimiter } from "../middlewares/rateLimiters";
 import { validateBody } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -24,6 +44,9 @@ router.post(
 );
 
 router.post("/auth/register", registerLimiter, validateBody(RegisterBodySchema), asyncHandler(register));
+router.post("/auth/signup/start", otpLimiterByIp, otpLimiterByPhone, validateBody(SignupStartSchema), asyncHandler(signupStart));
+router.post("/auth/signup/verify", otpVerifyLimiter, validateBody(SignupVerifySchema), asyncHandler(signupVerify));
+router.post("/auth/signup/complete", registerLimiter, validateBody(SignupCompleteSchema), asyncHandler(signupComplete));
 
 router.post(
   "/auth/login",
