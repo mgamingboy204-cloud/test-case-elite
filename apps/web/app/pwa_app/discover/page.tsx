@@ -1,5 +1,1 @@
-import { redirect } from "next/navigation";
-
-export default function DiscoverRedirectPage() {
-  redirect("/discover");
-}
+export { default } from "../../(app)/discover/page";
