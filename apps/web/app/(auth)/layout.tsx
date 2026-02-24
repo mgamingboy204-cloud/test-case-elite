@@ -2,13 +2,34 @@
 
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useTheme } from "@/app/providers";
+import { isStandaloneDisplayMode } from "@/lib/displayMode";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const { theme, toggle } = useTheme();
+  const pathname = usePathname();
+  const [useNativeSignupMobileShell, setUseNativeSignupMobileShell] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px)");
+    const applyMode = () => {
+      const shouldUseNativeShell = pathname === "/signup" && (media.matches || isStandaloneDisplayMode());
+      setUseNativeSignupMobileShell(shouldUseNativeShell);
+    };
+
+    applyMode();
+    media.addEventListener("change", applyMode);
+    window.addEventListener("resize", applyMode);
+    return () => {
+      media.removeEventListener("change", applyMode);
+      window.removeEventListener("resize", applyMode);
+    };
+  }, [pathname]);
 
   return (
-    <div className="auth-shell">
+    <div className={useNativeSignupMobileShell ? "auth-shell auth-shell-native" : "auth-shell"}>
       <div className="auth-backdrop" aria-hidden="true" />
       <div className="auth-overlay" aria-hidden="true" />
       <div className="auth-vignette" aria-hidden="true" />
@@ -22,7 +43,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </button>
       </header>
 
-      <main className="auth-panel">{children}</main>
+      <main className={useNativeSignupMobileShell ? "auth-panel auth-panel-native" : "auth-panel"}>{children}</main>
 
       <style jsx>{`
         .auth-shell {
@@ -35,6 +56,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           justify-content: flex-end;
           padding: calc(20px + env(safe-area-inset-top, 0px)) calc(22px + env(safe-area-inset-right, 0px)) calc(22px + env(safe-area-inset-bottom, 0px)) calc(22px + env(safe-area-inset-left, 0px));
           background: linear-gradient(145deg, var(--bg2) 0%, var(--surface) 44%, var(--surface2) 100%);
+        }
+        .auth-shell-native {
+          justify-content: flex-start;
+          align-items: stretch;
+          padding: 0;
+          overflow: hidden;
+          overscroll-behavior: none;
         }
         .auth-backdrop,
         .auth-overlay,
@@ -103,6 +131,23 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 86%, transparent), color-mix(in srgb, var(--surface2) 82%, var(--pearl-panel)));
           backdrop-filter: blur(24px);
           box-shadow: var(--shadow-md);
+        }
+        .auth-panel-native {
+          width: 100%;
+          max-width: none;
+          height: 100vh;
+          height: 100svh;
+          height: 100dvh;
+          border: none;
+          border-radius: 0;
+          background: transparent;
+          box-shadow: none;
+          backdrop-filter: none;
+        }
+        .auth-shell-native .top-row {
+          top: calc(10px + env(safe-area-inset-top, 0px));
+          left: calc(14px + env(safe-area-inset-left, 0px));
+          right: calc(14px + env(safe-area-inset-right, 0px));
         }
         :global([data-theme='light']) .auth-shell {
           background: linear-gradient(145deg, var(--bg) 0%, var(--surface2) 48%, var(--surface) 100%);
