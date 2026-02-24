@@ -238,8 +238,8 @@ export default function SignupPage() {
           overflow: hidden;
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
-          padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 0;
+          justify-content: flex-start;
+          padding: 0 max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px));
           background: linear-gradient(180deg, var(--bg2), var(--bg));
           overscroll-behavior: none;
           touch-action: manipulation;
@@ -247,10 +247,11 @@ export default function SignupPage() {
         }
         .mobile-header {
           width: 100%;
-          min-height: clamp(34px, 10vh, 58px);
+          min-height: calc(44px + env(safe-area-inset-top, 0px));
         }
         .mobile-content {
           width: 100%;
+          margin-top: auto;
           display: flex;
           flex-direction: column;
           gap: 10px;
@@ -259,7 +260,7 @@ export default function SignupPage() {
           border-bottom: none;
           background: linear-gradient(160deg, color-mix(in srgb, var(--surface) 88%, transparent), color-mix(in srgb, var(--surface2) 84%, transparent));
           backdrop-filter: blur(16px);
-          padding: 16px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+          padding: 16px 14px calc(14px + env(safe-area-inset-bottom, 0px));
         }
         .auth-title { margin-bottom: 4px; font-size: clamp(1.6rem, 7vw, 1.95rem); line-height: 1.08; }
         .auth-subtitle { color: color-mix(in srgb, var(--text) 78%, transparent); font-size: 14px; margin-bottom: 10px; }
@@ -268,8 +269,8 @@ export default function SignupPage() {
         .switch-link-wrap { font-size: 14px; color: var(--muted); text-align: center; margin-top: 4px; }
         .switch-link { color: var(--primary); font-weight: 600; }
         @media (max-height: 700px) {
-          .mobile-screen { padding-top: calc(4px + env(safe-area-inset-top, 0px)); }
-          .mobile-header { min-height: clamp(20px, 8vh, 34px); }
+          .mobile-screen { padding: 0 max(10px, env(safe-area-inset-right, 0px)) 0 max(10px, env(safe-area-inset-left, 0px)); }
+          .mobile-header { min-height: calc(38px + env(safe-area-inset-top, 0px)); }
           .mobile-content { padding: 14px 12px calc(10px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
           .auth-title { font-size: clamp(1.35rem, 6vw, 1.65rem); margin-bottom: 2px; }
           .auth-subtitle { font-size: 13px; margin-bottom: 8px; }
