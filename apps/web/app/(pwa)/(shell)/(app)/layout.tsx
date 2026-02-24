@@ -2,8 +2,8 @@
 
 import React from "react"
 
-import { AppShell } from "@/app/components/shells/AppShell";
-import RouteGuard from "@/app/components/RouteGuard";
+import { AppShell } from "@/components/pwa/AppShell";
+import RouteGuard from "@/components/shared/RouteGuard";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (

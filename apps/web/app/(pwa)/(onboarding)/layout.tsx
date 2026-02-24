@@ -4,7 +4,7 @@ import React from "react"
 
 import Link from "next/link";
 import { useTheme } from "@/app/providers";
-import RouteGuard from "@/app/components/RouteGuard";
+import RouteGuard from "@/components/shared/RouteGuard";
 
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const { theme, toggle } = useTheme();
