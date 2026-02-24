@@ -38,3 +38,8 @@ export function getDefaultRoute(user: SessionUser | null) {
   }
   return getOnboardingRoute(user.onboardingStep);
 }
+
+export function getPwaDefaultRoute(user: SessionUser | null) {
+  if (!user?.onboardingStep) return "/pwa_app/get-started";
+  return "/pwa_app/discover";
+}

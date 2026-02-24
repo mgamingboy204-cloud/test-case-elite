@@ -6,7 +6,7 @@ import { ClipboardEvent, KeyboardEvent, useEffect, useLayoutEffect, useMemo, use
 import { useToast } from "@/app/providers";
 import { apiFetch, resetAuthFailureState } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
-import { getDefaultRoute } from "@/lib/onboarding";
+import { getPwaDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
 import styles from "./verify.module.css";
 
@@ -136,7 +136,7 @@ export default function AppSignupVerifyPage() {
 
       const user = await refresh();
       addToast("Phone verified!", "success");
-      router.replace(getDefaultRoute(user));
+      router.replace(getPwaDefaultRoute(user));
     } catch {
       setError("Invalid code. Please try again.");
     } finally {
