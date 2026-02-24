@@ -50,6 +50,18 @@ export default function Providers({ children }: { children: ReactNode }) {
   });
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (!document.body.classList.contains("splash-transition")) return;
+
+    const clearTimer = window.setTimeout(() => {
+      document.body.classList.remove("splash-transition");
+    }, 350);
+
+    return () => window.clearTimeout(clearTimer);
+  }, []);
+
   useEffect(() => {
     const stored = localStorage.getItem("em_theme") as Theme | null;
     if (stored === "light" || stored === "dark") {

@@ -3,10 +3,13 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import SplashScreen from "@/app/components/SplashScreen";
-import { resolveNextRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
-
-const MIN_SPLASH_MS = 800;
+import {
+  resolveSplashDestination,
+  SPLASH_MIN_VISIBLE_MS,
+  SPLASH_SOFT_TIMEOUT_MS,
+  warmRouteChunks
+} from "@/lib/splashGate";
 
 export default function AppGatewayPage() {
   const router = useRouter();
@@ -15,20 +18,42 @@ export default function AppGatewayPage() {
   const redirectedRef = useRef(false);
 
   useEffect(() => {
+    const fallback = "/pwa_app/get-started";
+
+    void router.prefetch(fallback);
+    warmRouteChunks(fallback);
+
+    const softTimeout = window.setTimeout(() => {
+      if (redirectedRef.current) return;
+      redirectedRef.current = true;
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[splash-gate] pwa soft-timeout route", { fallback });
+      }
+      document.body.classList.add("splash-transition");
+      router.replace(fallback);
+    }, SPLASH_SOFT_TIMEOUT_MS);
+
+    return () => window.clearTimeout(softTimeout);
+  }, [router]);
+
+  useEffect(() => {
     if (status === "loading" || redirectedRef.current) return;
 
-    redirectedRef.current = true;
     const elapsed = Date.now() - startedAtRef.current;
-    const waitMs = Math.max(0, MIN_SPLASH_MS - elapsed);
-    const nextPath = resolveNextRoute(status === "logged-in" ? user : null, {
-      loggedOutRoute: "/pwa_app/get-started"
-    });
+    const waitMs = Math.max(0, SPLASH_MIN_VISIBLE_MS - elapsed);
+    const nextPath = resolveSplashDestination(status, user, true);
 
     void router.prefetch(nextPath);
+    warmRouteChunks(nextPath);
 
-    window.setTimeout(() => {
+    const redirectTimer = window.setTimeout(() => {
+      if (redirectedRef.current) return;
+      redirectedRef.current = true;
+      document.body.classList.add("splash-transition");
       router.replace(nextPath);
     }, waitMs);
+
+    return () => window.clearTimeout(redirectTimer);
   }, [status, user, router]);
 
   return <SplashScreen />;

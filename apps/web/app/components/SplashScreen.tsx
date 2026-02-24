@@ -20,9 +20,8 @@ export default function SplashScreen({ subtitle = "from Elite Tech" }: SplashScr
       </div>
       <style jsx>{`
         .app-splash-shell {
-          position: relative;
-          min-height: 100vh;
-          min-height: 100dvh;
+          position: fixed;
+          inset: 0;
           overflow: hidden;
           display: grid;
           grid-template-rows: 1fr auto;
@@ -31,7 +30,6 @@ export default function SplashScreen({ subtitle = "from Elite Tech" }: SplashScr
           padding: calc(24px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px));
           background: radial-gradient(120% 80% at 80% 10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 62%),
             linear-gradient(180deg, color-mix(in srgb, var(--bg) 96%, transparent), color-mix(in srgb, var(--bg2) 88%, var(--accent) 12%));
-          animation: splashFade 220ms ease-out;
         }
 
         [data-theme="light"] .app-splash-shell {
@@ -39,20 +37,13 @@ export default function SplashScreen({ subtitle = "from Elite Tech" }: SplashScr
             linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, white 12%), color-mix(in srgb, var(--bg) 94%, var(--accent2) 6%));
         }
 
-        .app-splash-shell::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 6%, transparent), transparent 40%, color-mix(in srgb, var(--bg) 14%, transparent));
-        }
-
         .app-splash-brand {
           align-self: center;
-          transform: translateY(-6vh);
           display: grid;
           justify-items: center;
           gap: 14px;
+          will-change: transform, opacity, filter;
+          animation: premiumRise 840ms cubic-bezier(0.22, 0.9, 0.2, 1) both;
         }
 
         .app-splash-logo {
@@ -78,21 +69,25 @@ export default function SplashScreen({ subtitle = "from Elite Tech" }: SplashScr
           font-weight: 500;
           color: color-mix(in srgb, var(--text) 55%, transparent);
           text-align: center;
+          will-change: opacity;
+          animation: creditIn 360ms ease 220ms both;
         }
 
-        @keyframes splashFade {
-          from {
-            opacity: 0;
-            transform: translateY(2px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        @keyframes premiumRise {
+          0% { opacity: 0; transform: translate3d(0, 16px, 0) scale(0.98); filter: blur(8px); }
+          38% { opacity: 1; transform: translate3d(0, -4px, 0) scale(1); filter: blur(0); }
+          72% { opacity: 1; transform: translate3d(0, -2px, 0) scale(0.995); }
+          100% { opacity: 0.98; transform: translate3d(0, -8px, 0) scale(0.985); }
+        }
+
+        @keyframes creditIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .app-splash-shell {
+          .app-splash-brand,
+          .app-splash-credit {
             animation: none;
           }
         }
