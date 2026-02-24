@@ -4,6 +4,9 @@
 .container {
   padding: clamp(24px, 5vw, 34px);
 }
+.primaryAction {
+  margin-top: 24px;
+}
 .title {
   margin-bottom: 6px;
   font-size: clamp(1.65rem, 4vw, 2.15rem);
@@ -87,7 +90,7 @@
   }
 
   .container {
-    padding: 18px 10px 8px;
+    padding: 18px 10px 10px;
   }
 
   .title {
@@ -119,7 +122,17 @@
 
   .root :global(input),
   .root :global(button) {
-    min-height: 44px;
+    min-height: 48px;
+  }
+
+  .primaryAction {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    margin: 18px -4px 0;
+    padding: 12px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 16%, transparent), color-mix(in srgb, var(--surface) 90%, transparent) 38%, color-mix(in srgb, var(--surface2) 96%, transparent));
+    backdrop-filter: blur(16px);
   }
 
   .links {

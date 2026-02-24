@@ -170,9 +170,11 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <Button fullWidth size="lg" loading={loading} onClick={handleLogin} style={buttonStyle}>
-              Sign In
-            </Button>
+            <div className={styles.primaryAction}>
+              <Button fullWidth size="lg" loading={loading} onClick={handleLogin} style={buttonStyle}>
+                Sign In
+              </Button>
+            </div>
 
             <div className={styles.links}>
               <Link href="/otp" className={`${styles.linkPrimary} ${styles.otpLink}`}>
@@ -212,7 +214,7 @@ const inputStyle = {
 };
 
 const buttonStyle = {
-  marginTop: 24,
+  marginTop: 0,
   borderRadius: 999,
   background: "linear-gradient(120deg, var(--primary), var(--primary-hover))",
   color: "var(--ctaText)",
