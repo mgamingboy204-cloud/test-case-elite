@@ -1,0 +1,10 @@
+.card { max-width: 420px; width: 100%; padding: 0; }
+.container { padding: 32px 28px; }
+.title { margin-bottom: 4px; }
+.subtitle { color: var(--muted); font-size: 15px; margin-bottom: 24px; }
+.button { margin-top: 20px; }
+.stack { display: flex; flex-direction: column; gap: 20px; }
+.checkRow { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
+.checkbox { accent-color: var(--primary); width: 16px; height: 16px; }
+.footer { font-size: 14px; color: var(--muted); text-align: center; margin-top: 24px; }
+.backLink { color: var(--primary); font-weight: 600; }

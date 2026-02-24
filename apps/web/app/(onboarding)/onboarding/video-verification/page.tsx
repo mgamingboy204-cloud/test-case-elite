@@ -12,6 +12,7 @@ import { useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import { getDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
+import styles from "./page.module.css";
 
 type VStatus = "NOT_REQUESTED" | "REQUESTED" | "IN_PROGRESS" | "COMPLETED" | "APPROVED" | "REJECTED";
 
@@ -89,7 +90,7 @@ export default function VideoVerificationPage() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className={styles.loading}>
         <Skeleton height={32} width={240} />
         <Skeleton height={220} />
         <Skeleton height={44} width={220} />
@@ -102,35 +103,27 @@ export default function VideoVerificationPage() {
   }
 
   return (
-    <div className="fade-in" style={{ paddingBottom: 24 }}>
-      <h1 style={{ marginBottom: 8 }}>Video Verification</h1>
-      <p style={{ color: "var(--muted)", fontSize: 15, marginBottom: 24 }}>
+    <div className={`fade-in ${styles.root}`}>
+      <h1 className={styles.title}>Video Verification</h1>
+      <p className={styles.subtitle}>
         We continuously check your verification status and move you to the next onboarding step automatically.
       </p>
 
-      <Card
-        style={{
-          padding: 28,
-          marginBottom: 24,
-          border: "1px solid color-mix(in srgb, var(--accent) 28%, var(--border))",
-          background: "linear-gradient(150deg, color-mix(in srgb, var(--surface2) 90%, var(--accent) 10%), var(--panel))",
-          boxShadow: "var(--shadow-lg)",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h3 style={{ margin: 0 }}>Current Status</h3>
+      <Card className={styles.card}>
+        <div className={styles.header}>
+          <h3 className={styles.statusTitle}>Current Status</h3>
           <Badge variant={config.variant}>{config.label}</Badge>
         </div>
 
-        <p style={{ color: "var(--muted)", marginBottom: 16 }}>{config.desc}</p>
+        <p className={styles.description}>{config.desc}</p>
 
-        <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 20 }}>
+        <p className={styles.meta}>
           Live tracking: every 7s{lastUpdatedAt ? ` • Last checked ${lastUpdatedAt.toLocaleTimeString()}` : ""}
         </p>
 
         {status === "NOT_REQUESTED" && (
           <div className="safe-bottom">
-            <Button fullWidth loading={requesting} onClick={handleRequest} size="lg" style={{ minHeight: 52, fontWeight: 700 }}>
+            <Button fullWidth loading={requesting} onClick={handleRequest} size="lg" className={styles.requestButton}>
               Request Verification
             </Button>
           </div>
@@ -153,9 +146,9 @@ export default function VideoVerificationPage() {
         )}
 
         {status === "REJECTED" && (
-          <div className="safe-bottom" style={{ display: "flex", gap: 12, flexDirection: "column" }}>
-            <Button fullWidth loading={requesting} onClick={handleRequest} style={{ minHeight: 48 }}>Request Again</Button>
-            <Link href="/support" style={{ textAlign: "center", color: "var(--primary)", fontWeight: 500, fontSize: 14 }}>
+          <div className={`safe-bottom ${styles.rejectedActions}`}>
+            <Button fullWidth loading={requesting} onClick={handleRequest} className={styles.retryButton}>Request Again</Button>
+            <Link href="/support" className={styles.supportLink}>
               Contact Support
             </Link>
           </div>

@@ -12,6 +12,7 @@ import { apiFetch, resetAuthFailureState } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
 import { getDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
+import styles from "./page.module.css";
 
 type Step = "phone" | "otp" | "password";
 
@@ -139,10 +140,10 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="auth-form-card" aria-label="Signup">
-      <div className="auth-form-inner">
-        <h2 className="auth-title">Create account</h2>
-        <p className="auth-subtitle">{step === "phone" ? "Enter your phone number" : step === "otp" ? "Verify OTP" : "Set your password"}</p>
+    <main className={styles.root} aria-label="Signup">
+      <div className={styles.container}>
+        <h2 className={styles.title}>Create account</h2>
+        <p className={styles.subtitle}>{step === "phone" ? "Enter your phone number" : step === "otp" ? "Verify OTP" : "Set your password"}</p>
 
         {step === "phone" ? (
           <>
@@ -164,16 +165,16 @@ export default function SignupPage() {
         ) : null}
 
         {step === "otp" ? (
-          <div className="otp-stack fade-in">
-            <p className="otp-copy">OTP sent to {cleanedPhone}. Enter the 6-digit code.</p>
+          <div className={`${styles.stack} fade-in`}>
+            <p className={styles.copy}>OTP sent to {cleanedPhone}. Enter the 6-digit code.</p>
             <OtpInput onComplete={handleVerifyOtp} disabled={loading} />
             <ResendTimer onResend={handleResendOtp} />
-            <button onClick={() => setStep("phone")} className="back-link">Change number</button>
+            <button onClick={() => setStep("phone")} className={styles.backLink}>Change number</button>
           </div>
         ) : null}
 
         {step === "password" ? (
-          <div className="field-stack fade-in">
+          <div className={`${styles.stack} fade-in`}>
             <Input
               label="Password"
               type="password"
@@ -195,26 +196,15 @@ export default function SignupPage() {
             <Button fullWidth size="lg" loading={loading} onClick={handleSetPassword} style={buttonStyle}>
               Create account
             </Button>
-            <button onClick={() => setStep("otp")} className="back-link">Back to OTP</button>
+            <button onClick={() => setStep("otp")} className={styles.backLink}>Back to OTP</button>
           </div>
         ) : null}
 
-        <p className="switch-link-wrap">
-          Already have an account? <Link href="/login" className="switch-link">Sign In</Link>
+        <p className={styles.switchWrap}>
+          Already have an account? <Link href="/login" className={styles.linkPrimary}>Sign In</Link>
         </p>
       </div>
 
-      <style jsx>{`
-        .auth-form-card { width: 100%; }
-        .auth-form-inner { padding: clamp(24px, 5vw, 34px); }
-        .auth-title { margin-bottom: 4px; font-size: clamp(1.6rem, 7vw, 1.95rem); line-height: 1.08; }
-        .auth-subtitle { color: color-mix(in srgb, var(--text) 78%, transparent); font-size: 14px; margin-bottom: 10px; }
-        .field-stack, .otp-stack { display: flex; flex-direction: column; gap: 12px; }
-        .otp-copy, .back-link { font-size: 14px; color: var(--muted); text-align: center; }
-        .switch-link-wrap { font-size: 14px; color: var(--muted); text-align: center; margin-top: 8px; }
-        .switch-link { color: var(--primary); font-weight: 600; }
-        :global(.auth-form-card input) { font-size: 16px; }
-      `}</style>
     </main>
   );
 }

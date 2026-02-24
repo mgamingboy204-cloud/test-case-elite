@@ -11,6 +11,7 @@ import { apiFetch, resetAuthFailureState } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
 import { getDefaultRoute } from "@/lib/onboarding";
 import { useSession } from "@/lib/session";
+import styles from "./page.module.css";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -109,14 +110,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="auth-form-card">
-      <div className="auth-form-inner">
-        <h2 className="auth-title">Welcome back</h2>
-        <p className="auth-subtitle">Sign in to your account</p>
+    <div className={styles.root}>
+      <div className={styles.container}>
+        <h2 className={styles.title}>Welcome back</h2>
+        <p className={styles.subtitle}>Sign in to your account</p>
 
         {!otpRequired ? (
           <>
-            <div className="field-stack">
+            <div className={styles.field}>
               <Input
                 label="Phone Number"
                 type="tel"
@@ -128,7 +129,7 @@ export default function LoginPage() {
                 inputMode="numeric"
                 style={inputStyle}
               />
-              <div style={{ position: "relative" }}>
+              <div className={styles.passwordField}>
                 <Input
                   label="Password"
                   type={showPassword ? "text" : "password"}
@@ -141,28 +142,28 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="show-password"
+                  className={styles.showPassword}
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
 
-              <div className="check-stack">
-                <label className="check-row">
+              <div className={styles.checkStack}>
+                <label className={styles.checkRow}>
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    style={{ accentColor: "var(--primary)", width: 16, height: 16 }}
+                    className={styles.checkbox}
                   />
                   Remember me
                 </label>
-                <label className="check-row">
+                <label className={styles.checkRow}>
                   <input
                     type="checkbox"
                     checked={rememberDevice}
                     onChange={(e) => setRememberDevice(e.target.checked)}
-                    style={{ accentColor: "var(--primary)", width: 16, height: 16 }}
+                    className={styles.checkbox}
                   />
                   Remember this device for 30 days
                 </label>
@@ -173,107 +174,30 @@ export default function LoginPage() {
               Sign In
             </Button>
 
-            <div className="auth-links">
-              <Link href="/otp" className="otp-link">
+            <div className={styles.links}>
+              <Link href="/otp" className={`${styles.linkPrimary} ${styles.otpLink}`}>
                 Sign in with OTP instead
               </Link>
-              <p className="switch-link-wrap">
+              <p className={styles.switchWrap}>
                 {"Don't have an account? "}
-                <Link href="/signup" className="switch-link">
+                <Link href="/signup" className={styles.linkPrimary}>
                   Sign Up
                 </Link>
               </p>
             </div>
           </>
         ) : (
-          <div className="otp-stack">
-            <p className="otp-copy">Enter the 6-digit code sent to your phone</p>
+          <div className={styles.otpStack}>
+            <p className={styles.otpCopy}>Enter the 6-digit code sent to your phone</p>
             <OtpInput onComplete={handleVerifyOtp} disabled={loading} />
             <ResendTimer onResend={handleSendOtp} />
-            <button onClick={() => setOtpRequired(false)} className="back-link">
+            <button onClick={() => setOtpRequired(false)} className={styles.backLink}>
               Back to login
             </button>
           </div>
         )}
       </div>
 
-      <style jsx>{`
-        .auth-form-card {
-          width: 100%;
-        }
-        .auth-form-inner {
-          padding: clamp(24px, 5vw, 34px);
-        }
-        .auth-title {
-          margin-bottom: 6px;
-          font-size: clamp(1.65rem, 4vw, 2.15rem);
-          line-height: 1.2;
-        }
-        .auth-subtitle {
-          color: var(--muted);
-          font-size: 0.96rem;
-          margin-bottom: 24px;
-        }
-        .field-stack {
-          display: flex;
-          flex-direction: column;
-          gap: 15px;
-        }
-        .show-password {
-          position: absolute;
-          right: 14px;
-          top: 39px;
-          font-size: 13px;
-          color: var(--muted);
-          font-weight: 600;
-        }
-        .show-password:hover {
-          color: var(--primary);
-        }
-        .check-stack {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-        .check-row {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-size: 14px;
-          color: color-mix(in srgb, var(--text) 84%, var(--muted));
-          cursor: pointer;
-        }
-        .auth-links {
-          text-align: center;
-          margin-top: 20px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-        .otp-link,
-        .switch-link {
-          color: var(--primary);
-          font-weight: 600;
-        }
-        .otp-link {
-          font-size: 0.94rem;
-        }
-        .switch-link-wrap {
-          font-size: 14px;
-          color: var(--muted);
-        }
-        .otp-stack {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-        .otp-copy,
-        .back-link {
-          font-size: 14px;
-          color: var(--muted);
-          text-align: center;
-        }
-      `}</style>
     </div>
   );
 }
