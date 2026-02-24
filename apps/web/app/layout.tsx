@@ -11,7 +11,7 @@ const themeScript = `
       var theme = stored === "light" || stored === "dark" ? stored : (systemDark ? "dark" : "light");
       document.documentElement.dataset.theme = theme;
       document.documentElement.style.colorScheme = theme;
-      document.documentElement.style.backgroundColor = theme === "dark" ? "#0B0B10" : "#FAFAFB";
+      document.documentElement.style.backgroundColor = theme === "dark" ? "#0B0B10" : "#F8F4EF";
       requestAnimationFrame(function() {
         document.documentElement.classList.remove("theme-preload");
       });
@@ -42,7 +42,7 @@ export const viewport: Viewport = {
   width: "device-width",
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#0B0B10" },
-    { media: "(prefers-color-scheme: light)", color: "#FAFAFB" }
+    { media: "(prefers-color-scheme: light)", color: "#F8F4EF" }
   ],
   initialScale: 1,
   viewportFit: "cover",
@@ -52,11 +52,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning style={{ backgroundColor: "#0B0B10" }}>
+    <html lang="en" suppressHydrationWarning style={{ backgroundColor: "var(--bg)" }}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body style={{ backgroundColor: "#0B0B10" }}>
+      <body style={{ backgroundColor: "var(--bg)" }}>
         <div className="boot-shell" aria-hidden="true">
           <div className="boot-shell__mark" />
         </div>

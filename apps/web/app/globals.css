@@ -26,22 +26,25 @@
   --rose-300: #d79798;
   --rose-500: #c27d80;
   --rose-600: #af7375;
-  --bg: #fafafb;
-  --bg2: #f4f5f8;
-  --surface: #ffffff;
-  --surface2: #f2f3f6;
+  --bg: #f8f4ef;
+  --bg2: #f2ece5;
+  --surface: #fdf8f2;
+  --surface2: #f4ede6;
   --panel: var(--surface);
-  --text: rgba(10, 10, 12, 0.92);
-  --text-secondary: rgba(10, 10, 12, 0.7);
-  --muted: rgba(10, 10, 12, 0.58);
-  --border: rgba(0, 0, 0, 0.08);
+  --text: rgba(24, 19, 18, 0.9);
+  --text-secondary: rgba(38, 30, 28, 0.72);
+  --muted: rgba(38, 30, 28, 0.58);
+  --border: rgba(67, 50, 44, 0.13);
   --accent: var(--rose-500);
   --accent2: var(--rose-300);
-  --pearl-panel: rgba(255,255,255,0.06);
+  --pearl-panel: rgba(255, 248, 239, 0.6);
+  --surface-1: var(--surface);
+  --surface-2: var(--surface2);
+  --text-primary: var(--text);
   --accent-light: var(--rose-300);
   --accent-deep: var(--rose-600);
-  --rose-glow: rgba(194,125,128,0.10);
-  --rose-glow-2: rgba(215,151,152,0.08);
+  --rose-glow: rgba(194, 125, 128, 0.13);
+  --rose-glow-2: rgba(215, 151, 152, 0.11);
   --metal-trim: linear-gradient(135deg, color-mix(in srgb, var(--accent-light) 55%, transparent), color-mix(in srgb, var(--accent) 58%, transparent), color-mix(in srgb, var(--accent-deep) 56%, transparent));
   --interactive-raise: translateY(-2px);
   --ring: color-mix(in srgb, var(--rose-500) 68%, transparent);
@@ -56,8 +59,8 @@
   --success-light: rgba(22, 163, 74, 0.08);
   --warning: #F59E0B;
   --warning-light: rgba(245, 158, 11, 0.08);
-  --shadow-sm: 0 10px 26px color-mix(in srgb, #0b0b10 10%, transparent);
-  --shadow-md: 0 18px 40px color-mix(in srgb, #0b0b10 16%, transparent);
+  --shadow-sm: 0 10px 24px color-mix(in srgb, #201715 10%, transparent);
+  --shadow-md: 0 18px 38px color-mix(in srgb, #201715 14%, transparent);
   --shadow: var(--shadow-sm);
   --shadow-lg: var(--shadow-md);
   --shadow-xl: var(--shadow-md);
@@ -69,8 +72,8 @@
   --overlay: rgba(0,0,0,0.4);
   --shimmer-from: #f0f0f0;
   --shimmer-to: #e0e0e0;
-  --marketing-bg-start: #fafafb;
-  --marketing-bg-end: #f1f2f6;
+  --marketing-bg-start: var(--bg);
+  --marketing-bg-end: var(--bg2);
   --marketing-text-strong: var(--text);
   --marketing-text-muted: var(--text-secondary);
   --marketing-glass: color-mix(in srgb, var(--surface) 86%, transparent);
@@ -98,6 +101,9 @@
   --surface: #12121a;
   --surface2: #161622;
   --panel: var(--surface);
+  --surface-1: var(--surface);
+  --surface-2: var(--surface2);
+  --text-primary: var(--text);
   --text: rgba(255, 255, 255, 0.92);
   --text-secondary: rgba(255, 255, 255, 0.72);
   --muted: rgba(255, 255, 255, 0.55);
@@ -425,6 +431,10 @@ body.app-entry-no-scroll {
   align-items: center;
   justify-content: space-around;
   z-index: 100;
+}
+
+.shell-page {
+  background: var(--bg);
 }
 
 .app-mobile-bottom-nav__link {
