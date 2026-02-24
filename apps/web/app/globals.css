@@ -162,6 +162,27 @@ html, body {
   background-color: var(--bg);
 }
 
+
+.boot-shell {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--bg);
+}
+
+.boot-shell__mark {
+  position: absolute;
+  top: max(28px, calc(16px + var(--sat)));
+  left: 50%;
+  width: 72px;
+  height: 6px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--accent) 62%, transparent);
+  opacity: 0.22;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background-color: var(--bg);

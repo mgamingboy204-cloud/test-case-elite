@@ -3,6 +3,7 @@
 import { ReactNode, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "../../lib/session";
+import SplashScreen from "./SplashScreen";
 import { getOnboardingRoute } from "../../lib/onboarding";
 
 type RouteGuardProps = {
@@ -62,7 +63,7 @@ export default function RouteGuard({
   }, [status, requireAdmin, requireActive, allowedOnboardingSteps, user, router, pathname, loggedOutRedirect]);
 
   if (status === "loading") {
-    return <>{children}</>;
+    return <SplashScreen subtitle="Loading your experience" />;
   }
 
   if (status === "logged-out") {
