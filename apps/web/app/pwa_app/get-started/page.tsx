@@ -60,15 +60,14 @@ export default function AppGetStartedPage() {
 
   // Crossfade loop
   useEffect(() => {
-    const DURATION_MS = 900; // must match CSS
-    const HOLD_MS = 4000;
+    const DURATION_MS = 1800; // MUST match CSS transition duration
+    const HOLD_MS = 4000;     // time each image stays before next fade
 
     const tick = () => {
       setFadeIn(true);
 
-      // after fade, swap and pick next back
       timeoutRef.current = window.setTimeout(() => {
-        setFrontIdx((prevFront) => {
+        setFrontIdx(() => {
           const newFront = backIdx;
           const newBack = nextIndex(newFront, BACKGROUND_IMAGES.length);
           setBackIdx(newBack);
@@ -84,7 +83,6 @@ export default function AppGetStartedPage() {
       if (intervalRef.current) window.clearInterval(intervalRef.current);
       if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
     };
-    // backIdx intentionally included so swap uses latest
   }, [backIdx]);
 
   const frontSrc = BACKGROUND_IMAGES[frontIdx] ?? BACKGROUND_IMAGES[0];
@@ -92,7 +90,7 @@ export default function AppGetStartedPage() {
 
   return (
     <main className={styles.shell} aria-label="Get started">
-      {/* two-layer background for crossfade */}
+      {/* Two-layer background for crossfade */}
       <img className={`${styles.getStartedBg} ${styles.bgA}`} src={frontSrc} alt="" aria-hidden="true" />
       <img
         className={`${styles.getStartedBg} ${styles.bgB} ${fadeIn ? styles.bgBVisible : ""}`}
