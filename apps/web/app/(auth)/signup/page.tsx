@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { OtpInput, ResendTimer } from "@/app/components/OtpInput";
 import { Button } from "@/app/components/ui/Button";
 import { Input } from "@/app/components/ui/Input";
 import { useToast } from "@/app/providers";
-import { isStandaloneDisplayMode } from "@/lib/displayMode";
 import { ApiError } from "@/lib/apiClient";
 import { apiFetch, resetAuthFailureState } from "@/lib/api";
 import { setAccessToken } from "@/lib/authToken";
@@ -31,26 +30,6 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const [isMobileUi, setIsMobileUi] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 900px)");
-    const applyMode = () => {
-      setIsMobileUi(media.matches || isStandaloneDisplayMode());
-    };
-    applyMode();
-    media.addEventListener("change", applyMode);
-    return () => media.removeEventListener("change", applyMode);
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!isMobileUi) return;
-    document.body.classList.add("app-entry-no-scroll");
-    return () => {
-      document.body.classList.remove("app-entry-no-scroll");
-    };
-  }, [isMobileUi]);
 
   useEffect(() => {
     const storedPhone = (sessionStorage.getItem(PHONE_STORAGE_KEY) ?? "").replace(/\D/g, "");
@@ -160,9 +139,8 @@ export default function SignupPage() {
   };
 
   return (
-    <main className={isMobileUi ? "mobile-screen entry-screen auth-mobile-root" : "auth-form-card"} aria-label="Signup">
-      {isMobileUi ? <div className="mobile-header" aria-hidden="true" /> : null}
-      <div className={isMobileUi ? "mobile-content" : "auth-form-inner"}>
+    <main className="auth-form-card" aria-label="Signup">
+      <div className="auth-form-inner">
         <h2 className="auth-title">Create account</h2>
         <p className="auth-subtitle">{step === "phone" ? "Enter your phone number" : step === "otp" ? "Verify OTP" : "Set your password"}</p>
 
@@ -177,9 +155,9 @@ export default function SignupPage() {
               error={errors.phone}
               maxLength={10}
               inputMode="numeric"
-              style={isMobileUi ? mobileInputStyle : inputStyle}
+              style={inputStyle}
             />
-            <Button fullWidth size="lg" loading={loading} onClick={handleSendOtp} style={isMobileUi ? mobileButtonStyle : buttonStyle}>
+            <Button fullWidth size="lg" loading={loading} onClick={handleSendOtp} style={buttonStyle}>
               Continue
             </Button>
           </>
@@ -203,7 +181,7 @@ export default function SignupPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               error={errors.password}
-              style={isMobileUi ? mobileInputStyle : inputStyle}
+              style={inputStyle}
             />
             <Input
               label="Confirm Password"
@@ -212,9 +190,9 @@ export default function SignupPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               error={errors.confirmPassword}
-              style={isMobileUi ? mobileInputStyle : inputStyle}
+              style={inputStyle}
             />
-            <Button fullWidth size="lg" loading={loading} onClick={handleSetPassword} style={isMobileUi ? mobileButtonStyle : buttonStyle}>
+            <Button fullWidth size="lg" loading={loading} onClick={handleSetPassword} style={buttonStyle}>
               Create account
             </Button>
             <button onClick={() => setStep("otp")} className="back-link">Back to OTP</button>
@@ -229,56 +207,13 @@ export default function SignupPage() {
       <style jsx>{`
         .auth-form-card { width: 100%; }
         .auth-form-inner { padding: clamp(24px, 5vw, 34px); }
-        .mobile-screen {
-          position: fixed;
-          inset: 0;
-          height: 100vh;
-          height: 100svh;
-          height: 100dvh;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-start;
-          padding: 0 max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px));
-          background: linear-gradient(180deg, var(--bg2), var(--bg));
-          overscroll-behavior: none;
-          touch-action: manipulation;
-          animation: entryPush 180ms ease-out;
-        }
-        .mobile-header {
-          width: 100%;
-          min-height: calc(44px + env(safe-area-inset-top, 0px));
-        }
-        .mobile-content {
-          width: 100%;
-          margin-top: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          border-radius: 28px 28px 0 0;
-          border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
-          border-bottom: none;
-          background: linear-gradient(160deg, color-mix(in srgb, var(--surface) 88%, transparent), color-mix(in srgb, var(--surface2) 84%, transparent));
-          backdrop-filter: blur(16px);
-          padding: 16px 14px calc(14px + env(safe-area-inset-bottom, 0px));
-        }
         .auth-title { margin-bottom: 4px; font-size: clamp(1.6rem, 7vw, 1.95rem); line-height: 1.08; }
         .auth-subtitle { color: color-mix(in srgb, var(--text) 78%, transparent); font-size: 14px; margin-bottom: 10px; }
         .field-stack, .otp-stack { display: flex; flex-direction: column; gap: 12px; }
         .otp-copy, .back-link { font-size: 14px; color: var(--muted); text-align: center; }
-        .switch-link-wrap { font-size: 14px; color: var(--muted); text-align: center; margin-top: 4px; }
+        .switch-link-wrap { font-size: 14px; color: var(--muted); text-align: center; margin-top: 8px; }
         .switch-link { color: var(--primary); font-weight: 600; }
-        @media (max-height: 700px) {
-          .mobile-screen { padding: 0 max(10px, env(safe-area-inset-right, 0px)) 0 max(10px, env(safe-area-inset-left, 0px)); }
-          .mobile-header { min-height: calc(38px + env(safe-area-inset-top, 0px)); }
-          .mobile-content { padding: 14px 12px calc(10px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
-          .auth-title { font-size: clamp(1.35rem, 6vw, 1.65rem); margin-bottom: 2px; }
-          .auth-subtitle { font-size: 13px; margin-bottom: 8px; }
-          .field-stack, .otp-stack { gap: 8px; }
-          .otp-copy, .back-link, .switch-link-wrap { font-size: 13px; }
-        }
-        :global(.auth-mobile-root input) { font-size: 16px !important; }
-        @keyframes entryPush { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        :global(.auth-form-card input) { font-size: 16px; }
       `}</style>
     </main>
   );
@@ -299,24 +234,4 @@ const buttonStyle = {
   color: "var(--ctaText)",
   boxShadow: "var(--shadow-md)",
   letterSpacing: "0.01em"
-};
-
-const mobileInputStyle = {
-  height: 52,
-  borderRadius: "16px",
-  border: "1px solid color-mix(in srgb, var(--border) 72%, transparent)",
-  background: "color-mix(in srgb, var(--surface) 85%, transparent)",
-  padding: "0 16px",
-  fontSize: 16,
-  letterSpacing: "0.03em"
-};
-
-const mobileButtonStyle = {
-  height: 52,
-  borderRadius: 17,
-  border: "none",
-  fontSize: 16,
-  fontWeight: 700,
-  color: "var(--ctaText)",
-  background: "linear-gradient(120deg, var(--primary), var(--primary-hover))"
 };
