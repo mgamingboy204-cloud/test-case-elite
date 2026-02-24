@@ -1,4 +1,5 @@
 import { clearAccessToken, getAccessToken, setAccessToken } from "./authToken";
+import { appAuthRedirect } from "./appNavigation";
 
 const rawApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -24,7 +25,15 @@ let refreshPromise: Promise<string | null> | null = null;
 let authFailed = false;
 let logoutTriggered = false;
 
-const AUTH_ROUTES = new Set(["/login", "/signup", "/otp"]);
+const AUTH_ROUTES = new Set(["/login", "/signup", "/otp", "/app/login"]);
+const APP_PUBLIC_ROUTES = new Set([
+  "/app",
+  "/app/splash",
+  "/app/get-started",
+  "/app/login",
+  "/app/signup/phone",
+  "/app/signup/verify"
+]);
 const PUBLIC_ROUTES = new Set([
   "/",
   "/learn",
@@ -47,6 +56,14 @@ function isPublicRoute(pathname: string) {
   return pathname.startsWith("/(marketing)");
 }
 
+
+function isAppRoute(pathname: string) {
+  return pathname.startsWith("/app");
+}
+
+function isAppPublicRoute(pathname: string) {
+  return APP_PUBLIC_ROUTES.has(pathname);
+}
 function extractErrorMessage(payload: any, fallback: string) {
   if (!payload) return fallback;
   if (typeof payload === "string") return payload;
@@ -87,7 +104,8 @@ function triggerAuthFailure(reason: string) {
     logAuthRequest("state", { tokenPresent: Boolean(getAccessToken()), refreshAttempted: true, authFailed: true, reason });
   }
   if (typeof window === "undefined" || logoutTriggered) return;
-  if (isAuthRoute(window.location.pathname) || isPublicRoute(window.location.pathname)) {
+  const pathname = window.location.pathname;
+  if (isAuthRoute(pathname) || isPublicRoute(pathname) || (isAppRoute(pathname) && isAppPublicRoute(pathname))) {
     if (process.env.NODE_ENV !== "production") {
       logAuthRequest("redirect.skipped", { reason, pathname: window.location.pathname });
     }
@@ -99,7 +117,7 @@ function triggerAuthFailure(reason: string) {
     credentials: "include",
     cache: "no-store"
   }).catch(() => undefined).finally(() => {
-    window.location.assign("/login");
+    window.location.assign(isAppRoute(pathname) ? appAuthRedirect() : "/login");
   });
 }
 

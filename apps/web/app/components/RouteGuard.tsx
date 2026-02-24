@@ -4,6 +4,7 @@ import { ReactNode, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "../../lib/session";
 import { getOnboardingRoute } from "../../lib/onboarding";
+import { appAuthRedirect } from "../../lib/appNavigation";
 
 type RouteGuardProps = {
   children: ReactNode;
@@ -35,7 +36,7 @@ export default function RouteGuard({
 
   useEffect(() => {
     if (status === "logged-out") {
-      router.replace("/login");
+      router.replace(appAuthRedirect());
       return;
     }
     if (status === "logged-in" && user?.onboardingStep) {
