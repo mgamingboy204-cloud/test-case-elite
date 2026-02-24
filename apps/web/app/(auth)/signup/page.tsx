@@ -32,16 +32,26 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const isMobileUi = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(max-width: 900px)").matches || isStandaloneDisplayMode();
+  const [isMobileUi, setIsMobileUi] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px)");
+    const applyMode = () => {
+      setIsMobileUi(media.matches || isStandaloneDisplayMode());
+    };
+    applyMode();
+    media.addEventListener("change", applyMode);
+    return () => media.removeEventListener("change", applyMode);
   }, []);
 
   useLayoutEffect(() => {
     if (!isMobileUi) return;
     document.body.classList.add("app-entry-no-scroll");
+    const authPanel = document.querySelector(".auth-panel");
+    authPanel?.classList.add("auth-panel--mobile-sheet");
     return () => {
       document.body.classList.remove("app-entry-no-scroll");
+      authPanel?.classList.remove("auth-panel--mobile-sheet");
     };
   }, [isMobileUi]);
 
@@ -153,7 +163,8 @@ export default function SignupPage() {
   };
 
   return (
-    <main className={isMobileUi ? "mobile-screen entry-screen" : "auth-form-card"} aria-label="Signup">
+    <main className={isMobileUi ? "mobile-screen entry-screen auth-mobile-root" : "auth-form-card"} aria-label="Signup">
+      {isMobileUi ? <div className="mobile-header" aria-hidden="true" /> : null}
       <div className={isMobileUi ? "mobile-content" : "auth-form-inner"}>
         <h2 className="auth-title">Create account</h2>
         <p className="auth-subtitle">{step === "phone" ? "Enter your phone number" : step === "otp" ? "Verify OTP" : "Set your password"}</p>
@@ -222,18 +233,49 @@ export default function SignupPage() {
         .auth-form-card { width: 100%; }
         .auth-form-inner { padding: clamp(24px, 5vw, 34px); }
         .mobile-screen {
-          position: fixed; inset: 0; height: 100dvh; overflow: hidden; display: grid;
-          align-content: center; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px calc(12px + env(safe-area-inset-bottom, 0px));
+          position: fixed; inset: 0; min-height: 100svh; height: 100dvh;
+          overflow-x: hidden; overflow-y: auto;
+          display: grid;
+          grid-template-rows: auto 1fr;
+          padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 0;
           background: linear-gradient(180deg, var(--bg2), var(--bg)); overscroll-behavior: none; touch-action: manipulation;
           animation: entryPush 180ms ease-out;
         }
-        .mobile-content { width: min(92vw, 420px); justify-self: center; display: flex; flex-direction: column; gap: 14px; }
+        .mobile-header {
+          width: min(100%, 420px);
+          min-height: 56px;
+          margin: 0 auto;
+        }
+        .mobile-content {
+          width: min(100%, 420px);
+          margin: 0 auto;
+          align-self: end;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          border-radius: 28px 28px 0 0;
+          border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
+          border-bottom: none;
+          background: linear-gradient(160deg, color-mix(in srgb, var(--surface) 88%, transparent), color-mix(in srgb, var(--surface2) 84%, transparent));
+          backdrop-filter: blur(16px);
+          padding: 18px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+        }
         .auth-title { margin-bottom: 6px; font-size: clamp(1.8rem, 7vw, 2rem); line-height: 1.1; }
-        .auth-subtitle { color: color-mix(in srgb, var(--text) 78%, transparent); font-size: 15px; margin-bottom: 20px; }
+        .auth-subtitle { color: color-mix(in srgb, var(--text) 78%, transparent); font-size: 15px; margin-bottom: 14px; }
         .field-stack, .otp-stack { display: flex; flex-direction: column; gap: 14px; }
         .otp-copy, .back-link { font-size: 14px; color: var(--muted); text-align: center; }
-        .switch-link-wrap { font-size: 14px; color: var(--muted); text-align: center; margin-top: 12px; }
+        .switch-link-wrap { font-size: 14px; color: var(--muted); text-align: center; margin-top: 8px; }
         .switch-link { color: var(--primary); font-weight: 600; }
+        :global(.auth-panel.auth-panel--mobile-sheet) {
+          width: 100%;
+          max-width: none;
+          border: 0;
+          border-radius: 0;
+          background: transparent;
+          backdrop-filter: none;
+          box-shadow: none;
+        }
+        :global(.auth-mobile-root input) { font-size: 16px !important; }
         @keyframes entryPush { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </main>
