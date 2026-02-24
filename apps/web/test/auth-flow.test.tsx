@@ -1,53 +1,16 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
-import LoginPage from "../app/pwa_app/login/page";
+import { describe, expect, it } from "vitest";
+import { getPwaDefaultRoute } from "../lib/onboarding";
 
-const refreshMock = vi.fn();
-const pushMock = vi.fn();
-
-vi.mock("../lib/api", () => ({
-  apiFetch: vi.fn()
-}));
-
-vi.mock("../lib/session", () => ({
-  useSession: () => ({
-    refresh: refreshMock,
-    status: "logged-out",
-    user: null
-  })
-}));
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: pushMock
-  })
-}));
-
-describe("Login OTP flow", () => {
-  afterEach(() => {
-    vi.clearAllMocks();
+describe("PWA entry routing", () => {
+  it("sends logged-out users to get started", () => {
+    expect(getPwaDefaultRoute(null)).toBe("/pwa_app/get-started");
   });
 
-  it("refreshes session after OTP verification and redirects", async () => {
-    const { apiFetch } = await import("../lib/api");
-    const user = userEvent.setup();
-    refreshMock.mockResolvedValue({ onboardingStep: "PAYMENT_PENDING" });
+  it("sends active users to the canonical app", () => {
+    expect(getPwaDefaultRoute({ onboardingStep: "ACTIVE" } as any)).toBe("/discover");
+  });
 
-    (apiFetch as any)
-      .mockResolvedValueOnce({ otpRequired: true })
-      .mockResolvedValueOnce({});
-
-    render(<LoginPage />);
-
-    await user.type(screen.getByLabelText("Phone"), "5551234567");
-    await user.type(screen.getByLabelText("Password"), "Password@1");
-    await user.click(screen.getByRole("button", { name: "Login" }));
-
-    await user.type(screen.getByLabelText("OTP Code"), "123456");
-    await user.click(screen.getByRole("button", { name: "Verify OTP" }));
-
-    expect(refreshMock).toHaveBeenCalled();
-    expect(pushMock).toHaveBeenCalledWith("/onboarding/payment");
+  it("sends non-active users to onboarding", () => {
+    expect(getPwaDefaultRoute({ onboardingStep: "PAYMENT_PENDING" } as any)).toBe("/onboarding/payment");
   });
 });

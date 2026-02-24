@@ -41,5 +41,6 @@ export function getDefaultRoute(user: SessionUser | null) {
 
 export function getPwaDefaultRoute(user: SessionUser | null) {
   if (!user?.onboardingStep) return "/pwa_app/get-started";
-  return "/pwa_app/discover";
+  if (user.onboardingStep === "ACTIVE") return "/discover";
+  return getOnboardingRoute(user.onboardingStep);
 }
