@@ -26,13 +26,36 @@ export default function AppGetStartedPage() {
   const router = useRouter();
   const { status, user } = useSession();
 
-  const initialIndex = useMemo(() => Math.floor(Math.random() * BACKGROUND_IMAGES.length), []);
+  const initialIndex = useMemo(
+    () => Math.floor(Math.random() * BACKGROUND_IMAGES.length),
+    []
+  );
+
   const [frontIdx, setFrontIdx] = useState(initialIndex);
-  const [backIdx, setBackIdx] = useState(() => nextIndex(initialIndex, BACKGROUND_IMAGES.length));
+  const [backIdx, setBackIdx] = useState(() =>
+    nextIndex(initialIndex, BACKGROUND_IMAGES.length)
+  );
   const [fadeIn, setFadeIn] = useState(false);
 
   const intervalRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
+
+  // ===== iOS REAL VIEWPORT FIX =====
+  useLayoutEffect(() => {
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--app-vh", `${vh}px`);
+    };
+
+    setVh();
+    window.addEventListener("resize", setVh);
+    window.addEventListener("orientationchange", setVh);
+
+    return () => {
+      window.removeEventListener("resize", setVh);
+      window.removeEventListener("orientationchange", setVh);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     document.body.classList.add("app-entry-no-scroll");
@@ -61,7 +84,7 @@ export default function AppGetStartedPage() {
   // Crossfade loop
   useEffect(() => {
     const DURATION_MS = 1800; // MUST match CSS transition duration
-    const HOLD_MS = 4000;     // time each image stays before next fade
+    const HOLD_MS = 4000;     // how long each image stays before next fade
 
     const tick = () => {
       setFadeIn(true);
@@ -91,7 +114,12 @@ export default function AppGetStartedPage() {
   return (
     <main className={styles.shell} aria-label="Get started">
       {/* Two-layer background for crossfade */}
-      <img className={`${styles.getStartedBg} ${styles.bgA}`} src={frontSrc} alt="" aria-hidden="true" />
+      <img
+        className={`${styles.getStartedBg} ${styles.bgA}`}
+        src={frontSrc}
+        alt=""
+        aria-hidden="true"
+      />
       <img
         className={`${styles.getStartedBg} ${styles.bgB} ${fadeIn ? styles.bgBVisible : ""}`}
         src={backSrc}
