@@ -346,6 +346,12 @@ body.app-entry-no-scroll {
   animation: fadeIn 0.3s ease forwards;
 }
 
+
+body.splash-transition .fade-in {
+  animation: none !important;
+  opacity: 1 !important;
+}
+
 /* Slide up animation */
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(100%); }

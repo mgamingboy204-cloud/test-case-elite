@@ -16,7 +16,8 @@ describe("boot paint guardrails", () => {
   test("pwa shell keeps only the minimal entry pages", () => {
     const pwaPage = readFileSync(resolve(appRoot, "pwa_app/page.tsx"), "utf8");
     const getStartedPage = readFileSync(resolve(appRoot, "pwa_app/get-started/page.tsx"), "utf8");
-    expect(pwaPage).toContain('"/discover"');
+    expect(pwaPage).toContain("resolveSplashDestination");
+    expect(pwaPage).toContain("SPLASH_SOFT_TIMEOUT_MS");
     expect(getStartedPage).toContain('href="/login"');
     expect(getStartedPage).toContain('href="/signup"');
   });
