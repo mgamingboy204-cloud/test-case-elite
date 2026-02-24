@@ -11,11 +11,11 @@ import { BottomNav } from "@/app/components/BottomNav";
 import type { ReactNode, CSSProperties } from "react";
 
 const sidebarLinks = [
-  { href: "/discover", label: "Discover", icon: "\u2738" },
-  { href: "/likes", label: "Likes", icon: "\u2665" },
-  { href: "/matches", label: "Matches", icon: "\u263A" },
-  { href: "/profile", label: "Profile", icon: "\u263B" },
-  { href: "/settings", label: "Settings", icon: "\u2699" },
+  { href: "/web/discover", label: "Discover", icon: "\u2738" },
+  { href: "/web/likes", label: "Likes", icon: "\u2665" },
+  { href: "/web/matches", label: "Matches", icon: "\u263A" },
+  { href: "/web/profile", label: "Profile", icon: "\u263B" },
+  { href: "/web/settings", label: "Settings", icon: "\u2699" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -29,18 +29,18 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    router.prefetch("/discover");
-    router.prefetch("/matches");
-    router.prefetch("/likes");
+    router.prefetch("/web/discover");
+    router.prefetch("/web/matches");
+    router.prefetch("/web/likes");
   }, [router]);
 
   const mobileTitle = useMemo(() => {
-    if (pathname?.startsWith("/discover")) {
+    if (pathname?.startsWith("/web/discover")) {
       return profileName || "Elite Match";
     }
-    if (pathname?.startsWith("/likes")) return "Likes";
-    if (pathname?.startsWith("/matches")) return "Matches";
-    if (pathname?.startsWith("/profile")) return "Profile";
+    if (pathname?.startsWith("/web/likes")) return "Likes";
+    if (pathname?.startsWith("/web/matches")) return "Matches";
+    if (pathname?.startsWith("/web/profile")) return "Profile";
     return "Elite Match";
   }, [pathname, profileName]);
 
@@ -61,7 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <header style={headerStyle} className="app-header">
-        <Link href="/discover" style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}>
+        <Link href="/web/discover" style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}>
           Elite Match
         </Link>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -87,7 +87,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <header className="app-mobile-header" aria-label="Mobile header">
-        <Link href="/profile" aria-label="Open profile" className="app-mobile-header__avatar-link">
+        <Link href="/web/profile" aria-label="Open profile" className="app-mobile-header__avatar-link">
           <Avatar
             src={profilePhotoUrl}
             name={profileName || user?.displayName || user?.firstName || "You"}
@@ -101,7 +101,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <button
           className="app-mobile-header__filter-btn"
           onClick={() => {
-            if (pathname?.startsWith("/discover")) {
+            if (pathname?.startsWith("/web/discover")) {
               window.dispatchEvent(new CustomEvent("elite-open-discover-filters"));
               return;
             }

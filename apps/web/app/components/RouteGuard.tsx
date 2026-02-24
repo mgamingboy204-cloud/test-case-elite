@@ -23,6 +23,9 @@ export default function RouteGuard({
   const router = useRouter();
   const pathname = usePathname();
   const { status, user, refresh } = useSession();
+  const isWebRoute = pathname?.startsWith("/web");
+  const authBase = isWebRoute ? "/web/login" : "/login";
+  const onboardingBase = isWebRoute ? "/web/onboarding" : "/onboarding";
 
 
   useEffect(() => {
@@ -35,11 +38,11 @@ export default function RouteGuard({
 
   useEffect(() => {
     if (status === "logged-out") {
-      router.replace("/login");
+      router.replace(authBase);
       return;
     }
     if (status === "logged-in" && user?.onboardingStep) {
-      const target = getOnboardingRoute(user.onboardingStep);
+      const target = `${isWebRoute ? "/web" : ""}${getOnboardingRoute(user.onboardingStep)}`;
       if (requireActive && user.onboardingStep !== "ACTIVE") {
         router.replace(target);
         return;
@@ -48,7 +51,7 @@ export default function RouteGuard({
         router.replace(target);
         return;
       }
-      if (allowedOnboardingSteps && pathname && pathname.startsWith("/onboarding") && pathname !== target) {
+      if (allowedOnboardingSteps && pathname && pathname.startsWith(onboardingBase) && pathname !== target) {
         router.replace(target);
         return;
       }
@@ -56,7 +59,7 @@ export default function RouteGuard({
     if (requireAdmin && status === "logged-in" && user?.role !== "ADMIN" && !user?.isAdmin) {
       router.replace("/");
     }
-  }, [status, requireAdmin, requireActive, allowedOnboardingSteps, user, router, pathname]);
+  }, [status, requireAdmin, requireActive, allowedOnboardingSteps, user, router, pathname, authBase, isWebRoute, onboardingBase]);
 
   if (status === "loading") {
     return <>{children}</>;

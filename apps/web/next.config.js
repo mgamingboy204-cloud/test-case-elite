@@ -65,6 +65,20 @@ const nextConfig = {
   output: "standalone",
   reactStrictMode: true,
   productionBrowserSourceMaps: true,
+  async redirects() {
+    return [
+      {
+        source: "/app",
+        destination: "/",
+        permanent: true
+      },
+      {
+        source: "/app/:path*",
+        destination: "/:path*",
+        permanent: true
+      }
+    ];
+  },
   async rewrites() {
     if (!apiProxyTarget) {
       return [];

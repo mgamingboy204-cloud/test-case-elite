@@ -1,7 +1,8 @@
+import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { vi } from "vitest";
-import LoginPage from "../app/login/page";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import LoginPage from "../app/web/(auth)/login/page";
 
 const refreshMock = vi.fn();
 const pushMock = vi.fn();
@@ -48,6 +49,6 @@ describe("Login OTP flow", () => {
     await user.click(screen.getByRole("button", { name: "Verify OTP" }));
 
     expect(refreshMock).toHaveBeenCalled();
-    expect(pushMock).toHaveBeenCalledWith("/onboarding/payment");
+    expect(pushMock).toHaveBeenCalledWith("/web/onboarding/payment");
   });
 });
