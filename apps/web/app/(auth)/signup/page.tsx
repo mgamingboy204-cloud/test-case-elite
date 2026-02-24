@@ -142,7 +142,7 @@ export default function SignupPage() {
     <main className="auth-form-card" aria-label="Signup">
       <div className="auth-form-inner">
         <h2 className="auth-title">Create account</h2>
-        <p className="auth-subtitle">{step === "phone" ? "Enter your phone number" : step === "otp" ? "Verify OTP" : "Set your password"}</p>
+        <p className="auth-subtitle">{step === "phone" ? "Use your phone to begin." : step === "otp" ? "Enter the code we sent." : "Secure your account."}</p>
 
         {step === "phone" ? (
           <>
@@ -156,16 +156,18 @@ export default function SignupPage() {
               maxLength={10}
               inputMode="numeric"
               style={inputStyle}
+              wrapperStyle={fieldWrapperStyle}
             />
             <Button fullWidth size="lg" loading={loading} onClick={handleSendOtp} style={buttonStyle}>
               Continue
             </Button>
+            <span className="inline-error-slot" aria-live="polite">{errors.phone || "\u00A0"}</span>
           </>
         ) : null}
 
         {step === "otp" ? (
           <div className="otp-stack fade-in">
-            <p className="otp-copy">OTP sent to {cleanedPhone}. Enter the 6-digit code.</p>
+            <p className="otp-copy">Code sent to {cleanedPhone}.</p>
             <OtpInput onComplete={handleVerifyOtp} disabled={loading} />
             <ResendTimer onResend={handleResendOtp} />
             <button onClick={() => setStep("phone")} className="back-link">Change number</button>
@@ -182,6 +184,7 @@ export default function SignupPage() {
               onChange={(e) => setPassword(e.target.value)}
               error={errors.password}
               style={inputStyle}
+              wrapperStyle={fieldWrapperStyle}
             />
             <Input
               label="Confirm Password"
@@ -191,6 +194,7 @@ export default function SignupPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               error={errors.confirmPassword}
               style={inputStyle}
+              wrapperStyle={fieldWrapperStyle}
             />
             <Button fullWidth size="lg" loading={loading} onClick={handleSetPassword} style={buttonStyle}>
               Create account
@@ -211,20 +215,54 @@ export default function SignupPage() {
         .auth-subtitle { color: color-mix(in srgb, var(--text) 78%, transparent); font-size: 14px; margin-bottom: 10px; }
         .field-stack, .otp-stack { display: flex; flex-direction: column; gap: 12px; }
         .otp-copy, .back-link { font-size: 14px; color: var(--muted); text-align: center; }
+        .inline-error-slot { min-height: 18px; color: var(--danger); font-size: 13px; margin-top: 4px; display: block; }
         .switch-link-wrap { font-size: 14px; color: var(--muted); text-align: center; margin-top: 8px; }
         .switch-link { color: var(--primary); font-weight: 600; }
         :global(.auth-form-card input) { font-size: 16px; }
+
+        @media (max-width: 900px), (display-mode: standalone) {
+          .auth-form-inner {
+            padding: clamp(14px, 4.2vw, 18px) clamp(8px, 2.8vw, 12px) clamp(8px, 2.4vw, 12px);
+            display: flex;
+            flex-direction: column;
+            min-height: min(68dvh, 480px);
+            gap: 8px;
+          }
+          .auth-title {
+            font-size: clamp(1.32rem, 5.5vw, 1.58rem);
+            line-height: 1.08;
+          }
+          .auth-subtitle {
+            font-size: var(--mobile-auth-subtitle-size);
+            line-height: 1.3;
+            margin-bottom: 6px;
+          }
+          .field-stack,
+          .otp-stack {
+            gap: var(--mobile-auth-gap);
+          }
+          .otp-copy,
+          .back-link,
+          .switch-link-wrap {
+            font-size: 13px;
+          }
+          .switch-link-wrap {
+            margin-top: auto;
+            padding-top: 4px;
+          }
+        }
       `}</style>
     </main>
   );
 }
 
 const inputStyle = {
-  minHeight: 50,
+  minHeight: 52,
   borderRadius: "14px",
   background: "color-mix(in srgb, var(--panel) 84%, transparent)",
   borderColor: "color-mix(in srgb, var(--border) 88%, transparent)",
-  padding: "13px 16px"
+  padding: "13px 16px",
+  fontSize: 16
 };
 
 const buttonStyle = {
@@ -234,4 +272,8 @@ const buttonStyle = {
   color: "var(--ctaText)",
   boxShadow: "var(--shadow-md)",
   letterSpacing: "0.01em"
+};
+
+const fieldWrapperStyle = {
+  minHeight: 86
 };

@@ -112,7 +112,7 @@ export default function LoginPage() {
     <div className="auth-form-card">
       <div className="auth-form-inner">
         <h2 className="auth-title">Welcome back</h2>
-        <p className="auth-subtitle">Sign in to your account</p>
+        <p className="auth-subtitle">Sign in to continue.</p>
 
         {!otpRequired ? (
           <>
@@ -127,6 +127,7 @@ export default function LoginPage() {
                 maxLength={10}
                 inputMode="numeric"
                 style={inputStyle}
+                wrapperStyle={fieldWrapperStyle}
               />
               <div style={{ position: "relative" }}>
                 <Input
@@ -137,6 +138,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   error={errors.password}
                   style={inputStyle}
+                  wrapperStyle={fieldWrapperStyle}
                 />
                 <button
                   type="button"
@@ -187,7 +189,7 @@ export default function LoginPage() {
           </>
         ) : (
           <div className="otp-stack">
-            <p className="otp-copy">Enter the 6-digit code sent to your phone</p>
+            <p className="otp-copy">Enter the 6-digit code.</p>
             <OtpInput onComplete={handleVerifyOtp} disabled={loading} />
             <ResendTimer onResend={handleSendOtp} />
             <button onClick={() => setOtpRequired(false)} className="back-link">
@@ -265,7 +267,7 @@ export default function LoginPage() {
         .otp-stack {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 14px;
         }
         .otp-copy,
         .back-link {
@@ -273,17 +275,54 @@ export default function LoginPage() {
           color: var(--muted);
           text-align: center;
         }
+
+        @media (max-width: 900px), (display-mode: standalone) {
+          .auth-form-inner {
+            padding: clamp(14px, 4.2vw, 18px) clamp(8px, 2.8vw, 12px) clamp(8px, 2.4vw, 12px);
+            display: flex;
+            flex-direction: column;
+            min-height: min(68dvh, 500px);
+            gap: 8px;
+          }
+          .auth-title {
+            font-size: clamp(1.32rem, 5.5vw, 1.58rem);
+            line-height: 1.08;
+          }
+          .auth-subtitle {
+            margin-bottom: 8px;
+            font-size: var(--mobile-auth-subtitle-size);
+            line-height: 1.3;
+          }
+          .field-stack,
+          .check-stack,
+          .auth-links,
+          .otp-stack {
+            gap: var(--mobile-auth-gap);
+          }
+          .auth-links {
+            margin-top: auto;
+            padding-top: 4px;
+          }
+          .check-row,
+          .otp-link,
+          .switch-link-wrap,
+          .otp-copy,
+          .back-link {
+            font-size: 13px;
+          }
+        }
       `}</style>
     </div>
   );
 }
 
 const inputStyle = {
-  minHeight: 50,
+  minHeight: 52,
   borderRadius: "14px",
   background: "color-mix(in srgb, var(--panel) 84%, transparent)",
   borderColor: "color-mix(in srgb, var(--border) 88%, transparent)",
   padding: "13px 16px",
+  fontSize: 16,
 };
 
 const buttonStyle = {
@@ -293,4 +332,8 @@ const buttonStyle = {
   color: "var(--ctaText)",
   boxShadow: "var(--shadow-md)",
   letterSpacing: "0.01em",
+};
+
+const fieldWrapperStyle = {
+  minHeight: 86,
 };

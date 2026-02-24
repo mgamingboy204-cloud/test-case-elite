@@ -33,8 +33,10 @@ function MobileAuthShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.body.classList.add("app-entry-no-scroll");
+    document.documentElement.classList.add("app-mobile-auth-locked");
     return () => {
       document.body.classList.remove("app-entry-no-scroll");
+      document.documentElement.classList.remove("app-mobile-auth-locked");
     };
   }, []);
 
@@ -161,12 +163,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         .mobile-auth-shell {
           position: relative;
           width: 100%;
+          max-width: 100vw;
           min-height: 100svh;
           min-height: 100dvh;
           height: 100svh;
           height: 100dvh;
           overflow: hidden;
           overscroll-behavior: none;
+          touch-action: pan-y;
           display: flex;
           flex-direction: column;
           justify-content: flex-end;
@@ -192,12 +196,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: calc(8px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px)) 10px calc(14px + env(safe-area-inset-left, 0px));
+          min-height: 54px;
+          padding: calc(6px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px)) 8px calc(14px + env(safe-area-inset-left, 0px));
         }
         .mobile-auth-sheet {
           position: relative;
           z-index: 4;
           width: 100%;
+          max-width: 100vw;
           margin-top: auto;
           border-radius: 28px 28px 0 0;
           border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
@@ -205,6 +211,22 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           background: linear-gradient(160deg, color-mix(in srgb, var(--surface) 90%, transparent), color-mix(in srgb, var(--surface2) 86%, transparent));
           backdrop-filter: blur(18px);
           padding: 0 max(12px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+          box-shadow: 0 -20px 48px color-mix(in srgb, var(--bg) 58%, transparent);
+        }
+
+        :global(html.app-mobile-auth-locked),
+        :global(html.app-mobile-auth-locked body),
+        :global(html.app-mobile-auth-locked .site-main) {
+          height: 100%;
+          overflow: hidden;
+          overscroll-behavior: none;
+          max-width: 100vw;
+        }
+
+        :global(html.app-mobile-auth-locked body) {
+          position: fixed;
+          inset: 0;
+          touch-action: pan-y;
         }
 
         :global([data-theme='light']) .auth-shell {
