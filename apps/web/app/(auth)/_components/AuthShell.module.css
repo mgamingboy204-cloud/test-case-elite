@@ -1,0 +1,105 @@
+.root {
+  position: relative;
+  min-height: 100dvh;
+  width: 100%;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: linear-gradient(160deg, var(--bg2) 0%, var(--surface) 45%, var(--bg) 100%);
+  isolation: isolate;
+}
+
+.background,
+.overlay,
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.background {
+  background:
+    radial-gradient(circle at 12% 12%, var(--rose-glow-2), transparent 38%),
+    radial-gradient(circle at 86% 88%, var(--rose-glow), transparent 40%);
+  opacity: 0.72;
+}
+
+.overlay {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 44%, transparent), color-mix(in srgb, var(--bg2) 78%, transparent));
+}
+
+.vignette {
+  background: radial-gradient(circle at center, transparent 42%, color-mix(in srgb, var(--bg) 62%, transparent) 100%);
+}
+
+.topBar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 calc(16px + env(safe-area-inset-right, 0px)) 12px calc(16px + env(safe-area-inset-left, 0px));
+}
+
+.brand {
+  font-size: clamp(1.1rem, 3vw, 1.4rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.themeButton {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  background: color-mix(in srgb, var(--surface2) 76%, var(--pearl-panel));
+  backdrop-filter: blur(16px);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  place-items: center;
+}
+
+.sheet {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  width: 100%;
+  max-width: 520px;
+  align-self: center;
+  border-radius: 26px 26px 0 0;
+  border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
+  border-bottom: none;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface2) 88%, transparent));
+  backdrop-filter: blur(18px);
+  padding: 18px max(16px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+
+@media (min-width: 768px) {
+  .root {
+    justify-content: center;
+    padding: calc(24px + env(safe-area-inset-top, 0px)) 24px calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .topBar {
+    position: absolute;
+    top: calc(24px + env(safe-area-inset-top, 0px));
+    left: 0;
+    right: 0;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-inline: 24px;
+  }
+
+  .sheet {
+    margin-top: 0;
+    border-radius: 24px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
+    width: min(100%, 480px);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+  }
+}
