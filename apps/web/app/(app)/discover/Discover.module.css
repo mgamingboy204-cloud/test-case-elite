@@ -12,7 +12,7 @@
   background: transparent;
   color: var(--discover-text);
   display: grid;
-  grid-template-rows: 76% 3% 20%;
+  grid-template-rows: 77% 3% 20%;
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
@@ -276,7 +276,7 @@
     height: 100%;
     min-height: 0;
     overflow: hidden;
-    grid-template-rows: 80% 3% 20%;
+    grid-template-rows: 87% 3% 20%;
   }
 
   .cardStage {
