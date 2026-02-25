@@ -1,0 +1,355 @@
+.discoverRoot {
+  --discover-bg: color-mix(in srgb, var(--bg) 93%, #060910 7%);
+  --discover-text: var(--text);
+  --discover-muted: color-mix(in srgb, var(--text-secondary) 82%, transparent);
+  --discover-radius: clamp(12px, 3.5vw, 16px);
+  --discover-shadow: 0 20px 56px rgba(2, 5, 12, 0.24);
+  --discover-ease: cubic-bezier(0.2, 0.72, 0.24, 1);
+  --discover-card-height: clamp(430px, 79%, 760px);
+
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  background: var(--discover-bg);
+  color: var(--discover-text);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.cardStage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 10px max(8px, var(--sal)) 8px max(8px, var(--sal));
+  padding-right: max(8px, var(--sar));
+  overflow: hidden;
+}
+
+.cardSurface {
+  width: 100%;
+  max-width: 100%;
+  height: var(--discover-card-height);
+  border-radius: var(--discover-radius);
+  overflow: hidden;
+}
+
+.cardFrame {
+  position: relative;
+  touch-action: none;
+  user-select: none;
+  transform: translate3d(0, 0, 0);
+  cursor: grab;
+  box-shadow: var(--discover-shadow);
+  transition: transform 260ms var(--discover-ease), opacity 220ms ease;
+  will-change: transform;
+  animation: cardEnter 240ms ease-in-out;
+}
+
+.skeletonFrame {
+  background: color-mix(in srgb, var(--surface-2) 86%, transparent);
+  box-shadow: var(--discover-shadow);
+}
+
+.fallbackFrame {
+  width: 100%;
+  height: var(--discover-card-height);
+  display: grid;
+  place-items: center;
+  border-radius: var(--discover-radius);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface-1) 90%, transparent);
+}
+
+.nextCard {
+  position: absolute;
+  transform: translate3d(0, 18px, 0) scale(0.968);
+  opacity: 0.58;
+}
+
+.nextCardImage,
+.mainImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mainImage {
+  position: absolute;
+  inset: 0;
+  transition: opacity 220ms ease-out;
+}
+
+.mainImageLoaded {
+  opacity: 1;
+}
+
+.mainImagePending {
+  opacity: 0;
+}
+
+.loadingImage {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--surface-1) 74%, transparent), color-mix(in srgb, var(--surface-2) 88%, transparent), color-mix(in srgb, var(--surface-1) 74%, transparent));
+}
+
+.surfaceFade {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 29%;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(4, 5, 8, 0.92) 100%);
+  pointer-events: none;
+}
+
+.cardMicro {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 2;
+}
+
+.photoHint {
+  font-size: 12px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 999px;
+  min-height: 24px;
+  padding: 6px 10px;
+}
+
+.infoButton {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(0, 0, 0, 0.3);
+  transition: background-color 200ms ease;
+}
+
+.infoButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.infoButton:active {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.swipeBadge {
+  position: absolute;
+  top: 18px;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-weight: 620;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  z-index: 3;
+}
+
+.swipeLike {
+  left: 14px;
+  color: color-mix(in srgb, #f0d1c3 84%, white 16%);
+  border: 1px solid rgba(239, 189, 171, 0.44);
+  background: rgba(22, 14, 14, 0.68);
+  transform: rotate(-9deg);
+}
+
+.swipePass {
+  right: 14px;
+  color: rgba(250, 250, 250, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: rgba(14, 16, 18, 0.68);
+  transform: rotate(9deg);
+}
+
+.cardBottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 14px 14px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.name {
+  margin: 0;
+  font-size: clamp(1.6rem, 1.35rem + 1.3vw, 2rem);
+  font-weight: 620;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+  color: #fff;
+}
+
+.verifiedBadge {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.92);
+  color: #101114;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.metaLine {
+  margin: 0;
+  font-size: clamp(0.82rem, 0.77rem + 0.24vw, 0.92rem);
+  line-height: 1.44;
+  font-weight: 480;
+  color: color-mix(in srgb, #fff 82%, transparent);
+}
+
+.bio {
+  margin: 1px 0 0;
+  font-size: clamp(0.77rem, 0.74rem + 0.21vw, 0.84rem);
+  line-height: 1.42;
+  color: color-mix(in srgb, #fff 66%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actionsBand {
+  flex: 0 0 clamp(88px, 14svh, 104px);
+  min-height: clamp(88px, 14svh, 104px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px max(12px, var(--sal)) 12px max(12px, var(--sal));
+  padding-right: max(12px, var(--sar));
+}
+
+.actionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.actionButton {
+  border-radius: 999px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 8px 20px rgba(2, 6, 12, 0.18);
+  border: 1px solid color-mix(in srgb, var(--border) 56%, transparent);
+  transition: transform 240ms var(--discover-ease), box-shadow 240ms var(--discover-ease), background-color 240ms var(--discover-ease);
+}
+
+.actionButton:active {
+  transform: scale(0.96);
+  box-shadow: 0 4px 10px rgba(2, 6, 12, 0.18);
+}
+
+.actionPass {
+  width: 58px;
+  height: 58px;
+  color: color-mix(in srgb, var(--text-secondary) 92%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 91%, transparent);
+}
+
+.actionInfo {
+  width: 50px;
+  height: 50px;
+  color: color-mix(in srgb, var(--text-secondary) 86%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 75%, transparent);
+}
+
+.actionLike {
+  width: 68px;
+  height: 68px;
+  color: #fff9f4;
+  background: color-mix(in srgb, var(--accent) 84%, #eac3ae 16%);
+  border-color: color-mix(in srgb, var(--accent) 62%, #f4d4c5 38%);
+}
+
+.profileSheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.profileSheet strong {
+  color: var(--text);
+  font-weight: 560;
+}
+
+.debugText,
+.syncText {
+  text-align: center;
+  font-size: 11px;
+  color: var(--discover-muted);
+}
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (max-width: 390px) {
+  .discoverRoot {
+    --discover-card-height: clamp(392px, 78%, 620px);
+  }
+
+  .actionsRow {
+    gap: 12px;
+  }
+
+  .actionLike {
+    width: 64px;
+    height: 64px;
+  }
+
+  .actionPass {
+    width: 56px;
+    height: 56px;
+  }
+
+  .actionInfo {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardFrame,
+  .mainImage,
+  .actionButton {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+}

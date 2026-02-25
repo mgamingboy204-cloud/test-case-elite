@@ -10,7 +10,7 @@ import { Button } from "@/app/components/ui/Button";
 import { useTheme, useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import { useDiscoverBuffer } from "./useDiscoverBuffer";
-import styles from "./DiscoverPage.module.css";
+import styles from "./Discover.module.css";
 
 const ALL_INTERESTS = ["Travel", "Fitness", "Music", "Cooking", "Reading", "Photography", "Movies", "Art", "Hiking", "Gaming", "Yoga", "Dancing"];
 const PREFETCH_CARD_COUNT = 2;
@@ -31,6 +31,7 @@ export default function DiscoverPage() {
   const { theme, toggle } = useTheme();
   const [intent, setIntent] = useState("all");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [profileDetailsOpen, setProfileDetailsOpen] = useState(false);
   const [distance, setDistance] = useState(50);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [swipeXState, setSwipeXState] = useState(0);
@@ -260,26 +261,30 @@ export default function DiscoverPage() {
 
   return (
     <div className={styles.discoverRoot}>
-      <div className={styles.mainStage}>
+      <section className={styles.cardStage}>
         {loading ? (
-          <div className={styles.skeletonFrame}>
+          <div className={`${styles.cardSurface} ${styles.skeletonFrame}`}>
             <Skeleton width="100%" height="100%" radius={16} />
           </div>
         ) : error ? (
-          <ErrorState onRetry={reload} />
+          <div className={styles.fallbackFrame}>
+            <ErrorState onRetry={reload} />
+          </div>
         ) : !currentProfile ? (
-          <EmptyState
-            title="No more profiles"
-            description="Adjust your filters or check back later for new people."
-            action={{ label: "Adjust Filters", onClick: () => setFilterOpen(true) }}
-          />
+          <div className={styles.fallbackFrame}>
+            <EmptyState
+              title="No more profiles"
+              description="Adjust your filters or check back later for new people."
+              action={{ label: "Adjust Filters", onClick: () => setFilterOpen(true) }}
+            />
+          </div>
         ) : (
           <>
             {nextProfile && (
               <div
                 ref={nextCardRef}
                 aria-hidden
-                className={styles.nextCard}
+                className={`${styles.cardSurface} ${styles.nextCard}`}
               >
                 <img src={toDiscoverImageUrl(nextProfile.photo)} alt="" className={styles.nextCardImage} loading="lazy" decoding="async" />
               </div>
@@ -287,7 +292,7 @@ export default function DiscoverPage() {
 
             <div
               ref={cardRef}
-              className={styles.cardFrame}
+              className={`${styles.cardSurface} ${styles.cardFrame}`}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
@@ -308,8 +313,14 @@ export default function DiscoverPage() {
               <div className={styles.surfaceFade} />
 
               <div className={styles.cardMicro}>
-                <div className={styles.photoHint}>• • 3 photos</div>
-                <button className={styles.infoButton} aria-label="View profile details">i</button>
+                <div className={styles.photoHint}>3 photos</div>
+                <button className={styles.infoButton} aria-label="View profile details" onClick={() => setProfileDetailsOpen(true)}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.75" />
+                    <line x1="12" y1="10" x2="12" y2="16" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+                    <circle cx="12" cy="7.25" r="1" fill="currentColor" />
+                  </svg>
+                </button>
               </div>
 
               {swipeXState > 24 && <div className={`${styles.swipeBadge} ${styles.swipeLike}`} style={{ opacity: Math.min(swipeXState / 100, 1) }}>LIKE</div>}
@@ -320,35 +331,29 @@ export default function DiscoverPage() {
                   <h2 className={styles.name}>{currentProfile.name}, {currentProfile.age}</h2>
                   {currentProfile.verified && <span className={styles.verifiedBadge} aria-label="Verified profile">✓</span>}
                 </div>
-                <p className={styles.location}>{currentProfile.city}{currentProfile.premium ? " • Premium" : ""}</p>
+                <p className={styles.metaLine}>{currentProfile.city}{currentProfile.premium ? " • Premium" : ""}</p>
+                <p className={styles.metaLine}>Open to meaningful connection</p>
                 <p className={styles.bio}>{currentProfile.bio}</p>
               </div>
             </div>
           </>
         )}
-      </div>
+      </section>
 
       {!loading && currentProfile && (
-        <div className={styles.actionsRow}>
-          <div className={styles.actionCluster}>
-            <button onClick={() => addToast("Rewind is unavailable in buffered mode", "info")} aria-label="Maybe" className={`${styles.actionButton} ${styles.actionMaybe}`}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
-          </button>
-            <p className={styles.actionLabel}>Maybe</p>
-          </div>
-          <div className={styles.actionCluster}>
+        <section className={styles.actionsBand}>
+          <div className={styles.actionsRow}>
             <button onClick={() => handleAction("PASS", "left")} aria-label="Pass" className={`${styles.actionButton} ${styles.actionPass}`}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text)" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-          </button>
-            <p className={styles.actionLabel}>Pass</p>
-          </div>
-          <div className={styles.actionCluster}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+            <button onClick={() => setProfileDetailsOpen(true)} aria-label="Open profile info" className={`${styles.actionButton} ${styles.actionInfo}`}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><line x1="12" y1="10" x2="12" y2="16" /><circle cx="12" cy="7.25" r="1" fill="currentColor" stroke="none" /></svg>
+            </button>
             <button onClick={() => handleAction("LIKE", "right")} aria-label="Like" className={`${styles.actionButton} ${styles.actionLike}`}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--ctaText)" stroke="var(--ctaText)" strokeWidth="1"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
-          </button>
-            <p className={styles.actionLabel}>Like</p>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+            </button>
           </div>
-        </div>
+        </section>
       )}
 
       <BottomSheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filters">
@@ -373,6 +378,16 @@ export default function DiscoverPage() {
           <Button fullWidth onClick={() => { setFilterOpen(false); reload(); }}>Apply Filters</Button>
           <button onClick={toggle} style={{ border: "1px solid var(--border)", background: "var(--surface2)", borderRadius: "var(--radius-md)", padding: "12px 14px", textAlign: "left", fontWeight: 600 }}>Theme: {theme === "light" ? "Light" : "Dark"}</button>
         </div>
+      </BottomSheet>
+
+      <BottomSheet open={profileDetailsOpen} onClose={() => setProfileDetailsOpen(false)} title={currentProfile ? `${currentProfile.name}, ${currentProfile.age}` : "Profile"}>
+        {currentProfile ? (
+          <div className={styles.profileSheet}>
+            <p><strong>Location:</strong> {currentProfile.city}</p>
+            <p><strong>Intent:</strong> meaningful connection</p>
+            <p><strong>Bio:</strong> {currentProfile.bio}</p>
+          </div>
+        ) : null}
       </BottomSheet>
 
       {showDiscoverDebugStatus && syncWarning && <div className={styles.syncText}>Syncing swipes in background...</div>}
