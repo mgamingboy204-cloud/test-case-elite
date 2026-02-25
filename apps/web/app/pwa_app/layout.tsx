@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import RouteGuard from "../components/RouteGuard";
-import AppShell from "../components/AppShell";
+import { AppShell } from "../components/shells/AppShell";
 
 const APP_ENTRY_ROUTES = new Set(["/pwa_app", "/pwa_app/splash", "/pwa_app/get-started", "/signup", "/login"]);
 
