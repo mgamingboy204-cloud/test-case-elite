@@ -103,9 +103,7 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
         <main className="app-main-content" data-variant={shellVariant}>{children}</main>
       </div>
 
-      <div className={`app-bottom-nav${bottomNavClassName ? ` ${bottomNavClassName}` : ""}`} data-variant={shellVariant}>
-        <BottomNav variant={shellVariant} />
-      </div>
+      <BottomNav variant={shellVariant} />
 
       <BottomSheet open={mobileSettingsOpen} onClose={() => setMobileSettingsOpen(false)} title="Filters & Settings">
         <div className="app-mobile-sheet-content">
