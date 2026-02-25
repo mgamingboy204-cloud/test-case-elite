@@ -1,0 +1,298 @@
+.discoverRoot {
+  --discover-bg: var(--bg);
+  --discover-surface: var(--surface);
+  --discover-surface-2: var(--surface2);
+  --discover-text: var(--text);
+  --discover-text-muted: var(--text-secondary);
+  --discover-text-subtle: var(--muted);
+  --discover-accent: var(--accent);
+  --discover-card-radius: var(--radius-md);
+  --discover-shadow: var(--shadow-md);
+  --discover-space-8: 8px;
+  --discover-space-12: 12px;
+  --discover-space-16: 16px;
+  --discover-space-24: 24px;
+  --discover-motion: 240ms ease-in-out;
+
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100svh - var(--app-header-offset));
+  min-height: calc(100dvh - var(--app-header-offset));
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  background: var(--discover-bg);
+  padding: var(--discover-space-8) max(var(--discover-space-12), var(--sal)) 0 max(var(--discover-space-12), var(--sal));
+  padding-right: max(var(--discover-space-12), var(--sar));
+  padding-bottom: calc(var(--app-bottom-nav-height) + var(--sab) + 18px);
+}
+
+.mainStage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0 10px;
+}
+
+.cardFrame,
+.skeletonFrame {
+  width: min(100%, 460px);
+  height: clamp(420px, 76svh, 680px);
+  border-radius: clamp(12px, 3vw, 16px);
+  overflow: hidden;
+}
+
+.cardFrame {
+  position: relative;
+  margin: 0 auto;
+  touch-action: none;
+  user-select: none;
+  transform: translate3d(0, 0, 0);
+  cursor: grab;
+  will-change: transform;
+  box-shadow: var(--discover-shadow);
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  transition: transform 220ms cubic-bezier(0.2, 0.82, 0.24, 1);
+}
+
+.nextCard {
+  position: absolute;
+  width: min(100%, 460px);
+  height: clamp(420px, 76svh, 680px);
+  border-radius: clamp(12px, 3vw, 16px);
+  overflow: hidden;
+  transform: translate3d(0, 20px, 0) scale(0.95);
+  opacity: 0.62;
+  background: color-mix(in srgb, var(--discover-surface-2) 72%, var(--discover-surface));
+  box-shadow: var(--shadow-sm);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+}
+
+.nextCardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.94) brightness(0.88);
+}
+
+.loadingImage {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--discover-surface-2) 92%, transparent), color-mix(in srgb, var(--discover-surface) 80%, transparent), color-mix(in srgb, var(--discover-surface-2) 92%, transparent));
+}
+
+.mainImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+  transition: opacity 180ms ease-out;
+}
+
+.mainImageLoaded {
+  opacity: 1;
+}
+
+.mainImagePending {
+  opacity: 0;
+}
+
+.surfaceFade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.04) 0%, transparent 68%, rgba(0, 0, 0, 0.12) 100%);
+}
+
+.swipeBadge {
+  position: absolute;
+  top: 38px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--discover-bg) 82%, transparent);
+}
+
+.swipeLike {
+  left: 20px;
+  border: 2px solid var(--discover-accent);
+  color: var(--discover-accent);
+  transform: rotate(-12deg);
+}
+
+.swipePass {
+  right: 20px;
+  border: 2px solid var(--discover-text-muted);
+  color: var(--discover-text-muted);
+  transform: rotate(12deg);
+}
+
+.cardBottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 30%;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 0 var(--discover-space-16) var(--discover-space-16);
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.92) 100%);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.name {
+  color: var(--ctaText);
+  margin: 0;
+  font-size: clamp(24px, 5vw, 30px);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.verified {
+  flex-shrink: 0;
+}
+
+.location {
+  color: color-mix(in srgb, var(--ctaText) 82%, transparent);
+  font-size: 14px;
+}
+
+.bio {
+  color: color-mix(in srgb, var(--ctaText) 72%, transparent);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actionsRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0 6px;
+}
+
+.actionButton {
+  --discover-action-size: 56px;
+  width: var(--discover-action-size);
+  height: var(--discover-action-size);
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  color: var(--ctaText);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--discover-motion), box-shadow var(--discover-motion), background-color var(--discover-motion);
+  will-change: transform;
+}
+
+.actionButton:active {
+  transform: scale(0.96);
+}
+
+.actionNeutral {
+  --discover-action-size: 56px;
+  background: color-mix(in srgb, var(--discover-surface-2) 92%, transparent);
+}
+
+.actionPass {
+  --discover-action-size: 58px;
+  background: color-mix(in srgb, var(--discover-surface-2) 86%, var(--rose-glow));
+}
+
+.actionLike {
+  --discover-action-size: 68px;
+  background: var(--discover-accent);
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--discover-accent) 28%, transparent);
+}
+
+.actionLabel {
+  font-size: 12px;
+  color: var(--discover-text-subtle);
+  text-align: center;
+  margin-top: 6px;
+}
+
+.debugText {
+  text-align: center;
+  font-size: 11px;
+  color: var(--discover-text-subtle);
+  padding-bottom: 8px;
+}
+
+.syncText {
+  text-align: center;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--discover-text-subtle);
+}
+
+@media (max-width: 390px) {
+  .discoverRoot {
+    padding-left: max(8px, var(--sal));
+    padding-right: max(8px, var(--sar));
+  }
+
+  .cardFrame,
+  .skeletonFrame,
+  .nextCard {
+    height: clamp(390px, 72svh, 610px);
+  }
+
+  .cardBottom {
+    min-height: 132px;
+    padding: 0 12px 14px;
+  }
+
+  .name {
+    font-size: 24px;
+  }
+
+  .actionLike {
+    --discover-action-size: 64px;
+  }
+
+  .actionPass,
+  .actionNeutral {
+    --discover-action-size: 56px;
+  }
+}
+
+@media (max-width: 768px) {
+  .actionsRow {
+    position: fixed;
+    left: max(12px, var(--sal));
+    right: max(12px, var(--sar));
+    bottom: calc(var(--bn) + var(--sab) + 12px);
+    z-index: 60;
+    pointer-events: none;
+  }
+
+  .actionsRow > * {
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardFrame,
+  .actionButton,
+  .mainImage {
+    transition-duration: 1ms !important;
+    animation: none !important;
+  }
+}
