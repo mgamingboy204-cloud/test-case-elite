@@ -126,7 +126,8 @@ export default function DiscoverPage() {
       committedActionIdsRef.current.add(actionId);
 
       const resolvedDirection = direction || (type === "PASS" ? "left" : "right");
-      const endX = resolvedDirection === "left" ? -window.innerWidth * 1.25 : window.innerWidth * 1.25;
+      const stageW = cardRef.current?.parentElement?.getBoundingClientRect().width ?? window.innerWidth;
+      const endX = resolvedDirection === "left" ? -stageW * 1.25 : stageW * 1.25;
       const endY = swipeRef.current.y;
       const endRotation = resolvedDirection === "left" ? -16 : 16;
 
