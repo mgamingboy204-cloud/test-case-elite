@@ -288,7 +288,7 @@
   }
 
   /* THIS is the common fix so content never hides behind the fixed nav */
-  .app-bottom-nav,
+  
   .app-main-content {
     padding-bottom: calc(clamp(64px, 10svh, 72px) + env(safe-area-inset-bottom));
   }
