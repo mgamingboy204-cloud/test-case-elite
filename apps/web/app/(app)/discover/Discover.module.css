@@ -326,7 +326,7 @@
   }
 
   .actionsRow {
-    gap: 12px;
+    gap: 16px;
   }
 
   .actionLike {
@@ -334,14 +334,10 @@
     height: 64px;
   }
 
-  .actionPass {
+  .actionPass,
+  .actionInfo {
     width: 56px;
     height: 56px;
-  }
-
-  .actionInfo {
-    width: 48px;
-    height: 48px;
   }
 }
 
@@ -351,5 +347,107 @@
   .actionButton {
     transition-duration: 1ms !important;
     animation-duration: 1ms !important;
+  }
+}
+
+
+@media (max-width: 520px) {
+  .discoverRoot {
+    --discover-bg: var(--bg);
+    --discover-radius: 14px;
+    --discover-shadow: 0 18px 48px rgba(2, 6, 12, 0.22);
+
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .cardStage {
+    flex: 1;
+    min-height: 0;
+    padding: 6px max(10px, var(--sal)) 4px max(10px, var(--sal));
+    padding-right: max(10px, var(--sar));
+    align-items: stretch;
+  }
+
+  .cardSurface,
+  .fallbackFrame {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .nextCard {
+    inset: 6px max(10px, var(--sar)) auto max(10px, var(--sal));
+    height: calc(100% - 10px);
+    transform: translate3d(0, 14px, 0) scale(0.972);
+    opacity: 0.56;
+  }
+
+  .surfaceFade {
+    height: 28%;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(4, 5, 8, 0.9) 100%);
+  }
+
+  .cardBottom {
+    padding: 0 14px 16px;
+    gap: 4px;
+  }
+
+  .name {
+    font-size: clamp(1.72rem, 1.56rem + 1.1vw, 2.02rem);
+    font-weight: 610;
+    letter-spacing: -0.02em;
+  }
+
+  .metaLine {
+    font-size: 0.92rem;
+    color: color-mix(in srgb, #fff 70%, transparent);
+  }
+
+  .actionsBand {
+    flex: 0 0 clamp(88px, 13svh, 102px);
+    min-height: clamp(88px, 13svh, 102px);
+    padding: 10px max(12px, var(--sal)) 16px max(12px, var(--sal));
+    padding-right: max(12px, var(--sar));
+  }
+
+  .actionsRow {
+    gap: 18px;
+  }
+
+  .actionButton {
+    touch-action: manipulation;
+    transition: transform 140ms cubic-bezier(0.22, 0.84, 0.28, 1), box-shadow 140ms cubic-bezier(0.22, 0.84, 0.28, 1), opacity 140ms ease;
+  }
+
+  .actionPressed {
+    transform: scale(0.96) translateY(1px);
+    box-shadow: 0 4px 12px rgba(2, 6, 12, 0.2);
+  }
+
+  .actionPass,
+  .actionInfo {
+    width: 58px;
+    height: 58px;
+    color: color-mix(in srgb, var(--text-secondary) 84%, transparent);
+    background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+    box-shadow: 0 10px 26px rgba(2, 6, 12, 0.16);
+  }
+
+  .actionLike {
+    width: 68px;
+    height: 68px;
+    color: #fff;
+    background: #c79a86;
+    border-color: color-mix(in srgb, #c79a86 72%, #f0d6ca 28%);
+    box-shadow: 0 14px 34px rgba(133, 78, 57, 0.28);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actionPressed {
+    transform: none;
+    opacity: 0.92;
   }
 }
