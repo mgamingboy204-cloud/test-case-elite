@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react"
+import React from "react";
 
 import { AppShell } from "@/app/components/shells/AppShell";
 import RouteGuard from "@/app/components/RouteGuard";
+import "./appShell.css";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (

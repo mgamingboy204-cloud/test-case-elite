@@ -6,27 +6,31 @@ import { useEffect, useMemo, useState } from "react";
 import { useTheme } from "@/app/providers";
 import { useSession } from "@/lib/session";
 import { BottomSheet } from "@/app/components/ui/BottomSheet";
-import { Avatar } from "@/app/components/ui/Avatar";
 import { BottomNav } from "@/app/components/BottomNav";
-import type { ReactNode, CSSProperties } from "react";
+import type { ReactNode } from "react";
+
+type AppShellProps = {
+  children: ReactNode;
+  className?: string;
+  headerClassName?: string;
+  bottomNavClassName?: string;
+  variant?: "default" | "discover";
+};
 
 const sidebarLinks = [
-  { href: "/discover", label: "Discover", icon: "\u2738" },
-  { href: "/likes", label: "Likes", icon: "\u2665" },
-  { href: "/matches", label: "Matches", icon: "\u263A" },
-  { href: "/profile", label: "Profile", icon: "\u263B" },
-  { href: "/settings", label: "Settings", icon: "\u2699" },
+  { href: "/discover", label: "Discover", icon: "✸" },
+  { href: "/likes", label: "Likes", icon: "♥" },
+  { href: "/matches", label: "Matches", icon: "☺" },
+  { href: "/profile", label: "Profile", icon: "☻" },
+  { href: "/settings", label: "Settings", icon: "⚙" },
 ];
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, className, headerClassName, bottomNavClassName, variant = "default" }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, toggle } = useTheme();
   const { user } = useSession();
-  const profilePhotoUrl = null;
-  const profileName = String(user?.displayName ?? user?.firstName ?? "").trim();
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
-
 
   useEffect(() => {
     router.prefetch("/discover");
@@ -35,69 +39,33 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [router]);
 
   const mobileTitle = useMemo(() => {
-    if (pathname?.startsWith("/discover")) {
-      return profileName || "Elite Match";
-    }
+    if (pathname?.startsWith("/discover")) return "Discover";
     if (pathname?.startsWith("/likes")) return "Likes";
     if (pathname?.startsWith("/matches")) return "Matches";
     if (pathname?.startsWith("/profile")) return "Profile";
     return "Elite Match";
-  }, [pathname, profileName]);
+  }, [pathname]);
 
-  const headerStyle: CSSProperties = {
-    height: "var(--app-header-offset)",
-    background: "color-mix(in srgb, var(--surface-1) 94%, var(--bg) 6%)",
-    borderBottom: "1px solid color-mix(in srgb, var(--border) 78%, var(--accent) 22%)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "0 24px",
-    position: "sticky",
-    top: 0,
-    zIndex: 50,
-    paddingTop: "var(--app-mobile-safe-top)",
-  };
+  const profileName = String(user?.displayName ?? user?.firstName ?? "").trim();
 
   return (
-    <div className="shell-page" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <header style={headerStyle} className="app-header">
-        <Link href="/discover" style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}>
+    <div className={`app-shell${className ? ` ${className}` : ""}`} data-variant={variant}>
+      <header className={`app-header ${headerClassName ?? ""}`.trim()}>
+        <Link href="/discover" className="app-header__brand">
           Elite Match
         </Link>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <button
-            onClick={toggle}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "var(--radius-sm)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 16,
-              border: "1px solid var(--border)",
-              background: "color-mix(in srgb, var(--surface-1) 94%, var(--bg) 6%)",
-              color: "var(--text)",
-            }}
-            aria-label="Toggle theme"
-          >
-            {theme === "light" ? "\u263E" : "\u2600"}
-          </button>
-        </div>
+        <button
+          onClick={toggle}
+          className="app-header__theme-btn"
+          aria-label="Toggle theme"
+        >
+          {theme === "light" ? "☾" : "☀"}
+        </button>
       </header>
 
-      <header className="app-mobile-header" aria-label="Mobile header">
-        <Link href="/profile" aria-label="Open profile" className="app-mobile-header__avatar-link">
-          <Avatar
-            src={profilePhotoUrl}
-            name={profileName || user?.displayName || user?.firstName || "You"}
-            size={34}
-            style={{ border: "1px solid var(--border)" }}
-          />
-        </Link>
-        <div className="app-mobile-header__title" title={mobileTitle}>
-          {mobileTitle}
-        </div>
+      <header className={`app-mobile-header ${headerClassName ?? ""}`.trim()} aria-label="Mobile header">
+        <Link href="/profile" aria-label="Open profile" className="app-mobile-header__dot" title={profileName || "Profile"} />
+        <div className="app-mobile-header__title" title={mobileTitle}>{mobileTitle}</div>
         <button
           className="app-mobile-header__filter-btn"
           onClick={() => {
@@ -107,7 +75,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             }
             setMobileSettingsOpen(true);
           }}
-          aria-label="Open filters"
+          aria-label={pathname?.startsWith("/discover") ? "Open discover filters" : "Open settings"}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -115,143 +83,37 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
       </header>
 
-      <div style={{ flex: 1, display: "flex" }}>
-        <aside
-          className="app-sidebar"
-          style={{
-            width: 220,
-            background: "color-mix(in srgb, var(--surface-1) 94%, var(--bg) 6%)",
-            borderRight: "1px solid color-mix(in srgb, var(--border) 84%, var(--accent) 16%)",
-            padding: "16px 0",
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-            position: "sticky",
-            top: "var(--app-header-offset)",
-            height: "calc(100vh - var(--app-header-offset))",
-            overflowY: "auto",
-          }}
-        >
+      <div className="app-shell__body">
+        <aside className="app-sidebar">
           {sidebarLinks.map((link) => {
             const active = pathname.startsWith(link.href);
             return (
-              <Link
-                key={link.href}
-                href={link.href}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "12px 24px",
-                  fontSize: 14,
-                  fontWeight: active ? 600 : 400,
-                  color: active ? "var(--primary)" : "var(--text)",
-                  background: active ? "var(--primary-light)" : "transparent",
-                  borderRight: active ? "3px solid var(--primary)" : "3px solid transparent",
-                  transition: "all 180ms ease-out",
-                }}
-              >
-                <span style={{ fontSize: 18 }}>{link.icon}</span>
+              <Link key={link.href} href={link.href} className="app-sidebar__link" data-active={active ? "true" : "false"}>
+                <span className="app-sidebar__icon">{link.icon}</span>
                 {link.label}
               </Link>
             );
           })}
         </aside>
 
-        <main
-          className="app-main-content"
-          style={{
-            flex: 1,
-            minWidth: 0,
-            maxWidth: 800,
-            margin: "0 auto",
-            padding: "0 16px",
-            width: "100%",
-          }}
-        >
-          {children}
-        </main>
+        <main className="app-main-content">{children}</main>
       </div>
 
-      <div className="app-bottom-nav">
-        <BottomNav />
+      <div className={`app-bottom-nav${bottomNavClassName ? ` ${bottomNavClassName}` : ""}`}>
+        <BottomNav variant={variant === "discover" ? "discover" : "default"} />
       </div>
 
       <BottomSheet open={mobileSettingsOpen} onClose={() => setMobileSettingsOpen(false)} title="Filters & Settings">
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <p style={{ color: "var(--muted)", fontSize: 14 }}>Discover-specific filters are available on the Discover screen.</p>
+        <div className="app-mobile-sheet-content">
+          <p className="app-mobile-sheet-copy">Discover-specific filters are available on the Discover screen.</p>
           <button
             onClick={toggle}
-            style={{
-              border: "1px solid var(--border)",
-              background: "color-mix(in srgb, var(--surface-2) 90%, var(--surface-1) 10%)",
-              borderRadius: "var(--radius-md)",
-              padding: "12px 14px",
-              textAlign: "left",
-              fontWeight: 600,
-            }}
+            className="app-mobile-sheet-button"
           >
             Theme: {theme === "light" ? "Light" : "Dark"}
           </button>
         </div>
       </BottomSheet>
-
-      <style>{`
-        .app-mobile-header { display: none; }
-        .app-bottom-nav { display: none; }
-        @media (max-width: 768px) {
-          .app-header { display: none !important; }
-          .app-sidebar { display: none !important; }
-          .app-bottom-nav { display: block; }
-          .app-main-content { padding-bottom: var(--app-bottom-nav-height); }
-          .app-mobile-header {
-            position: sticky;
-            top: 0;
-            z-index: 60;
-            display: grid;
-            grid-template-columns: 44px 1fr 44px;
-            align-items: center;
-            gap: 10px;
-            padding: calc(var(--sat) + 10px) max(12px, var(--sal)) 12px max(12px, var(--sal));
-            padding-right: max(12px, var(--sar));
-            background: color-mix(in srgb, var(--surface-1) 90%, var(--bg) 10%);
-            backdrop-filter: saturate(140%) blur(14px);
-            border-bottom: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
-          }
-          .app-mobile-header__avatar-link {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 44px;
-            height: 44px;
-            border-radius: 9999px;
-          }
-          .app-mobile-header__title {
-            text-align: center;
-            font-size: 17px;
-            font-weight: 600;
-            letter-spacing: 0.01em;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-          .app-mobile-header__filter-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 9999px;
-            border: 1px solid var(--border);
-            background: color-mix(in srgb, var(--surface-2) 90%, var(--surface-1) 10%);
-            color: var(--text);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-          }
-          .app-mobile-header__filter-btn svg {
-            width: 20px;
-            height: 20px;
-          }
-        }
-      `}</style>
     </div>
   );
 }
