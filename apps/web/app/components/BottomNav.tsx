@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+type BottomNavProps = {
+  className?: string;
+  variant?: "default" | "discover";
+};
+
 const tabs = [
   {
     href: "/discover",
@@ -47,11 +52,11 @@ const tabs = [
   },
 ];
 
-export function BottomNav() {
+export function BottomNav({ className, variant = "default" }: BottomNavProps) {
   const pathname = usePathname();
 
   return (
-    <nav className="app-mobile-bottom-nav" aria-label="Main navigation">
+    <nav className={`app-mobile-bottom-nav${className ? ` ${className}` : ""}`} data-variant={variant} aria-label="Main navigation">
       {tabs.map((tab) => {
         const active = pathname.startsWith(tab.href);
         return (

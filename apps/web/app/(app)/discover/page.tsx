@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Tabs } from "@/app/components/ui/Tabs";
 import { BottomSheet } from "@/app/components/ui/BottomSheet";
-import { Chip, Badge } from "@/app/components/ui/Badge";
+import { Chip } from "@/app/components/ui/Badge";
 import { Skeleton } from "@/app/components/ui/Skeleton";
 import { EmptyState, ErrorState } from "@/app/components/ui/States";
 import { Button } from "@/app/components/ui/Button";
@@ -37,6 +37,7 @@ export default function DiscoverPage() {
   const [animatingOut, setAnimatingOut] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const [renderCount, setRenderCount] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const intentInitializedRef = useRef(false);
   const intentManuallyChangedRef = useRef(false);
@@ -69,6 +70,14 @@ export default function DiscoverPage() {
     if (!showDiscoverPerfLogs) return;
     setRenderCount((prev) => prev + 1);
   }, [showDiscoverPerfLogs, currentProfile?.userId, loading, error]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setPrefersReducedMotion(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   const applyCardTransform = useCallback((x: number, y: number, rotateDeg?: number) => {
     const card = cardRef.current;
@@ -135,7 +144,9 @@ export default function DiscoverPage() {
 
       const card = cardRef.current;
       if (card) {
-        card.style.transition = "transform 280ms cubic-bezier(0.24, 0.9, 0.2, 1), opacity 240ms ease-out";
+        card.style.transition = prefersReducedMotion
+          ? "transform 1ms linear, opacity 1ms linear"
+          : "transform 280ms cubic-bezier(0.24, 0.9, 0.2, 1), opacity 240ms ease-out";
       }
       applyCardTransform(endX, endY, endRotation);
       advance({ actionId, type });
@@ -152,14 +163,16 @@ export default function DiscoverPage() {
         }
         const activeCard = cardRef.current;
         if (activeCard) {
-          activeCard.style.transition = "transform 220ms cubic-bezier(0.2, 0.82, 0.24, 1)";
+          activeCard.style.transition = prefersReducedMotion
+            ? "transform 1ms linear"
+            : "transform 220ms cubic-bezier(0.2, 0.82, 0.24, 1)";
         }
         resetCardTransform();
         setSwipeDirection(null);
         setAnimatingOut(false);
-      }, 295);
+      }, prefersReducedMotion ? 1 : 295);
     },
-    [currentProfile, animatingOut, applyCardTransform, advance, addToast, resetCardTransform, showDiscoverPerfLogs]
+    [currentProfile, animatingOut, applyCardTransform, advance, addToast, prefersReducedMotion, resetCardTransform, showDiscoverPerfLogs]
   );
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -206,14 +219,16 @@ export default function DiscoverPage() {
 
     const card = cardRef.current;
     if (card) {
-      card.style.transition = "transform 340ms cubic-bezier(0.18, 0.9, 0.22, 1)";
+      card.style.transition = prefersReducedMotion
+        ? "transform 1ms linear"
+        : "transform 340ms cubic-bezier(0.18, 0.9, 0.22, 1)";
       card.style.cursor = "grab";
     }
 
     applyCardTransform(0, 0, 0);
     swipeRef.current = { x: 0, y: 0, velocityX: 0, lastX: 0, lastT: 0 };
     setSwipeXState(0);
-  }, [applyCardTransform, handleAction]);
+  }, [applyCardTransform, handleAction, prefersReducedMotion]);
 
   const [photoLoaded, setPhotoLoaded] = useState(false);
   const prefetchCacheRef = useRef(new Set<string>());
@@ -292,16 +307,20 @@ export default function DiscoverPage() {
               />
               <div className={styles.surfaceFade} />
 
+              <div className={styles.cardMicro}>
+                <div className={styles.photoHint}>• • 3 photos</div>
+                <button className={styles.infoButton} aria-label="View profile details">i</button>
+              </div>
+
               {swipeXState > 24 && <div className={`${styles.swipeBadge} ${styles.swipeLike}`} style={{ opacity: Math.min(swipeXState / 100, 1) }}>LIKE</div>}
               {swipeXState < -24 && <div className={`${styles.swipeBadge} ${styles.swipePass}`} style={{ opacity: Math.min(Math.abs(swipeXState) / 100, 1) }}>PASS</div>}
 
               <div className={styles.cardBottom}>
                 <div className={styles.titleRow}>
                   <h2 className={styles.name}>{currentProfile.name}, {currentProfile.age}</h2>
-                  {currentProfile.verified && <Badge variant="success" style={{ fontSize: 11 }}>Verified</Badge>}
-                  {currentProfile.premium && <Badge variant="primary" style={{ fontSize: 11 }}>Premium</Badge>}
+                  {currentProfile.verified && <span className={styles.verifiedBadge} aria-label="Verified profile">✓</span>}
                 </div>
-                <p className={styles.location}>{currentProfile.city}</p>
+                <p className={styles.location}>{currentProfile.city}{currentProfile.premium ? " • Premium" : ""}</p>
                 <p className={styles.bio}>{currentProfile.bio}</p>
               </div>
             </div>
@@ -311,23 +330,23 @@ export default function DiscoverPage() {
 
       {!loading && currentProfile && (
         <div className={styles.actionsRow}>
-          <div>
-            <button onClick={() => addToast("Rewind is unavailable in buffered mode", "info")} aria-label="Rewind" className={`${styles.actionButton} ${styles.actionNeutral}`}>
+          <div className={styles.actionCluster}>
+            <button onClick={() => addToast("Rewind is unavailable in buffered mode", "info")} aria-label="Maybe" className={`${styles.actionButton} ${styles.actionMaybe}`}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
           </button>
-            <div className={styles.actionLabel}>Maybe</div>
+            <p className={styles.actionLabel}>Maybe</p>
           </div>
-          <div>
+          <div className={styles.actionCluster}>
             <button onClick={() => handleAction("PASS", "left")} aria-label="Pass" className={`${styles.actionButton} ${styles.actionPass}`}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text)" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
-            <div className={styles.actionLabel}>Pass</div>
+            <p className={styles.actionLabel}>Pass</p>
           </div>
-          <div>
+          <div className={styles.actionCluster}>
             <button onClick={() => handleAction("LIKE", "right")} aria-label="Like" className={`${styles.actionButton} ${styles.actionLike}`}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--ctaText)" stroke="var(--ctaText)" strokeWidth="1"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
           </button>
-            <div className={styles.actionLabel}>Like</div>
+            <p className={styles.actionLabel}>Like</p>
           </div>
         </div>
       )}
