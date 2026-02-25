@@ -194,8 +194,14 @@
   }
 
   .app-shell[data-route="discover"][data-variant="discover"] .app-mobile-bottom-nav {
-    border-top-color: color-mix(in srgb, var(--border) 40%, transparent);
-  }
+  border-top-color: color-mix(in srgb, var(--border) 40%, transparent);
+
+  position: relative;                 /* stop fixed positioning in grid mode */
+  inset: auto;
+  height: 100% !important;            /* CRITICAL: kill the calc(... + env) height */
+  padding-bottom: env(safe-area-inset-bottom); /* keep icons above home indicator */
+  background: var(--app-shell-bottom-nav-bg);
+}
 
   .app-shell[data-route="discover"][data-variant="discover"] {
     --discover-topbar-height: calc(clamp(56px, 9svh, 64px) + var(--sat));
