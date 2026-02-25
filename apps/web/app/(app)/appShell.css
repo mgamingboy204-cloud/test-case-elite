@@ -12,7 +12,6 @@
   --app-shell-label-size: clamp(0.68rem, 0.64rem + 0.25vw, 0.8rem);
   --app-shell-nav-weight: 520;
 
-  /* common shell */
   height: 100dvh;
   height: 100svh;
   overflow: hidden;
@@ -29,6 +28,13 @@
   display: flex;
   flex: 1;
   min-height: 0;
+}
+
+/* wrapper around fixed nav must NEVER consume space */
+.app-bottom-nav {
+  padding: 0;
+  margin: 0;
+  height: 0;
 }
 
 /* =========================
@@ -110,7 +116,7 @@
   background: var(--app-shell-bg);
 }
 
-/* mobile-only wrappers hidden by default */
+/* mobile header hidden by default */
 .app-mobile-header {
   display: none;
   background: var(--app-shell-bg);
@@ -141,7 +147,7 @@
 }
 
 /* =========================
-   MOBILE BOTTOM NAV (COMMON)
+   MOBILE BOTTOM NAV
    ========================= */
 
 .app-mobile-bottom-nav {
@@ -195,11 +201,10 @@
 }
 
 /* =========================
-   MOBILE LAYOUT RULES (COMMON)
+   MOBILE LAYOUT
    ========================= */
 
 @media (max-width: 768px) {
-  
   .app-shell {
     padding-top: 0;
     padding-left: max(0px, var(--sal));
@@ -281,19 +286,13 @@
     padding-inline: 0;
     display: flex;
     flex-direction: column;
-  }
 
-  .app-bottom-nav {
-    display: block;
-  }
-
-  /* THIS is the common fix so content never hides behind the fixed nav */
-  
-  .app-main-content {
+    /* content never hides behind fixed nav */
     padding-bottom: calc(clamp(64px, 10svh, 72px) + env(safe-area-inset-bottom));
   }
 }
 
+/* hide mobile nav on real desktop */
 @media (hover: hover) and (pointer: fine) {
   .app-mobile-bottom-nav {
     display: none;
@@ -304,28 +303,5 @@
   .app-mobile-bottom-nav__link,
   .app-mobile-header__filter-btn {
     transition-duration: 1ms !important;
-  }
-}
-
-
-@media (hover: none) and (pointer: coarse) {
-  .app-header,
-  .app-sidebar {
-    display: none;
-  }
-
-  .app-mobile-header {
-    display: grid;
-  }
-
-  .app-bottom-nav {
-    display: block;
-    padding: 0;
-    margin: 0;
-    height: 0; /* wrapper must not consume space */
-  }
-
-  .app-main-content {
-    padding-bottom: calc(clamp(64px, 10svh, 72px) + env(safe-area-inset-bottom));
   }
 }
