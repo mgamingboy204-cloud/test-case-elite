@@ -306,6 +306,8 @@ export default function DiscoverPage() {
         )}
       </section>
 
+      <div className={styles.discoverGap} aria-hidden />
+
       <section className={styles.actionsBand}>
         {loading ? (
           <div className={`${styles.actionsRow} ${styles.actionsSkeleton}`} aria-hidden>
