@@ -9,7 +9,7 @@
   flex: 1;
   min-height: 0;
   height: 100%;
-  background: radial-gradient(120% 68% at 50% -14%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 62%), var(--discover-bg);
+  background: transparent;
   color: var(--discover-text);
   display: grid;
   grid-template-rows: minmax(0, 1fr) clamp(84px, 20svh, 120px);
@@ -26,6 +26,10 @@
   align-items: stretch;
   justify-content: center;
   padding: clamp(6px, 1.6svh, 12px) clamp(8px, 2.5vw, 12px) 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -172,6 +176,7 @@
   justify-content: center;
   padding: 8px max(12px, var(--sal)) 10px max(12px, var(--sal));
   padding-right: max(12px, var(--sar));
+  background: transparent;
 }
 
 .actionsRow {
@@ -254,12 +259,13 @@
 
 @media (max-width: 768px) {
   .discoverRoot {
-    --discover-gap-row: min(6.25%, 28px);
-    --discover-actions-row: 31.25%;
+    --discover-card-row: 75.9036%;
+    --discover-gap-row: 3.6145%;
+    --discover-actions-row: 20.4819%;
 
     height: 100%;
     min-height: 0;
-    grid-template-rows: minmax(0, calc(100% - var(--discover-actions-row) - var(--discover-gap-row))) var(--discover-gap-row) var(--discover-actions-row);
+    grid-template-rows: minmax(0, var(--discover-card-row)) var(--discover-gap-row) var(--discover-actions-row);
     overflow: hidden;
   }
 
