@@ -164,10 +164,18 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
-html, body {
+html,
+body,
+#__next {
   background-color: var(--bg);
 }
 
+.site-main {
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  background: var(--bg);
+}
 
 .boot-shell {
   position: fixed;

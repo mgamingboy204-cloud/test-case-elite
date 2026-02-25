@@ -101,6 +101,7 @@
 .app-mobile-header,
 .app-bottom-nav {
   display: none;
+  background: var(--app-shell-bg);
 }
 
 .app-mobile-sheet-content {
@@ -124,11 +125,13 @@
 }
 
 .app-mobile-bottom-nav {
+  --app-shell-bottom-nav-bg: color-mix(in srgb, var(--app-shell-bg) 95%, transparent);
+
   position: fixed;
   inset: auto 0 0;
   height: calc(clamp(64px, 10svh, 72px) + var(--sab));
   padding: 8px max(14px, var(--sal)) var(--sab) max(14px, var(--sar));
-  background: color-mix(in srgb, var(--app-shell-bg) 95%, transparent);
+  background: var(--app-shell-bottom-nav-bg);
   border-top: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
   backdrop-filter: blur(12px) saturate(140%);
   display: flex;
@@ -207,6 +210,7 @@
     inset: auto;
     height: 100%;
     padding-bottom: env(safe-area-inset-bottom);
+    background: var(--app-shell-bottom-nav-bg);
   }
 
   .app-shell {
