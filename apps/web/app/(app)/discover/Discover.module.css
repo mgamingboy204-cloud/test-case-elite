@@ -265,28 +265,30 @@
 }
 
 @media (max-width: 768px) {
-  .discoverRoot {
-    --discover-gap-row: clamp(10px, 2.6svh, 18px);
-
+    .discoverRoot {
     height: 100%;
     min-height: 0;
-    grid-template-rows: minmax(0, 1fr) var(--discover-gap-row) auto;
     overflow: hidden;
+  
+    /* ONLY TWO ROWS: card + actions (kills the boxed “gap panel”) */
+    grid-template-rows: minmax(0, 1fr) clamp(84px, 20svh, 120px);
   }
 
-  .cardStage {
+    .cardStage {
     grid-row: 1;
     height: 100%;
     min-height: 0;
-    padding-block: clamp(6px, 1.2svh, 10px) 0;
+    padding: clamp(6px, 1.2svh, 10px) clamp(8px, 2.5vw, 12px) 0;
+    background: transparent;
   }
 
-  .actionsBand {
-    grid-row: 3;
-    height: auto;
+    .actionsBand {
+    grid-row: 2;
+    height: 100%;
     min-height: 0;
     padding-top: 0;
     padding-bottom: clamp(6px, 1.4svh, 10px);
+    background: transparent;
   }
 }
 
