@@ -1,12 +1,18 @@
 .app-shell {
   --app-shell-bg: color-mix(in srgb, var(--bg) 90%, #04070e 10%);
   --app-shell-surface: color-mix(in srgb, var(--surface-1) 92%, var(--bg) 8%);
-  --discover-canvas-bg: radial-gradient(120% 68% at 50% -14%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 62%), var(--app-shell-bg);
+  --discover-canvas-bg: radial-gradient(
+      120% 68% at 50% -14%,
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      transparent 62%
+    ),
+    var(--app-shell-bg);
   --app-shell-border: color-mix(in srgb, var(--border) 78%, transparent);
   --app-shell-title-size: clamp(1.02rem, 0.94rem + 0.55vw, 1.2rem);
   --app-shell-label-size: clamp(0.68rem, 0.64rem + 0.25vw, 0.8rem);
   --app-shell-nav-weight: 520;
 
+  /* common shell */
   height: 100dvh;
   height: 100svh;
   overflow: hidden;
@@ -24,6 +30,10 @@
   flex: 1;
   min-height: 0;
 }
+
+/* =========================
+   DESKTOP
+   ========================= */
 
 .app-header {
   height: var(--app-header-offset);
@@ -100,11 +110,16 @@
   background: var(--app-shell-bg);
 }
 
+/* mobile-only wrappers hidden by default */
 .app-mobile-header,
 .app-bottom-nav {
   display: none;
   background: var(--app-shell-bg);
 }
+
+/* =========================
+   MOBILE SHEET
+   ========================= */
 
 .app-mobile-sheet-content {
   display: flex;
@@ -125,6 +140,10 @@
   text-align: left;
   font-weight: 560;
 }
+
+/* =========================
+   MOBILE BOTTOM NAV (COMMON)
+   ========================= */
 
 .app-mobile-bottom-nav {
   --app-shell-bottom-nav-bg: color-mix(in srgb, var(--app-shell-bg) 95%, transparent);
@@ -176,7 +195,12 @@
   line-height: 1;
 }
 
+/* =========================
+   MOBILE LAYOUT RULES (COMMON)
+   ========================= */
+
 @media (max-width: 768px) {
+  /* discover: visuals only */
   .app-shell[data-variant="discover"] {
     background: var(--discover-canvas-bg);
   }
@@ -191,56 +215,6 @@
   .app-shell[data-route="discover"][data-variant="discover"] .app-mobile-bottom-nav,
   .app-shell[data-route="discover"][data-variant="discover"] .app-mobile-header {
     background: var(--discover-canvas-bg);
-  }
-
-  .app-shell[data-route="discover"][data-variant="discover"] .app-mobile-bottom-nav {
-  border-top-color: color-mix(in srgb, var(--border) 40%, transparent);
-
-  position: relative;                 /* stop fixed positioning in grid mode */
-  inset: auto;
-  height: 100% !important;            /* CRITICAL: kill the calc(... + env) height */
-  padding-bottom: env(safe-area-inset-bottom); /* keep icons above home indicator */
-  background: var(--app-shell-bottom-nav-bg);
-}
-
-  .app-shell[data-route="discover"][data-variant="discover"] {
-    --discover-topbar-height: calc(clamp(56px, 9svh, 64px) + var(--sat));
-    --discover-bottom-nav-height: calc(clamp(64px, 8svh, 72px) + env(safe-area-inset-bottom));
-    --app-shell-bottom-nav-bg: var(--discover-canvas-bg);
-
-    height: 100dvh;
-    height: 100svh;
-    display: grid;
-    grid-template-rows: var(--discover-topbar-height) calc(100% - var(--discover-topbar-height) - var(--discover-bottom-nav-height)) var(--discover-bottom-nav-height);
-    overflow: hidden;
-  }
-
-  .app-shell[data-route="discover"][data-variant="discover"] .app-mobile-header {
-    grid-row: 1;
-    min-height: 0;
-    height: 100%;
-  }
-
-  .app-shell[data-route="discover"][data-variant="discover"] .app-shell__body {
-    grid-row: 2;
-    min-height: 0;
-    height: 100%;
-    background: var(--discover-canvas-bg) !important;
-    border-bottom: 0 !important;
-  }
-
-  .app-shell[data-route="discover"][data-variant="discover"] .app-bottom-nav {
-    grid-row: 3;
-    min-height: 0;
-    height: 100%;
-  }
-
-  .app-shell[data-route="discover"][data-variant="discover"] .app-mobile-bottom-nav {
-    position: relative;
-    inset: auto;
-    height: 100%;
-    padding-bottom: 0;
-    background: var(--app-shell-bottom-nav-bg);
   }
 
   .app-shell {
@@ -328,6 +302,12 @@
 
   .app-bottom-nav {
     display: block;
+  }
+
+  /* THIS is the common fix so content never hides behind the fixed nav */
+  .app-bottom-nav,
+  .app-main-content {
+    padding-bottom: calc(clamp(64px, 10svh, 72px) + env(safe-area-inset-bottom));
   }
 }
 
