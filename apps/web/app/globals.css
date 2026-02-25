@@ -167,14 +167,25 @@ html {
 html,
 body,
 #__next {
+  height: 100%;
   background-color: var(--bg);
 }
 
 .site-main {
+  height: 100%;
   min-height: 100vh;
   min-height: 100svh;
   min-height: 100dvh;
   background: var(--bg);
+}
+
+html[data-app-shell="1"],
+html[data-app-shell="1"] body,
+html[data-app-shell="1"] #__next,
+html[data-app-shell="1"] .site-main {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .boot-shell {
