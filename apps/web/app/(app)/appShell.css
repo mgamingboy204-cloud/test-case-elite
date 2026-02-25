@@ -111,8 +111,7 @@
 }
 
 /* mobile-only wrappers hidden by default */
-.app-mobile-header,
-.app-bottom-nav {
+.app-mobile-header {
   display: none;
   background: var(--app-shell-bg);
 }
