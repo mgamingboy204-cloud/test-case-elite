@@ -15,6 +15,7 @@ type AppShellProps = {
   headerClassName?: string;
   bottomNavClassName?: string;
   variant?: "default" | "discover";
+  dataVariant?: "default" | "discover";
 };
 
 const sidebarLinks = [
@@ -25,14 +26,14 @@ const sidebarLinks = [
   { href: "/settings", label: "Settings", icon: "⚙" },
 ];
 
-export function AppShell({ children, className, headerClassName, bottomNavClassName, variant = "default" }: AppShellProps) {
+export function AppShell({ children, className, headerClassName, bottomNavClassName, variant = "default", dataVariant }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, toggle } = useTheme();
   const { user } = useSession();
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const isDiscoverRoute = pathname?.startsWith("/discover");
-  const shellVariant = variant === "discover" || isDiscoverRoute ? "discover" : "default";
+  const shellVariant = dataVariant ?? (variant === "discover" || isDiscoverRoute ? "discover" : "default");
 
   useEffect(() => {
     router.prefetch("/discover");

@@ -1,19 +1,18 @@
 .discoverRoot {
-  --discover-bg: color-mix(in srgb, var(--bg) 93%, #060910 7%);
-  --discover-text: var(--text);
-  --discover-muted: color-mix(in srgb, var(--text-secondary) 82%, transparent);
-  --discover-radius: clamp(12px, 3.5vw, 16px);
-  --discover-shadow: 0 20px 56px rgba(2, 5, 12, 0.24);
-  --discover-ease: cubic-bezier(0.2, 0.72, 0.24, 1);
-  --discover-card-height: clamp(430px, 79%, 760px);
+  --discover-bg: color-mix(in srgb, var(--bg) 92%, #04070f 8%);
+  --discover-text: color-mix(in srgb, var(--text) 96%, #fff 4%);
+  --discover-muted: color-mix(in srgb, var(--text-secondary) 86%, transparent);
+  --discover-radius: clamp(12px, 3.6vw, 16px);
+  --discover-shadow: 0 22px 60px rgba(1, 4, 10, 0.4);
+  --discover-ease: cubic-bezier(0.22, 0.84, 0.24, 1);
 
   flex: 1;
   min-height: 0;
   height: 100%;
-  background: var(--discover-bg);
+  background: radial-gradient(120% 68% at 50% -14%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 62%), var(--discover-bg);
   color: var(--discover-text);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) clamp(84px, 20svh, 120px);
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
@@ -22,19 +21,19 @@
 
 .cardStage {
   position: relative;
-  flex: 1;
   min-height: 0;
-  display: grid;
-  place-items: center;
-  padding: 10px max(8px, var(--sal)) 8px max(8px, var(--sal));
-  padding-right: max(8px, var(--sar));
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: clamp(6px, 1.6svh, 12px) clamp(8px, 2.5vw, 12px) 0;
   overflow: hidden;
 }
 
-.cardSurface {
+.cardSurface,
+.fallbackFrame {
   width: 100%;
-  max-width: 100%;
-  height: var(--discover-card-height);
+  height: 100%;
+  min-height: 0;
   border-radius: var(--discover-radius);
   overflow: hidden;
 }
@@ -46,9 +45,8 @@
   transform: translate3d(0, 0, 0);
   cursor: grab;
   box-shadow: var(--discover-shadow);
-  transition: transform 260ms var(--discover-ease), opacity 220ms ease;
+  transition: transform 260ms var(--discover-ease), opacity 230ms ease-in-out;
   will-change: transform;
-  animation: cardEnter 240ms ease-in-out;
 }
 
 .skeletonFrame {
@@ -57,96 +55,35 @@
 }
 
 .fallbackFrame {
-  width: 100%;
-  height: var(--discover-card-height);
   display: grid;
   place-items: center;
-  border-radius: var(--discover-radius);
-  overflow: hidden;
   background: color-mix(in srgb, var(--surface-1) 90%, transparent);
-}
-
-.nextCard {
-  position: absolute;
-  transform: translate3d(0, 18px, 0) scale(0.968);
-  opacity: 0.58;
-}
-
-.nextCardImage,
-.mainImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .mainImage {
   position: absolute;
   inset: 0;
-  transition: opacity 220ms ease-out;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 210ms ease-in-out;
 }
 
-.mainImageLoaded {
-  opacity: 1;
-}
-
-.mainImagePending {
-  opacity: 0;
-}
+.mainImageLoaded { opacity: 1; }
+.mainImagePending { opacity: 0; }
 
 .loadingImage {
   position: absolute;
   inset: 0;
-  background: linear-gradient(120deg, color-mix(in srgb, var(--surface-1) 74%, transparent), color-mix(in srgb, var(--surface-2) 88%, transparent), color-mix(in srgb, var(--surface-1) 74%, transparent));
+  background: linear-gradient(120deg, color-mix(in srgb, var(--surface-1) 76%, transparent), color-mix(in srgb, var(--surface-2) 88%, transparent), color-mix(in srgb, var(--surface-1) 76%, transparent));
 }
 
 .surfaceFade {
   position: absolute;
   inset: auto 0 0 0;
-  height: 29%;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(4, 5, 8, 0.92) 100%);
+  height: 28%;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(4, 6, 11, 0.96) 100%);
   pointer-events: none;
-}
-
-.cardMicro {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  right: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 2;
-}
-
-.photoHint {
-  font-size: 12px;
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.72);
-  background: rgba(0, 0, 0, 0.28);
-  border-radius: 999px;
-  min-height: 24px;
-  padding: 6px 10px;
-}
-
-.infoButton {
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  color: rgba(255, 255, 255, 0.72);
-  background: rgba(0, 0, 0, 0.3);
-  transition: background-color 200ms ease;
-}
-
-.infoButton svg {
-  width: 16px;
-  height: 16px;
-}
-
-.infoButton:active {
-  background: rgba(0, 0, 0, 0.4);
 }
 
 .swipeBadge {
@@ -154,7 +91,7 @@
   top: 18px;
   border-radius: 8px;
   padding: 6px 10px;
-  font-weight: 620;
+  font-weight: 630;
   font-size: 14px;
   letter-spacing: 0.02em;
   z-index: 3;
@@ -184,8 +121,8 @@
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 0 14px 14px;
+  gap: 4px;
+  padding: 0 clamp(12px, 3.4vw, 16px) clamp(12px, 3.4vw, 16px);
 }
 
 .titleRow {
@@ -197,10 +134,10 @@
 
 .name {
   margin: 0;
-  font-size: clamp(1.6rem, 1.35rem + 1.3vw, 2rem);
-  font-weight: 620;
+  font-size: clamp(1.6rem, 1.25rem + 1.4vw, 2rem);
+  font-weight: 640;
   letter-spacing: -0.03em;
-  line-height: 1.02;
+  line-height: 1.06;
   color: #fff;
 }
 
@@ -219,29 +156,21 @@
 
 .metaLine {
   margin: 0;
-  font-size: clamp(0.82rem, 0.77rem + 0.24vw, 0.92rem);
-  line-height: 1.44;
-  font-weight: 480;
-  color: color-mix(in srgb, #fff 82%, transparent);
-}
-
-.bio {
-  margin: 1px 0 0;
-  font-size: clamp(0.77rem, 0.74rem + 0.21vw, 0.84rem);
-  line-height: 1.42;
-  color: color-mix(in srgb, #fff 66%, transparent);
+  font-size: clamp(0.84rem, 0.78rem + 0.35vw, 0.95rem);
+  line-height: 1.36;
+  font-weight: 520;
+  color: color-mix(in srgb, #fff 76%, transparent);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .actionsBand {
-  flex: 0 0 clamp(88px, 14svh, 104px);
-  min-height: clamp(88px, 14svh, 104px);
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px max(12px, var(--sal)) 12px max(12px, var(--sal));
+  padding: 8px max(12px, var(--sal)) 10px max(12px, var(--sal));
   padding-right: max(12px, var(--sar));
 }
 
@@ -249,7 +178,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: clamp(16px, 4.8vw, 22px);
+}
+
+.actionsSkeleton {
+  opacity: 0.72;
 }
 
 .actionButton {
@@ -257,36 +190,40 @@
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  box-shadow: 0 8px 20px rgba(2, 6, 12, 0.18);
-  border: 1px solid color-mix(in srgb, var(--border) 56%, transparent);
-  transition: transform 240ms var(--discover-ease), box-shadow 240ms var(--discover-ease), background-color 240ms var(--discover-ease);
+  box-shadow: 0 10px 24px rgba(2, 6, 12, 0.3);
+  border: 1px solid color-mix(in srgb, var(--border) 58%, transparent);
+  transition: transform 220ms ease-in-out, box-shadow 220ms ease-in-out, background-color 220ms ease-in-out;
+  touch-action: manipulation;
 }
 
-.actionButton:active {
-  transform: scale(0.96);
-  box-shadow: 0 4px 10px rgba(2, 6, 12, 0.18);
+.actionPressed {
+  transform: scale(0.96) translateY(1px);
+  box-shadow: 0 5px 12px rgba(2, 6, 12, 0.28);
 }
 
-.actionPass {
-  width: 58px;
-  height: 58px;
+.actionPass,
+.actionInfo {
+  width: clamp(56px, 15vw, 60px);
+  height: clamp(56px, 15vw, 60px);
   color: color-mix(in srgb, var(--text-secondary) 92%, transparent);
-  background: color-mix(in srgb, var(--surface-2) 91%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 90%, transparent);
 }
 
 .actionInfo {
-  width: 50px;
-  height: 50px;
-  color: color-mix(in srgb, var(--text-secondary) 86%, transparent);
-  background: color-mix(in srgb, var(--surface-2) 75%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
 }
 
 .actionLike {
-  width: 68px;
-  height: 68px;
+  width: clamp(64px, 18vw, 72px);
+  height: clamp(64px, 18vw, 72px);
   color: #fff9f4;
   background: color-mix(in srgb, var(--accent) 84%, #eac3ae 16%);
   border-color: color-mix(in srgb, var(--accent) 62%, #f4d4c5 38%);
+}
+
+.actionsSpacer {
+  width: 100%;
+  height: 100%;
 }
 
 .profileSheet {
@@ -309,35 +246,9 @@
   color: var(--discover-muted);
 }
 
-@keyframes cardEnter {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 10px, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
 @media (max-width: 390px) {
-  .discoverRoot {
-    --discover-card-height: clamp(392px, 78%, 620px);
-  }
-
-  .actionsRow {
-    gap: 16px;
-  }
-
-  .actionLike {
-    width: 64px;
-    height: 64px;
-  }
-
-  .actionPass,
-  .actionInfo {
-    width: 56px;
-    height: 56px;
+  .cardBottom {
+    padding-bottom: 12px;
   }
 }
 
@@ -348,106 +259,9 @@
     transition-duration: 1ms !important;
     animation-duration: 1ms !important;
   }
-}
 
-
-@media (max-width: 520px) {
-  .discoverRoot {
-    --discover-bg: var(--bg);
-    --discover-radius: 14px;
-    --discover-shadow: 0 18px 48px rgba(2, 6, 12, 0.22);
-
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
-    overscroll-behavior: none;
-  }
-
-  .cardStage {
-    flex: 1;
-    min-height: 0;
-    padding: 6px max(10px, var(--sal)) 4px max(10px, var(--sal));
-    padding-right: max(10px, var(--sar));
-    align-items: stretch;
-  }
-
-  .cardSurface,
-  .fallbackFrame {
-    height: 100%;
-    min-height: 0;
-  }
-
-  .nextCard {
-    inset: 6px max(10px, var(--sar)) auto max(10px, var(--sal));
-    height: calc(100% - 10px);
-    transform: translate3d(0, 14px, 0) scale(0.972);
-    opacity: 0.56;
-  }
-
-  .surfaceFade {
-    height: 28%;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(4, 5, 8, 0.9) 100%);
-  }
-
-  .cardBottom {
-    padding: 0 14px 16px;
-    gap: 4px;
-  }
-
-  .name {
-    font-size: clamp(1.72rem, 1.56rem + 1.1vw, 2.02rem);
-    font-weight: 610;
-    letter-spacing: -0.02em;
-  }
-
-  .metaLine {
-    font-size: 0.92rem;
-    color: color-mix(in srgb, #fff 70%, transparent);
-  }
-
-  .actionsBand {
-    flex: 0 0 clamp(88px, 13svh, 102px);
-    min-height: clamp(88px, 13svh, 102px);
-    padding: 10px max(12px, var(--sal)) 16px max(12px, var(--sal));
-    padding-right: max(12px, var(--sar));
-  }
-
-  .actionsRow {
-    gap: 18px;
-  }
-
-  .actionButton {
-    touch-action: manipulation;
-    transition: transform 140ms cubic-bezier(0.22, 0.84, 0.28, 1), box-shadow 140ms cubic-bezier(0.22, 0.84, 0.28, 1), opacity 140ms ease;
-  }
-
-  .actionPressed {
-    transform: scale(0.96) translateY(1px);
-    box-shadow: 0 4px 12px rgba(2, 6, 12, 0.2);
-  }
-
-  .actionPass,
-  .actionInfo {
-    width: 58px;
-    height: 58px;
-    color: color-mix(in srgb, var(--text-secondary) 84%, transparent);
-    background: color-mix(in srgb, var(--surface-2) 88%, transparent);
-    box-shadow: 0 10px 26px rgba(2, 6, 12, 0.16);
-  }
-
-  .actionLike {
-    width: 68px;
-    height: 68px;
-    color: #fff;
-    background: #c79a86;
-    border-color: color-mix(in srgb, #c79a86 72%, #f0d6ca 28%);
-    box-shadow: 0 14px 34px rgba(133, 78, 57, 0.28);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
   .actionPressed {
     transform: none;
-    opacity: 0.92;
+    opacity: 0.94;
   }
 }
