@@ -294,7 +294,7 @@
   }
 }
 
-@media (min-width: 769px) {
+@media (hover: hover) and (pointer: fine) {
   .app-mobile-bottom-nav {
     display: none;
   }
@@ -304,5 +304,28 @@
   .app-mobile-bottom-nav__link,
   .app-mobile-header__filter-btn {
     transition-duration: 1ms !important;
+  }
+}
+
+
+@media (hover: none) and (pointer: coarse) {
+  .app-header,
+  .app-sidebar {
+    display: none;
+  }
+
+  .app-mobile-header {
+    display: grid;
+  }
+
+  .app-bottom-nav {
+    display: block;
+    padding: 0;
+    margin: 0;
+    height: 0; /* wrapper must not consume space */
+  }
+
+  .app-main-content {
+    padding-bottom: calc(clamp(64px, 10svh, 72px) + env(safe-area-inset-bottom));
   }
 }
