@@ -31,6 +31,8 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
   const { theme, toggle } = useTheme();
   const { user } = useSession();
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+  const isDiscoverRoute = pathname?.startsWith("/discover");
+  const shellVariant = variant === "discover" || isDiscoverRoute ? "discover" : "default";
 
   useEffect(() => {
     router.prefetch("/discover");
@@ -49,8 +51,8 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
   const profileName = String(user?.displayName ?? user?.firstName ?? "").trim();
 
   return (
-    <div className={`app-shell${className ? ` ${className}` : ""}`} data-variant={variant}>
-      <header className={`app-header ${headerClassName ?? ""}`.trim()}>
+    <div className={`app-shell${className ? ` ${className}` : ""}`} data-variant={shellVariant}>
+      <header className={`app-header ${headerClassName ?? ""}`.trim()} data-variant={shellVariant}>
         <Link href="/discover" className="app-header__brand">
           Elite Match
         </Link>
@@ -63,7 +65,7 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
         </button>
       </header>
 
-      <header className={`app-mobile-header ${headerClassName ?? ""}`.trim()} aria-label="Mobile header">
+      <header className={`app-mobile-header ${headerClassName ?? ""}`.trim()} data-variant={shellVariant} aria-label="Mobile header">
         <Link href="/profile" aria-label="Open profile" className="app-mobile-header__dot" title={profileName || "Profile"} />
         <div className="app-mobile-header__title" title={mobileTitle}>{mobileTitle}</div>
         <button
@@ -83,7 +85,7 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
         </button>
       </header>
 
-      <div className="app-shell__body">
+      <div className="app-shell__body" data-variant={shellVariant}>
         <aside className="app-sidebar">
           {sidebarLinks.map((link) => {
             const active = pathname.startsWith(link.href);
@@ -96,11 +98,11 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
           })}
         </aside>
 
-        <main className="app-main-content">{children}</main>
+        <main className="app-main-content" data-variant={shellVariant}>{children}</main>
       </div>
 
-      <div className={`app-bottom-nav${bottomNavClassName ? ` ${bottomNavClassName}` : ""}`}>
-        <BottomNav variant={variant === "discover" ? "discover" : "default"} />
+      <div className={`app-bottom-nav${bottomNavClassName ? ` ${bottomNavClassName}` : ""}`} data-variant={shellVariant}>
+        <BottomNav variant={shellVariant} />
       </div>
 
       <BottomSheet open={mobileSettingsOpen} onClose={() => setMobileSettingsOpen(false)} title="Filters & Settings">

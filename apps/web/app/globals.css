@@ -255,21 +255,6 @@ h5 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
 .sp-32 { padding: 32px; }
 
 
-[data-app-shell="1"] {
-  height: 100%;
-}
-
-[data-app-shell="1"] body {
-  height: 100%;
-  overscroll-behavior: none;
-}
-
-[data-app-shell="1"] body.app-entry-no-scroll {
-  overflow: hidden;
-  overscroll-behavior: none;
-  touch-action: manipulation;
-  width: 100%;
-}
 
 body.app-entry-no-scroll {
   overflow: hidden;
@@ -290,11 +275,6 @@ body.app-entry-no-scroll {
     position: fixed;
     inset: 0;
   }
-}
-
-[data-app-shell="1"] .entry-screen {
-  min-height: 100dvh;
-  overflow: hidden;
 }
 
 /* Scrollbar styling */

@@ -2,7 +2,7 @@
   --app-shell-bg: color-mix(in srgb, var(--bg) 90%, #05070d 10%);
   --app-shell-surface: color-mix(in srgb, var(--surface-1) 92%, var(--bg) 8%);
   --app-shell-border: color-mix(in srgb, var(--border) 78%, transparent);
-  --app-shell-title-size: clamp(1.04rem, 1rem + 0.2vw, 1.15rem);
+  --app-shell-title-size: clamp(1.02rem, 0.98rem + 0.2vw, 1.14rem);
   --app-shell-label-size: clamp(0.68rem, 0.64rem + 0.25vw, 0.78rem);
   --app-shell-nav-weight: 500;
 
@@ -12,7 +12,7 @@
   color: var(--text);
   display: flex;
   flex-direction: column;
-  overscroll-behavior-y: none;
+  overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -153,16 +153,16 @@
 }
 
 .app-mobile-bottom-nav__link[aria-current="page"] {
-  color: var(--text);
+  color: color-mix(in srgb, var(--text) 94%, #fff 6%);
   font-weight: 560;
 }
 
 .app-mobile-bottom-nav__link[aria-current="page"]::after {
   content: "";
-  width: 12px;
+  width: 10px;
   height: 2px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 86%, #f5d2bf 14%);
+  background: color-mix(in srgb, var(--accent) 82%, #f5d2bf 18%);
 }
 
 .app-mobile-bottom-nav__label {
@@ -174,8 +174,11 @@
 
 @media (max-width: 768px) {
   .app-shell {
-    min-height: 100svh;
-    min-height: 100dvh;
+    height: 100svh;
+    height: 100dvh;
+    overflow: hidden;
+    padding-left: max(0px, var(--sal));
+    padding-right: max(0px, var(--sar));
   }
 
   .app-header,
@@ -184,43 +187,48 @@
   }
 
   .app-mobile-header {
-    position: sticky;
-    top: 0;
+    position: relative;
     z-index: 95;
-    height: calc(56px + var(--sat));
+    height: clamp(56px, 7.2svh, 64px);
+    min-height: clamp(56px, 7.2svh, 64px);
     display: grid;
     grid-template-columns: 28px 1fr 28px;
-    align-items: end;
+    align-items: center;
     gap: 10px;
-    padding: calc(var(--sat) + 10px) max(12px, var(--sal)) 10px max(12px, var(--sal));
+    padding: max(8px, var(--sat)) max(12px, var(--sal)) 8px max(12px, var(--sal));
     padding-right: max(12px, var(--sar));
     background: var(--app-shell-bg);
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 62%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  }
+
+  .app-mobile-header[data-variant="discover"] {
+    border-bottom-color: color-mix(in srgb, var(--border) 24%, transparent);
+    background: color-mix(in srgb, var(--app-shell-bg) 96%, transparent);
   }
 
   .app-mobile-header__dot {
     width: 26px;
     height: 26px;
     border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border));
-    background: color-mix(in srgb, var(--surface-2) 76%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+    background: color-mix(in srgb, var(--surface-2) 72%, transparent);
     justify-self: start;
   }
 
   .app-mobile-header__title {
     font-size: var(--app-shell-title-size);
-    font-weight: 610;
-    letter-spacing: -0.018em;
-    line-height: 1.15;
+    font-weight: 540;
+    letter-spacing: -0.022em;
+    line-height: 1.05;
     text-align: center;
-    color: color-mix(in srgb, var(--text) 96%, #fff 4%);
+    color: color-mix(in srgb, var(--text) 94%, #fff 6%);
     text-wrap: balance;
   }
 
   .app-mobile-header__filter-btn {
     width: 28px;
     height: 28px;
-    color: var(--text-secondary);
+    color: color-mix(in srgb, var(--text-secondary) 88%, transparent);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -231,13 +239,34 @@
     height: 19px;
   }
 
+  .app-shell__body {
+    overflow: hidden;
+  }
+
   .app-main-content {
+    height: 100%;
+    max-width: none;
     padding-inline: 0;
-    padding-bottom: calc(72px + var(--sab));
+    overflow: hidden;
+  }
+
+  .app-main-content[data-variant="discover"] {
+    display: flex;
+    flex-direction: column;
   }
 
   .app-bottom-nav {
     display: block;
+  }
+
+  .app-bottom-nav[data-variant="discover"] .app-mobile-bottom-nav {
+    min-height: calc(64px + var(--sab));
+    border-top-color: color-mix(in srgb, var(--border) 35%, transparent);
+    background: color-mix(in srgb, var(--app-shell-bg) 95%, transparent);
+  }
+
+  .app-bottom-nav[data-variant="discover"] .app-mobile-bottom-nav__link {
+    color: color-mix(in srgb, var(--text-secondary) 62%, transparent);
   }
 }
 
