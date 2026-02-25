@@ -252,6 +252,33 @@
   }
 }
 
+@media (max-width: 768px) {
+  .discoverRoot {
+    --discover-gap-row: min(6.25%, 28px);
+    --discover-actions-row: 31.25%;
+
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: minmax(0, calc(100% - var(--discover-actions-row) - var(--discover-gap-row))) var(--discover-gap-row) var(--discover-actions-row);
+    overflow: hidden;
+  }
+
+  .cardStage {
+    grid-row: 1;
+    height: 100%;
+    min-height: 0;
+    padding-block: clamp(6px, 1.2svh, 10px) 0;
+  }
+
+  .actionsBand {
+    grid-row: 3;
+    height: 100%;
+    min-height: 0;
+    padding-top: 0;
+    padding-bottom: clamp(8px, 1.8svh, 12px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cardFrame,
   .mainImage,

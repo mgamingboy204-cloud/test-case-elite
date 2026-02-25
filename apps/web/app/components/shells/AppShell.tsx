@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/app/providers";
 import { useSession } from "@/lib/session";
+import { isStandaloneDisplayMode } from "@/lib/displayMode";
 import { BottomSheet } from "@/app/components/ui/BottomSheet";
 import { BottomNav } from "@/app/components/BottomNav";
 import type { ReactNode } from "react";
@@ -32,6 +33,7 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
   const { theme, toggle } = useTheme();
   const { user } = useSession();
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+  const shellRef = useRef<HTMLDivElement>(null);
   const isDiscoverRoute = pathname?.startsWith("/discover");
   const shellVariant = dataVariant ?? (variant === "discover" || isDiscoverRoute ? "discover" : "default");
 
@@ -40,6 +42,45 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
     router.prefetch("/matches");
     router.prefetch("/likes");
   }, [router]);
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell || !isDiscoverRoute) {
+      shell?.removeAttribute("data-mobile-pwa-discover");
+      shell?.style.removeProperty("--app-height");
+      return;
+    }
+
+    const isIOS = /iP(hone|od|ad)/.test(window.navigator.userAgent) || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+    const isMobileViewport = window.matchMedia("(max-width: 768px)").matches;
+    const shouldPinViewportHeight = isMobileViewport && (isStandaloneDisplayMode() || isIOS);
+
+    if (!shouldPinViewportHeight) {
+      shell.removeAttribute("data-mobile-pwa-discover");
+      shell.style.removeProperty("--app-height");
+      return;
+    }
+
+    const applyViewportHeight = () => {
+      const nextHeight = window.visualViewport?.height || window.innerHeight;
+      shell.style.setProperty("--app-height", `${Math.round(nextHeight)}px`);
+    };
+
+    shell.setAttribute("data-mobile-pwa-discover", "true");
+    applyViewportHeight();
+
+    window.addEventListener("resize", applyViewportHeight);
+    window.addEventListener("orientationchange", applyViewportHeight);
+    window.visualViewport?.addEventListener("resize", applyViewportHeight);
+
+    return () => {
+      window.removeEventListener("resize", applyViewportHeight);
+      window.removeEventListener("orientationchange", applyViewportHeight);
+      window.visualViewport?.removeEventListener("resize", applyViewportHeight);
+      shell.removeAttribute("data-mobile-pwa-discover");
+      shell.style.removeProperty("--app-height");
+    };
+  }, [isDiscoverRoute]);
 
   const mobileTitle = useMemo(() => {
     if (pathname?.startsWith("/discover")) return "Discover";
@@ -52,7 +93,7 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
   const profileName = String(user?.displayName ?? user?.firstName ?? "").trim();
 
   return (
-    <div className={`app-shell${className ? ` ${className}` : ""}`} data-variant={shellVariant}>
+    <div ref={shellRef} className={`app-shell${className ? ` ${className}` : ""}`} data-variant={shellVariant}>
       <header className={`app-header ${headerClassName ?? ""}`.trim()} data-variant={shellVariant}>
         <Link href="/discover" className="app-header__brand">
           Elite Match
