@@ -39,6 +39,8 @@ export default function DiscoverPage() {
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const [renderCount, setRenderCount] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [pressedAction, setPressedAction] = useState<"pass" | "info" | "like" | null>(null);
+  const [isMobileLayout, setIsMobileLayout] = useState<boolean | null>(null);
 
   const intentInitializedRef = useRef(false);
   const intentManuallyChangedRef = useRef(false);
@@ -78,6 +80,14 @@ export default function DiscoverPage() {
     update();
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    const mobileMedia = window.matchMedia("(max-width: 520px)");
+    const updateMobile = () => setIsMobileLayout(mobileMedia.matches);
+    updateMobile();
+    mobileMedia.addEventListener("change", updateMobile);
+    return () => mobileMedia.removeEventListener("change", updateMobile);
   }, []);
 
   const applyCardTransform = useCallback((x: number, y: number, rotateDeg?: number) => {
@@ -312,17 +322,6 @@ export default function DiscoverPage() {
               />
               <div className={styles.surfaceFade} />
 
-              <div className={styles.cardMicro}>
-                <div className={styles.photoHint}>3 photos</div>
-                <button className={styles.infoButton} aria-label="View profile details" onClick={() => setProfileDetailsOpen(true)}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.75" />
-                    <line x1="12" y1="10" x2="12" y2="16" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-                    <circle cx="12" cy="7.25" r="1" fill="currentColor" />
-                  </svg>
-                </button>
-              </div>
-
               {swipeXState > 24 && <div className={`${styles.swipeBadge} ${styles.swipeLike}`} style={{ opacity: Math.min(swipeXState / 100, 1) }}>LIKE</div>}
               {swipeXState < -24 && <div className={`${styles.swipeBadge} ${styles.swipePass}`} style={{ opacity: Math.min(Math.abs(swipeXState) / 100, 1) }}>PASS</div>}
 
@@ -331,9 +330,13 @@ export default function DiscoverPage() {
                   <h2 className={styles.name}>{currentProfile.name}, {currentProfile.age}</h2>
                   {currentProfile.verified && <span className={styles.verifiedBadge} aria-label="Verified profile">✓</span>}
                 </div>
-                <p className={styles.metaLine}>{currentProfile.city}{currentProfile.premium ? " • Premium" : ""}</p>
-                <p className={styles.metaLine}>Open to meaningful connection</p>
-                <p className={styles.bio}>{currentProfile.bio}</p>
+                <p className={styles.metaLine}>{currentProfile.city}</p>
+                {isMobileLayout === false && (
+                  <>
+                    <p className={styles.metaLine}>{currentProfile.premium ? "Premium" : "Open to meaningful connection"}</p>
+                    <p className={styles.bio}>{currentProfile.bio}</p>
+                  </>
+                )}
               </div>
             </div>
           </>
@@ -343,13 +346,37 @@ export default function DiscoverPage() {
       {!loading && currentProfile && (
         <section className={styles.actionsBand}>
           <div className={styles.actionsRow}>
-            <button onClick={() => handleAction("PASS", "left")} aria-label="Pass" className={`${styles.actionButton} ${styles.actionPass}`}>
+            <button
+              onClick={() => handleAction("PASS", "left")}
+              aria-label="Pass"
+              className={`${styles.actionButton} ${styles.actionPass} ${pressedAction === "pass" ? styles.actionPressed : ""}`}
+              onPointerDown={() => setPressedAction("pass")}
+              onPointerUp={() => setPressedAction(null)}
+              onPointerCancel={() => setPressedAction(null)}
+              onPointerLeave={() => setPressedAction(null)}
+            >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </button>
-            <button onClick={() => setProfileDetailsOpen(true)} aria-label="Open profile info" className={`${styles.actionButton} ${styles.actionInfo}`}>
+            <button
+              onClick={() => setProfileDetailsOpen(true)}
+              aria-label="Open profile info"
+              className={`${styles.actionButton} ${styles.actionInfo} ${pressedAction === "info" ? styles.actionPressed : ""}`}
+              onPointerDown={() => setPressedAction("info")}
+              onPointerUp={() => setPressedAction(null)}
+              onPointerCancel={() => setPressedAction(null)}
+              onPointerLeave={() => setPressedAction(null)}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><line x1="12" y1="10" x2="12" y2="16" /><circle cx="12" cy="7.25" r="1" fill="currentColor" stroke="none" /></svg>
             </button>
-            <button onClick={() => handleAction("LIKE", "right")} aria-label="Like" className={`${styles.actionButton} ${styles.actionLike}`}>
+            <button
+              onClick={() => handleAction("LIKE", "right")}
+              aria-label="Like"
+              className={`${styles.actionButton} ${styles.actionLike} ${pressedAction === "like" ? styles.actionPressed : ""}`}
+              onPointerDown={() => setPressedAction("like")}
+              onPointerUp={() => setPressedAction(null)}
+              onPointerCancel={() => setPressedAction(null)}
+              onPointerLeave={() => setPressedAction(null)}
+            >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
             </button>
           </div>
