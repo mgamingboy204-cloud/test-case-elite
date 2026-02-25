@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import type { CSSProperties } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Tabs } from "@/app/components/ui/Tabs";
 import { BottomSheet } from "@/app/components/ui/BottomSheet";
 import { Chip, Badge } from "@/app/components/ui/Badge";
@@ -11,6 +10,7 @@ import { Button } from "@/app/components/ui/Button";
 import { useTheme, useToast } from "@/app/providers";
 import { apiFetch } from "@/lib/api";
 import { useDiscoverBuffer } from "./useDiscoverBuffer";
+import styles from "./DiscoverPage.module.css";
 
 const ALL_INTERESTS = ["Travel", "Fitness", "Music", "Cooking", "Reading", "Photography", "Movies", "Art", "Hiking", "Gaming", "Yoga", "Dancing"];
 const PREFETCH_CARD_COUNT = 2;
@@ -243,36 +243,12 @@ export default function DiscoverPage() {
     addToast("Session expired. Please sign in again to sync likes.", "error");
   }, [authRequired, addToast]);
 
-  const actionBtnStyle = useMemo(() => (bg: string, size = 56): CSSProperties => ({
-    width: size,
-    height: size,
-    borderRadius: "50%",
-    background: bg,
-    border: "1px solid color-mix(in srgb, var(--border) 72%, var(--accent) 28%)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: size * 0.4,
-    color: "var(--ctaText)",
-    boxShadow: "var(--shadow-md)",
-    cursor: "pointer",
-    transition: "transform 180ms cubic-bezier(0.22, 0.9, 0.2, 1), box-shadow 180ms ease-out, background-color 180ms ease-out",
-    willChange: "transform",
-  }), []);
-
   return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      minHeight: "calc(100dvh - var(--app-header-offset))",
-      overflowX: "hidden",
-      padding: "10px 0 0",
-      paddingBottom: "calc(var(--app-bottom-nav-height) + var(--sab) + 24px)",
-    }}>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4px 0 10px", position: "relative" }}>
+    <div className={styles.discoverRoot}>
+      <div className={styles.mainStage}>
         {loading ? (
-          <div style={{ width: "min(100%, 430px)", height: "clamp(520px, 70vh, 640px)", borderRadius: 30, overflow: "hidden" }}>
-            <Skeleton width="100%" height="100%" radius={30} />
+          <div className={styles.skeletonFrame}>
+            <Skeleton width="100%" height="100%" radius={16} />
           </div>
         ) : error ? (
           <ErrorState onRetry={reload} />
@@ -288,50 +264,25 @@ export default function DiscoverPage() {
               <div
                 ref={nextCardRef}
                 aria-hidden
-                style={{
-                  width: "min(100%, 430px)",
-                  height: "clamp(520px, 70vh, 640px)",
-                  borderRadius: 30,
-                  background: "color-mix(in srgb, var(--surface2) 72%, var(--surface))",
-                  position: "absolute",
-                  transform: "translate3d(0, 20px, 0) scale(0.95)",
-                  opacity: 0.62,
-                  boxShadow: "var(--shadow-sm)",
-                  border: "1px solid color-mix(in srgb, var(--border) 76%, var(--accent) 24%)",
-                  overflow: "hidden",
-                }}
+                className={styles.nextCard}
               >
-                <img src={toDiscoverImageUrl(nextProfile.photo)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "saturate(0.94) brightness(0.88)" }} loading="lazy" decoding="async" />
+                <img src={toDiscoverImageUrl(nextProfile.photo)} alt="" className={styles.nextCardImage} loading="lazy" decoding="async" />
               </div>
             )}
 
             <div
               ref={cardRef}
-              style={{
-                width: "min(100%, 430px)",
-                height: "clamp(520px, 70vh, 640px)",
-                borderRadius: 30,
-                overflow: "hidden",
-                boxShadow: "var(--shadow-md)",
-                position: "relative",
-                margin: "0 auto",
-                touchAction: "none",
-                userSelect: "none",
-                transform: "translate3d(0,0,0)",
-                cursor: "grab",
-                willChange: "transform",
-                border: "1px solid color-mix(in srgb, var(--border) 72%, var(--accent) 28%)",
-              }}
+              className={styles.cardFrame}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
             >
-              {!photoLoaded && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(120deg, color-mix(in srgb, var(--surface2) 92%, transparent), color-mix(in srgb, var(--surface) 80%, transparent), color-mix(in srgb, var(--surface2) 92%, transparent))" }} />}
+              {!photoLoaded && <div className={styles.loadingImage} />}
               <img
                 src={currentPhotoSrc}
                 alt={currentProfile.name}
-                style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0, opacity: photoLoaded ? 1 : 0, transition: "opacity 180ms ease-out" }}
+                className={`${styles.mainImage} ${photoLoaded ? styles.mainImageLoaded : styles.mainImagePending}`}
                 loading="eager"
                 fetchPriority="high"
                 decoding="async"
@@ -339,19 +290,19 @@ export default function DiscoverPage() {
                 crossOrigin="anonymous"
                 draggable={false}
               />
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, color-mix(in srgb, var(--bg) 8%, transparent) 0%, transparent 35%, color-mix(in srgb, var(--bg) 42%, transparent) 100%)", pointerEvents: "none" }} />
+              <div className={styles.surfaceFade} />
 
-              {swipeXState > 24 && <div style={{ position: "absolute", top: 40, left: 24, padding: "8px 16px", border: "2px solid var(--accent)", color: "var(--accent)", borderRadius: "var(--radius-md)", fontWeight: 800, fontSize: 28, transform: "rotate(-16deg)", opacity: Math.min(swipeXState / 100, 1), background: "color-mix(in srgb, var(--surface) 88%, transparent)" }}>LIKE</div>}
-              {swipeXState < -24 && <div style={{ position: "absolute", top: 40, right: 24, padding: "8px 16px", border: "2px solid var(--text-secondary)", color: "var(--text-secondary)", borderRadius: "var(--radius-md)", fontWeight: 800, fontSize: 28, transform: "rotate(16deg)", opacity: Math.min(Math.abs(swipeXState) / 100, 1), background: "color-mix(in srgb, var(--surface) 88%, transparent)" }}>PASS</div>}
+              {swipeXState > 24 && <div className={`${styles.swipeBadge} ${styles.swipeLike}`} style={{ opacity: Math.min(swipeXState / 100, 1) }}>LIKE</div>}
+              {swipeXState < -24 && <div className={`${styles.swipeBadge} ${styles.swipePass}`} style={{ opacity: Math.min(Math.abs(swipeXState) / 100, 1) }}>PASS</div>}
 
-              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "45%", background: "linear-gradient(transparent 20%, color-mix(in srgb, var(--bg) 88%, transparent))", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 24px 24px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <h2 style={{ color: "var(--ctaText)", margin: 0, fontSize: 26 }}>{currentProfile.name}, {currentProfile.age}</h2>
+              <div className={styles.cardBottom}>
+                <div className={styles.titleRow}>
+                  <h2 className={styles.name}>{currentProfile.name}, {currentProfile.age}</h2>
                   {currentProfile.verified && <Badge variant="success" style={{ fontSize: 11 }}>Verified</Badge>}
                   {currentProfile.premium && <Badge variant="primary" style={{ fontSize: 11 }}>Premium</Badge>}
                 </div>
-                <p style={{ color: "color-mix(in srgb, var(--ctaText) 80%, transparent)", fontSize: 14, marginBottom: 4 }}>{currentProfile.city}</p>
-                <p style={{ color: "color-mix(in srgb, var(--ctaText) 70%, transparent)", fontSize: 14, margin: 0 }}>{currentProfile.bio}</p>
+                <p className={styles.location}>{currentProfile.city}</p>
+                <p className={styles.bio}>{currentProfile.bio}</p>
               </div>
             </div>
           </>
@@ -359,16 +310,25 @@ export default function DiscoverPage() {
       </div>
 
       {!loading && currentProfile && (
-        <div className="discover-swipe-actions" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 18, padding: "14px 0 6px" }}>
-          <button onClick={() => addToast("Rewind is unavailable in buffered mode", "info")} style={actionBtnStyle("var(--surface2)", 54)} aria-label="Rewind" className="discover-action-button discover-action-button--neutral">
+        <div className={styles.actionsRow}>
+          <div>
+            <button onClick={() => addToast("Rewind is unavailable in buffered mode", "info")} aria-label="Rewind" className={`${styles.actionButton} ${styles.actionNeutral}`}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
           </button>
-          <button onClick={() => handleAction("PASS", "left")} style={actionBtnStyle("color-mix(in srgb, var(--surface2) 90%, var(--rose-glow))", 54)} aria-label="Pass" className="discover-action-button discover-action-button--pass">
+            <div className={styles.actionLabel}>Maybe</div>
+          </div>
+          <div>
+            <button onClick={() => handleAction("PASS", "left")} aria-label="Pass" className={`${styles.actionButton} ${styles.actionPass}`}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text)" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
-          <button onClick={() => handleAction("LIKE", "right")} style={actionBtnStyle("var(--accent)", 56)} aria-label="Like" className="discover-action-button discover-action-button--like">
+            <div className={styles.actionLabel}>Pass</div>
+          </div>
+          <div>
+            <button onClick={() => handleAction("LIKE", "right")} aria-label="Like" className={`${styles.actionButton} ${styles.actionLike}`}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--ctaText)" stroke="var(--ctaText)" strokeWidth="1"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
           </button>
+            <div className={styles.actionLabel}>Like</div>
+          </div>
         </div>
       )}
 
@@ -396,9 +356,9 @@ export default function DiscoverPage() {
         </div>
       </BottomSheet>
 
-      {showDiscoverDebugStatus && syncWarning && <div style={{ textAlign: "center", padding: "4px 12px", fontSize: 12, color: "var(--muted)" }}>Syncing swipes in background...</div>}
-      {showDiscoverDebugStatus && <div style={{ textAlign: "center", paddingBottom: 8, fontSize: 11, color: "var(--muted)" }}>Buffered discover enabled ({batchSize} batch / refill below {lowWatermark})</div>}
-      {showDiscoverPerfLogs && <div style={{ textAlign: "center", paddingBottom: 8, fontSize: 11, color: "var(--muted)" }}>QA mode • renders: {renderCount} • swipeDirection: {swipeDirection ?? "idle"}</div>}
+      {showDiscoverDebugStatus && syncWarning && <div className={styles.syncText}>Syncing swipes in background...</div>}
+      {showDiscoverDebugStatus && <div className={styles.debugText}>Buffered discover enabled ({batchSize} batch / refill below {lowWatermark})</div>}
+      {showDiscoverPerfLogs && <div className={styles.debugText}>QA mode • renders: {renderCount} • swipeDirection: {swipeDirection ?? "idle"}</div>}
       <DiscoverFilterBridge onOpen={() => setFilterOpen(true)} />
     </div>
   );
