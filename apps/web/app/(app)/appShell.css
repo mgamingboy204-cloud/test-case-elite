@@ -200,23 +200,7 @@
    ========================= */
 
 @media (max-width: 768px) {
-  /* discover: visuals only */
-  .app-shell[data-variant="discover"] {
-    background: var(--discover-canvas-bg);
-  }
-
-  .app-shell[data-route="discover"][data-variant="discover"] {
-    --app-shell-bottom-nav-bg: var(--discover-canvas-bg);
-  }
-
-  .app-shell[data-route="discover"][data-variant="discover"] .app-shell__body,
-  .app-shell[data-route="discover"][data-variant="discover"] .app-main-content,
-  .app-shell[data-route="discover"][data-variant="discover"] .app-bottom-nav,
-  .app-shell[data-route="discover"][data-variant="discover"] .app-mobile-bottom-nav,
-  .app-shell[data-route="discover"][data-variant="discover"] .app-mobile-header {
-    background: var(--discover-canvas-bg);
-  }
-
+  
   .app-shell {
     padding-top: 0;
     padding-left: max(0px, var(--sal));
