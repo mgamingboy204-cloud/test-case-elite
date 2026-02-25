@@ -174,7 +174,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px max(12px, var(--sal)) 10px max(12px, var(--sal));
+  padding: 0 max(12px, var(--sal)) clamp(8px, 1.8svh, 12px) max(12px, var(--sal));
   padding-right: max(12px, var(--sar));
   background: transparent;
 }
@@ -195,7 +195,10 @@
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  box-shadow: 0 10px 24px rgba(2, 6, 12, 0.3);
+  box-shadow:
+    0 12px 28px rgba(2, 6, 12, 0.34),
+    0 0 0 1px color-mix(in srgb, #fff 24%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 28%, transparent);
   border: 1px solid color-mix(in srgb, var(--border) 58%, transparent);
   transition: transform 220ms ease-in-out, box-shadow 220ms ease-in-out, background-color 220ms ease-in-out;
   touch-action: manipulation;
@@ -203,7 +206,9 @@
 
 .actionPressed {
   transform: scale(0.96) translateY(1px);
-  box-shadow: 0 5px 12px rgba(2, 6, 12, 0.28);
+  box-shadow:
+    0 6px 14px rgba(2, 6, 12, 0.28),
+    0 0 0 1px color-mix(in srgb, #fff 18%, transparent);
 }
 
 .actionPass,
@@ -259,13 +264,11 @@
 
 @media (max-width: 768px) {
   .discoverRoot {
-    --discover-card-row: calc((63 / 83) * 100%);
-    --discover-gap-row: calc((3 / 83) * 100%);
-    --discover-actions-row: calc((17 / 83) * 100%);
+    --discover-gap-row: clamp(10px, 2.6svh, 18px);
 
     height: 100%;
     min-height: 0;
-    grid-template-rows: minmax(0, var(--discover-card-row)) var(--discover-gap-row) var(--discover-actions-row);
+    grid-template-rows: minmax(0, 1fr) var(--discover-gap-row) auto;
     overflow: hidden;
   }
 
@@ -278,10 +281,10 @@
 
   .actionsBand {
     grid-row: 3;
-    height: 100%;
+    height: auto;
     min-height: 0;
     padding-top: 0;
-    padding-bottom: clamp(8px, 1.8svh, 12px);
+    padding-bottom: clamp(6px, 1.4svh, 10px);
   }
 }
 
