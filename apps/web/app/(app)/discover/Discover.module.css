@@ -12,7 +12,7 @@
   background: transparent;
   color: var(--discover-text);
   display: grid;
-  grid-template-rows: 75% 3% 17%;
+  grid-template-rows: 63% 3% 17%;
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
