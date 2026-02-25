@@ -129,8 +129,8 @@
 
   position: fixed;
   inset: auto 0 0;
-  height: calc(clamp(64px, 10svh, 72px) + var(--sab));
-  padding: 8px max(14px, var(--sal)) var(--sab) max(14px, var(--sar));
+  height: calc(clamp(64px, 10svh, 72px) + env(safe-area-inset-bottom));
+  padding: 8px max(14px, var(--sal)) env(safe-area-inset-bottom) max(14px, var(--sar));
   background: var(--app-shell-bottom-nav-bg);
   border-top: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
   backdrop-filter: blur(12px) saturate(140%);
@@ -205,11 +205,11 @@
     height: 100%;
   }
 
-  .app-shell[data-mobile-pwa-discover="true"][data-variant="discover"] .app-mobile-bottom-nav {
+    .app-shell[data-mobile-pwa-discover="true"][data-variant="discover"] .app-mobile-bottom-nav {
     position: relative;
     inset: auto;
     height: 100%;
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: 0;
     background: var(--app-shell-bottom-nav-bg);
   }
 
