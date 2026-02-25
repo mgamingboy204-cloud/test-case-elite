@@ -40,7 +40,6 @@ export default function DiscoverPage() {
   const [renderCount, setRenderCount] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [pressedAction, setPressedAction] = useState<"pass" | "info" | "like" | null>(null);
-  const [isMobileLayout, setIsMobileLayout] = useState<boolean | null>(null);
 
   const intentInitializedRef = useRef(false);
   const intentManuallyChangedRef = useRef(false);
@@ -51,7 +50,6 @@ export default function DiscoverPage() {
   const actionStartRef = useRef(0);
 
   const cardRef = useRef<HTMLDivElement>(null);
-  const nextCardRef = useRef<HTMLDivElement>(null);
 
   const {
     buffer,
@@ -82,30 +80,14 @@ export default function DiscoverPage() {
     return () => media.removeEventListener("change", update);
   }, []);
 
-  useEffect(() => {
-    const mobileMedia = window.matchMedia("(max-width: 520px)");
-    const updateMobile = () => setIsMobileLayout(mobileMedia.matches);
-    updateMobile();
-    mobileMedia.addEventListener("change", updateMobile);
-    return () => mobileMedia.removeEventListener("change", updateMobile);
-  }, []);
-
   const applyCardTransform = useCallback((x: number, y: number, rotateDeg?: number) => {
     const card = cardRef.current;
-    const nextCard = nextCardRef.current;
     if (!card) return;
 
     const progress = Math.min(Math.abs(x) / SWIPE_DISTANCE_THRESHOLD, 1.1);
     const rotation = rotateDeg ?? x * ROTATION_FACTOR;
     card.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rotation}deg)`;
     card.style.setProperty("--swipe-progress", String(progress));
-
-    if (nextCard) {
-      const nextScale = 0.95 + Math.min(progress, 1) * 0.05;
-      const nextLift = 20 - Math.min(progress, 1) * 20;
-      nextCard.style.transform = `translate3d(0, ${nextLift}px, 0) scale(${nextScale})`;
-      nextCard.style.opacity = String(0.62 + Math.min(progress, 1) * 0.38);
-    }
   }, []);
 
   const resetCardTransform = useCallback(() => {
@@ -244,8 +226,6 @@ export default function DiscoverPage() {
   const [photoLoaded, setPhotoLoaded] = useState(false);
   const prefetchCacheRef = useRef(new Set<string>());
   const currentPhotoSrc = toDiscoverImageUrl(currentProfile?.photo);
-  const nextProfile = buffer[1] ?? null;
-
   useEffect(() => {
     setPhotoLoaded(false);
   }, [currentPhotoSrc]);
@@ -289,62 +269,50 @@ export default function DiscoverPage() {
             />
           </div>
         ) : (
-          <>
-            {nextProfile && (
-              <div
-                ref={nextCardRef}
-                aria-hidden
-                className={`${styles.cardSurface} ${styles.nextCard}`}
-              >
-                <img src={toDiscoverImageUrl(nextProfile.photo)} alt="" className={styles.nextCardImage} loading="lazy" decoding="async" />
+          <div
+            ref={cardRef}
+            className={`${styles.cardSurface} ${styles.cardFrame}`}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+          >
+            {!photoLoaded && <div className={styles.loadingImage} />}
+            <img
+              src={currentPhotoSrc}
+              alt={currentProfile.name}
+              className={`${styles.mainImage} ${photoLoaded ? styles.mainImageLoaded : styles.mainImagePending}`}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              onLoad={() => setPhotoLoaded(true)}
+              crossOrigin="anonymous"
+              draggable={false}
+            />
+            <div className={styles.surfaceFade} />
+
+            {swipeXState > 24 && <div className={`${styles.swipeBadge} ${styles.swipeLike}`} style={{ opacity: Math.min(swipeXState / 100, 1) }}>LIKE</div>}
+            {swipeXState < -24 && <div className={`${styles.swipeBadge} ${styles.swipePass}`} style={{ opacity: Math.min(Math.abs(swipeXState) / 100, 1) }}>PASS</div>}
+
+            <div className={styles.cardBottom}>
+              <div className={styles.titleRow}>
+                <h2 className={styles.name}>{currentProfile.name}, {currentProfile.age}</h2>
+                {currentProfile.verified && <span className={styles.verifiedBadge} aria-label="Verified profile">✓</span>}
               </div>
-            )}
-
-            <div
-              ref={cardRef}
-              className={`${styles.cardSurface} ${styles.cardFrame}`}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-            >
-              {!photoLoaded && <div className={styles.loadingImage} />}
-              <img
-                src={currentPhotoSrc}
-                alt={currentProfile.name}
-                className={`${styles.mainImage} ${photoLoaded ? styles.mainImageLoaded : styles.mainImagePending}`}
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-                onLoad={() => setPhotoLoaded(true)}
-                crossOrigin="anonymous"
-                draggable={false}
-              />
-              <div className={styles.surfaceFade} />
-
-              {swipeXState > 24 && <div className={`${styles.swipeBadge} ${styles.swipeLike}`} style={{ opacity: Math.min(swipeXState / 100, 1) }}>LIKE</div>}
-              {swipeXState < -24 && <div className={`${styles.swipeBadge} ${styles.swipePass}`} style={{ opacity: Math.min(Math.abs(swipeXState) / 100, 1) }}>PASS</div>}
-
-              <div className={styles.cardBottom}>
-                <div className={styles.titleRow}>
-                  <h2 className={styles.name}>{currentProfile.name}, {currentProfile.age}</h2>
-                  {currentProfile.verified && <span className={styles.verifiedBadge} aria-label="Verified profile">✓</span>}
-                </div>
-                <p className={styles.metaLine}>{currentProfile.city}</p>
-                {isMobileLayout === false && (
-                  <>
-                    <p className={styles.metaLine}>{currentProfile.premium ? "Premium" : "Open to meaningful connection"}</p>
-                    <p className={styles.bio}>{currentProfile.bio}</p>
-                  </>
-                )}
-              </div>
+              <p className={styles.metaLine}>{currentProfile.bio || "Open to meaningful connection"}</p>
             </div>
-          </>
+          </div>
         )}
       </section>
 
-      {!loading && currentProfile && (
-        <section className={styles.actionsBand}>
+      <section className={styles.actionsBand}>
+        {loading ? (
+          <div className={`${styles.actionsRow} ${styles.actionsSkeleton}`} aria-hidden>
+            <span className={`${styles.actionButton} ${styles.actionPass}`} />
+            <span className={`${styles.actionButton} ${styles.actionInfo}`} />
+            <span className={`${styles.actionButton} ${styles.actionLike}`} />
+          </div>
+        ) : currentProfile ? (
           <div className={styles.actionsRow}>
             <button
               onClick={() => handleAction("PASS", "left")}
@@ -380,8 +348,8 @@ export default function DiscoverPage() {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
             </button>
           </div>
-        </section>
-      )}
+        ) : <div className={styles.actionsSpacer} aria-hidden />}
+      </section>
 
       <BottomSheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filters">
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
