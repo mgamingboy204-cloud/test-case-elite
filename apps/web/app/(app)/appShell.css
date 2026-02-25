@@ -6,8 +6,8 @@
   --app-shell-label-size: clamp(0.68rem, 0.64rem + 0.25vw, 0.8rem);
   --app-shell-nav-weight: 520;
 
-  height: 100svh;
   height: 100dvh;
+  height: 100svh;
   overflow: hidden;
   background: var(--app-shell-bg);
   color: var(--text);
@@ -172,6 +172,41 @@
 }
 
 @media (max-width: 768px) {
+  .app-shell[data-mobile-pwa-discover="true"][data-variant="discover"] {
+    --discover-topbar-height: calc(clamp(56px, 10%, 64px) + var(--sat));
+    --discover-bottom-nav-height: calc(clamp(64px, 10%, 72px) + var(--sab));
+
+    height: var(--app-height);
+    display: grid;
+    grid-template-rows: var(--discover-topbar-height) calc(100% - var(--discover-topbar-height) - var(--discover-bottom-nav-height)) var(--discover-bottom-nav-height);
+    overflow: hidden;
+  }
+
+  .app-shell[data-mobile-pwa-discover="true"][data-variant="discover"] .app-mobile-header {
+    grid-row: 1;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .app-shell[data-mobile-pwa-discover="true"][data-variant="discover"] .app-shell__body {
+    grid-row: 2;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .app-shell[data-mobile-pwa-discover="true"][data-variant="discover"] .app-bottom-nav {
+    grid-row: 3;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .app-shell[data-mobile-pwa-discover="true"][data-variant="discover"] .app-mobile-bottom-nav {
+    position: relative;
+    inset: auto;
+    height: 100%;
+    padding-bottom: var(--sab);
+  }
+
   .app-shell {
     padding-top: 0;
     padding-left: max(0px, var(--sal));
