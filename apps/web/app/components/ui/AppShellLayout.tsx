@@ -146,7 +146,7 @@ export default function AppShellLayout({
 
         <div className={rightPanel ? "app-content app-content--split" : "app-content"}>
           <div className="app-center">
-            <div className={showMobileShell ? "mobile-shell__content" : ""}>{children}</div>
+            <div className="mobile-shell__content">{children}</div>
           </div>
           {rightPanel ? <aside className="app-right">{rightPanel}</aside> : null}
         </div>
