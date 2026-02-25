@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTheme } from "@/app/providers";
 import { useSession } from "@/lib/session";
 import { BottomSheet } from "@/app/components/ui/BottomSheet";
@@ -32,7 +32,6 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
   const { theme, toggle } = useTheme();
   const { user } = useSession();
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
-  const shellRef = useRef<HTMLDivElement>(null);
   const isDiscoverRoute = pathname?.startsWith("/discover");
   const shellVariant = dataVariant ?? (variant === "discover" || isDiscoverRoute ? "discover" : "default");
 
@@ -41,27 +40,6 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
     router.prefetch("/matches");
     router.prefetch("/likes");
   }, [router]);
-
-  useEffect(() => {
-    const shell = shellRef.current;
-    if (!shell || !isDiscoverRoute) {
-      shell?.removeAttribute("data-mobile-pwa-discover");
-      return;
-    }
-
-    const isMobileViewport = window.matchMedia("(max-width: 768px)").matches;
-
-    if (!isMobileViewport) {
-      shell.removeAttribute("data-mobile-pwa-discover");
-      return;
-    }
-
-    shell.setAttribute("data-mobile-pwa-discover", "true");
-
-    return () => {
-      shell.removeAttribute("data-mobile-pwa-discover");
-    };
-  }, [isDiscoverRoute]);
 
   const mobileTitle = useMemo(() => {
     if (pathname?.startsWith("/discover")) return "Discover";
@@ -72,9 +50,10 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
   }, [pathname]);
 
   const profileName = String(user?.displayName ?? user?.firstName ?? "").trim();
+  const shellRoute = isDiscoverRoute ? "discover" : "default";
 
   return (
-    <div ref={shellRef} className={`app-shell${className ? ` ${className}` : ""}`} data-variant={shellVariant}>
+    <div className={`app-shell${className ? ` ${className}` : ""}`} data-variant={shellVariant} data-route={shellRoute}>
       <header className={`app-header ${headerClassName ?? ""}`.trim()} data-variant={shellVariant}>
         <Link href="/discover" className="app-header__brand">
           Elite Match
