@@ -120,7 +120,7 @@
   margin: 0 auto;
   max-width: 860px;
   padding-inline: 16px;
-  background: var(--app-shell-bg);
+  background: transparent;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
@@ -161,12 +161,12 @@
    ========================= */
 
 .app-mobile-bottom-nav {
-  --app-shell-bottom-nav-bg: color-mix(in srgb, var(--app-shell-bg) 95%, transparent);
+  --app-shell-bottom-nav-bg: var(--app-shell-bg);
 
-  position: absolute;
+  position: fixed;
   inset: auto 0 0;
-  height: var(--app-mobile-bottom-nav-height);
-  padding: 8px max(14px, var(--sal)) env(safe-area-inset-bottom) max(14px, var(--sar));
+  min-height: var(--app-mobile-bottom-nav-chrome-height);
+  padding: 8px max(14px, var(--sal)) var(--sab) max(14px, var(--sar));
   background: var(--app-shell-bottom-nav-bg);
   border-top: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
   backdrop-filter: blur(12px) saturate(140%);
@@ -217,6 +217,8 @@
 @media (max-width: 768px) {
   .app-shell {
     padding: 0;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
   }
 
   .app-header,
@@ -225,8 +227,9 @@
   }
 
   .app-mobile-header {
-    position: absolute;
-    inset: 0 0 auto 0;
+    position: relative;
+    inset: auto;
+    grid-row: 1;
     z-index: 95;
     min-height: var(--app-mobile-header-height);
     display: grid;
@@ -284,6 +287,7 @@
   }
 
   .app-shell__body {
+    grid-row: 2;
     min-height: 0;
     overflow: hidden;
     display: block;
@@ -295,8 +299,9 @@
     padding-inline: max(12px, var(--sal)) max(12px, var(--sar));
     display: flex;
     flex-direction: column;
-    padding-top: var(--app-mobile-header-height);
-    padding-bottom: var(--app-mobile-bottom-nav-height);
+    background: transparent;
+    padding-top: 0;
+    padding-bottom: calc(var(--app-mobile-bottom-nav-height) + 8px);
   }
 }
 
