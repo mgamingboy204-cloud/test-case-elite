@@ -326,7 +326,7 @@
   .app-main-content {
     height: 100%;
     max-width: none;
-    padding-inline: 12px 12px;
+    padding-inline: 0px 0px;
     display: flex;
     flex-direction: column;
     background: transparent;
