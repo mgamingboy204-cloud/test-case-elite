@@ -192,6 +192,7 @@
   padding: 0 max(16px, var(--sal));
   padding-right: max(16px, var(--sar));
   box-sizing: border-box;
+  padding-bottom: var(--sab);
 }
 .app-mobile-bottom-nav__link {
   min-height: 48px;
@@ -322,7 +323,7 @@
     flex-direction: column;
     background: transparent;
     padding-top: 0;
-    padding-bottom: 0 !important;
+    padding-bottom: var(--app-mobile-bottom-nav-safe);
   }
 }
 
