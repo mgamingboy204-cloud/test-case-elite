@@ -162,7 +162,7 @@
    MOBILE BOTTOM NAV
    ========================= */
 
- .app-mobile-bottom-nav {
+ .app-mobile-bottom-nav{
   position: fixed;
   left: 0;
   right: 0;
@@ -172,28 +172,30 @@
   background: var(--app-shell-bg);
   border-top: 1px solid var(--border);
 
-  /* bar is only the icon row height */
-  height: var(--app-mobile-bottom-nav-row-height);
-
-  /* safe area handled as padding, not extra blank height */
-  padding-bottom: var(--sab);
+  /* total bar = row + safe area */
+  height: calc(var(--app-mobile-bottom-nav-row-height) + var(--sab));
+  padding-bottom: 0;
 
   display: flex;
-  align-items: center;
+  align-items: flex-end; /* row sits on the safe-area edge */
 }
 
-.app-mobile-bottom-nav__row {
+.app-mobile-bottom-nav__row{
   height: var(--app-mobile-bottom-nav-row-height);
   width: 100%;
+
   display: flex;
   align-items: center;
   justify-content: space-around;
 
-  padding: 0 max(16px, var(--sal));
+  padding-left: max(16px, var(--sal));
   padding-right: max(16px, var(--sar));
   box-sizing: border-box;
-  padding-bottom: var(--sab);
+
+  /* IMPORTANT: remove this */
+  padding-bottom: 0;
 }
+
 .app-mobile-bottom-nav__link {
   min-height: 48px;
   min-width: 68px;
