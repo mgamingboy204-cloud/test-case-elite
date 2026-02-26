@@ -322,7 +322,7 @@
     flex-direction: column;
     background: transparent;
     padding-top: 0;
-    padding-bottom: var(--app-mobile-bottom-nav-safe);
+    padding-bottom: 0 !important;
   }
 }
 
