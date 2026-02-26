@@ -19,27 +19,27 @@
   }
 }
 
+/* Base document sizing */
 html,
 body {
   height: 100%;
   background-color: var(--bg, #05070b);
 }
 
-/* only lock scroll when app shell is active */
+/* DO NOT globally kill scroll — only lock when app shell is active */
 html[data-app-shell="1"],
 html[data-app-shell="1"] body {
   height: 100%;
   overflow: hidden;
 }
 
-/* don't force body to var(--app-vh) globally */
-
-body {
-  height: var(--app-vh);
+/* App root should not fight the shell */
+#app-root {
+  height: 100%;
 }
 
-#app-root {
+/* Only when app shell is active, force to viewport height */
+html[data-app-shell="1"] #app-root {
   height: var(--app-vh);
   overflow: hidden;
-  background-color: var(--bg, #05070b);
 }
