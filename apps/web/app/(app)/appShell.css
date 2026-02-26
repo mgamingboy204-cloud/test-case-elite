@@ -165,27 +165,27 @@
    ========================= */
 
     .app-mobile-bottom-nav {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-  
-    /* OWN the safe-area visually */
-    background-color: var(--app-shell-bg, var(--bg, #f8f4ef));
-    border-top: 1px solid color-mix(in srgb, var(--border) 18%, transparent);
-    z-index: 90;
-  }
-  
-  /* inner row is what you control */
-  .app-mobile-bottom-nav__row {
-    height: var(--app-mobile-bottom-nav-row-height, 45px);
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-  
-    padding: 8px calc(16px + var(--sar)) calc(8px + var(--sab)) calc(16px + var(--sal));
-    box-sizing: border-box;
-  }
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--app-mobile-bottom-nav-height);
+  background: var(--app-shell-bg);
+  border-top: 1px solid color-mix(in srgb, var(--border) 18%, transparent);
+  z-index: 90;
+  display: flex;
+  align-items: flex-end; /* respects safe area */
+}
+
+.app-mobile-bottom-nav__row {
+  height: var(--app-mobile-bottom-nav-row-height);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 max(16px, var(--sal)) var(--sab) max(16px, var(--sal));
+  box-sizing: border-box;
+}
 
 .app-mobile-bottom-nav__link {
   min-height: 48px;
