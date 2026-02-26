@@ -11,15 +11,9 @@ const themeScript = `
       var stored = localStorage.getItem("em_theme");
       var systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
       var theme = stored === "light" || stored === "dark" ? stored : (systemDark ? "dark" : "light");
-      var debugLayout = window.localStorage.getItem("em_layout_debug") === "1" || window.location.search.indexOf("layoutDebug=1") !== -1;
       document.documentElement.dataset.theme = theme;
       document.documentElement.style.colorScheme = theme;
       document.documentElement.style.backgroundColor = theme === "dark" ? "#0B0B10" : "#F8F4EF";
-      if (debugLayout) {
-        document.documentElement.setAttribute("data-debug-layout", "1");
-      } else {
-        document.documentElement.removeAttribute("data-debug-layout");
-      }
       requestAnimationFrame(function() {
         document.documentElement.classList.remove("theme-preload");
       });
@@ -68,7 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="boot-shell" aria-hidden="true">
           <div className="boot-shell__mark" />
         </div>
-        <div id="app-root" data-layout-part="app-root">
+        <div id="app-root">
           <Providers>
             <main className="site-main">{children}</main>
             <SafeAreaDebugProbe />

@@ -203,13 +203,13 @@ html.theme-preload * {
 
 html,
 body {
-  height: var(--app-vh);
+  height: 100%;
   background-color: var(--bg);
 }
 
 #__next,
 .site-main {
-  height: var(--app-vh);
+  height: 100%;
   background: var(--bg);
 }
 
@@ -222,10 +222,8 @@ body {
 
 /* App shell locks scroll ONLY here */
 html[data-app-shell="1"],
-html[data-app-shell="1"] body,
-html[data-app-shell="1"] #app-root,
-html[data-app-shell="1"] .site-main {
-  height: var(--app-vh);
+html[data-app-shell="1"] body {
+  height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
 }
@@ -390,26 +388,3 @@ body.app-entry-no-scroll {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-
-
-/* Layout debug mode: set localStorage em_layout_debug=1 or ?layoutDebug=1 */
-html[data-debug-layout="1"] {
-  outline: 2px solid #ff4d4f;
-  outline-offset: -2px;
-}
-
-html[data-debug-layout="1"] body {
-  outline: 2px solid #ff9f43;
-  outline-offset: -2px;
-}
-
-html[data-debug-layout="1"] [data-layout-part="app-root"] {
-  outline: 2px solid #36cfc9;
-  outline-offset: -2px;
-}
-
-html[data-debug-layout="1"] [data-layout-part="shell"] { outline: 2px solid #9254de; }
-html[data-debug-layout="1"] [data-layout-part="topbar-desktop"],
-html[data-debug-layout="1"] [data-layout-part="topbar-mobile"] { outline: 2px solid #13c2c2; }
-html[data-debug-layout="1"] [data-layout-part="content-scroll"] { outline: 2px solid #52c41a; }
-html[data-debug-layout="1"] [data-layout-part="bottom-nav"] { outline: 2px solid #faad14; }
