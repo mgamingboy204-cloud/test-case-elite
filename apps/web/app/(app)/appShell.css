@@ -15,7 +15,7 @@
   --app-mobile-header-chrome-height: 44px;
   --app-mobile-header-height: calc(var(--app-mobile-header-chrome-height) + var(--sat));
 
-  --app-mobile-bottom-nav-row-height: 42px; /* instagram-ish */
+  --app-mobile-bottom-nav-row-height: 49px; /* instagram-ish */
 
   /* ✅ SINGLE SOURCE OF TRUTH: content clears nav row + safe area */
   --app-mobile-bottom-nav-safe: calc(var(--app-mobile-bottom-nav-row-height) + var(--sab));
