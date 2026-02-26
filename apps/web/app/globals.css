@@ -15,8 +15,9 @@
   --bn: 49px;
   --app-header-height: 60px;
   --app-bottom-nav-base-height: var(--bn);
-  --app-bottom-nav-height: calc(var(--bn) + var(--sab));
+  --app-bottom-nav-height: var(--bn);
   --app-header-offset: var(--app-header-height);
+  --app-bottom-nav-safe: calc(var(--bn) + var(--sab));
   --rose-200: #dea5a5;
   --rose-300: #d79798;
   --rose-500: #c27d80;
