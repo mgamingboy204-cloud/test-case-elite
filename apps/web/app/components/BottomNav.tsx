@@ -57,7 +57,7 @@ export function BottomNav({ className, variant = "default", dataVariant }: Botto
   const pathname = usePathname();
 
   return (
-    <nav className={`app-mobile-bottom-nav${className ? ` ${className}` : ""}`} data-variant={dataVariant ?? variant} aria-label="Main navigation" data-layout-part="bottom-nav">
+    <nav className={`app-mobile-bottom-nav${className ? ` ${className}` : ""}`} data-variant={dataVariant ?? variant} aria-label="Main navigation">
       <div className="app-mobile-bottom-nav__row">
         {tabs.map((tab) => {
           const active = pathname.startsWith(tab.href);
