@@ -6,12 +6,12 @@
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
 
-  /* default: modern stable viewport */
-  --app-vh: 100svh;
+  /* Prefer dynamic viewport height on iOS/modern browsers */
+  --app-vh: 100dvh;
 }
 
-/* fallback for browsers that DON'T support svh */
-@supports not (height: 100svh) {
+/* Fallback if dvh is not supported */
+@supports not (height: 100dvh) {
   :root,
   [data-theme="light"],
   [data-theme="dark"] {
@@ -26,19 +26,19 @@ body {
   background-color: var(--bg, #05070b);
 }
 
-/* DO NOT globally kill scroll — only lock when app shell is active */
+/* Only lock scroll when app shell is active */
 html[data-app-shell="1"],
 html[data-app-shell="1"] body {
   height: 100%;
   overflow: hidden;
 }
 
-/* App root should not fight the shell */
+/* App root should be the ONLY full-height owner */
 #app-root {
   height: 100%;
 }
 
-/* Only when app shell is active, force to viewport height */
+/* When app shell is active, force to real viewport height */
 html[data-app-shell="1"] #app-root {
   height: var(--app-vh);
   overflow: hidden;
