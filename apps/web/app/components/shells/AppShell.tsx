@@ -19,11 +19,11 @@ type AppShellProps = {
 };
 
 const sidebarLinks = [
-  { href: "/discover", icon: "✸" },
-  { href: "/likes",  icon: "♥" },
-  { href: "/matches", icon: "☺" },
-  { href: "/profile", icon: "☻" },
-  { href: "/settings", icon: "⚙" },
+  { href: "/discover", label: "Discover", icon: "✸" },
+  { href: "/likes", label: "Likes",  icon: "♥" },
+  { href: "/matches", label: "Matches", icon: "☺" },
+  { href: "/profile", label: "Profile", icon: "☻" },
+  { href: "/settings", label: "Settings", icon: "⚙" },
 ];
 
 export function AppShell({ children, className, headerClassName, bottomNavClassName, variant = "default", dataVariant }: AppShellProps) {
@@ -94,7 +94,7 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
             return (
               <Link key={link.href} href={link.href} className="app-sidebar__link" data-active={active ? "true" : "false"}>
                 <span className="app-sidebar__icon">{link.icon}</span>
-                
+                {link.label}
               </Link>
             );
           })}
