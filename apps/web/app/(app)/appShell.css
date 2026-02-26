@@ -11,9 +11,9 @@
   --app-shell-title-size: clamp(1.02rem, 0.94rem + 0.55vw, 1.2rem);
   --app-shell-label-size: clamp(0.68rem, 0.64rem + 0.25vw, 0.8rem);
   --app-shell-nav-weight: 520;
-  --app-mobile-header-chrome-height: clamp(56px, 10svh, 64px);
+  --app-mobile-header-chrome-height: 45px;
   --app-mobile-header-height: calc(var(--app-mobile-header-chrome-height) + var(--sat));
-  --app-mobile-bottom-nav-row-height: 56px;
+  --app-mobile-bottom-nav-row-height: 50px;
   --app-mobile-bottom-nav-height: calc(var(--app-mobile-bottom-nav-row-height) + var(--sab));
 
   position: fixed;
@@ -36,9 +36,7 @@
   overflow: hidden;
 }
 
-.app-shell-content {
-  padding-bottom: var(--app-mobile-bottom-nav-height);
-}
+
 /* wrapper around fixed nav must NEVER consume space */
 .app-bottom-nav {
   padding: 0;
@@ -170,20 +168,16 @@
   left: 0;
   right: 0;
   bottom: 0;
-
-  /* don't bake sab into height AND also pad sab somewhere else */
-  height: var(--app-mobile-bottom-nav-row-height);
-
-  /* this is the only place sab is applied */
-  padding-bottom: var(--sab);
+  z-index: 90;
 
   background: var(--app-shell-bg);
   border-top: 1px solid color-mix(in srgb, var(--border) 18%, transparent);
-  z-index: 90;
 
-  /* keep row anchored above home indicator */
+  /* total includes home indicator area */
+  height: var(--app-mobile-bottom-nav-height);
+
   display: flex;
-  align-items: stretch;
+  align-items: flex-start; /* row sits above safe area */
 }
 
 .app-mobile-bottom-nav__row {
@@ -193,10 +187,8 @@
   align-items: center;
   justify-content: space-around;
 
-  /* REMOVE sab from here */
   padding: 0 max(16px, var(--sal));
   padding-right: max(16px, var(--sar));
-
   box-sizing: border-box;
 }
 
@@ -251,20 +243,24 @@
   }
 
   .app-mobile-header {
-    position: relative;
-    inset: auto;
-    grid-row: 1;
-    z-index: 95;
-    min-height: var(--app-mobile-header-height);
-    display: grid;
-    grid-template-columns: 44px 1fr 44px;
-    align-items: center;
-    gap: 10px;
-    padding: var(--sat) max(12px, var(--sal)) 0 max(12px, var(--sal));
-    padding-right: max(12px, var(--sar));
-    background: var(--app-shell-bg);
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 24%, transparent);
-  }
+  grid-row: 1;
+  z-index: 95;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 10px;
+
+  /* total includes safe area + bar */
+  height: var(--app-mobile-header-height);
+
+  /* content sits in the 44px bar BELOW the notch */
+  padding-top: var(--sat);
+  padding-left: max(12px, var(--sal));
+  padding-right: max(12px, var(--sar));
+
+  background: var(--app-shell-bg);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 24%, transparent);
+}
 
   .app-mobile-header__dot {
     width: 44px;
