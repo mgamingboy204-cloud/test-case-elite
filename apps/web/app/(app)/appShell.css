@@ -193,7 +193,7 @@
 
   padding-left: max(16px, var(--sal));
   padding-right: max(16px, var(--sar));
-  padding-top: 4px
+  padding-top: 4px;
   box-sizing: border-box;
 
   padding-bottom: 0; /* ✅ keep 0 (no double padding) */
