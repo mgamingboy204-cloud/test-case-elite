@@ -13,8 +13,8 @@
   --app-shell-nav-weight: 520;
   --app-mobile-header-chrome-height: clamp(56px, 10svh, 64px);
   --app-mobile-header-height: calc(var(--app-mobile-header-chrome-height) + var(--sat));
-  --app-mobile-bottom-nav-row-height: 58px;
-  --app-mobile-bottom-nav-height: var(--app-mobile-bottom-nav-row-height);
+  --app-mobile-bottom-nav-row-height: 56px;
+  --app-mobile-bottom-nav-height: calc(var(--app-mobile-bottom-nav-row-height) + var(--sab));
 
   position: fixed;
   inset: 0;
