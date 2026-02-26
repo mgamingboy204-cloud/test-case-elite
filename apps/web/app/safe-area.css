@@ -6,6 +6,16 @@
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
 
+  --safe-top: max(0px, var(--sat));
+  --safe-right: max(0px, var(--sar));
+  --safe-bottom: max(0px, var(--sab));
+  --safe-left: max(0px, var(--sal));
+
+  --safe-edge-x: max(12px, var(--safe-left));
+  --safe-edge-right: max(12px, var(--safe-right));
+  --safe-edge-top: max(10px, var(--safe-top));
+  --safe-edge-bottom: max(12px, var(--safe-bottom));
+
   /* Prefer dynamic viewport height on iOS/modern browsers */
   --app-vh: 100dvh;
 }
@@ -19,7 +29,6 @@
   }
 }
 
-/* Base document sizing */
 html,
 body {
   height: 100%;
@@ -31,14 +40,13 @@ html[data-app-shell="1"],
 html[data-app-shell="1"] body {
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
-/* App root should be the ONLY full-height owner */
 #app-root {
   height: 100%;
 }
 
-/* When app shell is active, force to real viewport height */
 html[data-app-shell="1"] #app-root {
   height: var(--app-vh);
   overflow: hidden;

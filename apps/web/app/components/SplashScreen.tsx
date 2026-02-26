@@ -25,8 +25,7 @@ export default function SplashScreen({ subtitle = "from Elite Tech" }: SplashScr
           left: 0;
           right: 0;
           top: 0;
-          height: 100dvh; /* correct on modern iOS */
-          height: 100svh; /* fallback */
+          height: var(--app-vh);
           overflow: hidden;
 
           display: grid;
@@ -35,10 +34,10 @@ export default function SplashScreen({ subtitle = "from Elite Tech" }: SplashScr
           justify-items: center;
 
           padding:
-            calc(24px + env(safe-area-inset-top, 0px))
-            calc(20px + env(safe-area-inset-right, 0px))
-            max(16px, env(safe-area-inset-bottom, 0px))
-            calc(20px + env(safe-area-inset-left, 0px));
+            calc(24px + var(--safe-top))
+            calc(20px + var(--safe-right))
+            max(16px, var(--safe-bottom))
+            calc(20px + var(--safe-left));
 
           background: radial-gradient(
               120% 80% at 80% 10%,

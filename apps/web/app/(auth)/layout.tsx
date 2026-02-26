@@ -60,6 +60,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   const [useMobileShell, setUseMobileShell] = useState(false);
 
   useEffect(() => {
+    document.documentElement.setAttribute("data-app-shell", "1");
+
     const media = window.matchMedia("(max-width: 900px)");
     const applyMode = () => {
       setUseMobileShell(media.matches || isStandaloneDisplayMode());
@@ -71,6 +73,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     return () => {
       media.removeEventListener("change", applyMode);
       window.removeEventListener("resize", applyMode);
+      document.documentElement.removeAttribute("data-app-shell");
+      document.body.classList.remove("app-entry-no-scroll");
     };
   }, []);
 

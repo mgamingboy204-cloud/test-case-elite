@@ -20,13 +20,13 @@
 
   /* top + side safe areas only (bottom handled by dock) */
   padding:
-    calc(18px + var(--sat))
-    calc(20px + var(--sar))
+    calc(18px + var(--safe-top))
+    calc(20px + var(--safe-right))
     0
-    calc(20px + var(--sal));
+    calc(20px + var(--safe-left));
 
   /* also stabilize bottom math on iOS */
-  padding-bottom: max(18px, var(--sab));
+  padding-bottom: max(18px, var(--safe-bottom));
 
   /* FORCE DARK on this screen regardless of app theme */
   color-scheme: dark;
@@ -105,7 +105,7 @@
   gap: 12px;
 
   /* bottom dock */
-  padding-bottom: max(18px, var(--sab));
+  padding-bottom: max(18px, var(--safe-bottom));
 }
 
 /* Typography */
