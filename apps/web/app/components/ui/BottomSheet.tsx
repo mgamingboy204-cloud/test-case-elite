@@ -38,7 +38,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
     boxShadow: "var(--shadow-md)",
     zIndex: 1001,
     animation: "slideUp 250ms cubic-bezier(0.32, 0.72, 0, 1)",
-    paddingBottom: "max(16px, var(--sab))",
+    paddingBottom: 0,
   };
 
   return (
