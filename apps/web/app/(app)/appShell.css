@@ -161,33 +161,28 @@
    MOBILE BOTTOM NAV
    ========================= */
 
-  .app-mobile-bottom-nav {
+    .app-mobile-bottom-nav {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
   
-    /* bar height = row + safe-area */
-    height: calc(var(--app-mobile-bottom-nav-row-height) + var(--sab));
-  
-    /* spacing for the row + safe area */
-    padding: 8px calc(16px + var(--sar)) var(--sab) calc(16px + var(--sal));
-  
-    /* MUST match the shell canvas, not plain --bg */
-    background-color: var(--app-shell-bg);
-  
-    border-top: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
-    backdrop-filter: blur(12px) saturate(140%);
-    box-sizing: border-box;
+    /* OWN the safe-area visually */
+    background-color: var(--app-shell-bg, var(--bg, #f8f4ef));
+    border-top: 1px solid color-mix(in srgb, var(--border) 18%, transparent);
     z-index: 90;
   }
-
-.app-mobile-bottom-nav__row {
-  height: var(--app-mobile-bottom-nav-row-height);
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-}
+  
+  /* inner row is what you control */
+  .app-mobile-bottom-nav__row {
+    height: var(--app-mobile-bottom-nav-row-height, 52px);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+  
+    padding: 8px calc(16px + var(--sar)) calc(8px + var(--sab)) calc(16px + var(--sal));
+    box-sizing: border-box;
+  }
 
 .app-mobile-bottom-nav__link {
   min-height: 48px;
