@@ -388,3 +388,37 @@ body.app-entry-no-scroll {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+/* Layout debug mode (toggle with ?debugLayout=1, persisted in localStorage em_debug_layout) */
+html[data-debug-layout="1"],
+body[data-debug-layout="1"] {
+  background: hotpink !important;
+}
+
+html[data-debug-layout="1"] #app-root {
+  background: lime !important;
+  outline: 2px dashed #1f7a1f;
+  outline-offset: -2px;
+}
+
+html[data-debug-layout="1"] .app-shell {
+  background: cyan !important;
+  outline: 2px solid #006a80;
+  outline-offset: -2px;
+}
+
+html[data-debug-layout="1"] .app-mobile-bottom-nav {
+  background: yellow !important;
+  outline: 2px solid #9b870c;
+  outline-offset: -2px;
+}
+
+html[data-debug-layout="1"] .app-shell__body {
+  outline: 2px dotted #7e57c2;
+  outline-offset: -2px;
+}
+
+html[data-debug-layout="1"] .app-main-content {
+  outline: 2px dashed #ff6f61;
+  outline-offset: -2px;
+}
