@@ -226,12 +226,7 @@
   background: color-mix(in srgb, var(--accent) 82%, #f5d2bf 18%);
 }
 
-.app-mobile-bottom-nav__label {
-  font-size: var(--app-shell-label-size);
-  font-weight: var(--app-shell-nav-weight);
-  letter-spacing: 0.01em;
-  line-height: 1;
-}
+
 
 /* =========================
    MOBILE LAYOUT
