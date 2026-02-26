@@ -15,7 +15,7 @@
   --app-mobile-header-chrome-height: 47px;
   --app-mobile-header-height: calc(var(--app-mobile-header-chrome-height) + var(--sat));
 
-  --app-mobile-bottom-nav-row-height: 49px; /* instagram-ish */
+  --app-mobile-bottom-nav-row-height: 47px; /* instagram-ish */
 
   /* ✅ SINGLE SOURCE OF TRUTH: content clears nav row + safe area */
   --app-mobile-bottom-nav-safe: var(--app-mobile-bottom-nav-row-height);
@@ -193,7 +193,7 @@
 
   padding-left: max(16px, var(--sal));
   padding-right: max(16px, var(--sar));
-  padding-top: 4px;
+  padding-top: 5px;
   box-sizing: border-box;
 
   padding-bottom: 0; /* ✅ keep 0 (no double padding) */
@@ -207,7 +207,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
+  align-items: flex-bottom;
   gap: 6px; /* space between icon and dash */
   color: color-mix(in srgb, var(--text-secondary) 78%, transparent);
   transition: color 220ms ease, transform 220ms ease;
