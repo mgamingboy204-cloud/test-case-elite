@@ -48,6 +48,5 @@ html[data-app-shell="1"] body {
 }
 
 html[data-app-shell="1"] #app-root {
-  height: var(--app-vh);
-  overflow: hidden;
+  height: 100%;
 }

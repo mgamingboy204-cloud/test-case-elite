@@ -14,6 +14,30 @@ const themeScript = `
       document.documentElement.dataset.theme = theme;
       document.documentElement.style.colorScheme = theme;
       document.documentElement.style.backgroundColor = theme === "dark" ? "#0B0B10" : "#F8F4EF";
+
+      var debugFlag = "0";
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var queryDebug = params.get("debugLayout");
+        if (queryDebug === "1" || queryDebug === "0") {
+          localStorage.setItem("em_debug_layout", queryDebug);
+        }
+        debugFlag = localStorage.getItem("em_debug_layout") === "1" ? "1" : "0";
+      } catch (_) {}
+
+      if (debugFlag === "1") {
+        document.documentElement.setAttribute("data-debug-layout", "1");
+        var applyBodyDebug = function() {
+          if (document.body) {
+            document.body.setAttribute("data-debug-layout", "1");
+          }
+        };
+        applyBodyDebug();
+        document.addEventListener("DOMContentLoaded", applyBodyDebug, { once: true });
+      } else {
+        document.documentElement.removeAttribute("data-debug-layout");
+      }
+
       requestAnimationFrame(function() {
         document.documentElement.classList.remove("theme-preload");
       });
