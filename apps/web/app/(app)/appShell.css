@@ -173,8 +173,8 @@
   border-top: 1px solid var(--border);
 
   /* total bar = row + safe area */
-  height: calc(var(--app-mobile-bottom-nav-row-height) + var(--sab));
-  padding-bottom: 0;
+  height: var(--app-mobile-bottom-nav-row-height);
+  padding-bottom: var(--sab);
 
   display: flex;
   align-items: flex-end; /* row sits on the safe-area edge */
