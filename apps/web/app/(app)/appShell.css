@@ -36,6 +36,9 @@
   overflow: hidden;
 }
 
+.app-shell-content {
+  padding-bottom: calc(46px + var(--sab) + 12px);
+}
 /* wrapper around fixed nav must NEVER consume space */
 .app-bottom-nav {
   padding: 0;
