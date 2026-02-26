@@ -2,8 +2,11 @@
   --discover-bg: transparent;
   --discover-text: color-mix(in srgb, var(--text) 96%, #fff 4%);
   --discover-muted: color-mix(in srgb, var(--text-secondary) 86%, transparent);
-  --discover-radius: clamp(12px, 3.6vw, 16px);
-  --discover-shadow: 0 22px 60px rgba(1, 4, 10, 0.4);
+
+  /* premium proportions */
+  --discover-radius: clamp(18px, 5vw, 24px);
+  --discover-shadow: 0 26px 70px rgba(1, 4, 10, 0.34);
+
   --discover-ease: cubic-bezier(0.22, 0.84, 0.24, 1);
 
   flex: 1;
@@ -12,7 +15,10 @@
   background: transparent;
   color: var(--discover-text);
   display: grid;
-  grid-template-rows: 77% 3% 20%;
+
+  /* was 77/3/20 -> make room for actions like reference */
+  grid-template-rows: 72% 4% 24%;
+
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
@@ -25,7 +31,10 @@
   display: flex;
   align-items: stretch;
   justify-content: center;
-  padding: clamp(6px, 1.6svh, 12px) clamp(8px, 2.5vw, 12px) 0;
+
+  /* cleaner 16px gutters like reference */
+  padding: clamp(8px, 1.8svh, 14px) 16px 0;
+
   background: var(--discover-bg);
   border: 0;
   border-radius: 0;
@@ -48,7 +57,12 @@
   user-select: none;
   transform: translate3d(0, 0, 0);
   cursor: grab;
+
   box-shadow: var(--discover-shadow);
+
+  /* subtle premium edge */
+  border: 1px solid color-mix(in srgb, #fff 10%, transparent);
+
   transition: transform 260ms var(--discover-ease), opacity 230ms ease-in-out;
   will-change: transform;
 }
@@ -73,20 +87,37 @@
   transition: opacity 210ms ease-in-out;
 }
 
-.mainImageLoaded { opacity: 1; }
-.mainImagePending { opacity: 0; }
+.mainImageLoaded {
+  opacity: 1;
+}
+.mainImagePending {
+  opacity: 0;
+}
 
 .loadingImage {
   position: absolute;
   inset: 0;
-  background: linear-gradient(120deg, color-mix(in srgb, var(--surface-1) 76%, transparent), color-mix(in srgb, var(--surface-2) 88%, transparent), color-mix(in srgb, var(--surface-1) 76%, transparent));
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--surface-1) 76%, transparent),
+    color-mix(in srgb, var(--surface-2) 88%, transparent),
+    color-mix(in srgb, var(--surface-1) 76%, transparent)
+  );
 }
 
 .surfaceFade {
   position: absolute;
   inset: auto 0 0 0;
-  height: 28%;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(4, 6, 11, 0.96) 100%);
+
+  /* was 28% and harsh -> smoother + taller for premium legibility */
+  height: 34%;
+
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(4, 6, 11, 0.22) 35%,
+    rgba(4, 6, 11, 0.92) 100%
+  );
   pointer-events: none;
 }
 
@@ -192,7 +223,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(16px, 4.8vw, 22px);
+
+  /* slightly tighter like reference */
+  gap: clamp(16px, 4.6vw, 20px);
 }
 
 .actionsSkeleton {
@@ -204,10 +237,13 @@
   display: inline-flex;
   justify-content: center;
   align-items: center;
+
+  /* heavier + cleaner */
   box-shadow:
-    0 12px 28px rgba(2, 6, 12, 0.34),
-    0 0 0 1px color-mix(in srgb, #fff 24%, transparent),
-    inset 0 1px 0 color-mix(in srgb, #fff 28%, transparent);
+    0 16px 34px rgba(2, 6, 12, 0.30),
+    0 0 0 1px color-mix(in srgb, #fff 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 24%, transparent);
+
   border: 1px solid color-mix(in srgb, var(--border) 58%, transparent);
   transition: transform 220ms ease-in-out, box-shadow 220ms ease-in-out, background-color 220ms ease-in-out;
   touch-action: manipulation;
@@ -222,8 +258,9 @@
 
 .actionPass,
 .actionInfo {
-  width: clamp(56px, 15vw, 60px);
-  height: clamp(56px, 15vw, 60px);
+  /* a hair bigger */
+  width: clamp(58px, 15.5vw, 62px);
+  height: clamp(58px, 15.5vw, 62px);
   color: color-mix(in srgb, var(--text-secondary) 92%, transparent);
   background: color-mix(in srgb, var(--surface-2) 90%, transparent);
 }
@@ -233,8 +270,9 @@
 }
 
 .actionLike {
-  width: clamp(64px, 18vw, 72px);
-  height: clamp(64px, 18vw, 72px);
+  /* center CTA dominance like reference */
+  width: clamp(72px, 18.5vw, 78px);
+  height: clamp(72px, 18.5vw, 78px);
   color: #fff9f4;
   background: color-mix(in srgb, var(--accent) 84%, #eac3ae 16%);
   border-color: color-mix(in srgb, var(--accent) 62%, #f4d4c5 38%);
@@ -277,14 +315,19 @@
     min-height: 0;
     overflow: hidden;
     display: grid;
-    grid-template-rows: 80% 3% 20%;
+
+    /* keep same premium proportions */
+    grid-template-rows: 72% 4% 24%;
   }
 
   .cardStage {
     grid-row: 1;
     height: 100%;
     min-height: 0;
-    padding: clamp(6px, 1.2svh, 10px) clamp(8px, 2.5vw, 12px) 0;
+
+    /* was variable gutters -> lock to 16px */
+    padding: clamp(8px, 1.6svh, 12px) 16px 0;
+
     background: transparent;
   }
 
