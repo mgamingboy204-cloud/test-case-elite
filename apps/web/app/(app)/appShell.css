@@ -171,7 +171,7 @@
   z-index: 90;
 
   background: var(--app-shell-bg);
-  border-top: 1px solid color-mix(in srgb, var(--border) 18%, transparent);
+  border-top: 1px solid var(--border);
 
   /* bar is only the icon row height */
   height: var(--app-mobile-bottom-nav-row-height);
