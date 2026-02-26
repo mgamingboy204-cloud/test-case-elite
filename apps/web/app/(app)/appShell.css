@@ -11,10 +11,11 @@
   --app-shell-title-size: clamp(1.02rem, 0.94rem + 0.55vw, 1.2rem);
   --app-shell-label-size: clamp(0.68rem, 0.64rem + 0.25vw, 0.8rem);
   --app-shell-nav-weight: 520;
-  --app-mobile-header-chrome-height: 45px;
+  --app-mobile-header-chrome-height: 44px;
   --app-mobile-header-height: calc(var(--app-mobile-header-chrome-height) + var(--sat));
-  --app-mobile-bottom-nav-row-height: 50px;
-  --app-mobile-bottom-nav-height: calc(var(--app-mobile-bottom-nav-row-height) + var(--sab));
+  --app-mobile-bottom-nav-row-height: 49px; /* instagram-ish */
+  --app-mobile-bottom-nav-height: var(--app-mobile-bottom-nav-row-height);
+  --app-mobile-bottom-nav-safe: calc(var(--app-mobile-bottom-nav-row-height) + var(--sab));
 
   position: fixed;
   inset: 0;
@@ -172,11 +173,14 @@
   background: var(--app-shell-bg);
   border-top: 1px solid color-mix(in srgb, var(--border) 18%, transparent);
 
-  /* total includes home indicator area */
-  height: var(--app-mobile-bottom-nav-height);
+  /* bar is only the icon row height */
+  height: var(--app-mobile-bottom-nav-row-height);
+
+  /* safe area handled as padding, not extra blank height */
+  padding-bottom: var(--sab);
 
   display: flex;
-  align-items: flex-start; /* row sits above safe area */
+  align-items: center;
 }
 
 .app-mobile-bottom-nav__row {
@@ -190,7 +194,6 @@
   padding-right: max(16px, var(--sar));
   box-sizing: border-box;
 }
-
 .app-mobile-bottom-nav__link {
   min-height: 48px;
   min-width: 68px;
@@ -320,7 +323,7 @@
     flex-direction: column;
     background: transparent;
     padding-top: 0;
-    padding-bottom: var(--app-mobile-bottom-nav-height);
+    padding-bottom: var(--app-mobile-bottom-nav-safe);
   }
 }
 
