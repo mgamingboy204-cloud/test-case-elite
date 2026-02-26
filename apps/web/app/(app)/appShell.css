@@ -259,8 +259,8 @@
 
   /* content sits in the 44px bar BELOW the notch */
   padding-top: var(--sat);
-  padding-left: 12px;
-  padding-right: 12px;
+  padding-left: max(12px, var(--sal));
+  padding-right: max(12px, var(--sar));
 
   background: var(--app-shell-bg);
   border-bottom: 1px solid color-mix(in srgb, var(--border) 24%, transparent);
@@ -320,7 +320,7 @@
   .app-main-content {
     height: 100%;
     max-width: none;
-    padding-inline: max(12px, var(--sal)) max(12px, var(--sar));
+    padding-inline: 12px 12px;
     display: flex;
     flex-direction: column;
     background: transparent;
