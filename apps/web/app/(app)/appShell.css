@@ -200,7 +200,7 @@
 }
 
 .app-mobile-bottom-nav__link {
-  min-height: 48px;
+  min-height: 56px; /* stable height so nothing jumps */
   min-width: 68px;
   padding: 4px 10px;
   border-radius: 14px;
@@ -208,31 +208,36 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 4px;
+  gap: 6px; /* space between icon and dash */
   color: color-mix(in srgb, var(--text-secondary) 78%, transparent);
   transition: color 220ms ease, transform 220ms ease;
 }
 
+/* Active color */
 .app-mobile-bottom-nav__link[aria-current="page"] {
   color: color-mix(in srgb, var(--text) 94%, #fff 6%);
   font-weight: 580;
 }
 
-.app-mobile-bottom-nav__link[aria-current="page"]::after {
+/* Always reserve space for the dash (prevents layout shift) */
+.app-mobile-bottom-nav__link::after {
   content: "";
   width: 10px;
   height: 2px;
   border-radius: 999px;
+  opacity: 0; /* hidden by default */
+}
+
+/* Show dash only when active */
+.app-mobile-bottom-nav__link[aria-current="page"]::after {
+  opacity: 1;
   background: color-mix(in srgb, var(--accent) 82%, #f5d2bf 18%);
 }
 
+/* Remove label completely (icon-only nav) */
 .app-mobile-bottom-nav__label {
-  font-size: var(--app-shell-label-size);
-  font-weight: var(--app-shell-nav-weight);
-  letter-spacing: 0.01em;
-  line-height: 1;
+  display: none;
 }
-
 /* =========================
    MOBILE LAYOUT
    ========================= */
