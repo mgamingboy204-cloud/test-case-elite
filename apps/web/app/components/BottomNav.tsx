@@ -58,22 +58,24 @@ export function BottomNav({ className, variant = "default", dataVariant }: Botto
 
   return (
     <nav className={`app-mobile-bottom-nav${className ? ` ${className}` : ""}`} data-variant={dataVariant ?? variant} aria-label="Main navigation">
-      {tabs.map((tab) => {
-        const active = pathname.startsWith(tab.href);
-        return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className="app-mobile-bottom-nav__link"
-            aria-current={active ? "page" : undefined}
-          >
-            {tab.icon(active)}
-            <span className="app-mobile-bottom-nav__label">
-              {tab.label}
-            </span>
-          </Link>
-        );
-      })}
+      <div className="app-mobile-bottom-nav__row">
+        {tabs.map((tab) => {
+          const active = pathname.startsWith(tab.href);
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className="app-mobile-bottom-nav__link"
+              aria-current={active ? "page" : undefined}
+            >
+              {tab.icon(active)}
+              <span className="app-mobile-bottom-nav__label">
+                {tab.label}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }
