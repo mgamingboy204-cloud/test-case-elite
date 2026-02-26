@@ -322,16 +322,16 @@ export default function ProfileWizardPage() {
 
       <style jsx>{`
         .onboarding-native {
-          min-height: 100svh;
-          min-height: 100dvh;
-          height: 100dvh;
+          min-height: 100%;
+          height: 100%;
           overflow: hidden;
           overscroll-behavior: none;
           background: linear-gradient(180deg, var(--bg), color-mix(in srgb, var(--surface2) 74%, var(--bg)));
         }
 
         .onboarding-desktop {
-          min-height: 100dvh;
+          min-height: 100%;
+          height: 100%;
           padding: 30px 20px;
           display: grid;
           place-items: center;
@@ -340,7 +340,8 @@ export default function ProfileWizardPage() {
 
         .onboarding-surface {
           position: relative;
-          min-height: 100dvh;
+          min-height: 100%;
+          height: 100%;
           display: grid;
           grid-template-rows: auto auto 1fr auto;
           background: color-mix(in srgb, var(--surface) 94%, var(--bg));

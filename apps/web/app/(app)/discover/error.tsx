@@ -9,7 +9,7 @@ export default function DiscoverError({ error, reset }: { error: Error & { diges
   }, [error]);
 
   return (
-    <div style={{ minHeight: "60vh", display: "grid", placeItems: "center", padding: "24px" }}>
+    <div style={{ minHeight: "100%", height: "100%", display: "grid", placeItems: "center", padding: "24px" }}>
       <div className="card" style={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
         <h2 style={{ marginBottom: 8 }}>Discover hit a temporary issue</h2>
         <p className="card-subtitle" style={{ marginBottom: 16 }}>
