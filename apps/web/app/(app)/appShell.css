@@ -126,7 +126,6 @@
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: var(--app-mobile-bottom-nav-height);
 }
 
 /* mobile header hidden by default */
