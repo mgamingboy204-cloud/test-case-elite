@@ -167,10 +167,12 @@ body,
 
 .site-main {
   height: 100%;
-  min-height: var(--app-vh);
-  min-height: 100svh;
-  min-height: 100dvh;
   background: var(--bg);
+}
+
+/* only non-app pages need viewport min-height */
+html:not([data-app-shell="1"]) .site-main {
+  min-height: var(--app-vh);
 }
 
 html[data-app-shell="1"],
