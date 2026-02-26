@@ -13,7 +13,7 @@
   --app-shell-nav-weight: 520;
   --app-mobile-header-chrome-height: 44px;
   --app-mobile-header-height: calc(var(--app-mobile-header-chrome-height) + var(--sat));
-  --app-mobile-bottom-nav-row-height: 50px; /* instagram-ish */
+  --app-mobile-bottom-nav-row-height: 45px; /* instagram-ish */
   --app-mobile-bottom-nav-safe: var(--app-mobile-bottom-nav-row-height);
 
   position: fixed;
