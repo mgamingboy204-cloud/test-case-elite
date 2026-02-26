@@ -161,18 +161,26 @@
    MOBILE BOTTOM NAV
    ========================= */
 
-.app-mobile-bottom-nav {
-  --app-shell-bottom-nav-bg: var(--app-shell-bg);
-
-  position: fixed;
-  inset: auto 0 0;
-  padding: 0 calc(16px + var(--sar)) var(--sab) calc(16px + var(--sal));
-  background-color: var(--bg, #05070b);
-  border-top: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
-  backdrop-filter: blur(12px) saturate(140%);
-  box-sizing: border-box;
-  z-index: 90;
-}
+  .app-mobile-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  
+    /* bar height = row + safe-area */
+    height: calc(var(--app-mobile-bottom-nav-row-height) + var(--sab));
+  
+    /* spacing for the row + safe area */
+    padding: 8px calc(16px + var(--sar)) var(--sab) calc(16px + var(--sal));
+  
+    /* MUST match the shell canvas, not plain --bg */
+    background-color: var(--app-shell-bg);
+  
+    border-top: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+    backdrop-filter: blur(12px) saturate(140%);
+    box-sizing: border-box;
+    z-index: 90;
+  }
 
 .app-mobile-bottom-nav__row {
   height: var(--app-mobile-bottom-nav-row-height);
