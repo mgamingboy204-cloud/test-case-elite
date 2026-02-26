@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import "./safe-area.css";
 import "./globals.css";
 import Providers from "./providers";
 

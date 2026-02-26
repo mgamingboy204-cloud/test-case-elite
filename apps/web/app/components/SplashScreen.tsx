@@ -27,7 +27,7 @@ export default function SplashScreen({ subtitle = "from Elite Tech" }: SplashScr
           grid-template-rows: 1fr auto;
           align-items: stretch;
           justify-items: center;
-          padding: calc(24px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px));
+          padding: calc(24px + var(--sat)) calc(20px + var(--sar)) calc(16px + var(--sab)) calc(20px + var(--sal));
           background: radial-gradient(120% 80% at 80% 10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 62%),
             linear-gradient(180deg, color-mix(in srgb, var(--bg) 96%, transparent), color-mix(in srgb, var(--bg2) 88%, var(--accent) 12%));
         }

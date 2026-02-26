@@ -93,13 +93,13 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         .shell-root { min-height: 100dvh; display: flex; flex-direction: column; }
         .marketing-header {
           position: fixed;
-          inset: calc(env(safe-area-inset-top, 0px) + 10px) 14px auto;
+          inset: calc(var(--sat) + 10px) 14px auto;
           z-index: 40;
           border-radius: 999px;
           transition: inset 250ms ease, transform 250ms ease, box-shadow 250ms ease;
         }
         .marketing-header.is-compact {
-          inset: calc(env(safe-area-inset-top, 0px) + 6px) 20px auto;
+          inset: calc(var(--sat) + 6px) 20px auto;
           transform: translateY(-1px);
           box-shadow: var(--shadow-md);
         }
@@ -121,7 +121,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         .footer-link { color: var(--marketing-text-muted); font-size: 14px; line-height: 1.8; padding: 8px 2px; min-height: 44px; display: inline-flex; align-items: center; }
 
         .mobile-menu-overlay { position: fixed; inset: 0; z-index: 80; background: color-mix(in srgb, var(--bg) 72%, transparent); backdrop-filter: blur(12px); display: flex; align-items: flex-end; }
-        .mobile-menu-sheet { width: 100%; border-radius: 22px 22px 0 0; padding: 16px 20px calc(24px + env(safe-area-inset-bottom)); border-top: 1px solid var(--marketing-glass-border); background: var(--marketing-glass); backdrop-filter: blur(22px); display: flex; flex-direction: column; gap: 10px; }
+        .mobile-menu-sheet { width: 100%; border-radius: 22px 22px 0 0; padding: 16px 20px calc(24px + var(--sab)); border-top: 1px solid var(--marketing-glass-border); background: var(--marketing-glass); backdrop-filter: blur(22px); display: flex; flex-direction: column; gap: 10px; }
         .sheet-handle { width: 46px; height: 5px; border-radius: 999px; background: var(--marketing-text-muted); opacity: 0.5; margin: 0 auto 6px; }
         .sheet-link { color: var(--marketing-text-strong); padding: 14px 0; border-bottom: 1px solid var(--marketing-glass-border); font-weight: 500; min-height: 44px; display: flex; align-items: center; }
         .sheet-signin { margin-top: 4px; text-align: center; padding: 13px; border-radius: 999px; color: var(--ctaText); background: linear-gradient(120deg, var(--cta), var(--primary-hover)); font-weight: 700; min-height: 44px; }
@@ -130,8 +130,8 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         @media (max-width: 880px) {
           .desktop-nav, .invite-btn { display: none; }
           .mobile-menu-btn { display: block; }
-          .marketing-header { inset: calc(env(safe-area-inset-top, 0px) + 8px) 10px auto; }
-          .marketing-header.is-compact { inset: calc(env(safe-area-inset-top, 0px) + 6px) 10px auto; }
+          .marketing-header { inset: calc(var(--sat) + 8px) 10px auto; }
+          .marketing-header.is-compact { inset: calc(var(--sat) + 6px) 10px auto; }
           .footer-inner { justify-content: center; text-align: center; flex-direction: column; }
         }
       `}</style>
