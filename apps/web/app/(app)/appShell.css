@@ -233,7 +233,7 @@
   .app-shell {
     padding: 0;
     display: grid;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: var(--app-mobile-header-height) 1fr;
   }
 
   .app-header,
