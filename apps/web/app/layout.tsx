@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./safe-area.css";
 import "./globals.css";
+import { SafeAreaDebugProbe } from "./components/SafeAreaDebugProbe";
 import Providers from "./providers";
 
 const themeScript = `
@@ -41,29 +42,32 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#0B0B10" },
     { media: "(prefers-color-scheme: light)", color: "#F8F4EF" }
   ],
-  initialScale: 1,
-  viewportFit: "cover",
   maximumScale: 1,
   userScalable: false
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning style={{ backgroundColor: "var(--bg)" }}>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body style={{ backgroundColor: "var(--bg)" }}>
+      <body>
         <div className="boot-shell" aria-hidden="true">
           <div className="boot-shell__mark" />
         </div>
-        <Providers>
-          <main className="site-main">{children}</main>
-        </Providers>
+        <div id="app-root">
+          <Providers>
+            <main className="site-main">{children}</main>
+            <SafeAreaDebugProbe />
+          </Providers>
+        </div>
       </body>
     </html>
   );

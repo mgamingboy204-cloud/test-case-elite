@@ -168,7 +168,7 @@
   inset: auto 0 0;
   min-height: var(--app-mobile-bottom-nav-chrome-height);
   padding: 8px max(14px, var(--sal)) var(--sab) max(14px, var(--sar));
-  background: var(--app-shell-bottom-nav-bg);
+  background-color: var(--bg, #05070b);
   border-top: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
   backdrop-filter: blur(12px) saturate(140%);
   display: flex;
