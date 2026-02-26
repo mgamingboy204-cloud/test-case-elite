@@ -1,5 +1,5 @@
 .app-shell {
-  --app-shell-bg: color-mix(in srgb, var(--bg) 90%, #04070e 10%);
+  --app-shell-bg: var(--bg, #f8f4ef);
   --app-shell-surface: color-mix(in srgb, var(--surface-1) 92%, var(--bg) 8%);
   --discover-canvas-bg: radial-gradient(
       120% 68% at 50% -14%,
@@ -175,7 +175,7 @@
   
   /* inner row is what you control */
   .app-mobile-bottom-nav__row {
-    height: var(--app-mobile-bottom-nav-row-height, 52px);
+    height: var(--app-mobile-bottom-nav-row-height, 45px);
     display: flex;
     align-items: center;
     justify-content: space-around;
