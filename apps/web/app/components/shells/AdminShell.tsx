@@ -24,7 +24,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="shell-page" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div className="shell-page" style={{ minHeight: "100svh", display: "flex", flexDirection: "column" }}>
       {/* Header */}
       <header
         style={{
@@ -123,7 +123,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             padding: "16px 0",
             position: "sticky",
             top: "var(--app-header-offset)",
-            height: "calc(100vh - var(--app-header-offset))",
+            height: "calc(100svh - var(--app-header-offset))",
             overflowY: "auto",
             flexShrink: 0,
           }}

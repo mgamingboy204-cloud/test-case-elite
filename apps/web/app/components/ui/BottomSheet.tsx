@@ -33,12 +33,12 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
     right: 0,
     background: "linear-gradient(150deg, color-mix(in srgb, var(--surface) 94%, transparent), color-mix(in srgb, var(--surface2) 96%, var(--pearl-panel)) )",
     borderRadius: "32px 32px 0 0",
-    maxHeight: "85vh",
+    maxHeight: "85svh",
     overflow: "auto",
     boxShadow: "var(--shadow-md)",
     zIndex: 1001,
     animation: "slideUp 250ms cubic-bezier(0.32, 0.72, 0, 1)",
-    paddingBottom: "env(safe-area-inset-bottom, 16px)",
+    paddingBottom: "max(16px, var(--sab))",
   };
 
   return (

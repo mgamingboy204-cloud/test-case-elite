@@ -12,15 +12,10 @@
 /* CSS Variables - Light Theme (default) */
 :root,
 [data-theme="light"] {
-  --sat: env(safe-area-inset-top, 0px);
-  --sar: env(safe-area-inset-right, 0px);
-  --sab: env(safe-area-inset-bottom, 0px);
-  --sal: env(safe-area-inset-left, 0px);
   --bn: 86px;
   --app-header-height: 60px;
   --app-bottom-nav-base-height: var(--bn);
   --app-bottom-nav-height: calc(var(--bn) + var(--sab));
-  --app-mobile-safe-top: 0px;
   --app-header-offset: var(--app-header-height);
   --rose-200: #dea5a5;
   --rose-300: #d79798;
@@ -85,8 +80,7 @@
   :root,
   [data-theme="light"],
   [data-theme="dark"] {
-    --app-mobile-safe-top: var(--sat);
-    --app-header-offset: calc(var(--app-header-height) + var(--app-mobile-safe-top));
+    --app-header-offset: calc(var(--app-header-height) + var(--sat));
   }
 }
 
@@ -173,7 +167,7 @@ body,
 
 .site-main {
   height: 100%;
-  min-height: 100vh;
+  min-height: var(--app-vh);
   min-height: 100svh;
   min-height: 100dvh;
   background: var(--bg);
@@ -213,7 +207,7 @@ body {
   background-color: var(--bg);
   color: var(--text);
   line-height: 1.58;
-  min-height: 100vh;
+  min-height: var(--app-vh);
   min-height: 100svh;
   min-height: 100dvh;
   overflow-x: hidden;

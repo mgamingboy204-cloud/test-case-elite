@@ -40,23 +40,6 @@ export default function AppGetStartedPage() {
   const intervalRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
 
-  // ===== iOS REAL VIEWPORT FIX =====
-  useLayoutEffect(() => {
-    const setVh = () => {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty("--app-vh", `${vh}px`);
-    };
-
-    setVh();
-    window.addEventListener("resize", setVh);
-    window.addEventListener("orientationchange", setVh);
-
-    return () => {
-      window.removeEventListener("resize", setVh);
-      window.removeEventListener("orientationchange", setVh);
-    };
-  }, []);
-
   useLayoutEffect(() => {
     document.body.classList.add("app-entry-no-scroll");
     return () => document.body.classList.remove("app-entry-no-scroll");
