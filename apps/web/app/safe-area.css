@@ -22,23 +22,17 @@
 /* Base document sizing */
 html,
 body {
-  height: 100%;
+  height: var(--app-vh);
   background-color: var(--bg, #05070b);
 }
 
-/* Only lock scroll when app shell is active */
-html[data-app-shell="1"],
-html[data-app-shell="1"] body {
-  height: 100%;
-  overflow: hidden;
-}
-
-/* App root should be the ONLY full-height owner */
 #app-root {
-  height: 100%;
+  height: var(--app-vh);
 }
 
-/* When app shell is active, force to real viewport height */
+/* App shell mode owns viewport + locks global scroll */
+html[data-app-shell="1"],
+html[data-app-shell="1"] body,
 html[data-app-shell="1"] #app-root {
   height: var(--app-vh);
   overflow: hidden;

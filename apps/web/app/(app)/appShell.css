@@ -16,9 +16,9 @@
   --app-mobile-bottom-nav-row-height: 49px; /* instagram-ish */
   --app-mobile-bottom-nav-safe: calc(var(--app-mobile-bottom-nav-row-height) + var(--sab));
 
-  position: fixed;
-  inset: 0;
-  height: var(--app-vh);
+  position: relative;
+  inset: auto;
+  height: 100%;
   overflow: hidden;
   background: var(--app-shell-bg);
   color: var(--text);
@@ -172,18 +172,18 @@
   background: var(--app-shell-bg);
   border-top: 1px solid var(--border);
 
-  /* bar is only the icon row height */
-  height: var(--app-mobile-bottom-nav-row-height);
+  /* total bar = row + safe area */
+  height: var(--app-mobile-bottom-nav-safe);
 
-  /* safe area handled as padding, not extra blank height */
-  padding-bottom: var(--sab);
+  /* safe area counted in total height only once */
+  padding-bottom: 0;
 
   display: flex;
   align-items: center;
 }
 
 .app-mobile-bottom-nav__row {
-  height: var(--app-mobile-bottom-nav-row-height);
+  height: 100%;
   width: 100%;
   display: flex;
   align-items: center;
@@ -192,7 +192,7 @@
   padding: 0 max(16px, var(--sal));
   padding-right: max(16px, var(--sar));
   box-sizing: border-box;
-  padding-bottom: var(--sab);
+  padding-bottom: 0;
 }
 .app-mobile-bottom-nav__link {
   min-height: 48px;
@@ -318,7 +318,8 @@
   .app-main-content {
     height: 100%;
     max-width: none;
-    padding-inline: max(12px, var(--sal)) max(12px, var(--sar));
+    padding-left: max(12px, var(--sal));
+    padding-right: max(12px, var(--sar));
     display: flex;
     flex-direction: column;
     background: transparent;

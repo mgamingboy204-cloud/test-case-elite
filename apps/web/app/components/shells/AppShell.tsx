@@ -53,8 +53,8 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
   const shellRoute = isDiscoverRoute ? "discover" : "default";
 
   return (
-    <div className={`app-shell${className ? ` ${className}` : ""}`} data-variant={shellVariant} data-route={shellRoute}>
-      <header className={`app-header ${headerClassName ?? ""}`.trim()} data-variant={shellVariant}>
+    <div className={`app-shell${className ? ` ${className}` : ""}`} data-variant={shellVariant} data-route={shellRoute} data-layout-part="shell">
+      <header className={`app-header ${headerClassName ?? ""}`.trim()} data-variant={shellVariant} data-layout-part="topbar-desktop">
         <Link href="/discover" className="app-header__brand">
           Elite Match
         </Link>
@@ -67,7 +67,7 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
         </button>
       </header>
 
-      <header className={`app-mobile-header ${headerClassName ?? ""}`.trim()} data-variant={shellVariant} aria-label="Mobile header">
+      <header className={`app-mobile-header ${headerClassName ?? ""}`.trim()} data-variant={shellVariant} aria-label="Mobile header" data-layout-part="topbar-mobile">
         <Link href="/profile" aria-label="Open profile" className="app-mobile-header__dot" title={profileName || "Profile"} />
         <div className="app-mobile-header__title" title={mobileTitle}>{mobileTitle}</div>
         <button
@@ -100,7 +100,7 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
           })}
         </aside>
 
-        <main className="app-main-content" data-variant={shellVariant}>{children}</main>
+        <main className="app-main-content" data-variant={shellVariant} data-layout-part="content-scroll">{children}</main>
       </div>
 
       <BottomNav
