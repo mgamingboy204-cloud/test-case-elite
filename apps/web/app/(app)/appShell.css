@@ -18,7 +18,7 @@
 
   position: fixed;
   inset: 0;
-  min-height: var(--app-vh);
+  height: var(--app-vh);
   overflow: hidden;
   background: var(--app-shell-bg);
   color: var(--text);
@@ -37,7 +37,7 @@
 }
 
 .app-shell-content {
-  padding-bottom: calc(46px + var(--sab) + 12px);
+  padding-bottom: var(--app-mobile-bottom-nav-height);
 }
 /* wrapper around fixed nav must NEVER consume space */
 .app-bottom-nav {
@@ -128,6 +128,7 @@
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
+  padding-bottom: var(--app-mobile-bottom-nav-height);
 }
 
 /* mobile header hidden by default */
@@ -164,17 +165,25 @@
    MOBILE BOTTOM NAV
    ========================= */
 
-    .app-mobile-bottom-nav {
+ .app-mobile-bottom-nav {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  height: var(--app-mobile-bottom-nav-height);
+
+  /* don't bake sab into height AND also pad sab somewhere else */
+  height: var(--app-mobile-bottom-nav-row-height);
+
+  /* this is the only place sab is applied */
+  padding-bottom: var(--sab);
+
   background: var(--app-shell-bg);
   border-top: 1px solid color-mix(in srgb, var(--border) 18%, transparent);
   z-index: 90;
+
+  /* keep row anchored above home indicator */
   display: flex;
-  align-items: flex-end; /* respects safe area */
+  align-items: stretch;
 }
 
 .app-mobile-bottom-nav__row {
@@ -183,7 +192,11 @@
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 0 max(16px, var(--sal)) var(--sab) max(16px, var(--sal));
+
+  /* REMOVE sab from here */
+  padding: 0 max(16px, var(--sal));
+  padding-right: max(16px, var(--sar));
+
   box-sizing: border-box;
 }
 
