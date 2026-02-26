@@ -94,7 +94,7 @@ export function AppShell({ children, className, headerClassName, bottomNavClassN
             return (
               <Link key={link.href} href={link.href} className="app-sidebar__link" data-active={active ? "true" : "false"}>
                 <span className="app-sidebar__icon">{link.icon}</span>
-                {link.label}
+                
               </Link>
             );
           })}
