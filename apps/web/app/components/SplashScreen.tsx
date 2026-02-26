@@ -18,23 +18,51 @@ export default function SplashScreen({ subtitle = "from Elite Tech" }: SplashScr
         </div>
         <p className="app-splash-credit">{subtitle}</p>
       </div>
+
       <style jsx>{`
         .app-splash-shell {
           position: fixed;
-          inset: 0;
+          left: 0;
+          right: 0;
+          top: 0;
+          height: 100dvh; /* correct on modern iOS */
+          height: 100svh; /* fallback */
           overflow: hidden;
+
           display: grid;
           grid-template-rows: 1fr auto;
           align-items: stretch;
           justify-items: center;
-          padding: calc(24px + var(--sat)) calc(20px + var(--sar)) calc(16px + var(--sab)) calc(20px + var(--sal));
-          background: radial-gradient(120% 80% at 80% 10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 62%),
-            linear-gradient(180deg, color-mix(in srgb, var(--bg) 96%, transparent), color-mix(in srgb, var(--bg2) 88%, var(--accent) 12%));
+
+          padding:
+            calc(24px + env(safe-area-inset-top, 0px))
+            calc(20px + env(safe-area-inset-right, 0px))
+            max(16px, env(safe-area-inset-bottom, 0px))
+            calc(20px + env(safe-area-inset-left, 0px));
+
+          background: radial-gradient(
+              120% 80% at 80% 10%,
+              color-mix(in srgb, var(--accent) 16%, transparent),
+              transparent 62%
+            ),
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, var(--bg) 96%, transparent),
+              color-mix(in srgb, var(--bg2) 88%, var(--accent) 12%)
+            );
         }
 
         [data-theme="light"] .app-splash-shell {
-          background: radial-gradient(120% 86% at 85% 0%, color-mix(in srgb, var(--accent2) 12%, transparent), transparent 60%),
-            linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, white 12%), color-mix(in srgb, var(--bg) 94%, var(--accent2) 6%));
+          background: radial-gradient(
+              120% 86% at 85% 0%,
+              color-mix(in srgb, var(--accent2) 12%, transparent),
+              transparent 60%
+            ),
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, var(--surface) 88%, white 12%),
+              color-mix(in srgb, var(--bg) 94%, var(--accent2) 6%)
+            );
         }
 
         .app-splash-brand {
@@ -74,15 +102,33 @@ export default function SplashScreen({ subtitle = "from Elite Tech" }: SplashScr
         }
 
         @keyframes premiumRise {
-          0% { opacity: 0; transform: translate3d(0, 16px, 0) scale(0.98); filter: blur(8px); }
-          38% { opacity: 1; transform: translate3d(0, -4px, 0) scale(1); filter: blur(0); }
-          72% { opacity: 1; transform: translate3d(0, -2px, 0) scale(0.995); }
-          100% { opacity: 0.98; transform: translate3d(0, -8px, 0) scale(0.985); }
+          0% {
+            opacity: 0;
+            transform: translate3d(0, 16px, 0) scale(0.98);
+            filter: blur(8px);
+          }
+          38% {
+            opacity: 1;
+            transform: translate3d(0, -4px, 0) scale(1);
+            filter: blur(0);
+          }
+          72% {
+            opacity: 1;
+            transform: translate3d(0, -2px, 0) scale(0.995);
+          }
+          100% {
+            opacity: 0.98;
+            transform: translate3d(0, -8px, 0) scale(0.985);
+          }
         }
 
         @keyframes creditIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
         }
 
         @media (prefers-reduced-motion: reduce) {
