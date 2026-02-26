@@ -11,10 +11,14 @@
   --app-shell-title-size: clamp(1.02rem, 0.94rem + 0.55vw, 1.2rem);
   --app-shell-label-size: clamp(0.68rem, 0.64rem + 0.25vw, 0.8rem);
   --app-shell-nav-weight: 520;
+
   --app-mobile-header-chrome-height: 44px;
   --app-mobile-header-height: calc(var(--app-mobile-header-chrome-height) + var(--sat));
+
   --app-mobile-bottom-nav-row-height: 45px; /* instagram-ish */
-  --app-mobile-bottom-nav-safe: var(--app-mobile-bottom-nav-row-height);
+
+  /* ✅ SINGLE SOURCE OF TRUTH: content clears nav row + safe area */
+  --app-mobile-bottom-nav-safe: calc(var(--app-mobile-bottom-nav-row-height) + var(--sab));
 
   position: fixed;
   inset: 0;
@@ -35,7 +39,6 @@
   min-height: 0;
   overflow: hidden;
 }
-
 
 /* wrapper around fixed nav must NEVER consume space */
 .app-bottom-nav {
@@ -162,7 +165,7 @@
    MOBILE BOTTOM NAV
    ========================= */
 
- .app-mobile-bottom-nav{
+.app-mobile-bottom-nav {
   position: fixed;
   left: 0;
   right: 0;
@@ -172,15 +175,15 @@
   background: var(--app-shell-bg);
   border-top: 1px solid var(--border);
 
-  /* total bar = row + safe area */
-  height: var(--app-mobile-bottom-nav-row-height);
-  padding-bottom: 0;
+  /* ✅ total bar = row + safe area */
+  height: calc(var(--app-mobile-bottom-nav-row-height) + var(--sab));
+  padding-bottom: var(--sab);
 
   display: flex;
   align-items: flex-end; /* row sits on the safe-area edge */
 }
 
-.app-mobile-bottom-nav__row{
+.app-mobile-bottom-nav__row {
   height: var(--app-mobile-bottom-nav-row-height);
   width: 100%;
 
@@ -192,8 +195,7 @@
   padding-right: max(16px, var(--sar));
   box-sizing: border-box;
 
-  /* IMPORTANT: remove this */
-  padding-bottom: 0;
+  padding-bottom: 0; /* ✅ keep 0 (no double padding) */
 }
 
 .app-mobile-bottom-nav__link {
@@ -247,24 +249,22 @@
   }
 
   .app-mobile-header {
-  grid-row: 1;
-  z-index: 95;
-  display: grid;
-  grid-template-columns: 44px 1fr 44px;
-  align-items: center;
-  gap: 10px;
+    grid-row: 1;
+    z-index: 95;
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    align-items: center;
+    gap: 10px;
 
-  /* total includes safe area + bar */
-  height: var(--app-mobile-header-height);
+    height: var(--app-mobile-header-height);
 
-  /* content sits in the 44px bar BELOW the notch */
-  padding-top: var(--sat);
-  padding-left: max(12px, var(--sal));
-  padding-right: max(12px, var(--sar));
+    padding-top: var(--sat);
+    padding-left: max(12px, var(--sal));
+    padding-right: max(12px, var(--sar));
 
-  background: var(--app-shell-bg);
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 24%, transparent);
-}
+    background: var(--app-shell-bg);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 24%, transparent);
+  }
 
   .app-mobile-header__dot {
     width: 44px;
@@ -325,6 +325,8 @@
     flex-direction: column;
     background: transparent;
     padding-top: 0;
+
+    /* ✅ ONLY AppShell controls page bottom inset */
     padding-bottom: var(--app-mobile-bottom-nav-safe);
   }
 }
