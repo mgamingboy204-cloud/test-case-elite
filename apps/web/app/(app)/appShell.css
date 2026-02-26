@@ -14,7 +14,7 @@
   --app-mobile-header-chrome-height: 44px;
   --app-mobile-header-height: calc(var(--app-mobile-header-chrome-height) + var(--sat));
   --app-mobile-bottom-nav-row-height: 49px; /* instagram-ish */
-  --app-mobile-bottom-nav-safe: calc(var(--app-mobile-bottom-nav-row-height) + var(--sab));
+  --app-mobile-bottom-nav-safe: var(--app-mobile-bottom-nav-row-height)
 
   position: fixed;
   inset: 0;
@@ -174,7 +174,7 @@
 
   /* total bar = row + safe area */
   height: var(--app-mobile-bottom-nav-row-height);
-  padding-bottom: var(--sab);
+  padding-bottom: 0;
 
   display: flex;
   align-items: flex-end; /* row sits on the safe-area edge */
