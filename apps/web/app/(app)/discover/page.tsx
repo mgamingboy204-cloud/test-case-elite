@@ -295,12 +295,13 @@ export default function DiscoverPage() {
             {swipeXState > 24 && <div className={`${styles.swipeBadge} ${styles.swipeLike}`} style={{ opacity: Math.min(swipeXState / 100, 1) }}>LIKE</div>}
             {swipeXState < -24 && <div className={`${styles.swipeBadge} ${styles.swipePass}`} style={{ opacity: Math.min(Math.abs(swipeXState) / 100, 1) }}>PASS</div>}
 
-            <div className={styles.cardBottom}>
+            <div className={styles.cardTextWrap}>
               <div className={styles.titleRow}>
-                <h2 className={styles.name}>{currentProfile.name}, {currentProfile.age}</h2>
+                <h2 className={styles.cardNameLine}>{currentProfile.name}, {currentProfile.age}</h2>
                 {currentProfile.verified && <span className={styles.verifiedBadge} aria-label="Verified profile">✓</span>}
               </div>
-              <p className={styles.metaLine}>{currentProfile.bio || "Open to meaningful connection"}</p>
+              <p className={styles.cardMetaLine}>{currentProfile.city}</p>
+              <p className={styles.cardBioLine}>{currentProfile.bio || "Open to meaningful connection"}</p>
             </div>
           </div>
         )}
@@ -311,48 +312,63 @@ export default function DiscoverPage() {
       <section className={styles.actionsBand}>
         {loading ? (
           <div className={`${styles.actionsRow} ${styles.actionsSkeleton}`} aria-hidden>
-            <span className={`${styles.actionButton} ${styles.actionPass}`} />
-            <span className={`${styles.actionButton} ${styles.actionInfo}`} />
-            <span className={`${styles.actionButton} ${styles.actionLike}`} />
+            <div className={styles.actionItem}>
+              <span className={styles.actionBtn} />
+              <span className={styles.actionLabel}>Pass</span>
+            </div>
+            <div className={styles.actionItem}>
+              <span className={styles.actionBtn} />
+              <span className={styles.actionLabel}>Info</span>
+            </div>
+            <div className={styles.actionItem}>
+              <span className={`${styles.actionBtn} ${styles.actionBtnPrimary}`} />
+              <span className={styles.actionLabel}>Like</span>
+            </div>
           </div>
         ) : currentProfile ? (
           <div className={styles.actionsRow}>
-            <button
-              onClick={() => handleAction("PASS", "left")}
-              aria-label="Pass"
-              className={`${styles.actionButton} ${styles.actionPass} ${pressedAction === "pass" ? styles.actionPressed : ""}`}
-              onPointerDown={() => setPressedAction("pass")}
-              onPointerUp={() => setPressedAction(null)}
-              onPointerCancel={() => setPressedAction(null)}
-              onPointerLeave={() => setPressedAction(null)}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-             <span className={styles.actionLabel}>Pass</span>
-            </button>
-            <button
-              onClick={() => setProfileDetailsOpen(true)}
-              aria-label="Open profile info"
-              className={`${styles.actionButton} ${styles.actionInfo} ${pressedAction === "info" ? styles.actionPressed : ""}`}
-              onPointerDown={() => setPressedAction("info")}
-              onPointerUp={() => setPressedAction(null)}
-              onPointerCancel={() => setPressedAction(null)}
-              onPointerLeave={() => setPressedAction(null)}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><line x1="12" y1="10" x2="12" y2="16" /><circle cx="12" cy="7.25" r="1" fill="currentColor" stroke="none" /></svg>
-           <span className={styles.actionLabel}>info</span>
-            </button>
-            <button
-              onClick={() => handleAction("LIKE", "right")}
-              aria-label="Like"
-              className={`${styles.actionButton} ${styles.actionLike} ${pressedAction === "like" ? styles.actionPressed : ""}`}
-              onPointerDown={() => setPressedAction("like")}
-              onPointerUp={() => setPressedAction(null)}
-              onPointerCancel={() => setPressedAction(null)}
-              onPointerLeave={() => setPressedAction(null)}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
-            <span className={styles.actionLabel}>Like</span>
-            </button>
+            <div className={styles.actionItem}>
+              <button
+                onClick={() => handleAction("PASS", "left")}
+                aria-label="Pass"
+                className={`${styles.actionBtn} ${styles.actionBtnPass} ${pressedAction === "pass" ? styles.actionPressed : ""}`}
+                onPointerDown={() => setPressedAction("pass")}
+                onPointerUp={() => setPressedAction(null)}
+                onPointerCancel={() => setPressedAction(null)}
+                onPointerLeave={() => setPressedAction(null)}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+              <div className={styles.actionLabel}>Pass</div>
+            </div>
+            <div className={styles.actionItem}>
+              <button
+                onClick={() => setProfileDetailsOpen(true)}
+                aria-label="Open profile info"
+                className={`${styles.actionBtn} ${styles.actionBtnInfo} ${pressedAction === "info" ? styles.actionPressed : ""}`}
+                onPointerDown={() => setPressedAction("info")}
+                onPointerUp={() => setPressedAction(null)}
+                onPointerCancel={() => setPressedAction(null)}
+                onPointerLeave={() => setPressedAction(null)}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><line x1="12" y1="10" x2="12" y2="16" /><circle cx="12" cy="7.25" r="1" fill="currentColor" stroke="none" /></svg>
+              </button>
+              <div className={styles.actionLabel}>Info</div>
+            </div>
+            <div className={styles.actionItem}>
+              <button
+                onClick={() => handleAction("LIKE", "right")}
+                aria-label="Like"
+                className={`${styles.actionBtn} ${styles.actionBtnPrimary} ${styles.actionBtnLike} ${pressedAction === "like" ? styles.actionPressed : ""}`}
+                onPointerDown={() => setPressedAction("like")}
+                onPointerUp={() => setPressedAction(null)}
+                onPointerCancel={() => setPressedAction(null)}
+                onPointerLeave={() => setPressedAction(null)}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+              </button>
+              <div className={styles.actionLabel}>Like</div>
+            </div>
           </div>
         ) : <div className={styles.actionsSpacer} aria-hidden />}
       </section>
