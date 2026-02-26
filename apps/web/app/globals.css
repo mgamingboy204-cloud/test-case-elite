@@ -209,9 +209,6 @@ body {
   background-color: var(--bg);
   color: var(--text);
   line-height: 1.58;
-  min-height: var(--app-vh);
-  min-height: 100svh;
-  min-height: 100dvh;
   overflow-x: hidden;
 }
 
