@@ -12,7 +12,7 @@
   --app-shell-label-size: clamp(0.68rem, 0.64rem + 0.25vw, 0.8rem);
   --app-shell-nav-weight: 520;
 
-  --app-mobile-header-chrome-height: 44px;
+  --app-mobile-header-chrome-height: 47px;
   --app-mobile-header-height: calc(var(--app-mobile-header-chrome-height) + var(--sat));
 
   --app-mobile-bottom-nav-row-height: 49px; /* instagram-ish */
