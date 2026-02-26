@@ -203,11 +203,13 @@ html.theme-preload * {
 
 html,
 body {
+  height: var(--app-vh);
   background-color: var(--bg);
 }
 
 #__next,
 .site-main {
+  height: var(--app-vh);
   background: var(--bg);
 }
 
@@ -221,7 +223,8 @@ body {
 /* App shell locks scroll ONLY here */
 html[data-app-shell="1"],
 html[data-app-shell="1"] body,
-html[data-app-shell="1"] #app-root {
+html[data-app-shell="1"] #app-root,
+html[data-app-shell="1"] .site-main {
   height: var(--app-vh);
   overflow: hidden;
   overscroll-behavior: none;
