@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 
 import { AppShell } from "@/app/components/shells/AppShell";
 import RouteGuard from "@/app/components/RouteGuard";
+import { AppViewportFix } from "@/app/components/AppViewportFix";
 import "./appShell.css";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -17,8 +18,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <RouteGuard requireActive>
-      <AppShell>{children}</AppShell>
-    </RouteGuard>
+    <>
+      <AppViewportFix />
+      <RouteGuard requireActive>
+        <AppShell>{children}</AppShell>
+      </RouteGuard>
+    </>
   );
 }
