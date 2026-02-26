@@ -12,7 +12,7 @@
 /* CSS Variables - Light Theme (default) */
 :root,
 [data-theme="light"] {
-  --bn: 86px;
+  --bn: 49px;
   --app-header-height: 60px;
   --app-bottom-nav-base-height: var(--bn);
   --app-bottom-nav-height: calc(var(--bn) + var(--sab));
