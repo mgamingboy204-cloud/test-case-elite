@@ -22,7 +22,23 @@ export default function ProfilePage() {
     const loadProfile = async () => {
       try {
         const response = await apiClient.getProfile();
-        setProfile(response);
+        const profileData = response.profile;
+        if (!profileData) {
+          setProfile(null);
+          return;
+        }
+
+        const photos = response.photos.map((photo) => photo.url);
+        const [firstName = '', ...lastNameParts] = profileData.name.split(' ');
+
+        setProfile({
+          firstName,
+          lastName: lastNameParts.join(' '),
+          email: '',
+          photos,
+          bio: profileData.bioShort,
+          location: profileData.city,
+        });
       } catch (error) {
         console.error('Failed to load profile:', error);
       } finally {

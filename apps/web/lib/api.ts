@@ -21,6 +21,41 @@ export type MatchesResponse = {
   matches: Match[];
 };
 
+export type ProfileDetails = {
+  userId: string;
+  name: string;
+  gender: string;
+  age: number;
+  city: string;
+  profession: string;
+  bioShort: string;
+  intent: string;
+};
+
+export type ProfilePhoto = {
+  id: string;
+  userId: string;
+  url: string;
+  createdAt: string;
+};
+
+export type ProfileUser = {
+  firstName: string | null;
+  lastName: string | null;
+  displayName: string | null;
+  gender: string | null;
+};
+
+export type GetProfileResponse = {
+  profile: ProfileDetails | null;
+  photos: ProfilePhoto[];
+  user: ProfileUser | null;
+};
+
+export type UploadPhotoResponse = {
+  url: string;
+};
+
 export class ApiClient {
   private baseUrl: string;
   private getHeaders: (() => Record<string, string>) | null = null;
@@ -96,10 +131,10 @@ export class ApiClient {
     });
   }
 
-  async uploadPhoto(file: File) {
+  async uploadPhoto(file: File): Promise<UploadPhotoResponse> {
     const formData = new FormData();
     formData.append('photo', file);
-    return this.request('/photos/upload', {
+    return this.request<UploadPhotoResponse>('/photos/upload', {
       method: 'POST',
       body: formData,
       headers: {}, // FormData sets Content-Type automatically
@@ -113,13 +148,13 @@ export class ApiClient {
     });
   }
 
-  async getProfile() {
-    return this.request('/profile', {
+  async getProfile(): Promise<GetProfileResponse> {
+    return this.request<GetProfileResponse>('/profile', {
       method: 'GET',
     });
   }
 
-  async getMatches() {
+  async getMatches(): Promise<MatchesResponse> {
     return this.request<MatchesResponse>('/matches', {
       method: 'GET',
     });
