@@ -1,9 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   return (
     <nav className="fixed w-full top-0 z-50 bg-[var(--bg-primary)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--bg-primary)]/60 border-b border-[var(--border-color)]">
@@ -25,9 +28,21 @@ export default function Navigation() {
           <a href="#pwa" className="text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition">
             About the App
           </a>
-          <button className="px-6 py-2 bg-[var(--accent-primary)] text-[var(--bg-primary)] rounded-full font-medium hover:bg-[var(--accent-secondary)] transition">
-            Open App
-          </button>
+
+          {isAuthenticated ? (
+            <Link href="/app" className="px-6 py-2 bg-[var(--accent-primary)] text-[var(--bg-primary)] rounded-full font-medium hover:bg-[var(--accent-secondary)] transition">
+              Go to App
+            </Link>
+          ) : (
+            <div className="flex items-center gap-4">
+              <Link href="/login" className="text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition">
+                Login
+              </Link>
+              <Link href="/onboarding" className="px-6 py-2 bg-[var(--accent-primary)] text-[var(--bg-primary)] rounded-full font-medium hover:bg-[var(--accent-secondary)] transition">
+                Get Started
+              </Link>
+            </div>
+          )}
         </div>
 
         <button
@@ -52,9 +67,20 @@ export default function Navigation() {
             <a href="#pwa" className="text-[var(--text-secondary)]">
               About the App
             </a>
-            <button className="w-full px-6 py-2 bg-[var(--accent-primary)] text-[var(--bg-primary)] rounded-full font-medium">
-              Open App
-            </button>
+            {isAuthenticated ? (
+              <Link href="/app" className="w-full px-6 py-2 bg-[var(--accent-primary)] text-[var(--bg-primary)] rounded-full font-medium text-center">
+                Go to App
+              </Link>
+            ) : (
+              <div className="space-y-2">
+                <Link href="/login" className="block w-full px-6 py-2 border border-[var(--border-color)] text-[var(--text-secondary)] rounded-full font-medium text-center hover:bg-[var(--bg-tertiary)]">
+                  Login
+                </Link>
+                <Link href="/onboarding" className="block w-full px-6 py-2 bg-[var(--accent-primary)] text-[var(--bg-primary)] rounded-full font-medium text-center">
+                  Get Started
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}
