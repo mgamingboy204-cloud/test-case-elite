@@ -7,6 +7,20 @@ export interface ApiError {
   details?: Record<string, unknown>;
 }
 
+export type Match = {
+  id: string;
+  name: string;
+  age: number;
+  location: string;
+  photos: string[];
+  bio: string;
+  verified: boolean;
+};
+
+export type MatchesResponse = {
+  matches: Match[];
+};
+
 export class ApiClient {
   private baseUrl: string;
   private getHeaders: (() => Record<string, string>) | null = null;
@@ -106,7 +120,7 @@ export class ApiClient {
   }
 
   async getMatches() {
-    return this.request('/matches', {
+    return this.request<MatchesResponse>('/matches', {
       method: 'GET',
     });
   }

@@ -1,17 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiClient } from '@/lib/api';
-
-interface Match {
-  id: string;
-  name: string;
-  age: number;
-  location: string;
-  photos: string[];
-  bio: string;
-  verified: boolean;
-}
+import { apiClient, type Match } from '@/lib/api';
 
 export default function AppHomePage() {
   const [matches, setMatches] = useState<Match[]>([]);
