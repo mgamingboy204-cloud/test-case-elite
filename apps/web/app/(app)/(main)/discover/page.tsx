@@ -152,31 +152,35 @@ export default function DiscoverPage() {
       </div>
 
       {/* Floating Action Buttons (Fixed over scroll) */}
-      <div className="absolute left-0 right-0 bottom-10 px-10 flex justify-between items-end z-40 w-full max-w-lg mx-auto pointer-events-none">
+      {/* Floating Action Buttons (Fixed over scroll) */}
+<div className="absolute left-0 right-0 bottom-10 px-10 flex justify-between items-center z-40 w-full max-w-lg mx-auto pointer-events-none">
 
-        {/* Pass Button */}
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          whileHover={{ scale: 1.05 }}
-          className="w-[76px] h-[76px] rounded-full bg-background/40 backdrop-blur-2xl border border-primary/40 flex items-center justify-center pointer-events-auto relative overflow-hidden group shadow-xl"
-        >
-          <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <X size={34} strokeWidth={1} className="text-primary drop-shadow-sm z-10" />
-        </motion.button>
+  {/* Pass Button (X) */}
+  <motion.button
+    whileTap={{ scale: 0.9 }}
+    whileHover={{ scale: 1.05 }}
+    {/* Standardized size to w-20 h-20 */}
+    className="w-20 h-20 rounded-full bg-background/40 backdrop-blur-2xl border border-primary/40 flex items-center justify-center pointer-events-auto relative overflow-hidden group shadow-xl"
+  >
+    <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+    <X size={32} strokeWidth={1} className="text-primary drop-shadow-sm z-10" />
+  </motion.button>
 
-        {/* Like Button */}
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          whileHover={{ scale: 1.05 }}
-          className="w-28 h-28 rounded-full bg-background/40 backdrop-blur-3xl shadow-[0_20px_50px_rgba(200,155,144,0.2)] border border-primary/60 flex items-center justify-center pointer-events-auto relative overflow-hidden group"
-        >
-          <div className="absolute inset-0 bg-primary/10 blur-2xl opacity-50 group-hover:opacity-100 transition-opacity" />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <HeartEliteIcon />
-        </motion.button>
+  {/* Like Button (Heart) */}
+  <motion.button
+    whileTap={{ scale: 0.9 }}
+    whileHover={{ scale: 1.05 }}
+    {/* Matched size to w-20 h-20 for perfect symmetry */}
+    className="w-20 h-20 rounded-full bg-background/40 backdrop-blur-3xl shadow-[0_20px_50px_rgba(200,155,144,0.2)] border border-primary/60 flex items-center justify-center pointer-events-auto relative overflow-hidden group"
+  >
+    <div className="absolute inset-0 bg-primary/10 blur-xl opacity-50 group-hover:opacity-100 transition-opacity" />
+    {/* Optical Nudge: the translate-y-[2px] balances the heart's pointy bottom */}
+    <div className="translate-y-[2px]">
+      <HeartEliteIcon />
+    </div>
+  </motion.button>
 
-      </div>
-
+</div>
     </div>
   );
 }
