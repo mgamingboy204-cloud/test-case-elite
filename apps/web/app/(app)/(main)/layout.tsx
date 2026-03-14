@@ -92,11 +92,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
 
-        {/* Safe area notch spacer — mobile only */}
-        <div className="safe-area-top-spacer flex-none bg-background/80 backdrop-blur-xl min-[769px]:hidden" />
-
         {/* Top bar — always shown */}
-        <header className="flex-none w-full h-[72px] flex items-center justify-between px-6 z-40 bg-background/80 backdrop-blur-xl border-b border-border/10">
+        <header
+          className="flex-none w-full flex items-center justify-between px-6 z-40 bg-background/80 backdrop-blur-xl border-b border-border/10 min-[769px]:h-[72px]"
+          style={{ paddingTop: "env(safe-area-inset-top)", minHeight: "calc(72px + env(safe-area-inset-top))" }}
+        >
           {/* Mobile: ELITE logo; Desktop: breadcrumb label */}
           <span className="min-[769px]:hidden text-xl font-serif tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-primary to-highlight">
             ELITE
@@ -133,9 +133,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         ═══════════════════════════════════════════════════════════════════ */}
         <nav
           className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
-          style={{ paddingBottom: "var(--safe-area-bottom)" }}
+          style={{ paddingBottom: "env(safe-area-inset-bottom)", height: "calc(65px + env(safe-area-inset-bottom))" }}
         >
-          <div className="flex h-[80px] items-center justify-around px-2">
+          <div className="flex h-[65px] items-center justify-around px-2">
             {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
               const isActive = pathname === href;
               return (
