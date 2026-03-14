@@ -25,7 +25,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!mounted || !isAuthenticated) return null;
 
   return (
-    <div className="flex flex-row h-[100vh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
+    // Reverted to 100dvh for pixel-perfect screen height matching on iOS
+    <div className="flex flex-row h-[100dvh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
 
       {/* ═══════════════════════════════════════════════════════════════════
           DESKTOP SIDEBAR 
@@ -122,28 +123,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            MOBILE BOTTOM NAV (Exact Instagram Proportions)
+            MOBILE BOTTOM NAV (MANUAL TIGHT GAP)
         ═══════════════════════════════════════════════════════════════════ */}
-        <nav 
-          className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
-          /* We MUST apply the safe area padding here so the black background covers the home bar entirely */
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-        >
-          {/* Exact 48px height used by Instagram/Apple native tab bars */}
-          <div className="flex h-[48px] items-center justify-around px-2">
+        {/* We removed all `env()` inline styles and added a strict pb-4 (16px) 
+            to leave just enough room for the white home bar and nothing more. */}
+        <nav className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground pb-4">
+          
+          <div className="flex h-[48px] items-center justify-around px-2 pt-1">
             {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
               const isActive = pathname === href;
               return (
                 <Link
                   key={href}
                   href={href}
-                  /* Uses gap-1 for tight spacing, removed margins to ensure mathematically perfect vertical centering */
                   className={`flex flex-col items-center justify-center w-full h-full gap-[2px] transition-colors ${
                     isActive ? "text-primary" : "text-foreground/40 hover:text-foreground/70"
                   }`}
                 >
                   <Icon size={22} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "drop-shadow-[0_0_8px_rgba(200,155,144,0.4)]" : ""} />
-                  {/* Kept text size tiny so it fits perfectly in the 48px space alongside the icon */}
                   <span className="text-[9px] font-medium tracking-wide">{label}</span>
                 </Link>
               );
