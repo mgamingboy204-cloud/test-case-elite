@@ -133,23 +133,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            MOBILE BOTTOM NAV — hidden on 769px+
+            MOBILE BOTTOM NAV — Full Bleed Fix applied here
         ═══════════════════════════════════════════════════════════════════ */}
-        {/* Outer nav: background bleeds into home indicator via padding-bottom safe area only */}
-        <nav
-          className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-        >
-          {/* Inner row: fixed 65px — icons always centred, never pushed into home bar */}
-          <div className="flex h-[65px] items-center justify-around px-2">
+        {/* Outer nav: background bleeds into home indicator (no padding here) */}
+        <nav className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground">
+          {/* Inner row: height adapts to safe area, padding pushes content up, icons stay centered */}
+          <div 
+            className="flex items-center justify-around px-2"
+            style={{ 
+              height: "calc(65px + env(safe-area-inset-bottom))", 
+              paddingBottom: "env(safe-area-inset-bottom)" 
+            }}
+          >
             {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
               const isActive = pathname === href;
               return (
                 <Link
                   key={href}
                   href={href}
-                  className={`flex flex-col items-center justify-center w-16 h-full transition-colors ${isActive ? "text-primary" : "text-foreground/40 hover:text-foreground/70"
-                    }`}
+                  className={`flex flex-col items-center justify-center w-16 h-full transition-colors ${
+                    isActive ? "text-primary" : "text-foreground/40 hover:text-foreground/70"
+                  }`}
                 >
                   <Icon size={24} strokeWidth={isActive ? 2.5 : 2} className={`mb-1 ${isActive ? "drop-shadow-[0_0_10px_rgba(200,155,144,0.4)]" : ""}`} />
                   <span className="text-[10px] font-medium tracking-wide">{label}</span>
