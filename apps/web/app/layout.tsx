@@ -48,9 +48,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning style={{ scrollBehavior: 'smooth' }}>
-      <head>
-        <meta name="mobile-web-app-capable" content="yes" />
-      </head>
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
