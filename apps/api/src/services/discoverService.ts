@@ -33,6 +33,17 @@ function normalizePhotoUrl(url: string | null | undefined, baseUrl?: string) {
   return resolved;
 }
 
+function resolveAge(age: number | null | undefined, dob: Date | null | undefined) {
+  if (dob) {
+    const today = new Date();
+    let years = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) years -= 1;
+    return years;
+  }
+  return age ?? null;
+}
+
 function buildDiscoverWhere(options: DiscoverFilterOptions) {
   const resolvedGender = resolveIntentGender(options.intent, options.viewerGender);
 
@@ -109,6 +120,8 @@ export async function getDiscoverProfiles(options: {
       city: true,
       bioShort: true,
       intent: true,
+      dob: true,
+      heightCm: true,
       user: {
         select: {
           videoVerificationStatus: true,
@@ -128,12 +141,17 @@ export async function getDiscoverProfiles(options: {
   const formatted = profiles.map((profile) => ({
     userId: profile.userId,
     name: profile.name,
-    age: profile.age,
+    age: resolveAge(profile.age, profile.dob),
     city: profile.city,
     bioShort: profile.bioShort,
+    bio: profile.bioShort,
     intent: profile.intent,
     videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,
     primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl),
+    display_name: profile.name,
+    u_id: profile.userId,
+    media_urls: (profile.user?.photos ?? []).map((photo) => normalizePhotoUrl(photo.url, options.baseUrl)).filter((url): url is string => Boolean(url)),
+    height_cm: profile.heightCm ?? null,
     photos:
       profile.user?.photos
         ?.map((photo) => ({
@@ -141,7 +159,8 @@ export async function getDiscoverProfiles(options: {
           url: normalizePhotoUrl(photo.url, options.baseUrl)
         }))
         .filter((photo): photo is { id: string; url: string } => Boolean(photo.url)) ?? [],
-    isMutualMatch: false
+    isMutualMatch: false,
+    is_mutual_match: false
   }));
 
   return { profiles: formatted };
@@ -185,6 +204,8 @@ export async function getDiscoverFeed(options: {
       city: true,
       bioShort: true,
       intent: true,
+      dob: true,
+      heightCm: true,
       user: {
         select: {
           videoVerificationStatus: true,
@@ -206,12 +227,17 @@ export async function getDiscoverFeed(options: {
   const formatted = pageProfiles.map((profile) => ({
     userId: profile.userId,
     name: profile.name,
-    age: profile.age,
+    age: resolveAge(profile.age, profile.dob),
     city: profile.city,
     bioShort: profile.bioShort,
+    bio: profile.bioShort,
     intent: profile.intent,
     videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,
     primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl),
+    display_name: profile.name,
+    u_id: profile.userId,
+    media_urls: (profile.user?.photos ?? []).map((photo) => normalizePhotoUrl(photo.url, options.baseUrl)).filter((url): url is string => Boolean(url)),
+    height_cm: profile.heightCm ?? null,
     photos:
       profile.user?.photos
         ?.map((photo) => ({
@@ -219,7 +245,8 @@ export async function getDiscoverFeed(options: {
           url: normalizePhotoUrl(photo.url, options.baseUrl)
         }))
         .filter((photo): photo is { id: string; url: string } => Boolean(photo.url)) ?? [],
-    isMutualMatch: false
+    isMutualMatch: false,
+    is_mutual_match: false
   }));
 
   const nextCursor = profiles.length > take ? pageProfiles[pageProfiles.length - 1]?.userId : undefined;
@@ -248,12 +275,17 @@ export async function getDiscoverProfileDetail(options: { userId: string; target
     userId: profile.userId,
     name: profile.name,
     gender: profile.gender,
-    age: profile.age,
+    age: resolveAge(profile.age, profile.dob),
     city: profile.city,
     profession: profile.profession,
     bioShort: profile.bioShort,
+    bio: profile.bioShort,
     intent: profile.intent,
     primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl),
+    display_name: profile.name,
+    u_id: profile.userId,
+    media_urls: (profile.user?.photos ?? []).map((photo) => normalizePhotoUrl(photo.url, options.baseUrl)).filter((url): url is string => Boolean(url)),
+    height_cm: profile.heightCm ?? null,
     photos:
       profile.user?.photos
         ?.map((photo) => ({
@@ -262,6 +294,7 @@ export async function getDiscoverProfileDetail(options: { userId: string; target
         }))
         .filter((photo): photo is { id: string; url: string } => Boolean(photo.url)) ?? [],
     isMutualMatch: false,
+    is_mutual_match: false,
     verifiedAt: profile.user?.verifiedAt ?? null,
     videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,
     status: profile.user?.status ?? null

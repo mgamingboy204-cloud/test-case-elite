@@ -48,7 +48,9 @@ export async function updateProfile(options: { userId: string; paymentStatus: st
     city: normalized.city,
     profession: normalized.profession,
     bioShort: normalized.bioShort,
-    intent: normalized.intent ?? "dating"
+    intent: normalized.intent ?? "dating",
+    dob: normalized.dob ?? null,
+    heightCm: normalized.heightCm ?? null
   };
 
   const profile = await prisma.profile.upsert({
@@ -106,7 +108,9 @@ export async function patchProfile(options: { userId: string; data: any }) {
       city: normalized.city ?? undefined,
       profession: normalized.profession ?? undefined,
       bioShort: normalized.bioShort ?? undefined,
-      intent: normalized.intent ?? undefined
+      intent: normalized.intent ?? undefined,
+      dob: normalized.dob ?? undefined,
+      heightCm: normalized.heightCm ?? undefined
     }
   });
 

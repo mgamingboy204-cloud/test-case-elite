@@ -126,6 +126,7 @@ model User {
   profileCompletedAt DateTime?
   deactivatedAt DateTime?
   deletedAt DateTime?
+  isPremium Boolean @default(false)
 
   profile       Profile?
   photos        Photo[]
@@ -164,6 +165,8 @@ model Profile {
   profession  String
   bioShort    String
   intent      String  @default("dating")
+  dob         DateTime?
+  heightCm    Int?
 
   user User @relation(fields: [userId], references: [id])
 }

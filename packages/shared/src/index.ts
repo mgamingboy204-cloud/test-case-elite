@@ -30,7 +30,9 @@ export const ProfileSchema = z
     city: z.string().min(1),
     profession: z.string().min(1),
     bioShort: z.string().min(1),
-    intent: z.enum(["dating", "friends", "all"]).default("dating")
+    intent: z.enum(["dating", "friends", "all"]).default("dating"),
+    dob: z.coerce.date().optional().nullable(),
+    heightCm: z.number().int().min(100).max(250).optional().nullable()
   })
   .superRefine((value, ctx) => {
     if (!value.displayName && !value.name) {
@@ -52,7 +54,9 @@ export const PartialProfileSchema = z.object({
   city: z.string().min(1).optional(),
   profession: z.string().min(1).optional(),
   bioShort: z.string().min(1).optional(),
-  intent: z.enum(["dating", "friends", "all"]).optional()
+  intent: z.enum(["dating", "friends", "all"]).optional(),
+  dob: z.coerce.date().optional().nullable(),
+  heightCm: z.number().int().min(100).max(250).optional().nullable()
 });
 
 export const LikeSchema = z.object({
