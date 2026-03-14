@@ -53,6 +53,7 @@ export async function listNotifications(userId: string) {
     return {
       ...notification,
       eventCategory: deriveEventCategory(notification.type),
+      event_type: deriveEventCategory(notification.type),
       eventMessage: deriveEventMessage(notification.type, actorName),
       targetRoute: deriveTargetRoute(notification.type),
       actorPreview: {

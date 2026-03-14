@@ -1,5 +1,16 @@
 import { prisma } from "../db/prisma";
 
+function resolveAge(age: number | null | undefined, dob: Date | null | undefined) {
+  if (dob) {
+    const today = new Date();
+    let years = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) years -= 1;
+    return years;
+  }
+  return age ?? null;
+}
+
 export async function createLike(options: { actorUserId: string; targetUserId: string; action: "LIKE" | "PASS"; actionId: string }) {
   const oppositeAction = options.action === "LIKE" ? "PASS" : "LIKE";
 
@@ -82,6 +93,7 @@ export async function getIncomingLikes(userId: string) {
           displayName: true,
           videoVerificationStatus: true,
           profile: true,
+          isPremium: true,
           photos: {
             select: { url: true },
             orderBy: { createdAt: "desc" },
@@ -117,6 +129,15 @@ export async function getIncomingLikes(userId: string) {
       const primaryPhotoUrl = item.actorUser.photos[0]?.url ?? null;
       const isSeen = likeReadMap.get(item.actorUser.id) ?? false;
 
+      const senderInfo = {
+        id: item.actorUser.id,
+        display_name: senderName,
+        age: resolveAge(item.actorUser.profile?.age ?? null, item.actorUser.profile?.dob),
+        city: item.actorUser.profile?.city ?? null,
+        media_urls: primaryPhotoUrl ? [primaryPhotoUrl] : [],
+        is_premium: item.actorUser.isPremium
+      };
+
       return {
         id: item.id,
         createdAt: item.createdAt,
@@ -124,14 +145,16 @@ export async function getIncomingLikes(userId: string) {
         isSeen,
         actorUser: item.actorUser,
         fromUser: item.actorUser,
+        sender_info: senderInfo,
         senderData: {
           id: item.actorUser.id,
           displayName: senderName,
-          age: item.actorUser.profile?.age ?? null,
+          age: resolveAge(item.actorUser.profile?.age ?? null, item.actorUser.profile?.dob),
           city: item.actorUser.profile?.city ?? null,
           primaryPhotoUrl,
           videoVerificationStatus: item.actorUser.videoVerificationStatus,
-          subscriptionStatus: isSeen ? "SEEN" : "NEW"
+          subscriptionStatus: isSeen ? "SEEN" : "NEW",
+          isPremium: item.actorUser.isPremium
         }
       };
     })
@@ -150,6 +173,7 @@ export async function getOutgoingLikes(userId: string) {
           id: true,
           phone: true,
           profile: true,
+          isPremium: true,
           photos: {
             select: { url: true },
             orderBy: { createdAt: "desc" },

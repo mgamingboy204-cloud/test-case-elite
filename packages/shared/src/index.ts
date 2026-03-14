@@ -30,7 +30,9 @@ export const ProfileSchema = z
     city: z.string().min(1),
     profession: z.string().min(1),
     bioShort: z.string().min(1),
-    intent: z.enum(["dating", "friends", "all"]).default("dating")
+    intent: z.enum(["dating", "friends", "all"]).default("dating"),
+    dob: z.coerce.date().optional().nullable(),
+    heightCm: z.number().int().min(100).max(250).optional().nullable()
   })
   .superRefine((value, ctx) => {
     if (!value.displayName && !value.name) {
@@ -41,6 +43,21 @@ export const ProfileSchema = z
       });
     }
   });
+
+export const PartialProfileSchema = z.object({
+  name: z.string().min(1).optional(),
+  displayName: z.string().min(1).optional(),
+  firstName: z.string().min(1).optional().nullable(),
+  lastName: z.string().min(1).optional().nullable(),
+  gender: GenderSchema.optional(),
+  age: z.number().int().min(18).optional(),
+  city: z.string().min(1).optional(),
+  profession: z.string().min(1).optional(),
+  bioShort: z.string().min(1).optional(),
+  intent: z.enum(["dating", "friends", "all"]).optional(),
+  dob: z.coerce.date().optional().nullable(),
+  heightCm: z.number().int().min(100).max(250).optional().nullable()
+});
 
 export const LikeSchema = z.object({
   actionId: z.string().min(1).max(128),
@@ -66,3 +83,4 @@ export const RefundRequestSchema = z.object({
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type ProfileInput = z.infer<typeof ProfileSchema>;
+export type PartialProfileInput = z.infer<typeof PartialProfileSchema>;
