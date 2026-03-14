@@ -122,24 +122,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            MOBILE BOTTOM NAV (Forced removal of safe area padding)
+            MOBILE BOTTOM NAV (Exact Instagram Proportions)
         ═══════════════════════════════════════════════════════════════════ */}
-        {/* Notice: No inline style for paddingBottom here anymore */}
-        <nav className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground">
-          {/* Slightly taller to account for removing the safe area entirely, but pins strictly to the bottom */}
-          <div className="flex h-[60px] items-center justify-around px-2 pb-1">
+        <nav 
+          className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
+          /* We MUST apply the safe area padding here so the black background covers the home bar entirely */
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          {/* Exact 48px height used by Instagram/Apple native tab bars */}
+          <div className="flex h-[48px] items-center justify-around px-2">
             {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
               const isActive = pathname === href;
               return (
                 <Link
                   key={href}
                   href={href}
-                  className={`flex flex-col items-center justify-center w-16 h-full transition-colors ${
+                  /* Uses gap-1 for tight spacing, removed margins to ensure mathematically perfect vertical centering */
+                  className={`flex flex-col items-center justify-center w-full h-full gap-[2px] transition-colors ${
                     isActive ? "text-primary" : "text-foreground/40 hover:text-foreground/70"
                   }`}
                 >
-                  <Icon size={24} strokeWidth={isActive ? 2.5 : 2} className={`mb-1 ${isActive ? "drop-shadow-[0_0_10px_rgba(200,155,144,0.4)]" : ""}`} />
-                  <span className="text-[10px] font-medium tracking-wide">{label}</span>
+                  <Icon size={22} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "drop-shadow-[0_0_8px_rgba(200,155,144,0.4)]" : ""} />
+                  {/* Kept text size tiny so it fits perfectly in the 48px space alongside the icon */}
+                  <span className="text-[9px] font-medium tracking-wide">{label}</span>
                 </Link>
               );
             })}
