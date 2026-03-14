@@ -42,6 +42,33 @@ export const ProfileSchema = z
     }
   });
 
+
+export const ProfilePatchSchema = z.object({
+  profession: z.string().min(1).optional(),
+  heightCm: z.number().int().min(120).max(240).optional().nullable(),
+  bioShort: z.string().min(1).optional(),
+  story: z.string().min(1).optional().nullable(),
+  city: z.string().min(1).optional(),
+  locationLabel: z.string().min(1).optional().nullable(),
+  photos: z
+    .array(
+      z.object({
+        id: z.string().uuid().optional(),
+        url: z.string().min(1),
+        photoIndex: z.number().int().min(0)
+      })
+    )
+    .optional(),
+  settings: z
+    .object({
+      pushNotificationsEnabled: z.boolean().optional(),
+      profileVisible: z.boolean().optional(),
+      showOnlineStatus: z.boolean().optional(),
+      discoverableByPremiumOnly: z.boolean().optional()
+    })
+    .optional()
+});
+
 export const LikeSchema = z.object({
   actionId: z.string().min(1).max(128),
   targetUserId: z.string().uuid(),
@@ -70,3 +97,4 @@ export const RefundRequestSchema = z.object({
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type ProfileInput = z.infer<typeof ProfileSchema>;
+export type ProfilePatchInput = z.infer<typeof ProfilePatchSchema>;

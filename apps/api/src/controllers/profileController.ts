@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
-import { completeProfile, getProfile, updateProfile } from "../services/profileService";
+import { completeProfile, getProfile, updateProfile, updateProfileSettings } from "../services/profileService";
 
 export async function getProfileHandler(req: Request, res: Response) {
-  const { profile, photos, user } = await getProfile(res.locals.user.id);
-  return res.json({ profile, photos, user });
+  const result = await getProfile(res.locals.user.id);
+  return res.json(result);
 }
 
 export async function updateProfileHandler(req: Request, res: Response) {
@@ -13,6 +13,11 @@ export async function updateProfileHandler(req: Request, res: Response) {
     onboardingStep: res.locals.user.onboardingStep,
     data: req.body
   });
+  return res.json(result);
+}
+
+export async function updateProfileSettingsHandler(req: Request, res: Response) {
+  const result = await updateProfileSettings(res.locals.user.id, req.body);
   return res.json(result);
 }
 

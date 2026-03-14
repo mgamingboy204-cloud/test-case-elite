@@ -126,8 +126,8 @@ export async function respondConsent(options: {
 
   await prisma.consent.upsert({
     where: { matchId_userId_type: { matchId: options.matchId, userId: options.userId, type } },
-    update: { response: options.response, payload: options.payload ?? undefined, respondedAt: new Date() },
-    create: { matchId: options.matchId, userId: options.userId, type, response: options.response, payload: options.payload ?? undefined }
+    update: { response: options.response, payload: (options.payload ?? undefined) as any, respondedAt: new Date() },
+    create: { matchId: options.matchId, userId: options.userId, type, response: options.response, payload: (options.payload ?? undefined) as any }
   });
 
   const consents = await prisma.consent.findMany({ where: { matchId: options.matchId, type } });
