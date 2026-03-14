@@ -27,6 +27,16 @@ export function resolveOnboardingStep(user: {
   return "PHONE_VERIFIED";
 }
 
+export async function issueOnboardingToken(userId: string) {
+  const onboardingToken = crypto.randomBytes(24).toString("hex");
+  const onboardingTokenExpiresAt = new Date(Date.now() + 1000 * 60 * 60 * 2);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { onboardingToken, onboardingTokenExpiresAt }
+  });
+  return { onboardingToken, onboardingTokenExpiresAt };
+}
+
 export async function upsertOtpCode(phone: string) {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const codeHash = await bcrypt.hash(otp, 10);

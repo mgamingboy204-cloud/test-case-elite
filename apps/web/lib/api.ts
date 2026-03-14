@@ -16,6 +16,21 @@ export function getAuthToken() {
   return localStorage.getItem("elite_access_token");
 }
 
+
+export function getOnboardingToken() {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("elite_onboarding_token");
+}
+
+export function setOnboardingToken(token: string | null) {
+  if (typeof window === "undefined") return;
+  if (!token) {
+    localStorage.removeItem("elite_onboarding_token");
+    return;
+  }
+  localStorage.setItem("elite_onboarding_token", token);
+}
+
 export function setAuthToken(token: string | null) {
   if (typeof window === "undefined") return;
   if (!token) {
@@ -33,6 +48,10 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
     const token = getAuthToken();
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
+    }
+    const onboardingToken = getOnboardingToken();
+    if (onboardingToken) {
+      headers.set("x-onboarding-token", onboardingToken);
     }
   }
 

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { apiRequest, setAuthToken } from "@/lib/api";
+import { apiRequest, setAuthToken, setOnboardingToken } from "@/lib/api";
 
 type BackendOnboardingStep =
   | "PHONE_VERIFIED"
@@ -23,6 +23,7 @@ interface User {
   lastName?: string | null;
   displayName?: string | null;
   onboardingStep: BackendOnboardingStep;
+  onboardingToken?: string | null;
 }
 
 interface AuthContextType {
@@ -67,14 +68,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshCurrentUser = async () => {
     const me = await apiRequest<User>("/me", { auth: true });
     setUser(me);
+    if (me.onboardingToken) {
+      setOnboardingToken(me.onboardingToken);
+    }
   };
 
   useEffect(() => {
     const hydrate = async () => {
       const storedPendingPhone = localStorage.getItem("elite_pending_phone");
       const storedSignupToken = localStorage.getItem("elite_signup_token");
+      const storedOnboardingToken = localStorage.getItem("elite_onboarding_token");
       setPendingPhone(storedPendingPhone || null);
       setSignupToken(storedSignupToken || null);
+      setOnboardingToken(storedOnboardingToken || null);
 
       try {
         await refreshCurrentUser();
@@ -115,12 +121,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const completeSignup = async (password: string) => {
     if (!signupToken) throw new Error("Signup session missing");
 
-    const response = await apiRequest<{ ok: true; accessToken: string }>("/auth/signup/complete", {
+    const response = await apiRequest<{ ok: true; accessToken: string; onboardingToken: string }>("/auth/signup/complete", {
       method: "POST",
       body: JSON.stringify({ signupToken, password })
     });
 
     setAuthToken(response.accessToken);
+    setOnboardingToken(response.onboardingToken);
     await refreshCurrentUser();
 
     setSignupToken(null);
@@ -129,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const startLogin = async (phone: string, password: string) => {
-    const response = await apiRequest<{ ok: true; otpRequired?: boolean; accessToken?: string; user?: User }>("/auth/login", {
+    const response = await apiRequest<{ ok: true; otpRequired?: boolean; accessToken?: string; onboardingToken?: string; user?: User }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ phone, password, rememberMe: true })
     });
@@ -143,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (response.accessToken && response.user) {
       setAuthToken(response.accessToken);
+      setOnboardingToken(response.onboardingToken ?? response.user.onboardingToken ?? null);
       setUser(response.user);
       router.push(mapOnboardingStep(response.user) === "COMPLETED" ? "/discover" : "/onboarding/verification");
     }
@@ -153,12 +161,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifySigninOtp = async (otp: string) => {
     if (!pendingPhone) throw new Error("Phone number is missing");
 
-    const response = await apiRequest<{ ok: true; accessToken: string; user: User }>("/auth/otp/verify", {
+    const response = await apiRequest<{ ok: true; accessToken: string; onboardingToken: string; user: User }>("/auth/otp/verify", {
       method: "POST",
       body: JSON.stringify({ phone: pendingPhone, code: otp, rememberMe: true })
     });
 
     setAuthToken(response.accessToken);
+    setOnboardingToken(response.onboardingToken);
     setUser(response.user);
     router.push(mapOnboardingStep(response.user) === "COMPLETED" ? "/discover" : "/onboarding/verification");
   };
@@ -208,8 +217,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setPendingPhone(null);
     setSignupToken(null);
+    setOnboardingToken(null);
     localStorage.removeItem("elite_pending_phone");
     localStorage.removeItem("elite_signup_token");
+    localStorage.removeItem("elite_onboarding_token");
     router.push("/");
   };
 
