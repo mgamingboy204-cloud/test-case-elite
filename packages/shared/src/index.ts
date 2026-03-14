@@ -42,6 +42,19 @@ export const ProfileSchema = z
     }
   });
 
+export const PartialProfileSchema = z.object({
+  name: z.string().min(1).optional(),
+  displayName: z.string().min(1).optional(),
+  firstName: z.string().min(1).optional().nullable(),
+  lastName: z.string().min(1).optional().nullable(),
+  gender: GenderSchema.optional(),
+  age: z.number().int().min(18).optional(),
+  city: z.string().min(1).optional(),
+  profession: z.string().min(1).optional(),
+  bioShort: z.string().min(1).optional(),
+  intent: z.enum(["dating", "friends", "all"]).optional()
+});
+
 export const LikeSchema = z.object({
   actionId: z.string().min(1).max(128),
   targetUserId: z.string().uuid(),
@@ -66,3 +79,4 @@ export const RefundRequestSchema = z.object({
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type ProfileInput = z.infer<typeof ProfileSchema>;
+export type PartialProfileInput = z.infer<typeof PartialProfileSchema>;

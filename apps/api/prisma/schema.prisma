@@ -144,6 +144,15 @@ model User {
   notifications Notification[] @relation("userNotifications")
   notificationsSent Notification[] @relation("notificationActors")
   auditLogs     AuditLog[] @relation("actorLogs")
+  preference    UserPreference?
+}
+
+model UserPreference {
+  userId    String @id
+  theme     String @default("light")
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Profile {
