@@ -16,6 +16,19 @@ type LikeProfile = {
   userId: string;
 };
 
+type IncomingLike = {
+  id: string;
+  actorUser: {
+    id: string;
+    profile: {
+      name: string;
+      age: number;
+      city: string;
+    } | null;
+    photos: Array<{ url: string }>;
+  };
+};
+
 export default function LikesPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
   const router = useRouter();
@@ -24,7 +37,7 @@ export default function LikesPage() {
   useEffect(() => {
     const loadIncoming = async () => {
       if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
-      const response = await apiRequest<{ incoming: Array<{ id: string; actorUser: { id: string; profile: { name: string; age: number; city: string } | null; photos: Array<{ url: string }> }> }>("/likes/incoming", { auth: true });
+      const response = await apiRequest<{ incoming: IncomingLike[] }>("/likes/incoming", { auth: true });
       setProfiles(
         response.incoming.map((item) => ({
           id: item.id,
