@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { OTPInput } from "@/components/auth/otp-input";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
@@ -11,7 +10,7 @@ export default function SignInOTP() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(30);
-  const { pendingPhone, verifySigninOtp } = useAuth();
+  const { pendingPhone, verifySigninOtp, resendSigninOtp } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -43,7 +42,7 @@ export default function SignInOTP() {
     <GlassCard>
       <h1 className="text-3xl font-light mb-2 text-foreground">Verify <span className="font-semibold text-primary">Identity</span></h1>
       <p className="text-foreground/60 mb-8 font-light leading-relaxed">
-        We've sent a secure code to +91 {pendingPhone}. Please enter it below.
+        We’ve sent a secure code to +91 {pendingPhone}. Please enter it below.
       </p>
 
       <div className="flex flex-col gap-6">
@@ -59,12 +58,19 @@ export default function SignInOTP() {
           )}
 
           <p className="text-sm text-foreground/50">
-            Didn't receive a code?{" "}
+            Didn’t receive a code?{" "}
             {countdown > 0 ? (
               <span className="text-foreground/80">Wait {countdown}s</span>
             ) : (
               <button 
-                onClick={() => setCountdown(30)}
+                onClick={async () => {
+                  try {
+                    await resendSigninOtp();
+                    setCountdown(30);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "Unable to resend code");
+                  }
+                }}
                 className="text-primary hover:underline"
               >
                 Resend SMS

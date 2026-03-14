@@ -9,8 +9,18 @@ import { useRouter } from "next/navigation";
 export default function SignUpOTP() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { pendingPhone, verifySignupOtp } = useAuth();
+  const { pendingPhone, verifySignupOtp, resendSignupOtp } = useAuth();
   const router = useRouter();
+
+  const [countdown, setCountdown] = useState(30);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!pendingPhone) {
@@ -47,10 +57,32 @@ export default function SignUpOTP() {
           <p className="text-sm text-red-400 text-center animate-in fade-in">{error}</p>
         )}
 
-        <div className="flex flex-col items-center mt-4">
+        <div className="flex flex-col items-center mt-4 gap-3">
           {loading && (
             <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           )}
+
+          <p className="text-sm text-foreground/50">
+            Didn’t receive a code? {" "}
+            {countdown > 0 ? (
+              <span className="text-foreground/80">Wait {countdown}s</span>
+            ) : (
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await resendSignupOtp();
+                    setCountdown(30);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "Unable to resend code");
+                  }
+                }}
+                className="text-primary hover:underline"
+              >
+                Resend SMS
+              </button>
+            )}
+          </p>
         </div>
       </div>
     </GlassCard>

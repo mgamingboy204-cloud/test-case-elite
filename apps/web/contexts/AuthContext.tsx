@@ -36,6 +36,8 @@ interface AuthContextType {
   completeSignup: (password: string) => Promise<void>;
   startLogin: (phone: string, password: string) => Promise<{ otpRequired: boolean }>;
   verifySigninOtp: (otp: string) => Promise<void>;
+  resendSigninOtp: () => Promise<void>;
+  resendSignupOtp: () => Promise<void>;
   refreshCurrentUser: () => Promise<void>;
   completeOnboardingStep: (nextStep: OnboardingStep) => void;
   logout: () => Promise<void>;
@@ -161,6 +163,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push(mapOnboardingStep(response.user) === "COMPLETED" ? "/discover" : "/onboarding/verification");
   };
 
+  const resendSigninOtp = async () => {
+    if (!pendingPhone) throw new Error("Phone number is missing");
+
+    await apiRequest<{ ok: true }>("/auth/otp/send", {
+      method: "POST",
+      body: JSON.stringify({ phone: pendingPhone })
+    });
+  };
+
+  const resendSignupOtp = async () => {
+    if (!pendingPhone) throw new Error("Phone number is missing");
+
+    await apiRequest<{ ok: true }>("/auth/signup/start", {
+      method: "POST",
+      body: JSON.stringify({ phone: pendingPhone })
+    });
+  };
+
   const completeOnboardingStep = (nextStep: OnboardingStep) => {
     if (nextStep === "COMPLETED") {
       router.push("/discover");
@@ -208,6 +228,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         completeSignup,
         startLogin,
         verifySigninOtp,
+        resendSigninOtp,
+        resendSignupOtp,
         refreshCurrentUser,
         completeOnboardingStep,
         logout

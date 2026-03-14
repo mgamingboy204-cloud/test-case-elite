@@ -132,7 +132,7 @@ export default function ProfileSetup() {
           city,
           profession,
           bioShort: `Looking for ${intent || "dating"}` ,
-          intent: "dating"
+          intent: intent === "network" ? "friends" : intent === "partner" ? "all" : "dating"
         })
       });
       completeOnboardingStep("PHOTOS");
