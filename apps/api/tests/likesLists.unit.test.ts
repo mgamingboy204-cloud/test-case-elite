@@ -28,8 +28,18 @@ describe("likes list service", () => {
 
     const result = await getIncomingLikes("u1");
 
+    expect(result.incoming[0].fromUserId).toBe("u2");
+    expect(result.incoming[0].actorUserId).toBe("u2");
     expect(result.incoming[0].fromUser.id).toBe("u2");
     expect(result.incoming[0].actorUser.id).toBe("u2");
+    expect(result.incoming[0].liker).toMatchObject({
+      id: "u2",
+      name: "A",
+      primaryPhotoUrl: "p1",
+      isPremium: false,
+      isBlurred: false,
+      matchPercentage: null
+    });
   });
 
   it("returns outgoing likes with toUser alias", async () => {

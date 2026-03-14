@@ -96,9 +96,22 @@ export async function getIncomingLikes(userId: string) {
     incoming: incoming.map((item) => ({
       id: item.id,
       createdAt: item.createdAt,
+      likedAt: item.createdAt,
       action: item.action,
+      fromUserId: item.actorUserId ?? item.actorUser.id,
+      actorUserId: item.actorUserId ?? item.actorUser.id,
       actorUser: item.actorUser,
-      fromUser: item.actorUser
+      fromUser: item.actorUser,
+      liker: {
+        id: item.actorUser.id,
+        name: item.actorUser.profile?.name ?? null,
+        age: item.actorUser.profile?.age ?? null,
+        city: item.actorUser.profile?.city ?? null,
+        primaryPhotoUrl: item.actorUser.photos[0]?.url ?? null,
+        isPremium: false,
+        isBlurred: false,
+        matchPercentage: null
+      }
     }))
   };
 }
