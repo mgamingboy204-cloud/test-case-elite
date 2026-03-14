@@ -26,12 +26,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     // Root: row on desktop, column on mobile
-    <div className="flex flex-row h-[100dvh] w-screen bg-background transition-colors duration-500 overflow-hidden">
+    <div className="flex flex-row h-[100dvh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
 
       {/* ═══════════════════════════════════════════════════════════════════
-          DESKTOP SIDEBAR — hidden on mobile, visible md+
+          DESKTOP SIDEBAR — hidden on mobile, visible 769px+
       ═══════════════════════════════════════════════════════════════════ */}
-      <aside className="hidden md:flex flex-col w-[80px] xl:w-[240px] h-full flex-none bg-background border-r border-border/10 z-50">
+      <aside className="hidden min-[769px]:flex flex-col w-[80px] xl:w-[240px] h-full flex-none bg-background border-r border-border/10 z-50">
 
         {/* Logo */}
         <div className="h-[72px] flex items-center px-6 xl:px-8 flex-none border-b border-primary/10">
@@ -93,15 +93,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
 
         {/* Safe area notch spacer — mobile only */}
-        <div className="safe-area-top-spacer flex-none bg-background/80 backdrop-blur-xl md:hidden" />
+        <div className="safe-area-top-spacer flex-none bg-background/80 backdrop-blur-xl min-[769px]:hidden" />
 
         {/* Top bar — always shown */}
         <header className="flex-none w-full h-[72px] flex items-center justify-between px-6 z-40 bg-background/80 backdrop-blur-xl border-b border-border/10">
           {/* Mobile: ELITE logo; Desktop: breadcrumb label */}
-          <span className="md:hidden text-xl font-serif tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-primary to-highlight">
+          <span className="min-[769px]:hidden text-xl font-serif tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-primary to-highlight">
             ELITE
           </span>
-          <span className="hidden md:block text-[11px] uppercase tracking-[0.4em] text-foreground/40 font-medium">
+          <span className="hidden min-[769px]:block text-[11px] uppercase tracking-[0.4em] text-foreground/40 font-medium">
             {NAV_ITEMS.find(n => n.href === pathname)?.label ?? 'Elite'}
           </span>
 
@@ -123,16 +123,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
         >
           {/* On desktop: phone-proportioned center column */}
-          <div className="w-full h-full md:max-w-[480px] md:mx-auto">
+          <div className="w-full h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto">
             {children}
           </div>
         </main>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            MOBILE BOTTOM NAV — hidden on md+
+            MOBILE BOTTOM NAV — hidden on 769px+
         ═══════════════════════════════════════════════════════════════════ */}
         <nav
-          className="flex-none md:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
+          className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           <div className="flex h-[80px] items-center justify-around px-2">

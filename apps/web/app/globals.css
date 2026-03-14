@@ -49,12 +49,6 @@ html, body {
 /* ─── Universal Helpers ────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
-  /* Hide scrollbars universally */
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-*::-webkit-scrollbar {
-  display: none;
 }
 
 /* ─── Safe Area Spacer (Notch) ─────────────────────────────── */
@@ -70,6 +64,45 @@ html, body {
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* ─── Adaptive PWA Interactions ───────────────────────────── */
+@media (max-width: 768px) {
+  .mobile-container {
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-top: env(safe-area-inset-top);
+    height: 100dvh;
+  }
+
+  html[data-device="mobile"],
+  html[data-device="mobile"] body {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .desktop-container {
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  html[data-device="desktop"],
+  html[data-device="desktop"] body {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #B76E79;
+    border-radius: 10px;
+  }
 }
 
 /* ─── Button Components ────────────────────────────────────── */
