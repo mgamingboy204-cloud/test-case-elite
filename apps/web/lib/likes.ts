@@ -71,10 +71,10 @@ function toIncomingProfile(item: LegacyIncomingLike): LikesIncomingProfile | nul
     profileId: actorId,
     hasLikedMe: true,
     likedAt: item.likedAt ?? item.createdAt ?? null,
-    name: actor.profile?.name ?? "Member",
-    age: actor.profile?.age ?? 0,
-    location: (actor.profile?.city ?? "Unknown").toUpperCase(),
-    image: actor.photos?.[0]?.url ?? FALLBACK_IMAGE
+    name: actor?.profile?.name ?? "Member",
+    age: actor?.profile?.age ?? 0,
+    location: (actor?.profile?.city ?? "Unknown").toUpperCase(),
+    image: actor?.photos?.[0]?.url ?? FALLBACK_IMAGE
   };
 }
 
