@@ -95,7 +95,7 @@ async function removeExistingPhoto(userId: string) {
   await prisma.photo.deleteMany({ where: { userId } });
 }
 
-export async function uploadPhoto(options: { userId: string; filename: string; dataUrl: string }) {
+export async function uploadPhoto(options: { userId: string; filename: string; dataUrl: string; cropX?: number; cropY?: number; cropZoom?: number }) {
   const matches = options.dataUrl.match(/^data:(.+);base64,(.+)$/);
   if (!matches) {
     throw new HttpError(400, { message: "Invalid image data." });
@@ -135,7 +135,10 @@ export async function uploadPhoto(options: { userId: string; filename: string; d
   return prisma.photo.create({
     data: {
       userId: options.userId,
-      url
+      url,
+      cropX: options.cropX,
+      cropY: options.cropY,
+      cropZoom: options.cropZoom
     }
   });
 }

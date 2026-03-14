@@ -42,7 +42,7 @@ export default function PhotosSetup() {
       const result = await apiRequest<{ photo: { url: string } }>("/photos/upload", {
         method: "POST",
         auth: true,
-        body: JSON.stringify({ filename: `photo-${Date.now()}.jpg`, dataUrl })
+        body: JSON.stringify({ filename: `photo-${Date.now()}.jpg`, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
       });
       setPhotos(prev => [...prev, result.photo.url]);
     } catch (err) {

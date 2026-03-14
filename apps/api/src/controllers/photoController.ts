@@ -7,7 +7,13 @@ export async function listPhotosHandler(req: Request, res: Response) {
 }
 
 export async function uploadPhotoHandler(req: Request, res: Response) {
-  const { filename, dataUrl } = req.body as { filename: string; dataUrl: string };
-  const photo = await uploadPhoto({ userId: res.locals.user.id, filename, dataUrl });
+  const { filename, dataUrl, cropX, cropY, cropZoom } = req.body as {
+    filename: string;
+    dataUrl: string;
+    cropX?: number;
+    cropY?: number;
+    cropZoom?: number;
+  };
+  const photo = await uploadPhoto({ userId: res.locals.user.id, filename, dataUrl, cropX, cropY, cropZoom });
   return res.json({ photo });
 }

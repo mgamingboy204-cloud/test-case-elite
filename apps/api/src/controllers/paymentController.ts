@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getLatestPayment } from "../services/paymentService";
+import { getLatestPayment, initiateOnboardingPayment, verifyOnboardingPayment } from "../services/paymentService";
 import { confirmMockPayment, startMockPayment } from "../services/paymentMockService";
 
 export async function getMyPaymentHandler(req: Request, res: Response) {
@@ -35,8 +35,20 @@ export async function validateCouponHandler(req: Request, res: Response) {
   });
 }
 
+export async function initiateOnboardingPaymentHandler(req: Request, res: Response) {
+  const { tier, cardLast4 } = req.body as { tier: string; cardLast4: string };
+  const result = await initiateOnboardingPayment({ user: res.locals.user, tier, cardLast4 });
+  return res.json(result);
+}
+
+export async function verifyOnboardingPaymentHandler(req: Request, res: Response) {
+  const { paymentRef } = req.body as { paymentRef: string };
+  const result = await verifyOnboardingPayment({ user: res.locals.user, paymentRef });
+  return res.json(result);
+}
+
 export async function mockPaymentUnsupported(req: Request, res: Response) {
-  return res.status(404).json({ message: "Use /payments/mock/start or /payments/mock/confirm." });
+  return res.status(404).json({ message: "Use /payments/initiate or /payments/verify." });
 }
 
 export async function startMockPaymentHandler(req: Request, res: Response) {

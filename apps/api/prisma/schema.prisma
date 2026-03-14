@@ -126,6 +126,12 @@ model User {
   onboardingStep OnboardingStep @default(PHONE_VERIFIED)
   videoVerificationStatus VideoVerificationStatus @default(NOT_REQUESTED)
   paymentStatus OnboardingPaymentStatus @default(NOT_STARTED)
+  isVideoVerified Boolean @default(false)
+  videoUrl String?
+  onboardingToken String? @unique
+  onboardingTokenExpiresAt DateTime?
+  onboardingPaymentRef String?
+  onboardingPaymentVerifiedAt DateTime?
   createdAt    DateTime @default(now())
   lastActiveAt DateTime @default(now())
   verifiedAt   DateTime?
@@ -170,6 +176,9 @@ model Photo {
   id        String   @id @default(uuid())
   userId    String
   url       String
+  cropX     Float?
+  cropY     Float?
+  cropZoom  Float?
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])

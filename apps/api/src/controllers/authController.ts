@@ -13,6 +13,7 @@ import { prisma } from "../db/prisma";
 import {
   completeSignupWithPassword,
   createDeviceToken,
+  issueOnboardingToken,
   registerPendingUser,
   requestSignupOtp,
   requestOtp,
@@ -82,6 +83,7 @@ export async function verifyOtp(req: Request, res: Response) {
 
     const accessToken = signAccessToken(user.id, { rememberMe: resolvedRememberMe });
     const refreshToken = signRefreshToken(user.id, { rememberMe: resolvedRememberMe });
+    const { onboardingToken } = await issueOnboardingToken(user.id);
 
     const refreshTtlDays = resolvedRememberMe
       ? env.REFRESH_TOKEN_TTL_DAYS
@@ -94,6 +96,7 @@ export async function verifyOtp(req: Request, res: Response) {
     return res.json({
       ok: true,
       accessToken,
+      onboardingToken,
       user: {
         id: user.id,
         phone: user.phone,
@@ -158,10 +161,11 @@ export async function signupComplete(req: Request, res: Response) {
 
   const accessToken = signAccessToken(user.id, { rememberMe: true });
   const refreshToken = signRefreshToken(user.id, { rememberMe: true });
+  const { onboardingToken } = await issueOnboardingToken(user.id);
   const refreshCookieOptions = buildRefreshCookieOptions(env.REFRESH_TOKEN_TTL_DAYS);
   res.cookie(refreshCookieName, refreshToken, refreshCookieOptions);
 
-  return res.json({ ok: true, accessToken });
+  return res.json({ ok: true, accessToken, onboardingToken });
 }
 
 export async function login(req: Request, res: Response) {
@@ -188,6 +192,7 @@ export async function login(req: Request, res: Response) {
 
   const accessToken = signAccessToken(result.user.id, { rememberMe: resolvedRememberMe });
   const refreshToken = signRefreshToken(result.user.id, { rememberMe: resolvedRememberMe });
+  const { onboardingToken } = await issueOnboardingToken(result.user.id);
 
   const refreshTtlDays = resolvedRememberMe
     ? env.REFRESH_TOKEN_TTL_DAYS
@@ -206,6 +211,7 @@ export async function login(req: Request, res: Response) {
   return res.json({
     ok: true,
     accessToken,
+    onboardingToken,
     user: {
       id: result.user.id,
       phone: result.user.phone,
@@ -339,7 +345,9 @@ export async function whoAmI(req: Request, res: Response) {
     onboardingStep: user.onboardingStep,
     videoVerificationStatus: user.videoVerificationStatus,
     paymentStatus: user.paymentStatus,
-    profileCompletedAt: user.profileCompletedAt
+    profileCompletedAt: user.profileCompletedAt,
+    onboardingToken: user.onboardingToken,
+    onboardingTokenExpiresAt: user.onboardingTokenExpiresAt
   });
 }
 

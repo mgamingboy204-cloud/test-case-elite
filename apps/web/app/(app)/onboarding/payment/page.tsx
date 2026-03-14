@@ -42,8 +42,17 @@ export default function PaymentStep() {
     setError("");
     setProcessing(true);
     try {
-      await apiRequest("/payments/mock/start", { method: "POST", auth: true, body: JSON.stringify({}) });
-      await apiRequest("/payments/mock/confirm", { method: "POST", auth: true, body: JSON.stringify({}) });
+      const cardLast4 = cardNumber.replace(/\s/g, "").slice(-4);
+      const init = await apiRequest<{ paymentRef: string }>("/payments/initiate", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({ tier: selectedTier, cardLast4 })
+      });
+      await apiRequest("/payments/verify", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({ paymentRef: init.paymentRef })
+      });
       await refreshCurrentUser();
       completeOnboardingStep("PROFILE");
     } catch (err) {
