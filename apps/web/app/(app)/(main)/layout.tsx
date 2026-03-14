@@ -133,7 +133,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         ═══════════════════════════════════════════════════════════════════ */}
         <nav
           className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          style={{ paddingBottom: "var(--safe-area-bottom)" }}
         >
           <div className="flex h-[80px] items-center justify-around px-2">
             {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
