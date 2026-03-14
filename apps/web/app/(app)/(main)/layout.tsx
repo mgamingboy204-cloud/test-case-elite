@@ -133,18 +133,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            MOBILE BOTTOM NAV — Full Bleed Fix applied here
+            MOBILE BOTTOM NAV 
         ═══════════════════════════════════════════════════════════════════ */}
-        {/* Outer nav: background bleeds into home indicator (no padding here) */}
-        <nav className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground">
-          {/* Inner row: height adapts to safe area, padding pushes content up, icons stay centered */}
-          <div 
-            className="flex items-center justify-around px-2"
-            style={{ 
-              height: "calc(65px + env(safe-area-inset-bottom))", 
-              paddingBottom: "env(safe-area-inset-bottom)" 
-            }}
-          >
+        <nav
+          className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          {/* Inner row: strictly 65px tall. Safe area padding is applied to the parent. */}
+          <div className="flex h-[65px] items-center justify-around px-2">
             {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
               const isActive = pathname === href;
               return (
