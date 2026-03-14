@@ -103,7 +103,7 @@ export default function DiscoverPage() {
                 className="w-full"
               >
                 <p className="text-3xl md:text-4xl font-serif text-foreground leading-[1.3] italic font-light">
-                  {item?.bioShort ? `"${item.bioShort}"` : ""Curating art collections by day, hunting for the perfect matcha by night. I value deep conversations over small talk.""}
+                  {item?.bioShort ? `"${item.bioShort}"` : '"Curating art collections by day, hunting for the perfect matcha by night. I value deep conversations over small talk."'}
                 </p>
               </motion.div>
 
