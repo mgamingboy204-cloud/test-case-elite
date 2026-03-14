@@ -5,29 +5,9 @@ import { X, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, PanInfo } from "framer-motion";
-import { apiRequest } from "@/lib/api";
+import { fetchIncomingLikes, respondToIncomingLike, type LikesIncomingProfile } from "@/lib/likes";
 
-type LikeProfile = {
-  id: string;
-  name: string;
-  age: number;
-  location: string;
-  image: string;
-  userId: string;
-};
-
-type IncomingLike = {
-  id: string;
-  actorUser: {
-    id: string;
-    profile: {
-      name: string;
-      age: number;
-      city: string;
-    } | null;
-    photos: Array<{ url: string }>;
-  };
-};
+type LikeProfile = LikesIncomingProfile;
 
 export default function LikesPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
@@ -37,17 +17,8 @@ export default function LikesPage() {
   useEffect(() => {
     const loadIncoming = async () => {
       if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
-      const response = await apiRequest<{ incoming: IncomingLike[] }>("/likes/incoming", { auth: true });
-      setProfiles(
-        response.incoming.map((item) => ({
-          id: item.id,
-          name: item.actorUser.profile?.name ?? "Member",
-          age: item.actorUser.profile?.age ?? 0,
-          location: (item.actorUser.profile?.city ?? "Unknown").toUpperCase(),
-          image: item.actorUser.photos[0]?.url ?? "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&auto=format&fit=crop&q=80",
-          userId: item.actorUser.id
-        }))
-      );
+      const incomingProfiles = await fetchIncomingLikes();
+      setProfiles(incomingProfiles);
     };
 
     void loadIncoming();
@@ -83,7 +54,7 @@ export default function LikesPage() {
   const handleAction = async (action: "LIKE" | "PASS") => {
     setProfiles((prev) => {
       if (prev.length === 0) return prev;
-      const [_first, ...rest] = prev;
+      const [, ...rest] = prev;
       return rest;
     });
 
@@ -91,14 +62,9 @@ export default function LikesPage() {
     if (!current) return;
 
     try {
-      await apiRequest("/likes", {
-        method: "POST",
-        auth: true,
-        body: JSON.stringify({
-          actionId: crypto.randomUUID(),
-          targetUserId: current.userId,
-          action
-        })
+      await respondToIncomingLike({
+        targetUserId: current.profileId,
+        action
       });
     } catch {
       // keep optimistic UX
@@ -150,7 +116,7 @@ export default function LikesPage() {
 
             return (
               <motion.div
-                key={profile.id}
+                key={profile.likeId}
                 initial={false}
                 animate={{
                   x: xPos,
