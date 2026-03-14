@@ -318,6 +318,64 @@ describe("Phone unlock authorization", () => {
     expect(allowed.status).toBe(200);
     expect(allowed.body.users).toHaveLength(2);
   });
+
+  it("supports offline, online, and social consent workflows", async () => {
+    const agentA = request.agent(app);
+    const agentB = request.agent(app);
+    const tokenA = await registerAndLogin(agentA, "5550003333", "Password@1");
+    const tokenB = await registerAndLogin(agentB, "5550004444", "Password@1");
+
+    const userA = await prisma.user.findUnique({ where: { phone: "5550003333" } });
+    const userB = await prisma.user.findUnique({ where: { phone: "5550004444" } });
+    if (!userA || !userB) throw new Error("Users missing");
+
+    await prisma.user.updateMany({
+      where: { id: { in: [userA.id, userB.id] } },
+      data: {
+        status: "APPROVED",
+        verifiedAt: new Date(),
+        phoneVerifiedAt: new Date(),
+        onboardingStep: "ACTIVE",
+        paymentStatus: "PAID",
+        profileCompletedAt: new Date()
+      }
+    });
+
+    const ordered = [userA.id, userB.id].sort();
+    const match = await prisma.match.create({ data: { userAId: ordered[0], userBId: ordered[1] } });
+
+    await withAuth(agentA.post("/consent/respond"), tokenA).send({
+      matchId: match.id,
+      type: "OFFLINE_MEET",
+      response: "YES",
+      payload: { venues: ["Soho House"], times: ["Sat 4PM"] }
+    });
+    await withAuth(agentB.post("/consent/respond"), tokenB).send({
+      matchId: match.id,
+      type: "OFFLINE_MEET",
+      response: "YES",
+      payload: { venues: ["Blue Tokai Reserve"], times: ["Sun 11AM"] }
+    });
+
+    const offline = await withAuth(agentA.get(`/offline-meet/${match.id}`), tokenA);
+    expect(offline.status).toBe(200);
+    expect(offline.body.type).toBe("OFFLINE_MEET");
+
+    await withAuth(agentA.post("/consent/respond"), tokenA).send({ matchId: match.id, type: "ONLINE_MEET", response: "YES", payload: { platforms: ["Zoom"], times: ["Sat 8PM"] } });
+    await withAuth(agentB.post("/consent/respond"), tokenB).send({ matchId: match.id, type: "ONLINE_MEET", response: "YES", payload: { platforms: ["G-Meet"], times: ["Sat 8PM"] } });
+
+    const online = await withAuth(agentA.get(`/online-meet/${match.id}`), tokenA);
+    expect(online.status).toBe(200);
+    expect(online.body.type).toBe("ONLINE_MEET");
+
+    await withAuth(agentA.post("/consent/respond"), tokenA).send({ matchId: match.id, type: "SOCIAL_EXCHANGE", response: "YES", payload: { platform: "Instagram", handle: "@a" } });
+    await withAuth(agentB.post("/consent/respond"), tokenB).send({ matchId: match.id, type: "SOCIAL_EXCHANGE", response: "YES", payload: { platform: "Instagram", handle: "@b" } });
+
+    const social = await withAuth(agentA.get(`/social-exchange/${match.id}`), tokenA);
+    expect(social.status).toBe(200);
+    expect(social.body.type).toBe("SOCIAL_EXCHANGE");
+  });
+
 });
 
 describe("Session authentication", () => {

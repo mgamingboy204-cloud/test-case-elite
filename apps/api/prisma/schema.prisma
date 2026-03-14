@@ -80,6 +80,13 @@ enum ConsentResponse {
   NO
 }
 
+enum ConsentType {
+  PHONE_NUMBER
+  OFFLINE_MEET
+  ONLINE_MEET
+  SOCIAL_EXCHANGE
+}
+
 enum ReportStatus {
   OPEN
   RESOLVED
@@ -239,6 +246,9 @@ model Match {
   userB User @relation("matchesB", fields: [userBId], references: [id])
   consents Consent[]
   phoneExchange PhoneExchangeEvent?
+  offlineMeet OfflineMeetEvent?
+  onlineMeet OnlineMeetEvent?
+  socialExchange SocialExchangeEvent?
   notifications Notification[]
 
   @@unique([userAId, userBId])
@@ -248,19 +258,49 @@ model Consent {
   id         String @id @default(uuid())
   matchId    String
   userId     String
+  type       ConsentType @default(PHONE_NUMBER)
   response   ConsentResponse
+  payload    Json?
   respondedAt DateTime @default(now())
 
   match Match @relation(fields: [matchId], references: [id])
   user  User @relation(fields: [userId], references: [id])
 
-  @@unique([matchId, userId])
+  @@unique([matchId, userId, type])
+  @@index([matchId, type])
 }
 
 model PhoneExchangeEvent {
   id        String @id @default(uuid())
   matchId   String @unique
   createdAt DateTime @default(now())
+
+  match Match @relation(fields: [matchId], references: [id])
+}
+
+model OfflineMeetEvent {
+  id        String @id @default(uuid())
+  matchId   String @unique
+  createdAt DateTime @default(now())
+  details   Json?
+
+  match Match @relation(fields: [matchId], references: [id])
+}
+
+model OnlineMeetEvent {
+  id        String @id @default(uuid())
+  matchId   String @unique
+  createdAt DateTime @default(now())
+  details   Json?
+
+  match Match @relation(fields: [matchId], references: [id])
+}
+
+model SocialExchangeEvent {
+  id        String @id @default(uuid())
+  matchId   String @unique
+  createdAt DateTime @default(now())
+  details   Json?
 
   match Match @relation(fields: [matchId], references: [id])
 }

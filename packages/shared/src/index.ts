@@ -48,9 +48,13 @@ export const LikeSchema = z.object({
   action: z.enum(["LIKE", "PASS"])
 });
 
+export const ConsentTypeSchema = z.enum(["PHONE_NUMBER", "OFFLINE_MEET", "ONLINE_MEET", "SOCIAL_EXCHANGE"]);
+
 export const ConsentSchema = z.object({
   matchId: z.string().uuid(),
-  response: z.enum(["YES", "NO"])
+  response: z.enum(["YES", "NO"]),
+  type: ConsentTypeSchema.default("PHONE_NUMBER"),
+  payload: z.record(z.string(), z.unknown()).optional().nullable()
 });
 
 export const ReportSchema = z.object({
