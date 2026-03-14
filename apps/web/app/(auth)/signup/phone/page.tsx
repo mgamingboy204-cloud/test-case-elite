@@ -6,24 +6,22 @@ import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export default function SignUpPhone() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
-  const router = useRouter();
+  const { startSignup } = useAuth();
 
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (phone.length !== 10) return;
     
     setLoading(true);
-    // Mock Async Check
-    setTimeout(() => {
-      // Step 1 check - in real app, sends OTP
-      signup(phone);
-    }, 800);
+    try {
+      await startSignup(phone);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

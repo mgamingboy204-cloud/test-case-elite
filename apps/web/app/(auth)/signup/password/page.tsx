@@ -11,25 +11,28 @@ export default function SignUpPassword() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { user, completeOnboardingStep } = useAuth();
+  const { pendingPhone, signupToken, completeSignup } = useAuth();
+  const [error, setError] = useState("");
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
-      router.replace('/auth/signup/phone');
+    if (!pendingPhone || !signupToken) {
+      router.replace('/signup/phone');
     }
-  }, [user, router]);
+  }, [pendingPhone, signupToken, router]);
 
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword || password.length < 8) return;
     
     setLoading(true);
-    // Mock save logic
-    setTimeout(() => {
-      // Move to real onboarding phase
-      completeOnboardingStep('VERIFICATION');
-    }, 800);
+    setError("");
+    try {
+      await completeSignup(password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to complete signup.");
+      setLoading(false);
+    }
   };
 
   const isMatch = password === confirmPassword && password.length > 0;

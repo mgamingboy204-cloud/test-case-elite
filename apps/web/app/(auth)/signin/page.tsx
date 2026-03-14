@@ -15,8 +15,9 @@ export default function SignIn() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { startLogin } = useAuth();
   const router = useRouter();
+  const [error, setError] = useState("");
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,9 +30,16 @@ export default function SignIn() {
 
   const handleSignIn = async () => {
     setLoading(true);
-    setTimeout(() => {
-      login(phone);
-    }, 1200);
+    setError("");
+    try {
+      const result = await startLogin(phone, password);
+      if (result.otpRequired) {
+        router.push("/signin/otp");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to sign in");
+      setLoading(false);
+    }
   };
 
   return (
@@ -52,6 +60,7 @@ export default function SignIn() {
             </div>
 
             <form onSubmit={handleNext} className="flex flex-col gap-12">
+              {error && <p className="text-sm text-red-400">{error}</p>}
               <PhoneInput value={phone} onChange={setPhone} />
               <button 
                 type="submit" 
@@ -86,6 +95,7 @@ export default function SignIn() {
             </div>
 
             <form onSubmit={handleNext} className="flex flex-col gap-12">
+              {error && <p className="text-sm text-red-400">{error}</p>}
               <Input 
                 type="password" 
                 placeholder="Unique Key" 

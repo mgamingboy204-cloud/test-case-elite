@@ -1,9 +1,10 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { apiRequest } from "@/lib/api";
 
 // --- Mock Data ---
 interface Alert {
@@ -17,53 +18,35 @@ interface Alert {
   targetId?: number;
 }
 
-const MOCK_ALERTS: Alert[] = [
-  {
-    id: "a1",
-    type: "CONCIERGE",
-    title: "Priority Concierge",
-    message: "Aisha has requested an Offline Rendezvous.",
-    timestamp: "2m ago",
-    image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&auto=format&fit=crop&q=80",
-    isUnread: true,
-  },
-  {
-    id: "a2",
-    type: "CONNECTION",
-    title: "New Match",
-    message: "New Connection: James is waiting for your move.",
-    timestamp: "1h ago",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&auto=format&fit=crop&q=80",
-    isUnread: true,
-  },
-  {
-    id: "a3",
-    type: "INTEREST",
-    title: "New Interest",
-    message: "A new member is interested in connecting.",
-    timestamp: "4h ago",
-    image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&auto=format&fit=crop&q=80",
-    isUnread: false,
-  },
-  {
-    id: "a4",
-    type: "INTEREST",
-    title: "New Interest",
-    message: "A new member is interested in connecting.",
-    timestamp: "1d ago",
-    image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&auto=format&fit=crop&q=80",
-    isUnread: false,
-  }
-];
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&auto=format&fit=crop&q=80";
 
 export default function AlertsPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
   const router = useRouter();
+  const [alerts, setAlerts] = useState<Alert[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) router.replace('/signin');
     else if (onboardingStep !== 'COMPLETED') router.replace('/onboarding/verification'); 
   }, [isAuthenticated, onboardingStep, router]);
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
+      const response = await apiRequest<{ notifications: Array<{ id: string; type: string; isRead: boolean; createdAt: string; actor: { photos: Array<{ url: string }> } | null }> }>("/notifications", { auth: true });
+      setAlerts(response.notifications.map((item) => ({
+        id: item.id,
+        type: item.type === "NEW_MATCH" ? "CONNECTION" : "INTEREST",
+        title: item.type === "NEW_MATCH" ? "New Match" : "New Interest",
+        message: item.type === "NEW_MATCH" ? "A new match is waiting for your move." : "A member showed interest in your profile.",
+        timestamp: new Date(item.createdAt).toLocaleDateString(),
+        image: item.actor?.photos[0]?.url ?? FALLBACK_IMAGE,
+        isUnread: !item.isRead
+      })));
+    };
+
+    void loadNotifications();
+  }, [isAuthenticated, onboardingStep]);
 
   if (!isAuthenticated || onboardingStep !== 'COMPLETED') return null;
 
@@ -90,7 +73,7 @@ export default function AlertsPage() {
 
       {/* Alerts List */}
       <div className="w-full px-4 pt-4 pb-20 flex flex-col gap-3">
-        {MOCK_ALERTS.map((alert, index) => (
+        {alerts.map((alert, index) => (
           <motion.button
             key={alert.id}
             initial={{ opacity: 0, y: 10 }}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, X } from "lucide-react";
@@ -12,20 +13,43 @@ const SAMPLE_PHOTOS = [
 ];
 
 export default function PhotosSetup() {
-  const { completeOnboardingStep } = useAuth();
+  const { completeOnboardingStep, refreshCurrentUser } = useAuth();
+  const [error, setError] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
 
   const MAX_PHOTOS = 3;
   const canAdd = photos.length < MAX_PHOTOS && !uploading;
 
-  const addPhoto = () => {
+  const toDataUrl = async (url: string) => {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Unable to read image"));
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const addPhoto = async () => {
     if (!canAdd) return;
     setUploading(true);
-    setTimeout(() => {
-      setPhotos(prev => [...prev, SAMPLE_PHOTOS[prev.length % SAMPLE_PHOTOS.length]]);
+    setError("");
+    try {
+      const image = SAMPLE_PHOTOS[photos.length % SAMPLE_PHOTOS.length];
+      const dataUrl = await toDataUrl(image);
+      const result = await apiRequest<{ photo: { url: string } }>("/photos/upload", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({ filename: `photo-${Date.now()}.jpg`, dataUrl })
+      });
+      setPhotos(prev => [...prev, result.photo.url]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to upload photo.");
+    } finally {
       setUploading(false);
-    }, 700);
+    }
   };
 
   const removePhoto = (idx: number) => {
@@ -41,9 +65,15 @@ export default function PhotosSetup() {
     ? "Add 1 Portrait to Continue"
     : `Add ${MAX_PHOTOS - photos.length} More ${MAX_PHOTOS - photos.length === 1 ? 'Portrait' : 'Portraits'}`;
 
-  const finishOnboarding = () => {
+  const finishOnboarding = async () => {
     if (!isEnabled) return;
-    completeOnboardingStep('COMPLETED');
+    try {
+      await apiRequest("/profile/complete", { method: "POST", auth: true, body: JSON.stringify({}) });
+      await refreshCurrentUser();
+      completeOnboardingStep("COMPLETED");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to complete onboarding.");
+    }
   };
 
   return (
@@ -142,6 +172,7 @@ export default function PhotosSetup() {
 
       {/* CTA */}
       <div className="flex-none mt-auto">
+        {error && <p className="text-red-400 text-xs text-center mb-2">{error}</p>}
         <motion.button
           whileTap={isEnabled ? { scale: 0.97 } : {}}
           onClick={finishOnboarding}

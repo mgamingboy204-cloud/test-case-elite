@@ -9,26 +9,25 @@ import { useRouter } from "next/navigation";
 export default function SignUpOTP() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { user, verifyOTP } = useAuth();
+  const { pendingPhone, verifySignupOtp } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user?.phone) {
-      router.replace('/auth/signup/phone');
+    if (!pendingPhone) {
+      router.replace('/signup/phone');
     }
-  }, [user, router]);
+  }, [pendingPhone, router]);
 
   const handleComplete = async (otp: string) => {
     setLoading(true);
     setError("");
-    
-    setTimeout(() => {
-      const isValid = verifyOTP(otp);
-      if (!isValid) {
-        setError("Invalid verification code. Use 123456.");
-        setLoading(false);
-      }
-    }, 1000);
+    try {
+      await verifySignupOtp(otp);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid verification code.";
+      setError(message);
+      setLoading(false);
+    }
   };
 
   return (
@@ -37,7 +36,7 @@ export default function SignUpOTP() {
         <span className="text-xs font-mono tracking-widest text-primary/80 mb-2 block">STEP 02</span>
         <h1 className="text-3xl font-light mb-2 text-foreground">Verify <span className="font-semibold text-primary">Device</span></h1>
         <p className="text-foreground/60 font-light leading-relaxed">
-          We need to ensure you own this device. Enter the code sent to +91 {user?.phone}.
+          We need to ensure you own this device. Enter the code sent to +91 {pendingPhone}.
         </p>
       </div>
 

@@ -1,139 +1,218 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { apiRequest, setAuthToken } from "@/lib/api";
 
-export type OnboardingStep = 'PHONE' | 'OTP' | 'PASSWORD' | 'VERIFICATION' | 'PAYMENT' | 'PROFILE' | 'PHOTOS' | 'COMPLETED';
+type BackendOnboardingStep =
+  | "PHONE_VERIFIED"
+  | "VIDEO_VERIFICATION_PENDING"
+  | "VIDEO_VERIFIED"
+  | "PAYMENT_PENDING"
+  | "PAID"
+  | "PROFILE_PENDING"
+  | "ACTIVE";
+
+export type OnboardingStep = "PHONE" | "OTP" | "PASSWORD" | "VERIFICATION" | "PAYMENT" | "PROFILE" | "PHOTOS" | "COMPLETED";
 
 interface User {
+  id: string;
   phone: string;
-  name?: string;
-  isVerified?: boolean;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  displayName?: string | null;
+  onboardingStep: BackendOnboardingStep;
 }
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   onboardingStep: OnboardingStep;
-  login: (phone: string) => void;
-  signup: (phone: string) => void;
-  verifyOTP: (otp: string) => boolean;
-  completeOnboardingStep: (nextStep: OnboardingStep, userData?: Partial<User>) => void;
-  logout: () => void;
+  pendingPhone: string | null;
+  signupToken: string | null;
+  startSignup: (phone: string) => Promise<void>;
+  verifySignupOtp: (otp: string) => Promise<void>;
+  completeSignup: (password: string) => Promise<void>;
+  startLogin: (phone: string, password: string) => Promise<{ otpRequired: boolean }>;
+  verifySigninOtp: (otp: string) => Promise<void>;
+  refreshCurrentUser: () => Promise<void>;
+  completeOnboardingStep: (nextStep: OnboardingStep) => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock initial state for developmental preview
-const MOCK_OTP = "123456";
+function mapOnboardingStep(user: User | null): OnboardingStep {
+  if (!user) return "PHONE";
+
+  if (user.onboardingStep === "ACTIVE") return "COMPLETED";
+  if (user.onboardingStep === "PAID" || user.onboardingStep === "PROFILE_PENDING") return "PROFILE";
+  if (user.onboardingStep === "PAYMENT_PENDING") return "PAYMENT";
+  return "VERIFICATION";
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('PHONE');
+  const [pendingPhone, setPendingPhone] = useState<string | null>(null);
+  const [signupToken, setSignupToken] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  
   const router = useRouter();
-  const pathname = usePathname();
 
-  // Hydrate from localStorage on mount
+  const isAuthenticated = Boolean(user);
+  const onboardingStep = useMemo(() => mapOnboardingStep(user), [user]);
+
+  const refreshCurrentUser = async () => {
+    const me = await apiRequest<User>("/me", { auth: true });
+    setUser(me);
+  };
+
   useEffect(() => {
-    const storedAuth = localStorage.getItem('elite_auth');
-    if (storedAuth) {
+    const hydrate = async () => {
+      const storedPendingPhone = localStorage.getItem("elite_pending_phone");
+      const storedSignupToken = localStorage.getItem("elite_signup_token");
+      setPendingPhone(storedPendingPhone || null);
+      setSignupToken(storedSignupToken || null);
+
       try {
-        const { auth, usr, step } = JSON.parse(storedAuth);
-        setIsAuthenticated(auth);
-        setUser(usr);
-        setOnboardingStep(step);
-      } catch (e) {
-        console.error("Failed to parse auth state");
+        await refreshCurrentUser();
+      } catch {
+        setUser(null);
+      } finally {
+        setIsInitialized(true);
       }
-    }
-    setIsInitialized(true);
+    };
+
+    void hydrate();
   }, []);
 
-  // Persist state changes
-  useEffect(() => {
-    if (isInitialized) {
-      localStorage.setItem('elite_auth', JSON.stringify({
-        auth: isAuthenticated,
-        usr: user,
-        step: onboardingStep
-      }));
-    }
-  }, [isAuthenticated, user, onboardingStep, isInitialized]);
+  const startSignup = async (phone: string) => {
+    await apiRequest<{ ok: boolean }>("/auth/signup/start", {
+      method: "POST",
+      body: JSON.stringify({ phone })
+    });
 
-  const login = (phone: string) => {
-    // Mock login flow initiation
-    setUser({ phone });
-    // In a real app, send OTP here
-    router.push('/signin/otp');
+    setPendingPhone(phone);
+    localStorage.setItem("elite_pending_phone", phone);
+    router.push("/signup/otp");
   };
 
-  const signup = (phone: string) => {
-    setUser({ phone });
-    setOnboardingStep('OTP');
-    router.push('/signup/otp');
+  const verifySignupOtp = async (otp: string) => {
+    if (!pendingPhone) throw new Error("Phone number is missing");
+
+    const response = await apiRequest<{ ok: true; signupToken: string }>("/auth/signup/verify", {
+      method: "POST",
+      body: JSON.stringify({ phone: pendingPhone, code: otp })
+    });
+
+    setSignupToken(response.signupToken);
+    localStorage.setItem("elite_signup_token", response.signupToken);
+    router.push("/signup/password");
   };
 
-  const verifyOTP = (otp: string) => {
-    if (otp === MOCK_OTP) {
-      if (pathname.includes('/signin')) {
-        setIsAuthenticated(true);
-        // Assuming signed in users have completed onboarding for now
-        setOnboardingStep('COMPLETED');
-        router.push('/discover');
-      } else {
-        // Sign up flow
-        setOnboardingStep('PASSWORD');
-        router.push('/signup/password');
-      }
-      return true;
-    }
-    return false;
+  const completeSignup = async (password: string) => {
+    if (!signupToken) throw new Error("Signup session missing");
+
+    const response = await apiRequest<{ ok: true; accessToken: string }>("/auth/signup/complete", {
+      method: "POST",
+      body: JSON.stringify({ signupToken, password })
+    });
+
+    setAuthToken(response.accessToken);
+    await refreshCurrentUser();
+
+    setSignupToken(null);
+    localStorage.removeItem("elite_signup_token");
+    router.push("/onboarding/verification");
   };
 
-  const completeOnboardingStep = (nextStep: OnboardingStep, userData?: Partial<User>) => {
-    if (userData) {
-      setUser(prev => prev ? { ...prev, ...userData } : prev);
+  const startLogin = async (phone: string, password: string) => {
+    const response = await apiRequest<{ ok: true; otpRequired?: boolean; accessToken?: string; user?: User }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ phone, password, rememberMe: true })
+    });
+
+    setPendingPhone(phone);
+    localStorage.setItem("elite_pending_phone", phone);
+
+    if (response.otpRequired) {
+      return { otpRequired: true };
     }
-    setOnboardingStep(nextStep);
-    
-    // Route based on next step — each step maps to its own dedicated sub-route
-    switch (nextStep) {
-      case 'VERIFICATION':
-        router.push('/onboarding/verification');
-        break;
-      case 'PAYMENT':
-        router.push('/onboarding/payment');
-        break;
-      case 'PROFILE':
-        router.push('/onboarding/profile');
-        break;
-      case 'PHOTOS':
-        router.push('/onboarding/photos');
-        break;
-      case 'COMPLETED':
-        setIsAuthenticated(true);
-        router.push('/discover');
-        break;
-      default:
-        break;
+
+    if (response.accessToken && response.user) {
+      setAuthToken(response.accessToken);
+      setUser(response.user);
+      router.push(mapOnboardingStep(response.user) === "COMPLETED" ? "/discover" : "/onboarding/verification");
     }
+
+    return { otpRequired: false };
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
+  const verifySigninOtp = async (otp: string) => {
+    if (!pendingPhone) throw new Error("Phone number is missing");
+
+    const response = await apiRequest<{ ok: true; accessToken: string; user: User }>("/auth/otp/verify", {
+      method: "POST",
+      body: JSON.stringify({ phone: pendingPhone, code: otp, rememberMe: true })
+    });
+
+    setAuthToken(response.accessToken);
+    setUser(response.user);
+    router.push(mapOnboardingStep(response.user) === "COMPLETED" ? "/discover" : "/onboarding/verification");
+  };
+
+  const completeOnboardingStep = (nextStep: OnboardingStep) => {
+    if (nextStep === "COMPLETED") {
+      router.push("/discover");
+      return;
+    }
+
+    const routeMap: Partial<Record<OnboardingStep, string>> = {
+      VERIFICATION: "/onboarding/verification",
+      PAYMENT: "/onboarding/payment",
+      PROFILE: "/onboarding/profile",
+      PHOTOS: "/onboarding/photos"
+    };
+
+    const route = routeMap[nextStep];
+    if (route) router.push(route);
+  };
+
+  const logout = async () => {
+    try {
+      await apiRequest<{ ok: true }>("/auth/logout", { method: "POST" });
+    } catch {
+      // ignore logout API errors
+    }
+    setAuthToken(null);
     setUser(null);
-    setOnboardingStep('PHONE');
-    localStorage.removeItem('elite_auth');
-    router.push('/');
+    setPendingPhone(null);
+    setSignupToken(null);
+    localStorage.removeItem("elite_pending_phone");
+    localStorage.removeItem("elite_signup_token");
+    router.push("/");
   };
 
-  if (!isInitialized) return null; // Avoid hydration mismatch
+  if (!isInitialized) return null;
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, onboardingStep, login, signup, verifyOTP, completeOnboardingStep, logout }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        user,
+        onboardingStep,
+        pendingPhone,
+        signupToken,
+        startSignup,
+        verifySignupOtp,
+        completeSignup,
+        startLogin,
+        verifySigninOtp,
+        refreshCurrentUser,
+        completeOnboardingStep,
+        logout
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -142,7 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

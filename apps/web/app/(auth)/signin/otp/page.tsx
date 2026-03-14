@@ -11,14 +11,14 @@ export default function SignInOTP() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(30);
-  const { user, verifyOTP } = useAuth();
+  const { pendingPhone, verifySigninOtp } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user?.phone) {
-      router.replace('/auth/signin');
+    if (!pendingPhone) {
+      router.replace('/signin');
     }
-  }, [user, router]);
+  }, [pendingPhone, router]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -30,23 +30,20 @@ export default function SignInOTP() {
   const handleComplete = async (otp: string) => {
     setLoading(true);
     setError("");
-    
-    // Simulate network delay
-    setTimeout(() => {
-      const isValid = verifyOTP(otp);
-      if (!isValid) {
-        setError("Invalid code. Please try again.");
-        setLoading(false);
-      }
-      // If valid, verifyOTP handles routing
-    }, 1000);
+
+    try {
+      await verifySigninOtp(otp);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid code. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (
     <GlassCard>
       <h1 className="text-3xl font-light mb-2 text-foreground">Verify <span className="font-semibold text-primary">Identity</span></h1>
       <p className="text-foreground/60 mb-8 font-light leading-relaxed">
-        We've sent a secure code to +91 {user?.phone}. Please enter it below.
+        We've sent a secure code to +91 {pendingPhone}. Please enter it below.
       </p>
 
       <div className="flex flex-col gap-6">

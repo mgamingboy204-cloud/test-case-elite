@@ -1,24 +1,35 @@
 "use client";
 
 import { useState } from "react";
+import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import { Video, Check } from "lucide-react";
 
 export default function VideoVerification() {
   const { completeOnboardingStep } = useAuth();
+  const [error, setError] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verified, setVerified] = useState(false);
 
-  const startVerification = () => {
+  const startVerification = async () => {
+    setError("");
     setVerifying(true);
-    setTimeout(() => {
-      setVerifying(false);
+    try {
+      await apiRequest<{ request: { status: string } }>("/verification-requests", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({})
+      });
       setVerified(true);
-    }, 2500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start verification request.");
+    } finally {
+      setVerifying(false);
+    }
   };
 
-  const proceed = () => completeOnboardingStep('PAYMENT');
+  const proceed = () => completeOnboardingStep("PAYMENT");
 
   return (
     <div className="flex flex-col h-full px-8 pb-[calc(env(safe-area-inset-bottom,0px)+32px)]">
@@ -67,6 +78,7 @@ export default function VideoVerification() {
 
       {/* CTA */}
       <div className="flex-none space-y-4">
+        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
         {!verified ? (
           <motion.button
             whileTap={{ scale: 0.97 }}
