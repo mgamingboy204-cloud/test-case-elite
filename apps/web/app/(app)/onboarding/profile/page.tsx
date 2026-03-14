@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronUp, ChevronDown } from "lucide-react";
@@ -77,6 +78,8 @@ function DrumColumn({
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function ProfileSetup() {
   const { completeOnboardingStep } = useAuth();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   // Sub-step index (0–4)
   const [sub, setSub]         = useState(0);
@@ -110,11 +113,33 @@ export default function ProfileSetup() {
     !!intent,
   ];
 
-  const advance = () => {
+  const advance = async () => {
     if (sub < TOTAL_SUB - 1) {
       setSub(s => s + 1);
-    } else {
-      completeOnboardingStep("PHOTOS", { name });
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    try {
+      await apiRequest("/profile", {
+        method: "PUT",
+        auth: true,
+        body: JSON.stringify({
+          name,
+          gender: "OTHER",
+          age,
+          city,
+          profession,
+          bioShort: `Looking for ${intent || "dating"}` ,
+          intent: "dating"
+        })
+      });
+      completeOnboardingStep("PHOTOS");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to save profile.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -162,14 +187,15 @@ export default function ProfileSetup() {
       <div className="flex-none space-y-3">
         <motion.button
           whileTap={{ scale: 0.97 }}
-          disabled={!stepValid[sub]}
+          disabled={!stepValid[sub] || saving}
           onClick={advance}
           className={`btn-elite-primary transition-all ${!stepValid[sub] ? "opacity-20 grayscale cursor-not-allowed" : ""}`}
         >
-          {sub === TOTAL_SUB - 1 ? "Proceed to Gallery" : "Continue"}
+          {saving ? "Saving..." : sub === TOTAL_SUB - 1 ? "Proceed to Gallery" : "Continue"}
         </motion.button>
 
         {/* Back ghost link */}
+        {error && <p className="text-red-400 text-xs text-center">{error}</p>}
         {sub > 0 && (
           <button onClick={() => setSub(s => s - 1)}
             className="w-full text-center text-[10px] uppercase tracking-[0.35em] text-foreground/30 hover:text-foreground/50 transition-colors py-1">

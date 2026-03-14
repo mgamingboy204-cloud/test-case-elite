@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import { ShieldCheck, Check } from "lucide-react";
@@ -24,7 +25,8 @@ const TIERS = [
 ];
 
 export default function PaymentStep() {
-  const { completeOnboardingStep } = useAuth();
+  const { completeOnboardingStep, refreshCurrentUser } = useAuth();
+  const [error, setError] = useState("");
   const [selectedTier, setSelectedTier] = useState<string>("");
   const [cardNumber, setCardNumber] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -34,11 +36,20 @@ export default function PaymentStep() {
   const formatCard = (val: string) =>
     val.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
 
-  const handlePayment = (e: React.FormEvent) => {
+  const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
+    setError("");
     setProcessing(true);
-    setTimeout(() => completeOnboardingStep('PROFILE'), 1500);
+    try {
+      await apiRequest("/payments/mock/start", { method: "POST", auth: true, body: JSON.stringify({}) });
+      await apiRequest("/payments/mock/confirm", { method: "POST", auth: true, body: JSON.stringify({}) });
+      await refreshCurrentUser();
+      completeOnboardingStep("PROFILE");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Payment failed");
+      setProcessing(false);
+    }
   };
 
   return (
@@ -114,6 +125,7 @@ export default function PaymentStep() {
         </div>
 
         <div className="mt-auto space-y-3">
+          {error && <p className="text-sm text-red-400 text-center">{error}</p>}
           <motion.button
             whileTap={{ scale: 0.97 }}
             type="submit"

@@ -5,35 +5,40 @@ import { X, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, PanInfo } from "framer-motion";
+import { apiRequest } from "@/lib/api";
 
-const MOCK_LIKES = [
-  {
-    id: 1,
-    name: "Anna",
-    age: 29,
-    location: "SOHO, NY",
-    image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&auto=format&fit=crop&q=80",
-  },
-  {
-    id: 2,
-    name: "Elena",
-    age: 26,
-    location: "BROOKLYN, NY",
-    image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&auto=format&fit=crop&q=80",
-  },
-  {
-    id: 3,
-    name: "Sophia",
-    age: 31,
-    location: "TRIBECA, NY",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&auto=format&fit=crop&q=80",
-  }
-];
+type LikeProfile = {
+  id: string;
+  name: string;
+  age: number;
+  location: string;
+  image: string;
+  userId: string;
+};
 
 export default function LikesPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
   const router = useRouter();
-  const [profiles, setProfiles] = useState(MOCK_LIKES);
+  const [profiles, setProfiles] = useState<LikeProfile[]>([]);
+
+  useEffect(() => {
+    const loadIncoming = async () => {
+      if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
+      const response = await apiRequest<{ incoming: Array<{ id: string; actorUser: { id: string; profile: { name: string; age: number; city: string } | null; photos: Array<{ url: string }> }> }>("/likes/incoming", { auth: true });
+      setProfiles(
+        response.incoming.map((item) => ({
+          id: item.id,
+          name: item.actorUser.profile?.name ?? "Member",
+          age: item.actorUser.profile?.age ?? 0,
+          location: (item.actorUser.profile?.city ?? "Unknown").toUpperCase(),
+          image: item.actorUser.photos[0]?.url ?? "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&auto=format&fit=crop&q=80",
+          userId: item.actorUser.id
+        }))
+      );
+    };
+
+    void loadIncoming();
+  }, [isAuthenticated, onboardingStep]);
 
   useEffect(() => {
     if (!isAuthenticated) router.replace('/signin');
@@ -62,12 +67,29 @@ export default function LikesPage() {
     }
   };
 
-  const handleAction = () => {
-     setProfiles(prev => {
-        if (prev.length === 0) return prev;
-        const [_first, ...rest] = prev;
-        return rest;
-     });
+  const handleAction = async (action: "LIKE" | "PASS") => {
+    setProfiles((prev) => {
+      if (prev.length === 0) return prev;
+      const [_first, ...rest] = prev;
+      return rest;
+    });
+
+    const current = profiles[0];
+    if (!current) return;
+
+    try {
+      await apiRequest("/likes", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({
+          actionId: crypto.randomUUID(),
+          targetUserId: current.userId,
+          action
+        })
+      });
+    } catch {
+      // keep optimistic UX
+    }
   };
 
   return (
@@ -162,7 +184,7 @@ export default function LikesPage() {
                 <div className="flex justify-center gap-8 items-center w-full shrink-0">
                   {/* Pass Button */}
                   <button 
-                    onClick={isCenter ? handleAction : undefined}
+                    onClick={isCenter ? () => void handleAction("PASS") : undefined}
                     className="w-[64px] h-[64px] rounded-full bg-background/50 backdrop-blur-xl border border-primary/30 shadow-lg flex items-center justify-center hover:bg-primary/10 transition-colors pointer-events-auto"
                   >
                     <X size={28} strokeWidth={1} className="text-primary" />
@@ -170,7 +192,7 @@ export default function LikesPage() {
                   
                   {/* Like Button */}
                   <button 
-                    onClick={isCenter ? handleAction : undefined}
+                    onClick={isCenter ? () => void handleAction("LIKE") : undefined}
                     className="w-[72px] h-[72px] rounded-full bg-background/50 backdrop-blur-xl border border-primary/50 shadow-2xl flex items-center justify-center hover:bg-primary/10 transition-colors pointer-events-auto"
                   >
                     <HeartEliteIconSmall />

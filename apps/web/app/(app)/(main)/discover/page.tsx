@@ -5,6 +5,17 @@ import { Info, MapPin, Briefcase, Ruler, X, ShieldAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { apiRequest } from "@/lib/api";
+
+
+type DiscoverItem = {
+  userId: string;
+  name: string;
+  age: number;
+  city: string;
+  bioShort: string;
+  primaryPhotoUrl: string | null;
+};
 
 export default function DiscoverPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
@@ -12,11 +23,22 @@ export default function DiscoverPage() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [hasScrolled, setHasScrolled] = useState(false);
+  const [item, setItem] = useState<DiscoverItem | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) router.replace('/signin');
     else if (onboardingStep !== 'COMPLETED') router.replace('/onboarding/verification');
   }, [isAuthenticated, onboardingStep, router]);
+
+  useEffect(() => {
+    const loadDiscover = async () => {
+      if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
+      const response = await apiRequest<{ items: DiscoverItem[] }>("/discover/feed?limit=1", { auth: true });
+      setItem(response.items[0] ?? null);
+    };
+
+    void loadDiscover();
+  }, [isAuthenticated, onboardingStep]);
 
   const { scrollYProgress } = useScroll({
     container: containerRef,
@@ -52,19 +74,19 @@ export default function DiscoverPage() {
               {/* Minimal bottom scrim — 8% height, 8% opacity: just enough to anchor text, photo stays crystal clear */}
               <div className="absolute bottom-0 left-0 right-0 h-[8%] bg-gradient-to-t from-black/[0.08] to-transparent z-10 pointer-events-none" />
               <img
-                src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=2127&auto=format&fit=crop"
-                alt="Aisha"
+                src={item?.primaryPhotoUrl ?? "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=2127&auto=format&fit=crop"}
+                alt={item?.name ?? "Member"}
                 className="w-full h-full object-cover object-center"
               />
 
               {/* Name & Age Overlay */}
               <div className="absolute bottom-10 left-8 z-20">
                 <h1 className="text-6xl font-serif text-white mb-3 drop-shadow-xl tracking-wide">
-                  Aisha, <span className="font-light">27</span>
+                  {item?.name ?? "Aisha"}, <span className="font-light">{item?.age ?? 27}</span>
                 </h1>
                 <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.3em] text-white/95 bg-black/30 backdrop-blur-xl w-fit px-4 py-2 rounded-full border border-white/10">
                   <div className="w-2 h-2 rotate-45 bg-primary shadow-[0_0_12px_rgba(200,155,144,0.8)]" />
-                  New Delhi, India
+                  {item?.city ?? "New Delhi, India"}
                 </div>
               </div>
             </motion.div>
@@ -81,7 +103,7 @@ export default function DiscoverPage() {
                 className="w-full"
               >
                 <p className="text-3xl md:text-4xl font-serif text-foreground leading-[1.3] italic font-light">
-                  "Curating art collections by day, hunting for the perfect matcha by night. I value deep conversations over small talk."
+                  {item?.bioShort ? `"${item.bioShort}"` : ""Curating art collections by day, hunting for the perfect matcha by night. I value deep conversations over small talk.""}
                 </p>
               </motion.div>
 

@@ -4,39 +4,20 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { apiRequest } from "@/lib/api";
 import { MapPin, Video, Link as LinkIcon, Unlock, ChevronRight, Loader2, Instagram, Linkedin, Ghost, X, CheckCircle2, Copy } from "lucide-react";
 
 // --- Mock Data ---
-const MOCK_MATCHES = [
-  {
-    id: 1,
-    name: "Liam",
-    age: 31,
-    location: "NEW DELHI",
-    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800&auto=format&fit=crop&q=80",
-  },
-  {
-    id: 2,
-    name: "James",
-    age: 34,
-    location: "MUMBAI",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&auto=format&fit=crop&q=80",
-  },
-  {
-    id: 3,
-    name: "Arjun",
-    age: 28,
-    location: "BANGALORE",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&auto=format&fit=crop&q=80",
-  },
-  {
-    id: 4,
-    name: "Michael",
-    age: 32,
-    location: "LONDON",
-    image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=800&auto=format&fit=crop&q=80",
-  }
-];
+type MatchCard = {
+  id: string;
+  name: string;
+  age: number;
+  location: string;
+  image: string;
+};
+
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&auto=format&fit=crop&q=80";
+
 
 const springTransition = { type: "spring", bounce: 0.15, duration: 0.6 } as any;
 
@@ -53,7 +34,24 @@ export default function MatchesPage() {
     else if (onboardingStep !== 'COMPLETED') router.replace('/onboarding/verification'); 
   }, [isAuthenticated, onboardingStep, router]);
 
-  const [selectedMatch, setSelectedMatch] = useState<typeof MOCK_MATCHES[0] | null>(null);
+  const [matches, setMatches] = useState<MatchCard[]>([]);
+  const [selectedMatch, setSelectedMatch] = useState<MatchCard | null>(null);
+
+  useEffect(() => {
+    const loadMatches = async () => {
+      if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
+      const response = await apiRequest<{ matches: Array<{ id: string; user: { name: string; city: string | null; primaryPhotoUrl: string | null } }> }>("/matches", { auth: true });
+      setMatches(response.matches.map((match) => ({
+        id: match.id,
+        name: match.user.name,
+        age: 0,
+        location: (match.user.city ?? "Unknown").toUpperCase(),
+        image: match.user.primaryPhotoUrl ?? FALLBACK_IMAGE
+      })));
+    };
+
+    void loadMatches();
+  }, [isAuthenticated, onboardingStep]);
 
   if (!isAuthenticated || onboardingStep !== 'COMPLETED') return null;
 
@@ -72,7 +70,7 @@ export default function MatchesPage() {
 
         {/* Grid Layout */}
         <div className="grid grid-cols-2 gap-4 auto-rows-max">
-          {MOCK_MATCHES.map((match) => (
+          {matches.map((match) => (
             <motion.div
               key={match.id}
               layoutId={`container-${match.id}`}
@@ -116,7 +114,7 @@ export default function MatchesPage() {
 }
 
 // --- Match Expanded Modal & State Machine ---
-function MatchModal({ match, onClose }: { match: typeof MOCK_MATCHES[0], onClose: () => void }) {
+function MatchModal({ match, onClose }: { match: MatchCard, onClose: () => void }) {
   const [flowState, setFlowState] = useState<
     'idle' | 
     'offline_step1' | 'offline_pending_match' | 'offline_agent' | 'offline_selection' | 'offline_pending_final' | 'offline_success' |
