@@ -79,7 +79,8 @@ export async function getIncomingLikes(userId: string) {
       actorUser: {
         select: {
           id: true,
-          phone: true,
+          displayName: true,
+          videoVerificationStatus: true,
           profile: true,
           photos: {
             select: { url: true },
@@ -92,14 +93,48 @@ export async function getIncomingLikes(userId: string) {
     orderBy: { createdAt: "desc" }
   });
 
+  const likeNotifications = await prisma.notification.findMany({
+    where: {
+      userId,
+      type: "NEW_LIKE",
+      actorUserId: { in: incoming.map((item) => item.actorUser.id) }
+    },
+    select: {
+      actorUserId: true,
+      isRead: true
+    }
+  });
+
+  const likeReadMap = new Map<string, boolean>();
+  for (const notification of likeNotifications) {
+    if (!notification.actorUserId) continue;
+    likeReadMap.set(notification.actorUserId, notification.isRead);
+  }
+
   return {
-    incoming: incoming.map((item) => ({
-      id: item.id,
-      createdAt: item.createdAt,
-      action: item.action,
-      actorUser: item.actorUser,
-      fromUser: item.actorUser
-    }))
+    incoming: incoming.map((item) => {
+      const senderName = item.actorUser.profile?.name ?? item.actorUser.displayName ?? "Member";
+      const primaryPhotoUrl = item.actorUser.photos[0]?.url ?? null;
+      const isSeen = likeReadMap.get(item.actorUser.id) ?? false;
+
+      return {
+        id: item.id,
+        createdAt: item.createdAt,
+        action: item.action,
+        isSeen,
+        actorUser: item.actorUser,
+        fromUser: item.actorUser,
+        senderData: {
+          id: item.actorUser.id,
+          displayName: senderName,
+          age: item.actorUser.profile?.age ?? null,
+          city: item.actorUser.profile?.city ?? null,
+          primaryPhotoUrl,
+          videoVerificationStatus: item.actorUser.videoVerificationStatus,
+          subscriptionStatus: isSeen ? "SEEN" : "NEW"
+        }
+      };
+    })
   };
 }
 

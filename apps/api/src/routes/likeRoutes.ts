@@ -18,6 +18,7 @@ router.post(
   asyncHandler(createLikeHandler)
 );
 router.get("/likes/incoming", requireAuth, requireActive, asyncHandler(incomingLikesHandler));
+router.get("/likes/received", requireAuth, requireActive, asyncHandler(incomingLikesHandler));
 router.get("/likes/outgoing", requireAuth, requireActive, asyncHandler(outgoingLikesHandler));
 
 export default router;

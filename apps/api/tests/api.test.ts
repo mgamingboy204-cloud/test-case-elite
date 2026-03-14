@@ -89,6 +89,40 @@ describe("Health and notifications", () => {
     expect(response.status).toBe(200);
     expect(response.body.notifications).toHaveLength(1);
   });
+
+  it("marks a notification as read", async () => {
+    const agent = request.agent(app);
+    const phone = "5551002010";
+    const token = await registerAndLogin(agent, phone, "Password@1");
+    const user = await prisma.user.findUnique({ where: { phone } });
+    if (!user) throw new Error("User missing");
+
+    const actor = await prisma.user.create({
+      data: {
+        phone: "5551002011",
+        email: "actor2@example.com",
+        passwordHash: await bcrypt.hash("Password@1", 10),
+        status: "APPROVED",
+        verifiedAt: new Date()
+      }
+    });
+
+    const notification = await prisma.notification.create({
+      data: {
+        userId: user.id,
+        actorUserId: actor.id,
+        type: "NEW_LIKE"
+      }
+    });
+
+    const response = await withAuth(agent.patch(`/notifications/${notification.id}/read`), token);
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+
+    const updated = await prisma.notification.findUnique({ where: { id: notification.id } });
+    expect(updated?.isRead).toBe(true);
+  });
+
 });
 
 describe("Auth routes", () => {
