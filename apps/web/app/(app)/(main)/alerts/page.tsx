@@ -5,78 +5,28 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { apiRequest } from "@/lib/api";
-
-interface Alert {
-  id: string;
-  type: "INTEREST" | "CONNECTION" | "CONCIERGE";
-  title: string;
-  message: string;
-  timestamp: string;
-  image: string;
-  isUnread: boolean;
-  targetId?: number;
-}
-
-interface NotificationApiItem {
-  id: string;
-  type: "NEW_LIKE" | "NEW_MATCH" | "NEW_MESSAGE" | "SYSTEM_PROMO" | "PROFILE_VIEW" | "VIDEO_VERIFICATION_UPDATE";
-  isRead: boolean;
-  createdAt: string;
-  title?: string | null;
-  message?: string | null;
-  deepLinkUrl?: string | null;
-  imageUrl?: string | null;
-  actor: { photos: Array<{ url: string }> } | null;
-}
-
-const FALLBACK_IMAGE =
-  "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&auto=format&fit=crop&q=80";
-
-function toAlert(item: NotificationApiItem): Alert {
-  const normalizedType = item.type === "NEW_MATCH" ? "CONNECTION" : item.type === "SYSTEM_PROMO" ? "CONCIERGE" : "INTEREST";
-  const title =
-    item.title ??
-    (item.type === "NEW_MATCH" ? "New Match" : item.type === "NEW_LIKE" ? "New Interest" : item.type === "SYSTEM_PROMO" ? "Elite Update" : "Update");
-  const message =
-    item.message ??
-    (item.type === "NEW_MATCH"
-      ? "A new match is waiting for your move."
-      : item.type === "NEW_LIKE"
-        ? "A member showed interest in your profile."
-        : item.type === "SYSTEM_PROMO"
-          ? "Concierge shared a new update for you."
-          : "You have a new notification.");
-
-  return {
-    id: item.id,
-    type: normalizedType,
-    title,
-    message,
-    timestamp: new Date(item.createdAt).toLocaleDateString(),
-    image: item.imageUrl ?? item.actor?.photos[0]?.url ?? FALLBACK_IMAGE,
-    isUnread: !item.isRead
-  };
-}
+import { fetchAlerts, type Alert } from "@/lib/queries";
+import { useStaleWhileRevalidate } from "@/lib/cache";
 
 export default function AlertsPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
   const router = useRouter();
   const [alerts, setAlerts] = useState<Alert[]>([]);
 
+  const alertsQuery = useStaleWhileRevalidate({
+    key: "alerts",
+    fetcher: fetchAlerts,
+    enabled: isAuthenticated && onboardingStep === "COMPLETED",
+    staleTimeMs: 60_000
+  });
+
+  const visibleAlerts = alerts.length > 0 ? alerts : alertsQuery.data ?? [];
+
   useEffect(() => {
     if (!isAuthenticated) router.replace("/signin");
     else if (onboardingStep !== "COMPLETED") router.replace("/onboarding/verification");
   }, [isAuthenticated, onboardingStep, router]);
 
-  useEffect(() => {
-    const loadNotifications = async () => {
-      if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
-      const response = await apiRequest<{ notifications: NotificationApiItem[] }>("/notifications", { auth: true });
-      setAlerts(response.notifications.map(toAlert));
-    };
-
-    void loadNotifications();
-  }, [isAuthenticated, onboardingStep]);
 
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
@@ -106,7 +56,7 @@ export default function AlertsPage() {
       </div>
 
       <div className="w-full px-4 pt-4 pb-20 flex flex-col gap-3">
-        {alerts.map((alert, index) => (
+        {visibleAlerts.map((alert, index) => (
           <motion.button
             key={alert.id}
             initial={{ opacity: 0, y: 10 }}

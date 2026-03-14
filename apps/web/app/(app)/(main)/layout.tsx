@@ -3,8 +3,10 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Compass, Heart, Bell, User, Sparkles, LogOut } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { fetchAlerts, fetchLikesIncoming, fetchMatches, fetchProfile } from "@/lib/queries";
+import { primeCache } from "@/lib/cache";
 import { motion } from "framer-motion";
 
 const NAV_ITEMS = [
@@ -18,9 +20,22 @@ const NAV_ITEMS = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
+  const prefetchRouteBundle = useCallback((href: string) => {
+    router.prefetch(href);
+    if (href === "/likes") void fetchLikesIncoming().then((data) => primeCache("likes-incoming", data));
+    if (href === "/matches") void fetchMatches().then((data) => primeCache("matches", data));
+    if (href === "/alerts") void fetchAlerts().then((data) => primeCache("alerts", data));
+    if (href === "/profile") void fetchProfile().then((data) => primeCache("profile", data));
+  }, [router]);
+
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    NAV_ITEMS.forEach((item) => prefetchRouteBundle(item.href));
+  }, [prefetchRouteBundle]);
 
   if (!mounted || !isAuthenticated) return null;
 
@@ -44,6 +59,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={href}
                 href={href}
+                prefetch
+                onMouseEnter={() => prefetchRouteBundle(href)}
+                onFocus={() => prefetchRouteBundle(href)}
                 className={`relative flex items-center gap-4 px-3 py-3.5 rounded-2xl transition-all duration-300 group ${isActive
                   ? "bg-primary/10 text-primary"
                   : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/5"
@@ -135,6 +153,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={href}
                   href={href}
+                  prefetch
+                  onMouseEnter={() => prefetchRouteBundle(href)}
+                  onFocus={() => prefetchRouteBundle(href)}
                   className={`flex items-center justify-center w-full h-full transition-colors ${
                     isActive ? "text-primary" : "text-foreground/40 hover:text-foreground/70"
                   }`}

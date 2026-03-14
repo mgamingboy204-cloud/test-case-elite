@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Settings, X, BadgeCheck, Briefcase, Ruler, LogOut, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { apiRequest } from "@/lib/api";
+import { fetchProfile } from "@/lib/queries";
+import { useStaleWhileRevalidate } from "@/lib/cache";
 
 type ProfileViewModel = {
   name: string;
@@ -41,49 +43,31 @@ export default function ProfilePage() {
   const [view, setView] = useState<"portfolio" | "settings" | "edit">("portfolio");
   const [model, setModel] = useState<ProfileViewModel | null>(null);
 
+  const profileQuery = useStaleWhileRevalidate({
+    key: "profile",
+    fetcher: fetchProfile,
+    enabled: isAuthenticated && onboardingStep === "COMPLETED",
+    staleTimeMs: 60_000
+  });
+
   useEffect(() => {
     if (!isAuthenticated) router.replace("/signin");
     else if (onboardingStep !== "COMPLETED") router.replace("/onboarding/verification");
   }, [isAuthenticated, onboardingStep, router]);
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
-      const data = await apiRequest<any>("/profile", { auth: true });
-      setModel({
-        name: data.viewModel?.name ?? data.profile?.name ?? "",
-        age: data.profile?.age ?? 27,
-        location: data.viewModel?.location ?? data.profile?.city ?? "",
-        image: data.photos?.[0]?.url ?? FALLBACK_IMAGE,
-        profession: data.viewModel?.profession ?? data.profile?.profession ?? "",
-        height: data.viewModel?.height ?? "5'8\"",
-        story: data.viewModel?.story ?? data.profile?.bioShort ?? "",
-        subscription: data.viewModel?.subscription ?? { tier: "FREE", status: "INACTIVE" },
-        settings: data.viewModel?.settings ?? {
-          pushNotificationsEnabled: true,
-          profileVisible: true,
-          showOnlineStatus: true,
-          discoverableByPremiumOnly: false
-        },
-        photos: data.viewModel?.photos ?? data.photos ?? []
-      });
-    };
-
-    void loadProfile();
-  }, [isAuthenticated, onboardingStep]);
 
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
   return (
     <div className="w-full h-full relative">
       <AnimatePresence mode="wait">
-        {view === "portfolio" && <PortfolioView key="portfolio" onSettings={() => setView("settings")} onEdit={() => setView("edit")} model={model} />}
+        {view === "portfolio" && <PortfolioView key="portfolio" onSettings={() => setView("settings")} onEdit={() => setView("edit")} model={model ?? profileQuery.data ?? null} />}
         {view === "settings" && (
           <SettingsView
             key="settings"
             onClose={() => setView("portfolio")}
             onLogout={logout}
-            model={model}
+            model={model ?? profileQuery.data ?? null}
             onSave={async (settings) => {
               await apiRequest("/profile/settings", { method: "PATCH", auth: true, body: JSON.stringify(settings) });
               setModel((prev) => (prev ? { ...prev, settings: { ...prev.settings, ...settings } } : prev));
@@ -94,7 +78,7 @@ export default function ProfilePage() {
           <EditView
             key="edit"
             onClose={() => setView("portfolio")}
-            model={model}
+            model={model ?? profileQuery.data ?? null}
             onSave={async (partial) => {
               await apiRequest("/profile", { method: "PATCH", auth: true, body: JSON.stringify(partial) });
               setModel((prev) => (prev ? { ...prev, ...partial } : prev));

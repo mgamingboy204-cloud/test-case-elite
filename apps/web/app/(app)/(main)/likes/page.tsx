@@ -5,7 +5,9 @@ import { X, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, PanInfo } from "framer-motion";
-import { fetchIncomingLikes, respondToIncomingLike, type LikesIncomingProfile } from "@/lib/likes";
+import { respondToIncomingLike, type LikesIncomingProfile } from "@/lib/likes";
+import { fetchLikesIncoming } from "@/lib/queries";
+import { useStaleWhileRevalidate } from "@/lib/cache";
 
 type LikeProfile = LikesIncomingProfile;
 
@@ -14,15 +16,14 @@ export default function LikesPage() {
   const router = useRouter();
   const [profiles, setProfiles] = useState<LikeProfile[]>([]);
 
-  useEffect(() => {
-    const loadIncoming = async () => {
-      if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
-      const incomingProfiles = await fetchIncomingLikes();
-      setProfiles(incomingProfiles);
-    };
+  const incomingQuery = useStaleWhileRevalidate({
+    key: "likes-incoming",
+    fetcher: fetchLikesIncoming,
+    enabled: isAuthenticated && onboardingStep === "COMPLETED",
+    staleTimeMs: 60_000
+  });
 
-    void loadIncoming();
-  }, [isAuthenticated, onboardingStep]);
+  const resolvedProfiles = profiles.length > 0 ? profiles : incomingQuery.data ?? [];
 
   useEffect(() => {
     if (!isAuthenticated) router.replace('/signin');
@@ -52,13 +53,13 @@ export default function LikesPage() {
   };
 
   const handleAction = async (action: "LIKE" | "PASS") => {
+    const current = resolvedProfiles[0];
     setProfiles((prev) => {
-      if (prev.length === 0) return prev;
-      const [, ...rest] = prev;
+      const source = prev.length > 0 ? prev : resolvedProfiles;
+      if (source.length === 0) return source;
+      const [, ...rest] = source;
       return rest;
     });
-
-    const current = profiles[0];
     if (!current) return;
 
     try {
@@ -80,7 +81,7 @@ export default function LikesPage() {
           Likes
         </h1>
         <p className="text-[10px] text-foreground/30 font-bold tracking-widest uppercase">
-          {profiles.length} Selective Interests
+          {resolvedProfiles.length} Selective Interests
         </p>
       </div>
 
@@ -89,12 +90,12 @@ export default function LikesPage() {
         className="flex-1 w-full relative flex items-center justify-center overflow-hidden"
         style={{ overscrollBehavior: 'contain' }}
       >
-         {profiles.length === 0 ? (
+         {resolvedProfiles.length === 0 ? (
             <div className="text-foreground/40 text-sm font-light">No new likes.</div>
-         ) : profiles.map((profile, index) => {
+         ) : resolvedProfiles.map((profile, index) => {
             let offset = index;
-            if (offset > Math.floor(profiles.length / 2)) {
-                offset -= profiles.length;
+            if (offset > Math.floor(resolvedProfiles.length / 2)) {
+                offset -= resolvedProfiles.length;
             }
             const distance = Math.abs(offset);
             
@@ -112,7 +113,7 @@ export default function LikesPage() {
             if (opacity < 0) opacity = 0;
             
             // Center card wins the highest z-index; background cards step down
-            const zIndex = isCenter ? profiles.length + 10 : profiles.length - distance;
+            const zIndex = isCenter ? resolvedProfiles.length + 10 : resolvedProfiles.length - distance;
 
             return (
               <motion.div
