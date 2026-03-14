@@ -116,7 +116,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-background"
           style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
         >
-          <div className="w-full h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto border-x border-red-500/20">
+          <div className="w-full h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto">
     {children}
   </div>
         </main>
