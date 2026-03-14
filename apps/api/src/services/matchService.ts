@@ -26,10 +26,12 @@ export async function listMatches(userId: string) {
     },
     orderBy: { createdAt: "desc" }
   });
+
   const formatted = matches.map((match) => {
     const otherUser = match.userAId === userId ? match.userB : match.userA;
     const myConsent = match.consents.find((consent) => consent.userId === userId)?.response ?? null;
     const otherConsent = match.consents.find((consent) => consent.userId === otherUser.id)?.response ?? null;
+
     const consentStatus = match.phoneExchange
       ? "PHONE_EXCHANGE_READY"
       : myConsent === "YES" && otherConsent === "YES"
@@ -37,22 +39,51 @@ export async function listMatches(userId: string) {
         : myConsent === "NO" || otherConsent === "NO"
           ? "DECLINED"
           : "PENDING";
+
+    const statusLabel = match.phoneExchange
+      ? "Numbers unlocked"
+      : myConsent === "YES" && !otherConsent
+        ? "Awaiting their number"
+        : !myConsent && otherConsent === "YES"
+          ? "They shared number. Share yours"
+          : myConsent === "NO" || otherConsent === "NO"
+            ? "Number sharing declined"
+            : "Number sharing not started";
+
+    const primaryPhotoUrl = otherUser.photos?.[0]?.url ?? null;
+
     return {
       id: match.id,
       createdAt: match.createdAt,
+      matchedAt: match.createdAt,
       consentStatus,
+      status: statusLabel,
       phoneExchangeReady: Boolean(match.phoneExchange),
+      isNumberShared: Boolean(match.phoneExchange),
+      myConsent,
+      partnerConsent: otherConsent,
       consents: match.consents,
+      partnerInfo: {
+        id: otherUser.id,
+        name: otherUser.profile?.name ?? "Member",
+        age: otherUser.profile?.age ?? null,
+        city: otherUser.profile?.city ?? null,
+        profession: otherUser.profile?.profession ?? null,
+        primaryPhotoUrl,
+        likedPhotoUrl: primaryPhotoUrl,
+        photos: otherUser.photos?.map((photo) => photo.url) ?? []
+      },
       user: {
         id: otherUser.id,
         name: otherUser.profile?.name ?? "Member",
         city: otherUser.profile?.city ?? null,
         profession: otherUser.profile?.profession ?? null,
-        primaryPhotoUrl: otherUser.photos?.[0]?.url ?? null,
+        primaryPhotoUrl,
         photos: otherUser.photos?.map((photo) => photo.url) ?? []
       }
     };
   });
+
   return { matches: formatted };
 }
 
