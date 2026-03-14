@@ -49,10 +49,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning style={{ scrollBehavior: 'smooth' }}>
       <head>
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
-        />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body

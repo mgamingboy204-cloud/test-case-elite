@@ -93,28 +93,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
 
         {/* Top bar — always shown */}
+        {/* Outer header: background bleeds into status bar via padding-top safe area */}
         <header
-          className="flex-none w-full flex items-center justify-between px-6 z-40 bg-background/80 backdrop-blur-xl border-b border-border/10 min-[769px]:h-[72px]"
-          style={{ paddingTop: "env(safe-area-inset-top)", minHeight: "calc(72px + env(safe-area-inset-top))" }}
+          className="flex-none w-full z-40 bg-background/80 backdrop-blur-xl border-b border-border/10"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
         >
-          {/* Mobile: ELITE logo; Desktop: breadcrumb label */}
-          <span className="min-[769px]:hidden text-xl font-serif tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-primary to-highlight">
-            ELITE
-          </span>
-          <span className="hidden min-[769px]:block text-[11px] uppercase tracking-[0.4em] text-foreground/40 font-medium">
-            {NAV_ITEMS.find(n => n.href === pathname)?.label ?? 'Elite'}
-          </span>
+          {/* Inner row: fixed height keeps content always correctly positioned */}
+          <div className="flex items-center justify-between px-6 h-[56px] min-[769px]:h-[72px]">
+            {/* Mobile: ELITE logo; Desktop: breadcrumb label */}
+            <span className="min-[769px]:hidden text-xl font-serif tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-primary to-highlight">
+              ELITE
+            </span>
+            <span className="hidden min-[769px]:block text-[11px] uppercase tracking-[0.4em] text-foreground/40 font-medium">
+              {NAV_ITEMS.find(n => n.href === pathname)?.label ?? 'Elite'}
+            </span>
 
-          {/* Filter / settings icon */}
-          <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-foreground/5 transition-colors">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-              <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
-              <line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" />
-              <line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" />
-              <line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" />
-              <line x1="17" y1="16" x2="23" y2="16" />
-            </svg>
-          </button>
+            {/* Filter / settings icon */}
+            <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-foreground/5 transition-colors">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" />
+                <line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" />
+                <line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" />
+                <line x1="17" y1="16" x2="23" y2="16" />
+              </svg>
+            </button>
+          </div>
         </header>
 
         {/* ── Scrollable Content ── */}
@@ -131,10 +135,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* ═══════════════════════════════════════════════════════════════════
             MOBILE BOTTOM NAV — hidden on 769px+
         ═══════════════════════════════════════════════════════════════════ */}
+        {/* Outer nav: background bleeds into home indicator via padding-bottom safe area only */}
         <nav
           className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)", height: "calc(65px + env(safe-area-inset-bottom))" }}
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
+          {/* Inner row: fixed 65px — icons always centred, never pushed into home bar */}
           <div className="flex h-[65px] items-center justify-around px-2">
             {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
               const isActive = pathname === href;
