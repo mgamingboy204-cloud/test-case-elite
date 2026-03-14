@@ -114,10 +114,11 @@ export async function getDiscoverProfiles(options: {
           videoVerificationStatus: true,
           photos: {
             select: {
+              id: true,
               url: true
             },
             orderBy: { createdAt: "desc" },
-            take: 1
+            take: 6
           }
         }
       }
@@ -133,7 +134,14 @@ export async function getDiscoverProfiles(options: {
     intent: profile.intent,
     videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,
     primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl),
-    photos: []
+    photos:
+      profile.user?.photos
+        ?.map((photo) => ({
+          id: photo.id,
+          url: normalizePhotoUrl(photo.url, options.baseUrl)
+        }))
+        .filter((photo): photo is { id: string; url: string } => Boolean(photo.url)) ?? [],
+    isMutualMatch: false
   }));
 
   return { profiles: formatted };
@@ -182,10 +190,11 @@ export async function getDiscoverFeed(options: {
           videoVerificationStatus: true,
           photos: {
             select: {
+              id: true,
               url: true
             },
             orderBy: { createdAt: "desc" },
-            take: 1
+            take: 6
           }
         }
       }
@@ -202,7 +211,15 @@ export async function getDiscoverFeed(options: {
     bioShort: profile.bioShort,
     intent: profile.intent,
     videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,
-    primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl)
+    primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl),
+    photos:
+      profile.user?.photos
+        ?.map((photo) => ({
+          id: photo.id,
+          url: normalizePhotoUrl(photo.url, options.baseUrl)
+        }))
+        .filter((photo): photo is { id: string; url: string } => Boolean(photo.url)) ?? [],
+    isMutualMatch: false
   }));
 
   const nextCursor = profiles.length > take ? pageProfiles[pageProfiles.length - 1]?.userId : undefined;
@@ -219,7 +236,7 @@ export async function getDiscoverProfileDetail(options: { userId: string; target
           status: true,
           verifiedAt: true,
           videoVerificationStatus: true,
-          photos: { select: { url: true }, orderBy: { createdAt: "desc" }, take: 1 }
+          photos: { select: { id: true, url: true }, orderBy: { createdAt: "desc" }, take: 6 }
         }
       }
     }
@@ -237,6 +254,14 @@ export async function getDiscoverProfileDetail(options: { userId: string; target
     bioShort: profile.bioShort,
     intent: profile.intent,
     primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl),
+    photos:
+      profile.user?.photos
+        ?.map((photo) => ({
+          id: photo.id,
+          url: normalizePhotoUrl(photo.url, options.baseUrl)
+        }))
+        .filter((photo): photo is { id: string; url: string } => Boolean(photo.url)) ?? [],
+    isMutualMatch: false,
     verifiedAt: profile.user?.verifiedAt ?? null,
     videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,
     status: profile.user?.status ?? null
