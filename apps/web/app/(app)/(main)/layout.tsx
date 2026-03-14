@@ -25,7 +25,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!mounted || !isAuthenticated) return null;
 
   return (
-    // Reverted to 100dvh for pixel-perfect screen height matching on iOS
     <div className="flex flex-row h-[100dvh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -123,25 +122,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            MOBILE BOTTOM NAV (MANUAL TIGHT GAP)
+            MOBILE BOTTOM NAV 
         ═══════════════════════════════════════════════════════════════════ */}
-        {/* We removed all `env()` inline styles and added a strict pb-4 (16px) 
-            to leave just enough room for the white home bar and nothing more. */}
-        <nav className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground pb-4">
+        {/* Absolutely zero padding here. Force pinned to the bottom. */}
+        <nav className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground">
           
-          <div className="flex h-[48px] items-center justify-around px-2 pt-1">
-            {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+          {/* Exactly 50px tall, icons perfectly centered inside */}
+          <div className="flex h-[50px] items-center justify-around px-2">
+            {NAV_ITEMS.map(({ href, icon: Icon }) => {
               const isActive = pathname === href;
               return (
                 <Link
                   key={href}
                   href={href}
-                  className={`flex flex-col items-center justify-center w-full h-full gap-[2px] transition-colors ${
+                  className={`flex items-center justify-center w-full h-full transition-colors ${
                     isActive ? "text-primary" : "text-foreground/40 hover:text-foreground/70"
                   }`}
                 >
-                  <Icon size={22} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "drop-shadow-[0_0_8px_rgba(200,155,144,0.4)]" : ""} />
-                  <span className="text-[9px] font-medium tracking-wide">{label}</span>
+                  {/* Icon bumped up to size 26, text span completely deleted */}
+                  <Icon size={26} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "drop-shadow-[0_0_8px_rgba(200,155,144,0.4)]" : ""} />
                 </Link>
               );
             })}
