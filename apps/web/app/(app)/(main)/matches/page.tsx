@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/api";
+import { getOfflineMeet, getOnlineMeet, getPhoneUnlock, getSocialExchange, respondMatchConsent } from "@/lib/matches";
 import { MapPin, Video, Link as LinkIcon, Unlock, ChevronRight, Loader2, Instagram, Linkedin, Ghost, X, CheckCircle2, Copy } from "lucide-react";
 
 // --- Mock Data ---
@@ -128,45 +129,70 @@ function MatchModal({ match, onClose }: { match: MatchCard, onClose: () => void 
   const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [selectedSocial, setSelectedSocial] = useState<string | null>(null);
+  const [unlockedPhone, setUnlockedPhone] = useState<string | null>(null);
+  const [socialHandle, setSocialHandle] = useState<string>("@liam_creative");
 
   // Flow Triggers
   const startFlow = (flow: string) => setFlowState(`${flow}_step1` as any);
-  const proceedOfflineInvite = () => {
+  const proceedOfflineInvite = async () => {
     setFlowState('offline_pending_match');
-    setTimeout(() => {
-        setFlowState('offline_agent');
-        setTimeout(() => setFlowState('offline_selection'), 2500);
-    }, 2000);
+    await respondMatchConsent({ matchId: match.id, type: 'OFFLINE_MEET', response: 'YES' });
+    setFlowState('offline_agent');
+    setTimeout(() => setFlowState('offline_selection'), 1200);
   };
 
-  const proceedOfflineSubmit = () => {
+  const proceedOfflineSubmit = async () => {
     setFlowState('offline_pending_final');
-    setTimeout(() => setFlowState('offline_success'), 2000);
+    await respondMatchConsent({
+      matchId: match.id,
+      type: 'OFFLINE_MEET',
+      response: 'YES',
+      payload: { venues: selectedVenues, times: selectedTimes }
+    });
+    await getOfflineMeet(match.id).catch(() => null);
+    setFlowState('offline_success');
   }
 
-  const proceedOnline = () => {
+  const proceedOnline = async () => {
     setFlowState('online_pending_match');
-    setTimeout(() => {
-        setFlowState('online_agent');
-        setTimeout(() => setFlowState('online_success'), 2500);
-    }, 2000);
+    await respondMatchConsent({
+      matchId: match.id,
+      type: 'ONLINE_MEET',
+      response: 'YES',
+      payload: { platforms: selectedPlatforms, times: selectedTimes }
+    });
+    setFlowState('online_agent');
+    await getOnlineMeet(match.id).catch(() => null);
+    setTimeout(() => setFlowState('online_success'), 1200);
   };
 
-  const proceedSocial = () => {
+  const proceedSocial = async () => {
     if(!selectedSocial) return;
     setFlowState('social_pending_match');
-    setTimeout(() => {
-        setFlowState('social_agent');
-        setTimeout(() => setFlowState('social_success'), 2500);
-    }, 2000);
+    await respondMatchConsent({
+      matchId: match.id,
+      type: 'SOCIAL_EXCHANGE',
+      response: 'YES',
+      payload: { platform: selectedSocial }
+    });
+    setFlowState('social_agent');
+    const exchange = await getSocialExchange(match.id).catch(() => null);
+    if (exchange?.payloads?.length) {
+      const firstPayload = exchange.payloads.find((entry) => typeof entry.payload === 'object' && entry.payload !== null) as { payload?: { handle?: string; platform?: string } } | undefined;
+      if (firstPayload?.payload?.handle) setSocialHandle(firstPayload.payload.handle);
+    }
+    setTimeout(() => setFlowState('social_success'), 1200);
   };
 
-  const proceedPhone = () => {
+  const proceedPhone = async () => {
     setFlowState('phone_pending_match');
-    setTimeout(() => {
-        setFlowState('phone_agent');
-        setTimeout(() => setFlowState('phone_success'), 2500);
-    }, 2000);
+    await respondMatchConsent({ matchId: match.id, type: 'PHONE_NUMBER', response: 'YES' });
+    setFlowState('phone_agent');
+    const unlock = await getPhoneUnlock(match.id).catch(() => null);
+    if (unlock?.users?.length) {
+      setUnlockedPhone(unlock.users[0]?.phone ?? null);
+    }
+    setTimeout(() => setFlowState('phone_success'), 1200);
   };
 
   // Content Renderer
@@ -246,7 +272,7 @@ function MatchModal({ match, onClose }: { match: MatchCard, onClose: () => void 
         return (
           <SuccessStep title="Exchange Secured" message="Credentials safely transmitted.">
              <div className="mt-4 p-4 rounded-xl bg-foreground/5 border border-border/10 flex items-center justify-between backdrop-blur-md">
-                <span className="text-primary font-medium tracking-wide">@liam_creative</span>
+                <span className="text-primary font-medium tracking-wide">{socialHandle}</span>
                 <button className="p-2 hover:bg-foreground/10 rounded-full transition-colors"><Copy size={16} className="text-foreground/60" /></button>
              </div>
           </SuccessStep>
@@ -267,7 +293,7 @@ function MatchModal({ match, onClose }: { match: MatchCard, onClose: () => void 
         return (
           <SuccessStep title="Direct Line Unlocked" message="Connection established.">
              <div className="mt-4 flex justify-center py-4">
-                <span className="text-2xl font-serif text-white tracking-widest">+91 • 98765 43210</span>
+                <span className="text-2xl font-serif text-white tracking-widest">{unlockedPhone ?? "+91 • 98765 43210"}</span>
              </div>
           </SuccessStep>
         );

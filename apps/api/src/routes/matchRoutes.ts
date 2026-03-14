@@ -1,7 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import { ConsentSchema } from "@elite/shared";
-import { listMatchesHandler, phoneUnlockHandler, respondConsentHandler } from "../controllers/matchController";
+import {
+  listMatchesHandler,
+  offlineMeetUnlockHandler,
+  onlineMeetUnlockHandler,
+  phoneUnlockHandler,
+  respondConsentHandler,
+  socialExchangeUnlockHandler
+} from "../controllers/matchController";
 import { requireAuth, requireAuthHeader } from "../middlewares/auth";
 import { requireActive } from "../middlewares/onboarding";
 import { validateBody, validateParams } from "../middlewares/validate";
@@ -24,6 +31,27 @@ router.get(
   requireActive,
   validateParams(z.object({ matchId: z.string() })),
   asyncHandler(phoneUnlockHandler)
+);
+router.get(
+  "/offline-meet/:matchId",
+  requireAuth,
+  requireActive,
+  validateParams(z.object({ matchId: z.string() })),
+  asyncHandler(offlineMeetUnlockHandler)
+);
+router.get(
+  "/online-meet/:matchId",
+  requireAuth,
+  requireActive,
+  validateParams(z.object({ matchId: z.string() })),
+  asyncHandler(onlineMeetUnlockHandler)
+);
+router.get(
+  "/social-exchange/:matchId",
+  requireAuth,
+  requireActive,
+  validateParams(z.object({ matchId: z.string() })),
+  asyncHandler(socialExchangeUnlockHandler)
 );
 
 export default router;
