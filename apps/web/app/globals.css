@@ -46,6 +46,11 @@ html, body {
   transition: background-color 400ms ease, color 400ms ease;
 }
 
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* ─── Universal Helpers ────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -53,7 +58,7 @@ html, body {
 
 /* ─── Safe Area Spacer (Notch) ─────────────────────────────── */
 .safe-area-top-spacer {
-  min-height: env(safe-area-inset-top);
+  min-height: var(--safe-area-top);
   width: 100%;
 }
 
@@ -69,8 +74,6 @@ html, body {
 /* ─── Adaptive PWA Interactions ───────────────────────────── */
 @media (max-width: 768px) {
   .mobile-container {
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-top: env(safe-area-inset-top);
     height: 100dvh;
   }
 
