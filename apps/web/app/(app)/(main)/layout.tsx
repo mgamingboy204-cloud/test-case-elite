@@ -125,42 +125,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             MOBILE BOTTOM NAV 
         ═══════════════════════════════════════════════════════════════════ */}
         {/* Absolutely zero padding here. Force pinned to the bottom. */}
-        <nav className="fixed bottom-0 left-0 w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground">
+      <nav className="fixed bottom-0 left-0 w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground">
+  
   {/* 1. Icon Container 
-      This stays exactly 50px tall so icons are easy to tap.
+      A fixed 50px height keeps the icons perfectly centered for the thumb.
   */}
   <div className="flex h-[50px] items-center justify-around px-2">
-    {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+    {NAV_ITEMS.map(({ href, icon: Icon }) => {
       const isActive = pathname === href;
       return (
         <Link
           key={href}
           href={href}
-          className={`flex items-center justify-center w-full h-full transition-colors ${
-            isActive ? "text-primary" : "text-foreground/40 hover:text-foreground/70"
+          className={`flex items-center justify-center w-full h-full transition-all duration-300 ${
+            isActive ? "text-primary scale-110" : "text-foreground/40 hover:text-foreground/70 scale-100"
           }`}
         >
-          <div className="flex flex-col items-center justify-center">
-            <Icon 
-              size={24} 
-              strokeWidth={isActive ? 2.5 : 2} 
-              className={isActive ? "drop-shadow-[0_0_8px_rgba(200,155,144,0.4)]" : ""} 
-            />
-            {/* Optional: Add a tiny label if she wants text, 
-               otherwise keep this hidden for a cleaner look 
-            */}
-            <span className={`text-[9px] mt-1 uppercase tracking-tighter ${isActive ? "opacity-100" : "opacity-0"}`}>
-              {label}
-            </span>
-          </div>
+          <Icon 
+            size={26} 
+            strokeWidth={isActive ? 2.5 : 2} 
+            className={isActive ? "drop-shadow-[0_0_10px_rgba(200,155,144,0.5)]" : ""} 
+          />
         </Link>
       );
     })}
   </div>
 
   {/* 2. Safe Area Spacer 
-      This fills the gap behind the iPhone Home Bar with the navbar color 
-      so it doesn't look like a hole.
+      This is the 'magic' div. It fills the empty space under the 
+      iPhone Home Bar with the navbar background color.
   */}
   <div className="h-[env(safe-area-inset-bottom)]" />
 </nav>
