@@ -156,10 +156,10 @@ export default function DiscoverPage() {
 <div className="absolute left-0 right-0 bottom-10 px-10 flex justify-between items-center z-40 w-full max-w-lg mx-auto pointer-events-none">
 
   {/* Pass Button (X) */}
+  {/* Standardized size to w-20 h-20 */}
   <motion.button
     whileTap={{ scale: 0.9 }}
     whileHover={{ scale: 1.05 }}
-    {/* Standardized size to w-20 h-20 */}
     className="w-20 h-20 rounded-full bg-background/40 backdrop-blur-2xl border border-primary/40 flex items-center justify-center pointer-events-auto relative overflow-hidden group shadow-xl"
   >
     <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -167,10 +167,10 @@ export default function DiscoverPage() {
   </motion.button>
 
   {/* Like Button (Heart) */}
+  {/* Matched size to w-20 h-20 for perfect symmetry */}
   <motion.button
     whileTap={{ scale: 0.9 }}
     whileHover={{ scale: 1.05 }}
-    {/* Matched size to w-20 h-20 for perfect symmetry */}
     className="w-20 h-20 rounded-full bg-background/40 backdrop-blur-3xl shadow-[0_20px_50px_rgba(200,155,144,0.2)] border border-primary/60 flex items-center justify-center pointer-events-auto relative overflow-hidden group"
   >
     <div className="absolute inset-0 bg-primary/10 blur-xl opacity-50 group-hover:opacity-100 transition-opacity" />
