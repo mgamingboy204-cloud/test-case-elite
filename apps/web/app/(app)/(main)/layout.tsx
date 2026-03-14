@@ -112,14 +112,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Scrollable Content */}
-        <main
-          className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-background"
-          style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
-        >
-          <div className="w-full h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto">
+<main
+  className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-background"
+  style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
+>
+  {/* Added pb-24 so content doesn't get cut off by the fixed navbar */}
+  <div className="w-full h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto pb-24">
     {children}
   </div>
-        </main>
+</main>
 
         {/* ═══════════════════════════════════════════════════════════════════
             MOBILE BOTTOM NAV 
