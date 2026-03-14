@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { PhoneInput } from "@/components/auth/phone-input";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { GlassCard } from "@/components/ui/glass-card";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,7 +21,7 @@ export default function SignIn() {
     e.preventDefault();
     if (step === 1 && phone.length === 10) {
       setStep(2);
-    } else if (step === 2 && password.length >= 6) {
+    } else if (step === 2 && password.length >= 8) {
       handleSignIn();
     }
   };
@@ -106,7 +104,7 @@ export default function SignIn() {
               
               <button 
                 type="submit" 
-                disabled={password.length < 6 || loading}
+                disabled={password.length < 8 || loading}
                 className="btn-elite-primary disabled:opacity-20 disabled:grayscale"
               >
                 {loading ? (
