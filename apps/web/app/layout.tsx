@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -16,6 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Elite | Connect with Intention",
   description: "An exclusive, high-end matchmaking platform.",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -33,7 +35,8 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FBFCF8" },
+    { media: "(max-width: 768px)", color: "#13181F" },
+    { media: "(min-width: 769px)", color: "#FBFCF8" },
     { media: "(prefers-color-scheme: dark)", color: "#13181F" },
   ],
 };
@@ -45,10 +48,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning style={{ scrollBehavior: 'smooth' }}>
+      <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+      </head>
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
+        <Script id="device-mode" strategy="beforeInteractive">
+          {`(function(){var mobile=window.matchMedia('(max-width: 768px)').matches;document.documentElement.dataset.device=mobile?'mobile':'desktop';})();`}
+        </Script>
         <Providers>
           {children}
         </Providers>
