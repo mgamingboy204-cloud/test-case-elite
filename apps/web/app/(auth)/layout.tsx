@@ -1,83 +1,38 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import { useTheme } from "@/app/providers";
-import { isStandaloneDisplayMode } from "@/lib/displayMode";
-import styles from "./layout.module.css";
+import { ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { usePathname } from "next/navigation";
 
-function DesktopAuthShell({ children }: { children: React.ReactNode }) {
-  const { theme, toggle } = useTheme();
+export default function AuthLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
 
   return (
-    <div className={styles.authShell}>
-      <div className={styles.authBackdrop} aria-hidden="true" />
-      <div className={styles.authOverlay} aria-hidden="true" />
-      <div className={styles.authVignette} aria-hidden="true" />
-      <div className={`${styles.authGlow} ${styles.authGlowTop}`} aria-hidden="true" />
-      <div className={`${styles.authGlow} ${styles.authGlowBottom}`} aria-hidden="true" />
+    <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 relative bg-background">
+      {/* Subtle Abstract Background for Auth */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[120px] mix-blend-screen" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-slate-800/20 rounded-full blur-[100px] mix-blend-screen" />
+      </div>
 
-      <header className={styles.topRow}>
-        <Link href="/" className={styles.brand}>Elite Match</Link>
-        <button onClick={toggle} className={styles.themeButton} aria-label="Toggle theme">
-          {theme === "light" ? "☾" : "☀"}
-        </button>
-      </header>
+      <div className="w-full flex justify-center mb-12 z-10">
+        <span className="w-12 h-12 rounded-full border border-primary/30 flex items-center justify-center bg-primary/10">
+          <div className="w-3 h-3 rounded-full bg-primary shadow-[0_0_12px_var(--color-primary)]" />
+        </span>
+      </div>
 
-      <main className={styles.authPanel}>{children}</main>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={pathname}
+          initial={{ opacity: 0, scale: 0.98, filter: "blur(10px)" }}
+          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+          exit={{ opacity: 0, scale: 0.98, filter: "blur(10px)" }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full flex justify-center z-10"
+        >
+          {children}
+        </motion.div>
+      </AnimatePresence>
     </div>
-  );
-}
-
-function MobileAuthShell({ children }: { children: React.ReactNode }) {
-  const { theme, toggle } = useTheme();
-
-  useEffect(() => {
-    document.body.classList.add("app-entry-no-scroll");
-    return () => {
-      document.body.classList.remove("app-entry-no-scroll");
-    };
-  }, []);
-
-  return (
-    <div className={styles.mobileAuthShell}>
-      <div className={styles.mobileAuthBackground} aria-hidden="true" />
-      <div className={styles.mobileAuthOverlay} aria-hidden="true" />
-
-      <header className={styles.mobileTopRow}>
-        <Link href="/" className={styles.brand}>Elite Match</Link>
-        <button onClick={toggle} className={styles.themeButton} aria-label="Toggle theme">
-          {theme === "light" ? "☾" : "☀"}
-        </button>
-      </header>
-
-      <main className={styles.mobileAuthSheet}>{children}</main>
-    </div>
-  );
-}
-
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  const [useMobileShell, setUseMobileShell] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 900px)");
-    const applyMode = () => {
-      setUseMobileShell(media.matches || isStandaloneDisplayMode());
-    };
-
-    applyMode();
-    media.addEventListener("change", applyMode);
-    window.addEventListener("resize", applyMode);
-    return () => {
-      media.removeEventListener("change", applyMode);
-      window.removeEventListener("resize", applyMode);
-    };
-  }, []);
-
-  return (
-    <>
-      {useMobileShell ? <MobileAuthShell>{children}</MobileAuthShell> : <DesktopAuthShell>{children}</DesktopAuthShell>}
-
-    </>
   );
 }

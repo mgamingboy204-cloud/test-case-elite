@@ -1,73 +1,57 @@
 import type { Metadata, Viewport } from "next";
-import "./safe-area.css";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SafeAreaDebugProbe } from "./components/SafeAreaDebugProbe";
-import Providers from "./providers";
+import { Providers } from "./providers";
 
-const themeScript = `
-  (function() {
-    try {
-      document.documentElement.classList.add("theme-preload");
-      var stored = localStorage.getItem("em_theme");
-      var systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      var theme = stored === "light" || stored === "dark" ? stored : (systemDark ? "dark" : "light");
-      document.documentElement.dataset.theme = theme;
-      document.documentElement.style.colorScheme = theme;
-      document.documentElement.style.backgroundColor = theme === "dark" ? "#0B0B10" : "#F8F4EF";
-      requestAnimationFrame(function() {
-        document.documentElement.classList.remove("theme-preload");
-      });
-    } catch (e) {}
-  })();
-`;
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
-  title: "Elite Match",
-  description: "Premium, verified matchmaking experience.",
-  applicationName: "Elite Match",
-  manifest: "/manifest.webmanifest",
+  title: "Elite | Connect with Intention",
+  description: "An exclusive, high-end matchmaking platform.",
   appleWebApp: {
     capable: true,
-    title: "Elite Match",
-    statusBarStyle: "black-translucent"
+    statusBarStyle: "black-translucent",
+    title: "Elite",
   },
-  icons: {
-    icon: [
-      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" }
-    ],
-    apple: "/icons/apple-touch-icon.png"
-  }
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#0B0B10" },
-    { media: "(prefers-color-scheme: light)", color: "#F8F4EF" }
+    { media: "(prefers-color-scheme: light)", color: "#FBFCF8" },
+    { media: "(prefers-color-scheme: dark)", color: "#13181F" },
   ],
-  maximumScale: 1,
-  userScalable: false
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
-      <body>
-        <div className="boot-shell" aria-hidden="true">
-          <div className="boot-shell__mark" />
-        </div>
-        <div id="app-root">
-          <Providers>
-            <main className="site-main">{children}</main>
-            <SafeAreaDebugProbe />
-          </Providers>
-        </div>
+    <html lang="en" suppressHydrationWarning style={{ scrollBehavior: 'smooth' }}>
+      <body
+        suppressHydrationWarning
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+      >
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

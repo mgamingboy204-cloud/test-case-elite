@@ -1,28 +1,19 @@
-import { MarketingContentPage } from "@/app/components/MarketingContentPage";
-
-export default function TermsPage() {
-  const sections = [
-    { title: "1. Acceptance of Terms", body: "By accessing or using Elite Match, you agree to be bound by these Terms of Service. If you do not agree, do not use the platform." },
-    { title: "2. Eligibility", body: "You must be at least 18 years of age to use Elite Match. By creating an account, you represent and warrant that you meet this requirement." },
-    { title: "3. Account Registration", body: "You must provide accurate, complete information during registration. You are responsible for maintaining the confidentiality of your account credentials." },
-    { title: "4. Membership & Payments", body: "Elite Match offers paid membership plans. All payments are processed securely. Subscriptions auto-renew unless cancelled before the renewal date." },
-    { title: "5. User Conduct", body: "You agree not to: harass, abuse, or threaten other users; create fake profiles; use the platform for commercial purposes; or violate any applicable laws." },
-    { title: "6. Content", body: "You retain ownership of content you upload. By uploading, you grant Elite Match a license to display your content within the platform." },
-    { title: "7. Termination", body: "We reserve the right to suspend or terminate your account at any time for violations of these terms or for any other reason at our discretion." },
-    { title: "8. Limitation of Liability", body: "Elite Match is provided 'as is' without warranties. We are not liable for any damages arising from your use of the platform." },
-    { title: "9. Changes to Terms", body: "We may modify these terms at any time. Continued use after changes constitutes acceptance of the updated terms." }
-  ];
-
+export default function TermsOfService() {
   return (
-    <MarketingContentPage title="Terms of Service" subtitle="Last updated: January 2026">
-      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        {sections.map((section) => (
-          <article key={section.title} className="marketing-panel" style={{ padding: "24px 24px 26px" }}>
-            <h3 style={{ marginBottom: 10 }}>{section.title}</h3>
-            <p className="marketing-kicker">{section.body}</p>
-          </article>
-        ))}
+    <div className="min-h-screen py-32 px-6 md:px-12 max-w-4xl mx-auto flex flex-col pointer-events-auto">
+      <h1 className="text-4xl md:text-5xl font-light mb-12 text-foreground">Terms of <span className="font-semibold text-primary">Service</span></h1>
+      <div className="prose prose-invert prose-lg text-foreground/70 font-light leading-relaxed">
+        <p className="mb-6">Welcome to Elite. By accessing our platform, configuring an account, or requesting an invitation, you implicitly accept these highly exclusive terms of service.</p>
+        
+        <h2 className="text-2xl text-foreground font-medium mt-12 mb-4">1. Membership Eligibility</h2>
+        <p className="mb-6">Membership is granted strictly on an invitation and review basis. Elite reserves the unilateral right to deny or revoke access to maintain the integrity of our network.</p>
+        
+        <h2 className="text-2xl text-foreground font-medium mt-12 mb-4">2. Code of Conduct</h2>
+        <p className="mb-6">Members are expected to interact with the utmost respect, discretion, and intention. Any violation of privacy protocols or inappropriate behavior will result in an immediate, permanent ban.</p>
+        
+        <h2 className="text-2xl text-foreground font-medium mt-12 mb-4">3. Intellectual Property</h2>
+        <p className="mb-6">The Elite platform, its design system, algorithm, and 3D architectural implementations are protected proprietary assets.</p>
       </div>
-    </MarketingContentPage>
+    </div>
   );
 }
