@@ -25,8 +25,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!mounted || !isAuthenticated) return null;
 
   return (
-    // Root: row on desktop, column on mobile
-    <div className="flex flex-row h-[100dvh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
+    // Changed h-[100dvh] to h-[100vh] to stop the browser from auto-calculating the bottom gap
+    <div className="flex flex-row h-[100vh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
 
       {/* ═══════════════════════════════════════════════════════════════════
           DESKTOP SIDEBAR — hidden on mobile, visible 769px+
@@ -133,14 +133,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            MOBILE BOTTOM NAV 
+            MOBILE BOTTOM NAV (Completely stripped of safe-area padding)
         ═══════════════════════════════════════════════════════════════════ */}
-        <nav
-          className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-        >
-          {/* Inner row: strictly 65px tall. Safe area padding is applied to the parent. */}
-          <div className="flex h-[65px] items-center justify-around px-2">
+        <nav className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground">
+          {/* We added a slight pb-2 so the icons don't sit directly on the physical screen edge, but removed all iOS dynamic gaps */}
+          <div className="flex h-[70px] items-center justify-around px-2 pb-2">
             {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
               const isActive = pathname === href;
               return (
