@@ -1,6 +1,17 @@
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 
+function resolveAge(age: number | null | undefined, dob: Date | null | undefined) {
+  if (dob) {
+    const today = new Date();
+    let years = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) years -= 1;
+    return years;
+  }
+  return age ?? null;
+}
+
 export async function listMatches(userId: string) {
   const matches = await prisma.match.findMany({
     where: {
@@ -54,6 +65,7 @@ export async function listMatches(userId: string) {
 
     return {
       id: match.id,
+      is_mutual_match: true,
       createdAt: match.createdAt,
       matchedAt: match.createdAt,
       consentStatus,
@@ -66,7 +78,7 @@ export async function listMatches(userId: string) {
       partnerInfo: {
         id: otherUser.id,
         name: otherUser.profile?.name ?? "Member",
-        age: otherUser.profile?.age ?? null,
+        age: resolveAge(otherUser.profile?.age ?? null, otherUser.profile?.dob),
         city: otherUser.profile?.city ?? null,
         profession: otherUser.profile?.profession ?? null,
         primaryPhotoUrl,

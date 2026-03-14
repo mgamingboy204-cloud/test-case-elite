@@ -13,6 +13,7 @@ import verificationRoutes from "./verificationRoutes";
 import paymentRoutes from "./paymentRoutes";
 import notificationRoutes from "./notificationRoutes";
 import healthRoutes from "./healthRoutes";
+import accountRoutes from "./accountRoutes";
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use(verificationRoutes);
 router.use(paymentRoutes);
 router.use(notificationRoutes);
 router.use(healthRoutes);
+router.use(accountRoutes);
 
 export default router;

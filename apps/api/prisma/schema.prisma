@@ -126,6 +126,7 @@ model User {
   profileCompletedAt DateTime?
   deactivatedAt DateTime?
   deletedAt DateTime?
+  isPremium Boolean @default(false)
 
   profile       Profile?
   photos        Photo[]
@@ -144,6 +145,15 @@ model User {
   notifications Notification[] @relation("userNotifications")
   notificationsSent Notification[] @relation("notificationActors")
   auditLogs     AuditLog[] @relation("actorLogs")
+  preference    UserPreference?
+}
+
+model UserPreference {
+  userId    String @id
+  theme     String @default("light")
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Profile {
@@ -155,6 +165,8 @@ model Profile {
   profession  String
   bioShort    String
   intent      String  @default("dating")
+  dob         DateTime?
+  heightCm    Int?
 
   user User @relation(fields: [userId], references: [id])
 }
