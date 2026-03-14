@@ -25,22 +25,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!mounted || !isAuthenticated) return null;
 
   return (
-    // Main wrapper uses 100vh so it hits the true physical bottom of the phone
     <div className="flex flex-row h-[100vh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
 
       {/* ═══════════════════════════════════════════════════════════════════
-          DESKTOP SIDEBAR — hidden on mobile, visible 769px+
+          DESKTOP SIDEBAR 
       ═══════════════════════════════════════════════════════════════════ */}
       <aside className="hidden min-[769px]:flex flex-col w-[80px] xl:w-[240px] h-full flex-none bg-background border-r border-border/10 z-50">
-
-        {/* Logo */}
         <div className="h-[72px] flex items-center px-6 xl:px-8 flex-none border-b border-primary/10">
           <span className="text-xl font-serif tracking-[0.5em] uppercase bg-clip-text text-transparent bg-gradient-to-br from-primary via-primary/80 to-primary/60">
             E<span className="hidden xl:inline">lite</span>
           </span>
         </div>
 
-        {/* Nav items */}
         <nav className="flex-1 flex flex-col gap-1 px-3 xl:px-4 pt-6">
           {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
             const isActive = pathname === href;
@@ -53,7 +49,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/5"
                   }`}
               >
-                {/* Active indicator bar */}
                 {isActive && (
                   <motion.div
                     layoutId="sidebar-active"
@@ -75,7 +70,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Logout (bottom of sidebar) */}
         <div className="flex-none px-3 xl:px-4 pb-8">
           <button
             onClick={logout}
@@ -88,11 +82,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          MAIN CONTENT COLUMN — flex-1, holds header + scrollable core
+          MAIN CONTENT COLUMN 
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
 
-        {/* Top bar — always shown */}
+        {/* Top bar */}
         <header
           className="flex-none w-full z-40 bg-background/80 backdrop-blur-xl border-b border-border/10"
           style={{ paddingTop: "env(safe-area-inset-top)" }}
@@ -117,7 +111,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* ── Scrollable Content ── */}
+        {/* Scrollable Content */}
         <main
           className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-background"
           style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
@@ -128,15 +122,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            MOBILE BOTTOM NAV (Native App Proportions)
+            MOBILE BOTTOM NAV (Forced removal of safe area padding)
         ═══════════════════════════════════════════════════════════════════ */}
-        <nav 
-          className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
-          /* We apply the safe area padding here so the background covers the home bar */
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-        >
-          {/* Shrunk h-[70px] to h-[55px] to match Instagram/Apple native dimensions exactly! */}
-          <div className="flex h-[55px] items-center justify-around px-2 pt-1">
+        {/* Notice: No inline style for paddingBottom here anymore */}
+        <nav className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground">
+          {/* Slightly taller to account for removing the safe area entirely, but pins strictly to the bottom */}
+          <div className="flex h-[60px] items-center justify-around px-2 pb-1">
             {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
               const isActive = pathname === href;
               return (
