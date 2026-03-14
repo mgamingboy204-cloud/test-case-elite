@@ -4,20 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { apiRequest } from "@/lib/api";
+
 import { getOfflineMeet, getOnlineMeet, getPhoneUnlock, getSocialExchange, respondMatchConsent } from "@/lib/matches";
+import { fetchMatches, type MatchCard } from "@/lib/queries";
+import { useStaleWhileRevalidate } from "@/lib/cache";
 import { MapPin, Video, Link as LinkIcon, Unlock, ChevronRight, Loader2, Instagram, Linkedin, Ghost, X, CheckCircle2, Copy } from "lucide-react";
-
-// --- Mock Data ---
-type MatchCard = {
-  id: string;
-  name: string;
-  age: number;
-  location: string;
-  image: string;
-};
-
-const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&auto=format&fit=crop&q=80";
 
 
 const springTransition = { type: "spring", bounce: 0.15, duration: 0.6 } as any;
@@ -35,24 +26,16 @@ export default function MatchesPage() {
     else if (onboardingStep !== 'COMPLETED') router.replace('/onboarding/verification'); 
   }, [isAuthenticated, onboardingStep, router]);
 
-  const [matches, setMatches] = useState<MatchCard[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<MatchCard | null>(null);
 
-  useEffect(() => {
-    const loadMatches = async () => {
-      if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
-      const response = await apiRequest<{ matches: Array<{ id: string; user: { name: string; city: string | null; primaryPhotoUrl: string | null } }> }>("/matches", { auth: true });
-      setMatches(response.matches.map((match) => ({
-        id: match.id,
-        name: match.user.name,
-        age: 0,
-        location: (match.user.city ?? "Unknown").toUpperCase(),
-        image: match.user.primaryPhotoUrl ?? FALLBACK_IMAGE
-      })));
-    };
+  const matchesQuery = useStaleWhileRevalidate({
+    key: "matches",
+    fetcher: fetchMatches,
+    enabled: isAuthenticated && onboardingStep === "COMPLETED",
+    staleTimeMs: 60_000
+  });
 
-    void loadMatches();
-  }, [isAuthenticated, onboardingStep]);
+  const matches = matchesQuery.data ?? [];
 
   if (!isAuthenticated || onboardingStep !== 'COMPLETED') return null;
 
