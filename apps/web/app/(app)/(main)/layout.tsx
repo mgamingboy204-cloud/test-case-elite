@@ -25,7 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!mounted || !isAuthenticated) return null;
 
   return (
-    // Changed h-[100dvh] to h-[100vh] to stop the browser from auto-calculating the bottom gap
+    // Main wrapper uses 100vh so it hits the true physical bottom of the phone
     <div className="flex flex-row h-[100vh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -93,14 +93,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
 
         {/* Top bar — always shown */}
-        {/* Outer header: background bleeds into status bar via padding-top safe area */}
         <header
           className="flex-none w-full z-40 bg-background/80 backdrop-blur-xl border-b border-border/10"
           style={{ paddingTop: "env(safe-area-inset-top)" }}
         >
-          {/* Inner row: fixed height keeps content always correctly positioned */}
           <div className="flex items-center justify-between px-6 h-[56px] min-[769px]:h-[72px]">
-            {/* Mobile: ELITE logo; Desktop: breadcrumb label */}
             <span className="min-[769px]:hidden text-xl font-serif tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-primary to-highlight">
               ELITE
             </span>
@@ -108,7 +105,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {NAV_ITEMS.find(n => n.href === pathname)?.label ?? 'Elite'}
             </span>
 
-            {/* Filter / settings icon */}
             <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-foreground/5 transition-colors">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
                 <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
@@ -126,18 +122,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-background"
           style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
         >
-          {/* On desktop: phone-proportioned center column */}
           <div className="w-full h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto">
             {children}
           </div>
         </main>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            MOBILE BOTTOM NAV (Completely stripped of safe-area padding)
+            MOBILE BOTTOM NAV (Native App Proportions)
         ═══════════════════════════════════════════════════════════════════ */}
-        <nav className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground">
-          {/* We added a slight pb-2 so the icons don't sit directly on the physical screen edge, but removed all iOS dynamic gaps */}
-          <div className="flex h-[70px] items-center justify-around px-2 pb-2">
+        <nav 
+          className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
+          /* We apply the safe area padding here so the background covers the home bar */
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          {/* Shrunk h-[70px] to h-[55px] to match Instagram/Apple native dimensions exactly! */}
+          <div className="flex h-[55px] items-center justify-around px-2 pt-1">
             {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
               const isActive = pathname === href;
               return (
