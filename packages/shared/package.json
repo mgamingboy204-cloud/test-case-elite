@@ -1,8 +1,15 @@
 {
   "name": "@elite/shared",
   "version": "0.0.1",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  
+  // IF YOUR CODE IS IN A SRC FOLDER:
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  
+  // IF YOUR CODE IS JUST IN THE ROOT OF THE PACKAGE:
+  // "main": "index.ts",
+  // "types": "index.ts",
+
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
