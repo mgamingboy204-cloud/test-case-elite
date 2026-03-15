@@ -39,3 +39,78 @@ User authentication now relies on short-lived access tokens (JWT) sent via the `
 
 **Branding note**
 - Placeholder PWA icons live in `apps/web/public/icons` and should be replaced with final brand assets before launch.
+
+## Codex execution protocol for large feature requests
+
+When handing a broad product spec to Codex (or any code-generation assistant), provide **repo execution constraints first** so implementation stays aligned with the existing architecture and avoids duplicate pages/components.
+
+### Why this matters
+
+Product specs explain *what to build*, but they rarely define *how to extend the current repo safely*. Without execution constraints, assistants often:
+- create duplicate routes or parallel folder structures,
+- introduce mock APIs where real contracts already exist,
+- rebuild completed UI instead of wiring unfinished logic,
+- diverge from current auth/data-fetching patterns.
+
+### Recommended two-part prompt sequence
+
+1. **Execution prompt (repo discipline first)**
+2. **Business/product spec (feature intent second)**
+
+Use this execution prompt before sharing any large PRD/spec:
+
+```md
+You are working inside an existing production-style repo.
+Your job is to analyze the current repository first, then finish the missing parts by extending the existing codebase, not by rebuilding or duplicating it.
+
+Mandatory rules:
+1. Do a full repo scan first.
+2. Identify app structure, routing, shared UI, layouts, auth flow, API layer, backend schema, unfinished pages, and dead/duplicate files.
+3. Before writing code, produce an implementation map:
+   - what already exists
+   - what is broken
+   - what is incomplete
+   - exact files to edit
+   - truly necessary new files
+4. Reuse existing folders/components/hooks/services/naming/architecture.
+5. Do not create duplicate pages, APIs, schemas, or parallel structures.
+6. Do not redesign completed pages unless required for integration or bug fixes.
+7. Preserve existing visual style/layout system.
+8. Extend existing frontend/backend contracts instead of replacing them.
+9. Prefer editing existing files over creating new ones.
+10. If a new file is required, place it in the most natural existing location.
+11. Remove/avoid mock logic where real logic already exists.
+12. Keep type safety, route guards, loading/empty/error states intact.
+13. Integrate unfinished features into current app structure (no side builds).
+14. After implementation, report:
+    - files changed
+    - files created
+    - why each change was necessary
+    - assumptions
+    - blockers
+
+Key objective:
+Complete missing product flows using the current repo as source of truth.
+Do not rebuild from scratch.
+Do not duplicate existing features.
+```
+
+### Suggested phased delivery
+
+To reduce hallucination and integration risk, enforce staged execution:
+
+1. **Stage 1 — Discovery & map**
+   - Scan repo, map existing features/routes, identify missing flows and duplication risks.
+2. **Stage 2 — Foundation**
+   - Stabilize auth, onboarding guards, shared API contracts, route protection, data-fetch patterns, and shared types.
+3. **Stage 3 — Feature groups**
+   - Implement in sequence (e.g., verification → payment → onboarding → discover → likes → matches → employee panel → admin panel).
+
+### Additional constraints that prevent repo drift
+
+- Treat current UI as locked unless integration requires small edits.
+- Never create `v2`, `new`, `fixed`, `final`, or `updated` duplicate folders.
+- Search for equivalent components/services before adding anything.
+- Follow existing TypeScript types and import paths.
+- Keep current auth strategy unless an explicit blocker requires change.
+- If a feature is not clearly mappable, implement the smallest possible version that fits existing architecture.
