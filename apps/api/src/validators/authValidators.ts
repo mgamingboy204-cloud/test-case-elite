@@ -14,9 +14,11 @@ export const OtpVerifySchema = z.object({
   rememberMe: z.boolean().optional()
 });
 
-export const RefreshTokenSchema = z.object({
-  refreshToken: z.string().optional()
-});
+export const RefreshTokenSchema = z
+  .object({
+    refreshToken: z.string().optional()
+  })
+  .default({});
 
 export const SignupStartSchema = OtpSendSchema;
 
