@@ -50,6 +50,16 @@ async function registerAndLogin(agent: request.SuperAgentTest, phone: string, pa
   return response.body.accessToken as string;
 }
 
+async function registerAndLoginSession(agent: request.SuperAgentTest, phone: string, password: string) {
+  await agent.post("/auth/register").send({ phone, password, email: `${phone}@example.com` });
+  await createOtp(phone);
+  const response = await agent.post("/auth/otp/verify").send({ phone, code: "123456" });
+  return {
+    accessToken: response.body.accessToken as string,
+    onboardingToken: response.body.onboardingToken as string
+  };
+}
+
 beforeEach(async () => {
   await resetDb();
 });
@@ -1263,5 +1273,38 @@ describe("Admin delete cleanup", () => {
     expect(remainingLikes).toHaveLength(0);
     expect(remainingMatches).toHaveLength(0);
     expect(remainingNotifications).toHaveLength(0);
+  });
+});
+
+describe("Account settings and deletion", () => {
+  it("rejects empty settings patch payload", async () => {
+    const agent = request.agent(app);
+    const phone = "5554400001";
+    const session = await registerAndLoginSession(agent, phone, "Password@1");
+
+    const response = await withAuth(
+      agent.patch("/profile/settings").set("x-onboarding-token", session.onboardingToken).send({}),
+      session.accessToken
+    );
+
+    expect(response.status).toBe(400);
+  });
+
+  it("deactivates current account with explicit confirmation", async () => {
+    const agent = request.agent(app);
+    const phone = "5554400002";
+    const session = await registerAndLoginSession(agent, phone, "Password@1");
+
+    const response = await withAuth(
+      agent.delete("/account").send({ confirmation: "DELETE_MY_ACCOUNT", reason: "Requested by member" }),
+      session.accessToken
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+
+    const updated = await prisma.user.findUnique({ where: { phone } });
+    expect(updated?.deactivatedAt).toBeTruthy();
+    expect(updated?.subscriptionStatus).toBe("CANCELED");
   });
 });
