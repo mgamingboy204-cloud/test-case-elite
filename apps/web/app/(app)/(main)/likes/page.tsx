@@ -3,6 +3,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 import { fetchIncomingLikes, respondToIncomingLike, type LikesIncomingProfile } from "@/lib/likes";
+import { fetchAlerts, fetchMatches } from "@/lib/queries";
 import { primeCache, readCache } from "@/lib/cache";
 import { X, Check, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -86,7 +87,11 @@ export default function LikesPage() {
     if (optimistic.length === 0) setStatus("empty");
 
     try {
-      await respondToIncomingLike({ targetUserId: current.profileId, action });
+      const response = await respondToIncomingLike({ targetUserId: current.profileId, action });
+      if (response.matchId) {
+        void fetchMatches().then((data) => primeCache("matches", data));
+        void fetchAlerts().then((data) => primeCache("alerts", data));
+      }
       if (optimistic.length > 0) setStatus("success");
     } catch (error) {
       setProfiles(previous);

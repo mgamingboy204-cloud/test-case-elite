@@ -30,3 +30,10 @@ export async function getOnlineMeet(matchId: string) {
 export async function getSocialExchange(matchId: string) {
   return apiRequest<{ matchId: string; type: "SOCIAL_EXCHANGE"; payloads: Array<{ userId: string; payload: unknown }> }>(`/social-exchange/${matchId}`, { auth: true });
 }
+
+export async function unmatch(matchId: string) {
+  return apiRequest<{ ok: boolean; matchId: string; alreadyUnmatched: boolean }>(`/matches/${matchId}`, {
+    method: "DELETE",
+    auth: true
+  });
+}

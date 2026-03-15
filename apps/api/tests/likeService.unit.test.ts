@@ -16,6 +16,7 @@ describe("like service", () => {
 
   it("returns alreadyProcessed=true when duplicate actionId arrives", async () => {
     const tx = {
+      user: { findFirst: vi.fn().mockResolvedValue({ id: "u2" }) },
       like: { findUnique: vi.fn().mockResolvedValue({ id: "like-1", actionId: "dup-1" }) }
     };
     (prisma.$transaction as any).mockImplementation(async (fn: any) => fn(tx));

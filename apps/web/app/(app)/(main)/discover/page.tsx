@@ -5,7 +5,7 @@ import { Briefcase, Ruler, X, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import { ApiError, apiRequest } from "@/lib/api";
-import { fetchDiscoverFeedPage, mapLegacyFeedItemToCard, type DiscoverCard } from "@/lib/queries";
+import { fetchAlerts, fetchDiscoverFeedPage, fetchMatches, mapLegacyFeedItemToCard, type DiscoverCard } from "@/lib/queries";
 import { primeCache, readCache } from "@/lib/cache";
 
 type DiscoverState = {
@@ -135,11 +135,15 @@ export default function DiscoverPage() {
     }
 
     try {
-      await apiRequest<{ ok: boolean }>("/likes", {
+      const response = await apiRequest<{ ok: boolean; matchId: string | null }>("/likes", {
         method: "POST",
         auth: true,
         body: JSON.stringify({ actionId, targetUserId: current.id, action })
       });
+      if (response.matchId) {
+        void fetchMatches().then((data) => primeCache("matches", data));
+        void fetchAlerts().then((data) => primeCache("alerts", data));
+      }
       if (nextCards.length > 0) {
         setStatus("success");
       }

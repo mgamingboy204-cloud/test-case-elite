@@ -28,6 +28,7 @@ function getConsentPayloadMap(consents: Array<{ type: ConsentType; userId: strin
 export async function listMatches(userId: string) {
   const matches = await prisma.match.findMany({
     where: {
+      unmatchedAt: null,
       OR: [{ userAId: userId }, { userBId: userId }]
     },
     include: {
@@ -123,6 +124,9 @@ export async function respondConsent(options: {
   if (!match || ![match.userAId, match.userBId].includes(options.userId)) {
     throw new HttpError(403, { message: "Not allowed" });
   }
+  if (match.unmatchedAt) {
+    throw new HttpError(409, { message: "Match is no longer active" });
+  }
 
   await prisma.consent.upsert({
     where: { matchId_userId_type: { matchId: options.matchId, userId: options.userId, type } },
@@ -185,6 +189,7 @@ export async function getConsentUnlock(options: { matchId: string; userId: strin
   });
   if (!match) throw new HttpError(404, { message: "Match not found" });
   if (![match.userAId, match.userBId].includes(options.userId)) throw new HttpError(403, { message: "Not allowed" });
+  if (match.unmatchedAt) throw new HttpError(409, { message: "Match is no longer active" });
 
   const ready =
     options.type === "OFFLINE_MEET" ? Boolean(match.offlineMeet)
@@ -222,6 +227,9 @@ export async function getPhoneUnlock(options: { matchId: string; userId: string 
   if (![match.userAId, match.userBId].includes(options.userId)) {
     throw new HttpError(403, { message: "Not allowed" });
   }
+  if (match.unmatchedAt) {
+    throw new HttpError(409, { message: "Match is no longer active" });
+  }
   if (!match.phoneExchange) {
     throw new HttpError(403, { message: "Phone exchange not available" });
   }
@@ -236,4 +244,29 @@ export async function getPhoneUnlock(options: { matchId: string; userId: string 
       { id: match.userB.id, phone: match.userB.phone }
     ]
   };
+}
+
+export async function unmatch(options: { matchId: string; userId: string }) {
+  const updated = await prisma.match.updateMany({
+    where: {
+      id: options.matchId,
+      unmatchedAt: null,
+      OR: [{ userAId: options.userId }, { userBId: options.userId }]
+    },
+    data: {
+      unmatchedAt: new Date(),
+      unmatchedByUserId: options.userId
+    }
+  });
+
+  if (updated.count === 0) {
+    const existing = await prisma.match.findUnique({ where: { id: options.matchId } });
+    if (!existing || ![existing.userAId, existing.userBId].includes(options.userId)) {
+      throw new HttpError(404, { message: "Match not found" });
+    }
+
+    return { ok: true, matchId: options.matchId, alreadyUnmatched: true };
+  }
+
+  return { ok: true, matchId: options.matchId, alreadyUnmatched: false };
 }

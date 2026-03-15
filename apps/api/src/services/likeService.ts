@@ -1,9 +1,29 @@
 import { prisma } from "../db/prisma";
+import { HttpError } from "../utils/httpErrors";
+
+const ACTIVE_MATCH_WHERE = { unmatchedAt: null } as const;
 
 export async function createLike(options: { actorUserId: string; targetUserId: string; action: "LIKE" | "PASS"; actionId: string }) {
   const oppositeAction = options.action === "LIKE" ? "PASS" : "LIKE";
 
   const result = await prisma.$transaction(async (tx) => {
+    const targetUser = await tx.user.findFirst({
+      where: {
+        id: options.targetUserId,
+        deletedAt: null,
+        deactivatedAt: null,
+        onboardingStep: "ACTIVE",
+        status: "APPROVED",
+        videoVerificationStatus: "APPROVED",
+        paymentStatus: "PAID"
+      },
+      select: { id: true }
+    });
+
+    if (!targetUser) {
+      throw new HttpError(404, { message: "Target member not available for matching" });
+    }
+
     const existingAction = await tx.like.findUnique({ where: { actionId: options.actionId } });
     if (existingAction) {
       return { like: existingAction, match: null, alreadyProcessed: true };
@@ -44,7 +64,7 @@ export async function createLike(options: { actorUserId: string; targetUserId: s
         const ordered = [options.actorUserId, options.targetUserId].sort();
         match = await tx.match.upsert({
           where: { userAId_userBId: { userAId: ordered[0], userBId: ordered[1] } },
-          update: {},
+          update: { unmatchedAt: null, unmatchedByUserId: null },
           create: { userAId: ordered[0], userBId: ordered[1] }
         });
         await tx.notification.createMany({
@@ -75,8 +95,8 @@ export async function getIncomingLikes(userId: string) {
       },
       NOT: {
         OR: [
-          { actorUser: { matchesA: { some: { userBId: userId } } } },
-          { actorUser: { matchesB: { some: { userAId: userId } } } }
+          { actorUser: { matchesA: { some: { userBId: userId, ...ACTIVE_MATCH_WHERE } } } },
+          { actorUser: { matchesB: { some: { userAId: userId, ...ACTIVE_MATCH_WHERE } } } }
         ]
       }
     },
@@ -137,7 +157,13 @@ export async function getOutgoingLikes(userId: string) {
   const outgoing = await prisma.like.findMany({
     where: {
       actorUserId: userId,
-      action: "LIKE"
+      action: "LIKE",
+      NOT: {
+        OR: [
+          { targetUser: { matchesA: { some: { userBId: userId, ...ACTIVE_MATCH_WHERE } } } },
+          { targetUser: { matchesB: { some: { userAId: userId, ...ACTIVE_MATCH_WHERE } } } }
+        ]
+      }
     },
     include: {
       targetUser: {

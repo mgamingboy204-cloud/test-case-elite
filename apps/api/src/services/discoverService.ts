@@ -68,8 +68,8 @@ function buildDiscoverWhere(options: DiscoverFilterOptions) {
       NOT: {
         user: {
           OR: [
-            { matchesA: { some: { userBId: options.userId } } },
-            { matchesB: { some: { userAId: options.userId } } }
+            { matchesA: { some: { userBId: options.userId, unmatchedAt: null } } },
+            { matchesB: { some: { userAId: options.userId, unmatchedAt: null } } }
           ]
         }
       }

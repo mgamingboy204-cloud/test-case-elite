@@ -298,6 +298,8 @@ model Match {
   userAId  String
   userBId  String
   createdAt DateTime @default(now())
+  unmatchedAt DateTime?
+  unmatchedByUserId String?
 
   userA User @relation("matchesA", fields: [userAId], references: [id])
   userB User @relation("matchesB", fields: [userBId], references: [id])
@@ -309,6 +311,8 @@ model Match {
   notifications Notification[]
 
   @@unique([userAId, userBId])
+  @@index([userAId, unmatchedAt])
+  @@index([userBId, unmatchedAt])
 }
 
 model Consent {
