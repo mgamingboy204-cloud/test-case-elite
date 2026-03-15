@@ -224,7 +224,7 @@ export async function getDashboard() {
         createdAt: { gte: oneWeekAgo },
         isRead: false,
         type: {
-          in: ADMIN_NOTIFICATION_TYPES
+          in: [...ADMIN_NOTIFICATION_TYPES]
         }
       }
     })
