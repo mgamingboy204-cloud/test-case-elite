@@ -1,139 +1,231 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Search, MoreVertical, ShieldCheck, Flag, Ban, Eye } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertCircle, Loader2, RefreshCcw } from "lucide-react";
+import { ApiError, apiRequest } from "@/lib/api";
+import { fetchAdminDashboard, type AdminDashboardPayload } from "@/lib/adminDashboard";
 
-// Mock Data
-const METRICS = [
-  { label: "Total Members", value: "1,248" },
-  { label: "Revenue (MTD)", value: "$4.12M" },
-  { label: "Active Rendezvous", value: "34" },
-  { label: "Pending Verifications", value: "12" },
-];
+type MePayload = { role: "USER" | "EMPLOYEE" | "ADMIN"; isAdmin?: boolean };
 
-const MOCK_USERS = [
-  { id: "1", name: "Alexander Vance", age: 34, profession: "Hedge Fund Manager", signup: "2026-03-10", agent: "Julian" },
-  { id: "2", name: "Isabella Rossi", age: 29, profession: "Creative Director", signup: "2026-03-11", agent: "Julian" },
-  { id: "3", name: "Marcus Chen", age: 41, profession: "Neurosurgeon", signup: "2026-03-09", agent: "Sarah" },
-  { id: "4", name: "Eleanor Wright", age: 31, profession: "Tech Founder", signup: "2026-03-12", agent: "Julian" },
-  { id: "5", name: "David Kim", age: 38, profession: "Architect", signup: "2026-03-08", agent: "Marcus" },
-];
-
-export default function AdminDashboard() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
-
-  const filteredUsers = MOCK_USERS.filter(u => 
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.profession.toLowerCase().includes(searchQuery.toLowerCase())
+function StatCard({ label, value, tone = "default" }: { label: string; value: number; tone?: "default" | "warn" | "danger" }) {
+  const toneClass = tone === "danger" ? "text-red-300" : tone === "warn" ? "text-amber-200" : "text-[#f0c8be]";
+  return (
+    <div className="rounded-xl border border-[#222733] bg-[#0d1118] p-4">
+      <p className="text-[10px] uppercase tracking-[0.18em] text-white/45">{label}</p>
+      <p className={`mt-2 text-3xl font-light ${toneClass}`}>{value.toLocaleString()}</p>
+    </div>
   );
+}
+
+export default function AdminDashboardPage() {
+  const [data, setData] = useState<AdminDashboardPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
+
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    setError(null);
+
+    try {
+      const me = await apiRequest<MePayload>("/me", { auth: true });
+      if (me.role !== "ADMIN" && !me.isAdmin) {
+        setForbidden(true);
+        setData(null);
+        return;
+      }
+      setForbidden(false);
+      const payload = await fetchAdminDashboard();
+      setData(payload);
+    } catch (err) {
+      const apiError = err instanceof ApiError ? err : null;
+      if (apiError?.status === 403) {
+        setForbidden(true);
+        setData(null);
+      } else {
+        setError(apiError?.message ?? "Unable to load admin dashboard.");
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load(false);
+  }, [load]);
+
+  const employeeRows = useMemo(() => data?.employeeWorkload.perEmployee ?? [], [data]);
+
+  if (loading) {
+    return (
+      <div className="p-10 text-white/70 inline-flex items-center gap-3">
+        <Loader2 className="animate-spin" size={18} /> Loading founder dashboard…
+      </div>
+    );
+  }
+
+  if (forbidden) {
+    return (
+      <div className="p-10">
+        <div className="max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-red-100">
+          <p className="text-sm font-medium uppercase tracking-[0.14em]">Access denied</p>
+          <p className="mt-3 text-sm text-red-100/80">This dashboard is restricted to founder/admin users only.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-10">
+        <div className="max-w-2xl rounded-xl border border-amber-500/30 bg-amber-500/10 p-6">
+          <p className="inline-flex items-center gap-2 text-sm font-medium text-amber-100 uppercase tracking-[0.12em]">
+            <AlertCircle size={16} /> Unable to load dashboard
+          </p>
+          <p className="mt-3 text-sm text-amber-100/80">{error}</p>
+          <button
+            onClick={() => void load(false)}
+            className="mt-4 rounded-lg border border-amber-200/30 px-4 py-2 text-xs uppercase tracking-[0.15em] text-amber-100"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="p-10 text-sm text-white/60">No operational data is available yet.</div>
+    );
+  }
 
   return (
-    <div className="w-full h-full p-10 flex flex-col gap-10">
-      
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-serif text-white tracking-wide uppercase">Super Admin</h1>
-        <p className="text-xs text-white/40 uppercase tracking-widest mt-2">The Nerve Center</p>
-      </div>
+    <div className="p-8 space-y-8">
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-serif uppercase tracking-[0.14em] text-white">Founder Operations Dashboard</h1>
+          <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/45">Business health, queues, and team workload</p>
+        </div>
+        <button
+          disabled={refreshing}
+          onClick={() => void load(true)}
+          className="rounded-lg border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.15em] text-white/80 disabled:opacity-50"
+        >
+          <span className="inline-flex items-center gap-2">{refreshing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />} Refresh</span>
+        </button>
+      </header>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-4 gap-6">
-        {METRICS.map((metric, i) => (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            key={metric.label} 
-            className="p-6 rounded-xl border border-[#1f222b] bg-[#0a0c10]/80 backdrop-blur-sm relative overflow-hidden group"
-          >
-             <div className="absolute top-0 right-0 w-32 h-32 bg-[#C89B90]/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-[#C89B90]/10 transition-colors" />
-             <p className="text-[10px] text-white/40 uppercase tracking-widest mb-2 relative z-10">{metric.label}</p>
-             <p className="text-3xl font-light text-[#C89B90] relative z-10">{metric.value}</p>
-          </motion.div>
-        ))}
-      </div>
+      <section className="grid grid-cols-4 gap-4">
+        <StatCard label="Total users" value={data.businessOverview.totalUsers} />
+        <StatCard label="Verified users" value={data.membershipAndVerification.verifiedUsers} />
+        <StatCard label="Active subscriptions" value={data.subscriptionOverview.activeSubscriptions} />
+        <StatCard label="Pending coordination" value={data.coordinationOperations.pendingCoordinationTotal} tone="warn" />
+      </section>
 
-      {/* Main Table Area */}
-      <div className="flex-1 flex flex-col rounded-xl border border-[#1f222b] bg-[#0a0c10]/80 backdrop-blur-sm overflow-hidden">
-        
-        {/* Table Toolbar */}
-        <div className="p-4 border-b border-[#1f222b] flex items-center justify-between">
-           <div className="relative w-96">
-             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#C89B90]" />
-             <input 
-               type="text" 
-               placeholder="Search registry..."
-               value={searchQuery}
-               onChange={(e) => setSearchQuery(e.target.value)}
-               className="w-full bg-[#1f222b]/50 border-b border-transparent focus:border-[#C89B90] py-2 pl-12 pr-4 text-sm text-white placeholder:text-white/20 focus:outline-none transition-colors"
-             />
-           </div>
-           <div className="text-[10px] text-white/30 uppercase tracking-wider">
-             {filteredUsers.length} records found
-           </div>
+      <section className="grid grid-cols-2 gap-5">
+        <div className="rounded-xl border border-[#222733] bg-[#0d1118] p-5 space-y-4">
+          <h2 className="text-sm uppercase tracking-[0.18em] text-white/60">Membership & Verification</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard label="Rejected / banned" value={data.membershipAndVerification.rejectedOrBannedUsers} tone="danger" />
+            <StatCard label="Onboarding complete" value={data.membershipAndVerification.onboardingCompleted} />
+            <StatCard label="Verification queue" value={data.membershipAndVerification.verificationQueue} tone="warn" />
+            <StatCard label="Employees" value={data.employeeWorkload.totalEmployees} />
+          </div>
         </div>
 
-        {/* Dense Data Table */}
-        <div className="flex-1 overflow-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 bg-[#0a0c10]/95 backdrop-blur z-10 border-b border-[#1f222b]">
-              <tr>
-                <th className="py-4 px-6 text-[10px] font-medium text-white/40 uppercase tracking-wider">Name</th>
-                <th className="py-4 px-6 text-[10px] font-medium text-white/40 uppercase tracking-wider">Age</th>
-                <th className="py-4 px-6 text-[10px] font-medium text-white/40 uppercase tracking-wider">Profession</th>
-                <th className="py-4 px-6 text-[10px] font-medium text-white/40 uppercase tracking-wider">Signup Date</th>
-                <th className="py-4 px-6 text-[10px] font-medium text-white/40 uppercase tracking-wider">Agent</th>
-                <th className="py-4 px-6 text-right text-[10px] font-medium text-white/40 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1f222b]/50">
-              {filteredUsers.map((user, i) => (
-                <motion.tr 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.1 + i * 0.05 }}
-                  key={user.id} 
-                  className="hover:bg-white/[0.02] transition-colors group"
-                >
-                  <td className="py-3 px-6 text-sm font-serif text-white">{user.name}</td>
-                  <td className="py-3 px-6 text-sm font-sans text-white/70">{user.age}</td>
-                  <td className="py-3 px-6 text-sm font-sans text-[#C89B90]">{user.profession}</td>
-                  <td className="py-3 px-6 text-xs font-sans text-white/50">{user.signup}</td>
-                  <td className="py-3 px-6 text-xs font-sans text-white/50 tracking-wider uppercase">{user.agent}</td>
-                  <td className="py-3 px-6 text-right relative">
-                    <button 
-                      onClick={() => setActiveMenu(activeMenu === user.id ? null : user.id)}
-                      className="p-2 rounded hover:bg-white/5 text-white/40 hover:text-white transition-colors"
-                    >
-                      <MoreVertical size={16} />
-                    </button>
-
-                    {/* Action Dropdown */}
-                    {activeMenu === user.id && (
-                      <div className="absolute right-12 top-2 w-56 bg-[#0a0c10] border border-[#1f222b] rounded-lg shadow-2xl z-50 overflow-hidden text-left flex flex-col">
-                         <button className="px-4 py-3 text-xs flex items-center gap-3 text-white/70 hover:text-white hover:bg-white/5 transition-colors w-full">
-                           <Eye size={14} className="text-[#C89B90]" /> View Full Portfolio
-                         </button>
-                         <button className="px-4 py-3 text-xs flex items-center gap-3 text-white/70 hover:text-white hover:bg-white/5 transition-colors w-full">
-                           <ShieldCheck size={14} className="text-emerald-500" /> Manually Verify
-                         </button>
-                         <button className="px-4 py-3 text-xs flex items-center gap-3 text-white/70 hover:text-white hover:bg-white/5 transition-colors w-full border-t border-[#1f222b]">
-                           <Flag size={14} className="text-amber-500" /> Flag for Review
-                         </button>
-                         <button className="px-4 py-3 text-xs flex items-center gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors w-full">
-                           <Ban size={14} /> Revoke Membership
-                         </button>
-                      </div>
-                    )}
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="rounded-xl border border-[#222733] bg-[#0d1118] p-5 space-y-4">
+          <h2 className="text-sm uppercase tracking-[0.18em] text-white/60">Revenue / Subscription Overview</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard label="1 month plan" value={data.subscriptionOverview.planDistribution.ONE_MONTH} />
+            <StatCard label="5 months plan" value={data.subscriptionOverview.planDistribution.FIVE_MONTHS} />
+            <StatCard label="12 months plan" value={data.subscriptionOverview.planDistribution.TWELVE_MONTHS} />
+            <StatCard label="Payment issues" value={data.subscriptionOverview.paymentIssueCount} tone="warn" />
+          </div>
         </div>
-      </div>
+      </section>
+
+      <section className="grid grid-cols-2 gap-5">
+        <div className="rounded-xl border border-[#222733] bg-[#0d1118] p-5 space-y-4">
+          <h2 className="text-sm uppercase tracking-[0.18em] text-white/60">Engagement & Match Activity</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard label="Total likes" value={data.engagementAndMatchActivity.likesCount} />
+            <StatCard label="Total matches" value={data.engagementAndMatchActivity.matchesCount} />
+            <StatCard label="Offline meet requests" value={data.engagementAndMatchActivity.offlineMeetRequests} />
+            <StatCard label="Online meet requests" value={data.engagementAndMatchActivity.onlineMeetRequests} />
+            <StatCard label="Social exchange requests" value={data.engagementAndMatchActivity.socialExchangeRequests} />
+            <StatCard label="Phone exchange requests" value={data.engagementAndMatchActivity.phoneExchangeRequests} />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-[#222733] bg-[#0d1118] p-5 space-y-4">
+          <h2 className="text-sm uppercase tracking-[0.18em] text-white/60">Queues / Attention Needed</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard label="Pending verification" value={data.queuesAndAttention.verificationQueue} tone="warn" />
+            <StatCard label="Pending coordination" value={data.queuesAndAttention.pendingMatchCoordinationQueue} tone="warn" />
+            <StatCard label="Payment issue queue" value={data.queuesAndAttention.paymentIssueQueue} tone="warn" />
+            <StatCard label="Operational follow-ups" value={data.queuesAndAttention.pendingOperationalFollowUps} tone="warn" />
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-[#222733] bg-[#0d1118] p-5">
+        <h2 className="text-sm uppercase tracking-[0.18em] text-white/60">Employee Workload</h2>
+        {employeeRows.length === 0 ? (
+          <p className="mt-4 text-sm text-white/60">No active employees found.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-[10px] uppercase tracking-[0.14em] text-white/45">
+                <tr>
+                  <th className="py-2">Employee</th>
+                  <th className="py-2">Assigned Members</th>
+                  <th className="py-2">Verification</th>
+                  <th className="py-2">Offline Cases</th>
+                  <th className="py-2">Online Cases</th>
+                  <th className="py-2">Total Active Tasks</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/10 text-white/85">
+                {employeeRows.map((employee) => (
+                  <tr key={employee.id}>
+                    <td className="py-3">{employee.name}</td>
+                    <td className="py-3">{employee.assignedMembers}</td>
+                    <td className="py-3">{employee.verificationActive}</td>
+                    <td className="py-3">{employee.activeOfflineCases}</td>
+                    <td className="py-3">{employee.activeOnlineCases}</td>
+                    <td className="py-3">{employee.totalActiveTasks}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-[#222733] bg-[#0d1118] p-5">
+        <h2 className="text-sm uppercase tracking-[0.18em] text-white/60">Alert / Activity Summary (last {data.alertsActivity.recentWindowDays} days)</h2>
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          <StatCard label="Total alerts" value={data.alertsActivity.recentAlertsTotal} />
+          <StatCard label="Unread operational alerts" value={data.alertsActivity.unreadOperationalAlerts} tone="warn" />
+          <StatCard label="Pending follow-up signals" value={data.queuesAndAttention.pendingOperationalFollowUps} tone="warn" />
+        </div>
+        {data.alertsActivity.byType.length > 0 ? (
+          <ul className="mt-4 space-y-1 text-xs text-white/70">
+            {data.alertsActivity.byType.map((entry) => (
+              <li key={entry.type} className="flex items-center justify-between border-b border-white/5 py-1">
+                <span>{entry.type.replaceAll("_", " ")}</span>
+                <span>{entry.count}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 text-sm text-white/60">No recent alert activity yet.</p>
+        )}
+      </section>
     </div>
   );
 }
