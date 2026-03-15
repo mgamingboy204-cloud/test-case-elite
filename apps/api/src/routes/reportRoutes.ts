@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ReportSchema } from "@elite/shared";
+import { ReportSchema } from "@vael/shared";
 import { createReportHandler } from "../controllers/reportController";
 import { requireAuth, requireAuthHeader } from "../middlewares/auth";
 import { requireActive } from "../middlewares/onboarding";

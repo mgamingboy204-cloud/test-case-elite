@@ -155,9 +155,9 @@ export default function SettingsPage() {
 
       setAuthToken(null);
       setOnboardingToken(null);
-      localStorage.removeItem("elite_pending_phone");
-      localStorage.removeItem("elite_signup_token");
-      localStorage.removeItem("elite_onboarding_token");
+      localStorage.removeItem("vael_pending_phone");
+      localStorage.removeItem("vael_signup_token");
+      localStorage.removeItem("vael_onboarding_token");
       await logout();
     } catch (error) {
       setSettingsError(error instanceof ApiError ? error.message : "We could not process account deletion right now.");

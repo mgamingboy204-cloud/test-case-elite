@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LoginSchema, RegisterSchema } from "@elite/shared";
+import { LoginSchema, RegisterSchema } from "@vael/shared";
 
 export const RegisterBodySchema = RegisterSchema;
 export const LoginBodySchema = LoginSchema;

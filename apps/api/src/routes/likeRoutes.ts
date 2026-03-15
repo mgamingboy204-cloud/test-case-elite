@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { LikeSchema } from "@elite/shared";
+import { LikeSchema } from "@vael/shared";
 import { createLikeHandler, incomingLikesHandler, outgoingLikesHandler } from "../controllers/likeController";
 import { requireAuth } from "../middlewares/auth";
 import { requireMatchingEligible } from "../middlewares/onboarding";

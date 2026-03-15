@@ -305,7 +305,7 @@ function toAlert(item: NotificationApiItem): Alert {
   const normalizedType = item.type === "NEW_MATCH" ? "CONNECTION" : conciergeTypes.has(item.type) ? "CONCIERGE" : "INTEREST";
   const title =
     item.title ??
-    (item.type === "NEW_MATCH" ? "New Match" : item.type === "NEW_LIKE" ? "New Interest" : item.type === "SYSTEM_PROMO" ? "Elite Update" : "Update");
+    (item.type === "NEW_MATCH" ? "New Match" : item.type === "NEW_LIKE" ? "New Interest" : item.type === "SYSTEM_PROMO" ? "VAEL Update" : "Update");
   const message =
     item.message ??
     (item.type === "NEW_MATCH"

@@ -32,7 +32,7 @@ export default function SignUpPhone() {
     <GlassCard>
       <div className="mb-8">
         <span className="text-xs font-mono tracking-widest text-primary/80 mb-2 block">STEP 01</span>
-        <h1 className="text-3xl font-light mb-2 text-foreground">Apply for <span className="font-semibold text-primary">Elite</span></h1>
+        <h1 className="text-3xl font-light mb-2 text-foreground">Apply for <span className="font-semibold text-primary">VAEL</span></h1>
         <p className="text-foreground/60 font-light leading-relaxed">
           Membership is strictly invitation-only. Begin by entering your mobile number to verify your status.
         </p>

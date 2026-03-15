@@ -158,7 +158,7 @@ export default function VideoVerificationPage() {
         {message ? <p className="text-center text-sm text-primary">{message}</p> : null}
 
         {!loading && (!payload || payload.status === "NOT_REQUESTED" || payload.canRetry) ? (
-          <motion.button whileTap={{ scale: 0.98 }} disabled={requesting} onClick={createRequest} className="btn-elite-primary">
+          <motion.button whileTap={{ scale: 0.98 }} disabled={requesting} onClick={createRequest} className="btn-vael-primary">
             {requesting ? "Requesting…" : payload?.canRetry ? "Request verification again" : "Request live verification"}
           </motion.button>
         ) : null}

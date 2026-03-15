@@ -8,7 +8,7 @@ export function Footer() {
           <span className="w-4 h-4 rounded-full bg-primary/20 border border-primary/50 flex flex-col items-center justify-center">
             <span className="w-1 h-1 rounded-full bg-primary" />
           </span>
-          <span className="text-sm font-medium tracking-widest text-foreground">ELITE PLATFORM</span>
+          <span className="text-sm font-medium tracking-widest text-foreground">VAEL PLATFORM</span>
         </div>
         
         <div className="flex gap-6 text-sm text-foreground/50">
@@ -18,7 +18,7 @@ export function Footer() {
         </div>
         
         <div className="text-xs text-foreground/40">
-          &copy; {new Date().getFullYear()} Elite Matchmaking. All rights reserved.
+          &copy; {new Date().getFullYear()} VAEL. All rights reserved.
         </div>
       </div>
     </footer>

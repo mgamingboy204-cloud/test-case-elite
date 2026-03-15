@@ -264,7 +264,7 @@ ROUTE: /likes
 
 ROUTE: /login
   file: apps/web/app/login/page.tsx
-  main UI sections: ELITE MATCH; Welcome back
+  main UI sections: VAEL; Welcome back
   buttons/actions/navigation targets: /signup
   API calls: POST /auth/login, POST /auth/otp/send, POST /auth/otp/verify
   auth/role guard: session-aware (check file logic)
@@ -313,7 +313,7 @@ ROUTE: /otp
 
 ROUTE: /
   file: apps/web/app/page.tsx
-  main UI sections: Start something epic.; Elite matches.                          Real intentions.; {item.title}
+  main UI sections: Start something epic.; VAEL matches.                          Real intentions.; {item.title}
   buttons/actions/navigation targets: /learn, /login, /signup
   API calls: None in this file
   auth/role guard: guest/public
@@ -369,7 +369,7 @@ ROUTE: /settings
 
 ROUTE: /signup
   file: apps/web/app/signup/page.tsx
-  main UI sections: ELITE MATCH; {step === 0 ? "Create your account" : "Verify OTP"}
+  main UI sections: VAEL; {step === 0 ? "Create your account" : "Verify OTP"}
   buttons/actions/navigation targets: /login
   API calls: POST /auth/register, POST /auth/otp/send, POST /auth/otp/verify
   auth/role guard: session-aware (check file logic)
@@ -1451,7 +1451,7 @@ export default function ContactPage() {
       <section className="marketing-page">
         <PageHeader
           title="Contact"
-          subtitle="Get in touch with the ELITE MATCH concierge team."
+          subtitle="Get in touch with the VAEL concierge team."
           variant="marketing"
         />
         <div className="marketing-page__content">
@@ -1581,7 +1581,7 @@ import Providers from "./providers";
 const themeScript = `
   (function() {
     try {
-      var stored = localStorage.getItem("elite-match-theme");
+      var stored = localStorage.getItem("vael-theme");
       var theme = stored === "dark" ? "dark" : "light";
       document.documentElement.dataset.theme = theme;
       document.documentElement.style.colorScheme = theme;
@@ -1590,14 +1590,14 @@ const themeScript = `
 `;
 
 export const metadata: Metadata = {
-  title: "Elite Match",
+  title: "VAEL",
   description: "Premium, verified matchmaking experience.",
-  applicationName: "Elite Match",
+  applicationName: "VAEL",
   manifest: "/manifest.webmanifest",
   themeColor: "#f26b76",
   appleWebApp: {
     capable: true,
-    title: "Elite Match",
+    title: "VAEL",
     statusBarStyle: "black-translucent"
   },
   icons: {
@@ -1639,7 +1639,7 @@ export default function LearnPage() {
     <MarketingShell>
       <section className="marketing-page">
         <PageHeader
-          title="Learn the ELITE MATCH experience"
+          title="Learn the VAEL experience"
           subtitle="Discover how curated introductions, verification, and intent settings work together."
           variant="marketing"
         />
@@ -1983,7 +1983,7 @@ export default function LoginPage() {
     <div className="auth-layout">
       <section className="auth-visual">
         <div className="auth-visual-panel">
-          <h1>ELITE MATCH</h1>
+          <h1>VAEL</h1>
           <p>Confidence-first matchmaking with verification, privacy, and curated introductions.</p>
         </div>
       </section>
@@ -1992,7 +1992,7 @@ export default function LoginPage() {
         <div className="auth-card-inner">
           <div>
             <h2>Welcome back</h2>
-            <p className="text-muted">Log in to continue to ELITE MATCH.</p>
+            <p className="text-muted">Log in to continue to VAEL.</p>
           </div>
           <div className="form">
             <div className="field">
@@ -2378,7 +2378,7 @@ function MembershipPlanCard({
     <section className="card payment-plan">
       <div className="plan-header">
         <div>
-          <p className="plan-name">Elite Match Annual</p>
+          <p className="plan-name">VAEL Annual</p>
           <p className="plan-price">
             {formatCurrency(subtotalAmount)}
             <span className="plan-cycle">/year</span>
@@ -2768,7 +2768,7 @@ export default function PaymentPage() {
   const statusConfig: Record<string, StatusDetails> = {
     NOT_STARTED: {
       label: "Not started",
-      message: "Start your payment to secure Elite Match access.",
+      message: "Start your payment to secure VAEL access.",
       tone: "neutral"
     },
     PENDING: {
@@ -2970,7 +2970,7 @@ const steps: StepConfig[] = [
   {
     key: "displayName",
     title: "What should we call you?",
-    subtitle: "This is the name Elite Match introduces to new connections.",
+    subtitle: "This is the name VAEL introduces to new connections.",
     componentType: "text",
     placeholder: "Your display name"
   },
@@ -2989,7 +2989,7 @@ const steps: StepConfig[] = [
   {
     key: "genderPreference",
     title: "Who do you want to meet?",
-    subtitle: "Elite Match is built for genuine dating connections.",
+    subtitle: "VAEL is built for genuine dating connections.",
     componentType: "choice"
   },
   {
@@ -3048,7 +3048,7 @@ const steps: StepConfig[] = [
 const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 const maxBytes = 10 * 1024 * 1024;
 const preferenceDefaults = { intent: "serious", distance: "local" };
-const draftKey = "elite-onboarding-draft";
+const draftKey = "vael-onboarding-draft";
 
 export default function OnboardingProfilePage() {
   const router = useRouter();
@@ -4364,7 +4364,7 @@ export default function HomePage() {
         <div className="marketing-hero__content">
           <span className="marketing-hero__tag">PREMIUM INTRODUCTIONS</span>
           <h1>
-            Elite matches.
+            VAEL matches.
             <br />
             Real intentions.
           </h1>
@@ -4759,7 +4759,7 @@ export default function ProfilePage() {
     <RouteGuard requireActive>
       <AppShellLayout>
         <div className="profile-sections">
-          <PageHeader title="Profile" subtitle="Curate your presence on ELITE MATCH." />
+          <PageHeader title="Profile" subtitle="Curate your presence on VAEL." />
           {profileQuery.isLoading ? (
             <LoadingState message="Loading your profile..." />
           ) : profileQuery.isError ? (
@@ -5554,7 +5554,7 @@ export default function SignupPage() {
     <div className="auth-layout">
       <section className="auth-visual">
         <div className="auth-visual-panel">
-          <h1>ELITE MATCH</h1>
+          <h1>VAEL</h1>
           <p>Start with verification. Match with confidence and clarity.</p>
         </div>
       </section>
@@ -5698,7 +5698,7 @@ export default function TermsPage() {
           <div className="ui-card">
             <h3>Community standards</h3>
             <p className="text-muted">
-              ELITE MATCH is built around mutual respect and authenticity.
+              VAEL is built around mutual respect and authenticity.
             </p>
             <ul>
               <li>Keep profiles accurate and up to date.</li>
@@ -5803,8 +5803,8 @@ export default function MarketingShell({ children }: MarketingShellProps) {
   return (
     <div className="marketing-shell">
       <nav className="marketing-nav">
-        <Link href="/" className="marketing-logo" aria-label="ELITE MATCH home">
-          ELITE MATCH
+        <Link href="/" className="marketing-logo" aria-label="VAEL home">
+          VAEL
         </Link>
         <div className="marketing-nav__links">
           <Link href="/learn">Learn</Link>
@@ -5878,7 +5878,7 @@ export default function MarketingShell({ children }: MarketingShellProps) {
             <Link href="/contact">Contact</Link>
           </div>
         </div>
-        <div className="marketing-footer__bottom">© ELITE MATCH. All rights reserved.</div>
+        <div className="marketing-footer__bottom">© VAEL. All rights reserved.</div>
       </footer>
     </div>
   );
@@ -5961,8 +5961,8 @@ export default function MobileShell({ title }: MobileShellProps) {
   return (
     <div className="mobile-shell">
       <header className="mobile-shell__topbar">
-        <span className="mobile-shell__logo">ELITE MATCH</span>
-        <span className="mobile-shell__title">{title || "ELITE MATCH"}</span>
+        <span className="mobile-shell__logo">VAEL</span>
+        <span className="mobile-shell__title">{title || "VAEL"}</span>
         <Link href="/settings" className="mobile-shell__icon" aria-label="Settings">
           <SettingsIcon />
         </Link>
@@ -6159,7 +6159,7 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-const STORAGE_KEY = "elite-match-theme";
+const STORAGE_KEY = "vael-theme";
 
 function applyTheme(theme: ThemeMode) {
   if (typeof document === "undefined") return;
@@ -6324,7 +6324,7 @@ export default function TopNav() {
     <header className="header">
       <div className="container header-inner">
         <div className="brand">
-          <span className="brand-title">Elite Match MVP</span>
+          <span className="brand-title">VAEL</span>
           <span className="brand-subtitle">Premium matchmaking in minutes</span>
         </div>
         <div className="session">
@@ -6491,7 +6491,7 @@ export default function AppShellLayout({
       {showMobileShell ? <MobileShell title={title} /> : null}
       <aside className="app-rail" aria-label="Primary">
         <Link className="rail-brand" href="/discover">
-          ELITE MATCH
+          VAEL
         </Link>
         <nav className="rail-nav">
           {railItems.map((item) => {
@@ -10527,7 +10527,7 @@ module.exports = withPWA(nextConfig);
 
 --- FILE: apps/web/package.json ---
 {
-  "name": "@elite/web",
+  "name": "@vael/web",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -10538,7 +10538,7 @@ module.exports = withPWA(nextConfig);
     "test": "vitest run"
   },
   "dependencies": {
-    "@elite/shared": "*",
+    "@vael/shared": "*",
     "@tanstack/react-query": "^5.62.0",
     "@tanstack/react-query-devtools": "^5.62.0",
     "next": "^14.2.35",
@@ -10561,7 +10561,7 @@ module.exports = withPWA(nextConfig);
 
 --- FILE: package.json ---
 {
-  "name": "elite-match-mvp",
+  "name": "vael",
   "private": true,
   "workspaces": [
     "apps/*",

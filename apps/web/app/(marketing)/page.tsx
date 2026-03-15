@@ -35,7 +35,7 @@ export default function Home() {
               transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
               className="text-xl md:text-3xl text-foreground/70 max-w-2xl mb-12 leading-relaxed font-light"
             >
-              Experience the world's most exclusive matchmaking platform. Designed for those who value time, privacy, and exceptional connection.
+              Experience the world&apos;s most exclusive matchmaking platform. Designed for those who value time, privacy, and exceptional connection.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -47,7 +47,7 @@ export default function Home() {
                 href="/signup/phone"
                 className="px-10 py-5 bg-primary text-background font-semibold rounded-full hover:bg-primary/90 transition-all shadow-xl hover:shadow-primary/20 scale-110 md:scale-100"
               >
-                Apply for Elite
+                Apply for VAEL
               </Link>
               <Link
                 href="/signin"
@@ -60,7 +60,7 @@ export default function Home() {
         </section>
 
         {/* ── Section 2: The Standard ────────────────────────── */}
-        <section id="why-elite" className="min-h-screen w-full flex flex-col justify-center px-6 md:px-12 relative z-20">
+        <section id="why-vael" className="min-h-screen w-full flex flex-col justify-center px-6 md:px-12 relative z-20">
           <div className="max-w-7xl mx-auto w-full mt-24">
             <motion.h2
               initial={{ opacity: 0, y: 40 }}
@@ -69,7 +69,7 @@ export default function Home() {
               transition={{ duration: 0.8, ease: "easeOut" }}
               className="text-4xl md:text-6xl font-light mb-16 tracking-wide text-foreground"
             >
-              The Elite <span className="font-semibold">Standard</span>
+              The VAEL <span className="font-semibold">Standard</span>
             </motion.h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -156,7 +156,7 @@ export default function Home() {
               transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
               className="text-xl md:text-2xl text-foreground/70 max-w-xl font-light leading-relaxed mb-12"
             >
-              Elite doesn't require an App Store download. We deliver a secure, swipe-free curated profile discovery right from your browser window, running effortlessly with native PWA capabilities.
+              VAEL doesn&apos;t require an App Store download. We deliver a secure, swipe-free curated profile discovery right from your browser window, running effortlessly with native PWA capabilities.
             </motion.p>
             <motion.div
               initial={{ opacity: 0 }}

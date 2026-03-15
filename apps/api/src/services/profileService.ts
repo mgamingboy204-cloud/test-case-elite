@@ -1,6 +1,6 @@
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
-import { type ProfileInput, type ProfilePatchInput, hasRequiredOnboardingProfile } from "@elite/shared";
+import { type ProfileInput, type ProfilePatchInput, hasRequiredOnboardingProfile } from "@vael/shared";
 import { Gender } from "@prisma/client";
 
 type UpdateOptions = { userId: string; paymentStatus: string; onboardingStep: string; data: ProfileInput | ProfilePatchInput };
@@ -120,7 +120,7 @@ export async function getProfile(userId: string) {
       assignedExecutive: user?.assignedEmployeeId
         ? {
             id: user.assignedEmployeeId,
-            name: executiveName || "Elite Executive",
+            name: executiveName || "VAEL Executive",
             assignedAt: user.assignedAt ?? latestVerificationRequest?.assignedAt,
             verificationStatus: latestVerificationRequest?.status ?? null
           }

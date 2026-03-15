@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { onboardingRedirectForBackendStep } from "@elite/shared";
+import { onboardingRedirectForBackendStep } from "@vael/shared";
 
 export function requireActive(req: Request, res: Response, next: NextFunction) {
   const user = res.locals.user;

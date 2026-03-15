@@ -148,7 +148,7 @@ export default function OnboardingPhotosPage() {
         <button
           onClick={() => void finishOnboarding()}
           disabled={!canComplete || finishing}
-          className={`btn-elite-primary ${!canComplete || finishing ? "cursor-not-allowed opacity-30 grayscale" : ""}`}
+          className={`btn-vael-primary ${!canComplete || finishing ? "cursor-not-allowed opacity-30 grayscale" : ""}`}
         >
           {finishing ? "Finalizing…" : "Complete Onboarding"}
         </button>

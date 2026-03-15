@@ -27,12 +27,12 @@ export function Navigation() {
         <span className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
           <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_10px_var(--color-primary)]" />
         </span>
-        <span className="hidden sm:inline-block">ELITE</span>
+        <span className="hidden sm:inline-block">VAEL</span>
       </Link>
       
       <div className="flex gap-6 md:gap-8 items-center">
         <ThemeToggle />
-        <Link href="#why-elite" className="text-sm font-medium text-foreground/70 hover:text-primary transition-colors hidden sm:block">
+        <Link href="#why-vael" className="text-sm font-medium text-foreground/70 hover:text-primary transition-colors hidden sm:block">
           The Standard
         </Link>
         <Link href="#how-it-works" className="text-sm font-medium text-foreground/70 hover:text-primary transition-colors hidden sm:block">

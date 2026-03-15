@@ -80,7 +80,7 @@ export function PhoneModel() {
           <div className="w-[260px] h-[560px] bg-[#0b0d12] rounded-3xl overflow-hidden flex flex-col relative text-white border border-[#1f222b]">
              {/* Phone UI Header */}
              <div className="w-full pt-8 pb-4 px-6 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent absolute top-0 z-10">
-               <span className="text-xs font-semibold tracking-widest text-[#b76e79]">ELITE</span>
+               <span className="text-xs font-semibold tracking-widest text-[#b76e79]">VAEL</span>
              </div>
              
              {/* Curated Profile Mockup */}

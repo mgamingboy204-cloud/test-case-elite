@@ -111,20 +111,20 @@ html, body {
 /* ─── Button Components ────────────────────────────────────── */
 @layer components {
   /* Solid Rose Gold CTA */
-  .btn-elite-primary {
+  .btn-vael-primary {
     @apply w-full py-4 rounded-full bg-[var(--primary)] text-[#13181f] uppercase text-[11px] tracking-widest font-semibold flex items-center justify-center gap-2;
     transition: all 400ms ease;
   }
-  .btn-elite-primary:hover {
+  .btn-vael-primary:hover {
     @apply brightness-110 shadow-[0_0_20px_rgba(200,155,144,0.3)];
   }
 
   /* Hairline Shimmer Outline */
-  .btn-elite-secondary {
+  .btn-vael-secondary {
     @apply w-full py-4 rounded-full bg-transparent text-[var(--primary)] uppercase text-[11px] tracking-widest font-semibold flex items-center justify-center gap-2 relative z-10;
     transition: all 400ms ease;
   }
-  .btn-elite-secondary::before {
+  .btn-vael-secondary::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -138,7 +138,7 @@ html, body {
     z-index: -1;
     pointer-events: none;
   }
-  .btn-elite-secondary:hover {
+  .btn-vael-secondary:hover {
     @apply text-[var(--highlight)] bg-[var(--primary)]/5;
   }
 }

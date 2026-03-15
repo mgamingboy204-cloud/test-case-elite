@@ -3,7 +3,7 @@ export default function PrivacyPolicy() {
     <div className="min-h-screen py-32 px-6 md:px-12 max-w-4xl mx-auto flex flex-col pointer-events-auto">
       <h1 className="text-4xl md:text-5xl font-light mb-12 text-foreground">Privacy <span className="font-semibold text-primary">Policy</span></h1>
       <div className="prose prose-invert prose-lg text-foreground/70 font-light leading-relaxed">
-        <p className="mb-6">Elite Matchmaking platform values the privacy and security of our exclusive members above all else. This document outlines how we protect and manage your data.</p>
+        <p className="mb-6">VAEL platform values the privacy and security of our exclusive members above all else. This document outlines how we protect and manage your data.</p>
         
         <h2 className="text-2xl text-foreground font-medium mt-12 mb-4">1. Data Collection</h2>
         <p className="mb-6">We only collect information necessary to provide you with meaningful, curated introductions. This includes preference data, demographic information, and encrypted platform interactions.</p>
