@@ -146,6 +146,11 @@ export async function deletePhoto(options: { userId: string; photoId: string }) 
     throw new HttpError(404, { message: "Photo not found." });
   }
 
+  const photoCount = await prisma.photo.count({ where: { userId: options.userId } });
+  if (photoCount <= 1) {
+    throw new HttpError(400, { message: "At least one profile photo is required." });
+  }
+
   await removePhotoAsset(photo.url);
   await prisma.photo.delete({ where: { id: photo.id } });
 }

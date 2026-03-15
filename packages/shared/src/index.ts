@@ -65,11 +65,19 @@ export const ProfileSchema = z
 
 
 export const ProfilePatchSchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
+  displayName: z.string().trim().min(1).max(120).optional(),
+  dateOfBirth: z.coerce.date().optional(),
+  gender: GenderSchema.optional(),
+  age: z.number().int().min(18).max(120).optional(),
   profession: z.string().min(1).optional(),
   heightCm: z.number().int().min(120).max(240).optional().nullable(),
   bioShort: z.string().min(1).optional(),
+  bio: z.string().min(1).optional(),
   story: z.string().min(1).optional().nullable(),
   city: z.string().min(1).optional(),
+  place: z.string().min(1).optional(),
+  intent: z.enum(["dating", "friends", "all"]).optional(),
   locationLabel: z.string().min(1).optional().nullable(),
   photos: z
     .array(

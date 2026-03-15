@@ -1,45 +1,66 @@
 "use client";
 
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Settings, X, BadgeCheck, Briefcase, Ruler, LogOut, Trash2 } from "lucide-react";
-import { useTheme } from "next-themes";
-import { apiRequest } from "@/lib/api";
-import { fetchProfile } from "@/lib/queries";
+import { ApiError, apiRequest } from "@/lib/api";
+import { fetchProfile, type ProfileViewModel } from "@/lib/queries";
 import { useStaleWhileRevalidate } from "@/lib/cache";
+import { Loader2, PencilLine, ShieldCheck, UserRoundCheck, ImagePlus, Trash2 } from "lucide-react";
 
-type ProfileViewModel = {
-  name: string;
-  age: number;
-  location: string;
-  image: string;
-  profession: string;
-  height: string;
-  story: string;
-  subscription: { tier: string; status: string };
-  settings: {
-    pushNotificationsEnabled: boolean;
-    profileVisible: boolean;
-    showOnlineStatus: boolean;
-    discoverableByPremiumOnly: boolean;
-  };
-  photos: Array<{ id: string; url: string; photoIndex?: number | null }>;
-};
+const MAX_PHOTOS = 3;
+const MIN_PHOTOS = 1;
+const MIN_HEIGHT = 120;
+const MAX_HEIGHT = 240;
 
-const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&auto=format&fit=crop&q=80";
+type Gender = "MALE" | "FEMALE" | "NON_BINARY" | "OTHER";
 
-function toHeightCm(height: string) {
-  const m = height.trim().match(/^(\d)'\s*(\d{1,2})"?$/);
-  if (!m) return undefined;
-  return Math.round((Number(m[1]) * 12 + Number(m[2])) * 2.54);
+function calculateAgeFromDate(dateOfBirth: string | null) {
+  if (!dateOfBirth) return null;
+  const dob = new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) return null;
+  const today = new Date();
+  let age = today.getUTCFullYear() - dob.getUTCFullYear();
+  const monthDiff = today.getUTCMonth() - dob.getUTCMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getUTCDate() < dob.getUTCDate())) {
+    age -= 1;
+  }
+  return age;
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function formatPaymentPlan(plan?: string | null) {
+  if (!plan) return "Premium";
+  if (plan === "ONE_MONTH") return "1 Month";
+  if (plan === "FIVE_MONTHS") return "5 Months";
+  if (plan === "TWELVE_MONTHS") return "12 Months";
+  return plan;
+}
+
+function formatMoneyInr(amount?: number | null) {
+  if (!amount || amount <= 0) return "Tax included";
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount);
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Unable to read the selected image."));
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function ProfilePage() {
-  const { isAuthenticated, onboardingStep, logout } = useAuth();
-
-  const [view, setView] = useState<"portfolio" | "settings" | "edit">("portfolio");
-  const [model, setModel] = useState<ProfileViewModel | null>(null);
+  const { isAuthenticated, onboardingStep } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+  const [photoMessage, setPhotoMessage] = useState("");
 
   const profileQuery = useStaleWhileRevalidate({
     key: "profile",
@@ -50,282 +71,360 @@ export default function ProfilePage() {
 
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
+  if (profileQuery.isLoading && !profileQuery.data) {
+    return <ProfileSkeleton />;
+  }
+
+  if (profileQuery.error && !profileQuery.data) {
+    return (
+      <div className="px-6 py-10 space-y-4">
+        <h1 className="text-xl uppercase tracking-[0.35em] text-primary">Profile</h1>
+        <div className="rounded-3xl border border-red-300/20 bg-red-400/5 p-5">
+          <p className="text-sm text-red-200">We couldn’t load your profile right now.</p>
+          <button
+            onClick={() => void profileQuery.refresh(true)}
+            className="mt-4 rounded-xl border border-primary/30 px-4 py-2 text-xs uppercase tracking-[0.2em] text-primary"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const profile = profileQuery.data;
+  if (!profile) {
+    return (
+      <div className="px-6 py-10">
+        <h1 className="text-xl uppercase tracking-[0.35em] text-primary">Profile</h1>
+        <p className="mt-4 text-sm text-foreground/60">Your profile is currently unavailable. Please refresh.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full h-full relative">
-      <AnimatePresence mode="wait">
-        {view === "portfolio" && <PortfolioView key="portfolio" onSettings={() => setView("settings")} onEdit={() => setView("edit")} model={model ?? profileQuery.data ?? null} />}
-        {view === "settings" && (
-          <SettingsView
-            key="settings"
-            onClose={() => setView("portfolio")}
-            onLogout={logout}
-            model={model ?? profileQuery.data ?? null}
-            onSave={async (settings) => {
-              await apiRequest("/profile/settings", { method: "PATCH", auth: true, body: JSON.stringify(settings) });
-              setModel((prev) => (prev ? { ...prev, settings: { ...prev.settings, ...settings } } : prev));
+    <div className="px-6 py-8 space-y-6 pb-24">
+      <header className="space-y-2">
+        <h1 className="text-xl uppercase tracking-[0.35em] text-primary">Profile</h1>
+        <p className="text-xs uppercase tracking-[0.2em] text-foreground/45">Private membership identity</p>
+      </header>
+
+      <section className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-2xl font-serif text-foreground">{profile.name || "Private Member"}</p>
+            <p className="mt-1 text-sm text-foreground/60">
+              {profile.age ? `${profile.age} years` : "Age private"} • {profile.place || profile.location || "Location private"}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setEditing((value) => !value);
+              setSaveMessage("");
             }}
-          />
-        )}
-        {view === "edit" && (
-          <EditView
-            key="edit"
-            onClose={() => setView("portfolio")}
-            model={model ?? profileQuery.data ?? null}
-            onSave={async (partial) => {
-              await apiRequest("/profile", { method: "PATCH", auth: true, body: JSON.stringify(partial) });
-              setModel((prev) => (prev ? { ...prev, ...partial } : prev));
-              setView("portfolio");
-            }}
-          />
-        )}
-      </AnimatePresence>
+            className="rounded-xl border border-primary/30 px-3 py-2 text-xs uppercase tracking-[0.2em] text-primary"
+          >
+            <span className="inline-flex items-center gap-2"><PencilLine size={14} />{editing ? "Close" : "Edit"}</span>
+          </button>
+        </div>
+
+        {profile.assignedExecutive ? (
+          <div className="mt-4 rounded-2xl border border-primary/25 bg-background/60 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-primary/80">Human-managed service</p>
+            <p className="mt-2 text-sm text-foreground/85 inline-flex items-center gap-2">
+              <UserRoundCheck size={16} className="text-primary" />
+              Your profile is being managed by our executive <span className="font-medium">{profile.assignedExecutive.name}</span>
+            </p>
+          </div>
+        ) : null}
+      </section>
+
+      <PhotoManager
+        profile={profile}
+        onUpdated={async (message) => {
+          setPhotoMessage(message);
+          await profileQuery.refresh(true);
+        }}
+      />
+
+      {photoMessage ? <p className="text-xs text-emerald-300">{photoMessage}</p> : null}
+
+      {editing ? (
+        <ProfileEditForm
+          profile={profile}
+          onCancel={() => setEditing(false)}
+          onSaved={async (message) => {
+            setSaveMessage(message);
+            setEditing(false);
+            await profileQuery.refresh(true);
+          }}
+        />
+      ) : (
+        <ProfileReadView profile={profile} />
+      )}
+
+      {saveMessage ? <p className="text-xs text-emerald-300">{saveMessage}</p> : null}
+
+      <MembershipSummary profile={profile} />
     </div>
   );
 }
 
-function PortfolioView({ onSettings, onEdit, model }: { onSettings: () => void; onEdit: () => void; model: ProfileViewModel | null }) {
-  const user = model ?? {
-    name: "Aisha",
-    age: 27,
-    location: "MUMBAI",
-    image: FALLBACK_IMAGE,
-    profession: "Creative Director",
-    height: "5'8\"",
-    story:
-      "Wandering through the world with an eye for design and a taste for the extraordinary. Seeking someone who appreciates the quiet moments just as much as the grand adventures.",
-    subscription: { tier: "FREE", status: "INACTIVE" },
-    settings: { pushNotificationsEnabled: true, profileVisible: true, showOnlineStatus: true, discoverableByPremiumOnly: false },
-    photos: []
-  };
-
+function ProfileReadView({ profile }: { profile: ProfileViewModel }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 20, filter: "blur(10px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -20, filter: "blur(10px)" }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }} className="w-full pb-20">
-      <div className="relative w-full aspect-[4/5] rounded-b-3xl overflow-hidden shadow-2xl snap-start">
-        <motion.img layoutId="profile-image" src={user.image} alt="Profile" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
-
-        <button onClick={onSettings} className="absolute top-[env(safe-area-inset-top,24px)] right-6 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-all z-20 border border-white/10 shadow-sm">
-          <Settings size={20} className="text-primary" />
-        </button>
-
-        <div className="absolute bottom-10 left-8 z-20 flex flex-col">
-          <motion.div layoutId="profile-name-container" className="flex items-center gap-3">
-            <h2 className="text-5xl font-serif text-white tracking-wide drop-shadow-xl">
-              {user.name}, <span className="font-light">{user.age}</span>
-            </h2>
-            <BadgeCheck size={28} className="text-primary drop-shadow-xl" strokeWidth={2} />
-          </motion.div>
-          <motion.p layoutId="profile-location" className="text-[11px] uppercase tracking-[0.3em] font-medium text-white/50 mt-2">
-            {user.location}
-          </motion.p>
-        </div>
-      </div>
-
-      <div className="px-6 pt-6 flex flex-col gap-6">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="w-full p-4 rounded-2xl bg-foreground/5 backdrop-blur-md metallic-border flex items-center gap-4">
-          <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80" alt="Agent Julian" className="w-8 h-8 rounded-full object-cover border border-primary/50" />
-          <span className="text-xs text-foreground/80 font-light tracking-wide">Under the care of Agent Julian. {user.subscription.tier} access.</span>
-        </motion.div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <motion.div layoutId="profile-profession" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="p-4 rounded-2xl bg-foreground/5 metallic-border flex flex-col items-start gap-2">
-            <Briefcase size={18} className="text-primary" strokeWidth={1.5} />
-            <span className="text-sm font-medium text-foreground/90">{user.profession}</span>
-          </motion.div>
-          <motion.div layoutId="profile-height" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="p-4 rounded-2xl bg-foreground/5 metallic-border flex flex-col items-start gap-2">
-            <Ruler size={18} className="text-primary" strokeWidth={1.5} />
-            <span className="text-sm font-medium text-foreground/90">{user.height}</span>
-          </motion.div>
-        </div>
-
-        <motion.div layoutId="profile-story" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="w-full pt-4 pb-6">
-          <h3 className="text-[10px] uppercase tracking-[0.2em] text-primary mb-3">The Story</h3>
-          <p className="font-serif text-2xl leading-relaxed text-foreground/90">&ldquo;{user.story}&rdquo;</p>
-        </motion.div>
-
-        <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} onClick={onEdit} className="w-full py-4 rounded-xl border border-primary/40 text-primary uppercase text-[10px] tracking-widest font-semibold bg-transparent hover:bg-primary/5 transition-all shadow-sm">
-          Edit Portfolio
-        </motion.button>
-      </div>
-    </motion.div>
+    <section className="rounded-3xl border border-border/40 bg-foreground/[0.03] p-5 space-y-4">
+      <h2 className="text-sm uppercase tracking-[0.2em] text-foreground/50">Profile Details</h2>
+      <Field label="Date of birth" value={formatDate(profile.dateOfBirth)} />
+      <Field label="Gender" value={profile.gender ? profile.gender.replaceAll("_", " ") : "—"} />
+      <Field label="Height" value={profile.height ?? (profile.heightCm ? `${profile.heightCm} cm` : "—")} />
+      <Field label="Profession" value={profile.profession || "—"} />
+      <Field label="Place" value={profile.place || profile.location || "—"} />
+      <Field label="Bio" value={profile.bio || profile.story || "—"} multiline />
+    </section>
   );
 }
 
-function EditView({ onClose, model, onSave }: { onClose: () => void; model: ProfileViewModel | null; onSave: (payload: any) => Promise<void> }) {
-  const user = model ?? { profession: "Creative Director", height: "5'8\"", story: "" };
-  const [profession, setProfession] = useState(user.profession);
-  const [height, setHeight] = useState(user.height);
-  const [story, setStory] = useState(user.story);
+function ProfileEditForm({ profile, onCancel, onSaved }: { profile: ProfileViewModel; onCancel: () => void; onSaved: (message: string) => Promise<void> }) {
+  const [name, setName] = useState(profile.name);
+  const [dateOfBirth, setDateOfBirth] = useState(profile.dateOfBirth ? profile.dateOfBirth.slice(0, 10) : "");
+  const [gender, setGender] = useState<Gender | "">(profile.gender ?? "");
+  const [heightCm, setHeightCm] = useState(profile.heightCm ? String(profile.heightCm) : "");
+  const [profession, setProfession] = useState(profile.profession);
+  const [place, setPlace] = useState(profile.place || profile.location);
+  const [bio, setBio] = useState(profile.bio || profile.story);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} className="w-full h-full flex flex-col z-50 bg-background">
-      <div className="w-full pt-[env(safe-area-inset-top,24px)] pb-4 px-6 flex justify-between items-center border-b border-foreground/5 shrink-0">
-        <h1 className="text-lg tracking-[0.2em] font-medium text-foreground uppercase">Edit Identity</h1>
-        <button onClick={onClose} className="p-2 -mr-2 text-foreground/60 hover:text-foreground">
-          <X size={24} strokeWidth={1.5} />
-        </button>
-      </div>
+  const validationError = useMemo(() => {
+    if (name.trim().length < 2) return "Name must be at least 2 characters.";
+    if (!dateOfBirth) return "Date of birth is required.";
+    const age = calculateAgeFromDate(dateOfBirth);
+    if (!age || age < 18) return "Members must be at least 18 years old.";
+    if (!gender) return "Please select gender.";
+    const parsedHeight = Number(heightCm);
+    if (!Number.isFinite(parsedHeight) || parsedHeight < MIN_HEIGHT || parsedHeight > MAX_HEIGHT) {
+      return `Height must be between ${MIN_HEIGHT} and ${MAX_HEIGHT} cm.`;
+    }
+    if (profession.trim().length < 2) return "Profession must be at least 2 characters.";
+    if (place.trim().length < 2) return "Place must be at least 2 characters.";
+    if (bio.trim().length < 20) return "Bio must be at least 20 characters.";
+    return "";
+  }, [bio, dateOfBirth, gender, heightCm, name, place, profession]);
 
-      <div className="flex-1 w-full overflow-y-auto px-6 py-6 flex flex-col gap-6">
-        <div className="grid grid-cols-2 gap-4">
-          <motion.div layoutId="profile-profession" className="flex flex-col gap-2">
-            <label className="text-[10px] uppercase tracking-widest text-primary font-bold">Profession</label>
-            <input type="text" value={profession} onChange={(e) => setProfession(e.target.value)} className="w-full bg-foreground/5 border border-border/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary text-foreground" />
-          </motion.div>
-          <motion.div layoutId="profile-height" className="flex flex-col gap-2">
-            <label className="text-[10px] uppercase tracking-widest text-primary font-bold">Height</label>
-            <input type="text" value={height} onChange={(e) => setHeight(e.target.value)} className="w-full bg-foreground/5 border border-border/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary text-foreground" />
-          </motion.div>
-        </div>
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (validationError) return;
+    setSaving(true);
+    setError("");
 
-        <motion.div layoutId="profile-story" className="flex flex-col gap-2 mt-4">
-          <label className="text-[10px] uppercase tracking-widest text-primary font-bold">The Story</label>
-          <textarea value={story} onChange={(e) => setStory(e.target.value)} rows={6} className="w-full bg-foreground/5 border border-border/10 rounded-xl px-5 py-5 font-serif text-lg leading-relaxed focus:outline-none focus:border-primary text-foreground resize-none" />
-        </motion.div>
-
-        <button
-          onClick={() =>
-            void onSave({
-              profession,
-              story,
-              bioShort: story,
-              heightCm: toHeightCm(height)
-            })
-          }
-          className="w-full py-4 mt-8 rounded-xl bg-primary text-background uppercase text-[10px] tracking-widest font-semibold shadow-md"
-        >
-          Save Portfolio
-        </button>
-      </div>
-    </motion.div>
-  );
-}
-
-function SettingsView({ onClose, onLogout, model, onSave }: { onClose: () => void; onLogout: () => void; model: ProfileViewModel | null; onSave: (settings: any) => Promise<void> }) {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-
-  useEffect(() => setMounted(true), []);
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
-
-  const handleDeleteConfirm = () => {
-    setShowDeleteModal(false);
-    onLogout();
-  };
-
-  const settings = model?.settings ?? {
-    pushNotificationsEnabled: true,
-    profileVisible: true,
-    showOnlineStatus: true,
-    discoverableByPremiumOnly: false
-  };
-
-  return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.4 }} className="w-full h-full flex flex-col z-[60] bg-background">
-      <div className="w-full pt-[env(safe-area-inset-top,24px)] pb-4 px-6 flex justify-between items-center bg-background/80 backdrop-blur-md shrink-0 border-b border-foreground/5">
-        <h1 className="text-lg tracking-[0.4em] font-medium text-primary uppercase">The Vault</h1>
-        <button onClick={onClose} className="p-2 -mr-2 text-foreground/60 hover:text-foreground">
-          <X size={24} strokeWidth={1.5} />
-        </button>
-      </div>
-
-      <div className="flex-1 w-full overflow-y-auto px-6 py-8 flex flex-col gap-10">
-        <div className="flex flex-col gap-4">
-          <h3 className="text-[10px] uppercase tracking-widest text-foreground/40 font-semibold pl-1">Appearance</h3>
-          <div className="w-full p-4 rounded-2xl bg-foreground/5 flex items-center justify-between border border-foreground/5">
-            <span className="text-sm font-medium text-foreground">Theme</span>
-            {mounted && (
-              <button onClick={toggleTheme} className="w-14 h-8 rounded-full bg-foreground/10 p-1 flex items-center transition-colors relative">
-                <motion.div className="w-6 h-6 rounded-full bg-primary shadow-sm" layout animate={{ x: theme === "dark" ? 24 : 0 }} transition={{ type: "spring", stiffness: 500, damping: 30 }} />
-              </button>
-            )}
-          </div>
-          <div className="w-full p-4 rounded-2xl bg-foreground/5 border border-foreground/5 text-xs text-foreground/70">Push Notifications: {settings.pushNotificationsEnabled ? "On" : "Off"}</div>
-          <button onClick={() => void onSave({ pushNotificationsEnabled: !settings.pushNotificationsEnabled })} className="w-full p-3 rounded-xl bg-primary/10 text-primary text-xs uppercase tracking-widest">Toggle Push Notifications</button>
-        </div>
-
-        <div className="flex flex-col gap-4 mt-auto pb-12">
-          <h3 className="text-[10px] uppercase tracking-widest text-foreground/40 font-semibold pl-1">Security & Access</h3>
-
-          <HoldToConfirmAction label="End Session" colorClass="text-slate-500 dark:text-slate-400" bgClass="bg-foreground/5" icon={LogOut} onConfirm={onLogout} />
-
-          <HoldToConfirmAction label="Permanently Erase Portfolio" colorClass="text-[#9b2c2c]" bgClass="bg-[#9b2c2c]/10" icon={Trash2} onConfirm={() => setShowDeleteModal(true)} />
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {showDeleteModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-background/90 backdrop-blur-xl">
-            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="w-full max-w-sm rounded-[2rem] bg-foreground/5 p-8 border border-foreground/10 flex flex-col items-center text-center shadow-2xl">
-              <div className="w-16 h-16 rounded-full bg-[#9b2c2c]/20 flex items-center justify-center mb-6">
-                <Trash2 size={28} className="text-[#9b2c2c]" />
-              </div>
-              <h2 className="text-xl font-serif text-foreground mb-3">Irreversible Erase</h2>
-              <p className="text-sm font-light text-foreground/70 leading-relaxed mb-8">This action is irreversible. All connections and concierge history will be permanently wiped.</p>
-              <div className="flex flex-col w-full gap-3">
-                <button onClick={handleDeleteConfirm} className="w-full py-4 rounded-xl bg-[#9b2c2c] text-white uppercase text-[10px] tracking-widest font-semibold shadow-md">Confirm Erasure</button>
-                <button onClick={() => setShowDeleteModal(false)} className="w-full py-4 rounded-xl bg-transparent text-foreground uppercase text-[10px] tracking-widest font-semibold">Cancel</button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
-
-function HoldToConfirmAction({ label, colorClass, bgClass, icon: Icon, onConfirm }: any) {
-  const [progress, setProgress] = useState(0);
-  const [holding, setHolding] = useState(false);
-  const animationRef = useRef<number | null>(null);
-
-  const HOLD_TIME = 500;
-
-  const startHold = () => {
-    setHolding(true);
-    const startTime = Date.now();
-
-    const animate = () => {
-      const now = Date.now();
-      const p = Math.min((now - startTime) / HOLD_TIME, 1);
-      setProgress(p);
-
-      if (p < 1) {
-        animationRef.current = requestAnimationFrame(animate);
+    try {
+      await apiRequest("/profile", {
+        method: "PATCH",
+        auth: true,
+        body: JSON.stringify({
+          name: name.trim(),
+          displayName: name.trim(),
+          dateOfBirth,
+          gender,
+          heightCm: Number(heightCm),
+          profession: profession.trim(),
+          city: place.trim(),
+          place: place.trim(),
+          locationLabel: place.trim(),
+          bioShort: bio.trim(),
+          bio: bio.trim(),
+          story: bio.trim(),
+          intent: "dating"
+        })
+      });
+      await onSaved("Profile updated successfully.");
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
       } else {
-        onConfirm();
-        setHolding(false);
+        setError("Unable to save profile details right now.");
       }
-    };
-
-    animationRef.current = requestAnimationFrame(animate);
-  };
-
-  const endHold = () => {
-    setHolding(false);
-    if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    setProgress(0);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <button onPointerDown={startHold} onPointerUp={endHold} onPointerLeave={endHold} className={`relative w-full overflow-hidden p-4 rounded-2xl flex items-center justify-center gap-3 metallic-border transition-transform ${holding ? "scale-[0.98]" : "scale-100"} ${bgClass}`} style={{ userSelect: "none", WebkitUserSelect: "none" }}>
-      <div className="absolute inset-0 bg-foreground/10 origin-left" style={{ transform: `scaleX(${progress})`, transition: holding ? "none" : "transform 0.3s ease-out" }} />
-      <div className="relative z-10 flex items-center gap-3">
-        <Icon size={18} className={colorClass} />
-        <span className={`text-sm font-medium ${colorClass}`}>{label}</span>
+    <form onSubmit={onSubmit} className="rounded-3xl border border-primary/20 bg-primary/5 p-5 space-y-3">
+      <h2 className="text-sm uppercase tracking-[0.2em] text-primary">Edit Profile</h2>
+      <TextInput label="Name" value={name} onChange={setName} />
+      <TextInput label="Date of birth" value={dateOfBirth} onChange={setDateOfBirth} type="date" />
+      <div>
+        <label className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-foreground/50">Gender</label>
+        <select
+          value={gender}
+          onChange={(event) => setGender(event.target.value as Gender)}
+          className="w-full rounded-xl border border-primary/20 bg-transparent px-3 py-3 text-sm text-foreground focus:border-primary focus:outline-none"
+        >
+          <option value="">Select</option>
+          <option value="MALE">Male</option>
+          <option value="FEMALE">Female</option>
+          <option value="NON_BINARY">Non-binary</option>
+          <option value="OTHER">Other</option>
+        </select>
       </div>
+      <TextInput label="Height (cm)" value={heightCm} onChange={setHeightCm} inputMode="numeric" />
+      <TextInput label="Profession" value={profession} onChange={setProfession} />
+      <TextInput label="Place" value={place} onChange={setPlace} />
+      <div>
+        <label className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-foreground/50">Bio</label>
+        <textarea
+          rows={4}
+          value={bio}
+          onChange={(event) => setBio(event.target.value)}
+          className="w-full rounded-xl border border-primary/20 bg-transparent px-3 py-3 text-sm text-foreground focus:border-primary focus:outline-none"
+        />
+      </div>
+      {validationError ? <p className="text-xs text-amber-300">{validationError}</p> : null}
+      {error ? <p className="text-xs text-red-300">{error}</p> : null}
+      <div className="flex gap-3 pt-1">
+        <button type="submit" disabled={saving || Boolean(validationError)} className="btn-elite-primary disabled:opacity-40 disabled:cursor-not-allowed">
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+        <button type="button" onClick={onCancel} className="rounded-xl border border-border px-4 py-2 text-xs uppercase tracking-[0.2em] text-foreground/65">
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
 
-      <AnimatePresence>
-        {progress > 0 && progress < 1 && (
-          <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute bottom-1 right-3 text-[8px] uppercase tracking-widest text-foreground/50">
-            Hold
-          </motion.span>
-        )}
-      </AnimatePresence>
-    </button>
+function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpdated: (message: string) => Promise<void> }) {
+  const photos = profile.photos;
+  const canUpload = photos.length < MAX_PHOTOS;
+  const [busyPhotoId, setBusyPhotoId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !canUpload) return;
+
+    setUploading(true);
+    setError("");
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      await apiRequest("/photos/upload", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({ filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
+      });
+      await onUpdated("Photo uploaded.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to upload photo.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removePhoto = async (photoId: string) => {
+    setBusyPhotoId(photoId);
+    setError("");
+    try {
+      await apiRequest(`/photos/${photoId}`, { method: "DELETE", auth: true });
+      await onUpdated("Photo removed.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to remove photo.");
+    } finally {
+      setBusyPhotoId(null);
+    }
+  };
+
+  return (
+    <section className="rounded-3xl border border-border/40 bg-foreground/[0.03] p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm uppercase tracking-[0.2em] text-foreground/50">Photos</h2>
+        <span className="text-[11px] text-foreground/55">{photos.length}/{MAX_PHOTOS}</span>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {Array.from({ length: MAX_PHOTOS }).map((_, index) => {
+          const photo = photos[index];
+          return (
+            <div key={index} className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-primary/20 bg-foreground/[0.03]">
+              {photo ? (
+                <>
+                  <img src={photo.url} alt={`Profile ${index + 1}`} className="h-full w-full object-cover" />
+                  <button
+                    disabled={busyPhotoId === photo.id || photos.length <= MIN_PHOTOS}
+                    onClick={() => void removePhoto(photo.id)}
+                    className="absolute right-1 top-1 rounded-full bg-background/75 p-1.5 text-red-300 disabled:opacity-40"
+                  >
+                    {busyPhotoId === photo.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  </button>
+                </>
+              ) : (
+                <div className="flex h-full items-center justify-center text-[10px] uppercase tracking-[0.2em] text-foreground/35">Empty</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <label className={`inline-flex items-center gap-2 rounded-xl border border-primary/30 px-3 py-2 text-xs uppercase tracking-[0.2em] ${canUpload && !uploading ? "cursor-pointer text-primary" : "cursor-not-allowed text-foreground/40"}`}>
+        <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={!canUpload || uploading} onChange={(event) => void handleUpload(event)} />
+        {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />} {uploading ? "Uploading" : canUpload ? "Add photo" : "Max reached"}
+      </label>
+      <p className="text-xs text-foreground/55">Maintain 1 to 3 photos at all times for active membership visibility.</p>
+      {error ? <p className="text-xs text-red-300">{error}</p> : null}
+    </section>
+  );
+}
+
+function MembershipSummary({ profile }: { profile: ProfileViewModel }) {
+  return (
+    <section className="rounded-3xl border border-primary/20 bg-primary/5 p-5 space-y-3">
+      <h2 className="text-sm uppercase tracking-[0.2em] text-primary inline-flex items-center gap-2"><ShieldCheck size={14} /> Membership</h2>
+      <Field label="Plan" value={formatPaymentPlan(profile.subscription.paymentPlan) || profile.subscription.tier} />
+      <Field label="Status" value={profile.subscription.status} />
+      <Field label="Amount" value={formatMoneyInr(profile.subscription.paymentAmount)} />
+      <Field label="Validity" value={profile.subscription.endsAt ? `Valid until ${formatDate(profile.subscription.endsAt)}` : "—"} />
+      <Field label="Renewal" value={profile.subscription.renewalMode === "AUTO" ? "Auto" : "Manual renewal only"} />
+    </section>
+  );
+}
+
+function ProfileSkeleton() {
+  return (
+    <div className="px-6 py-8 space-y-4 animate-pulse">
+      <div className="h-5 w-28 rounded bg-foreground/10" />
+      <div className="h-36 rounded-3xl bg-foreground/10" />
+      <div className="h-40 rounded-3xl bg-foreground/10" />
+      <div className="h-56 rounded-3xl bg-foreground/10" />
+    </div>
+  );
+}
+
+function TextInput(props: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  inputMode?: "text" | "numeric";
+}) {
+  return (
+    <div>
+      <label className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-foreground/50">{props.label}</label>
+      <input
+        type={props.type ?? "text"}
+        value={props.value}
+        inputMode={props.inputMode}
+        onChange={(event) => props.onChange(event.target.value)}
+        className="w-full rounded-xl border border-primary/20 bg-transparent px-3 py-3 text-sm text-foreground focus:border-primary focus:outline-none"
+      />
+    </div>
+  );
+}
+
+function Field({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-[0.2em] text-foreground/45">{label}</p>
+      <p className={`mt-1 text-sm text-foreground/90 ${multiline ? "leading-relaxed" : ""}`}>{value}</p>
+    </div>
   );
 }

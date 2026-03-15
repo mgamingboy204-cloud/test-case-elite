@@ -336,13 +336,33 @@ export async function fetchAlerts(): Promise<Alert[]> {
 
 export type ProfileViewModel = {
   name: string;
-  age: number;
+  age: number | null;
+  dateOfBirth: string | null;
+  gender: "MALE" | "FEMALE" | "NON_BINARY" | "OTHER" | null;
   location: string;
-  image: string;
+  place: string;
+  image: string | null;
   profession: string;
-  height: string;
+  height: string | null;
+  heightCm: number | null;
   story: string;
-  subscription: { tier: string; status: string };
+  bio: string;
+  subscription: {
+    tier: string;
+    status: string;
+    paymentPlan?: string | null;
+    paymentAmount?: number | null;
+    startedAt?: string | null;
+    endsAt?: string | null;
+    paidAt?: string | null;
+    renewalMode?: "MANUAL" | "AUTO";
+  };
+  assignedExecutive: {
+    id: string;
+    name: string;
+    assignedAt: string | null;
+    verificationStatus: string;
+  } | null;
   settings: {
     pushNotificationsEnabled: boolean;
     profileVisible: boolean;
@@ -356,11 +376,18 @@ const FALLBACK_PROFILE_IMAGE = "https://images.unsplash.com/photo-1524504388940-
 type RawProfileResponse = {
   viewModel?: {
     name?: string;
+    dateOfBirth?: string | null;
+    age?: number | null;
+    gender?: ProfileViewModel["gender"];
     location?: string;
+    place?: string;
     profession?: string;
     height?: string;
+    heightCm?: number | null;
     story?: string;
-    subscription?: { tier: string; status: string };
+    bio?: string;
+    subscription?: ProfileViewModel["subscription"];
+    assignedExecutive?: ProfileViewModel["assignedExecutive"];
     settings?: ProfileViewModel["settings"];
     photos?: Array<{ id: string; url: string; photoIndex?: number | null }>;
   };
@@ -376,15 +403,22 @@ type RawProfileResponse = {
 
 export async function fetchProfile(): Promise<ProfileViewModel> {
   const data = await apiRequest<RawProfileResponse>("/profile", { auth: true });
+  const image = data.photos?.[0]?.url ?? data.viewModel?.photos?.[0]?.url ?? FALLBACK_PROFILE_IMAGE;
   return {
     name: data.viewModel?.name ?? data.profile?.name ?? "",
-    age: data.profile?.age ?? 27,
+    age: data.viewModel?.age ?? data.profile?.age ?? null,
+    dateOfBirth: data.viewModel?.dateOfBirth ?? null,
+    gender: data.viewModel?.gender ?? null,
     location: data.viewModel?.location ?? data.profile?.city ?? "",
-    image: data.photos?.[0]?.url ?? FALLBACK_PROFILE_IMAGE,
+    place: data.viewModel?.place ?? data.profile?.city ?? "",
+    image,
     profession: data.viewModel?.profession ?? data.profile?.profession ?? "",
-    height: data.viewModel?.height ?? "5'8\"",
+    height: data.viewModel?.height ?? null,
+    heightCm: data.viewModel?.heightCm ?? null,
     story: data.viewModel?.story ?? data.profile?.bioShort ?? "",
+    bio: data.viewModel?.bio ?? data.profile?.bioShort ?? "",
     subscription: data.viewModel?.subscription ?? { tier: "FREE", status: "INACTIVE" },
+    assignedExecutive: data.viewModel?.assignedExecutive ?? null,
     settings: data.viewModel?.settings ?? {
       pushNotificationsEnabled: true,
       profileVisible: true,
