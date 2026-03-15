@@ -12,7 +12,7 @@ export default function Contact() {
         <div className="flex flex-col items-center p-8 bg-background/20 backdrop-blur-md rounded-3xl border border-border/50">
           <Mail className="w-8 h-8 text-primary mb-4" />
           <h3 className="text-xl font-medium mb-2">Concierge Email</h3>
-          <p className="text-foreground/70 font-light">concierge@elitematch.app</p>
+          <p className="text-foreground/70 font-light">concierge@vael.app</p>
         </div>
         <div className="flex flex-col items-center p-8 bg-background/20 backdrop-blur-md rounded-3xl border border-border/50">
           <MapPin className="w-8 h-8 text-primary mb-4" />

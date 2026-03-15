@@ -10,7 +10,7 @@ type CacheRecord<T> = {
 const memoryCache = new Map<string, CacheRecord<unknown>>();
 
 function getStorageKey(key: string) {
-  return `elite-cache:${key}`;
+  return `vael-cache:${key}`;
 }
 
 function readPersisted<T>(key: string): CacheRecord<T> | null {

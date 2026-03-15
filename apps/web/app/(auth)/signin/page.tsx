@@ -63,7 +63,7 @@ export default function SignIn() {
               <button 
                 type="submit" 
                 disabled={phone.length !== 10}
-                className="btn-elite-primary disabled:opacity-20 disabled:grayscale"
+                className="btn-vael-primary disabled:opacity-20 disabled:grayscale"
               >
                 Identification Proceed
               </button>
@@ -105,7 +105,7 @@ export default function SignIn() {
               <button 
                 type="submit" 
                 disabled={password.length < 8 || loading}
-                className="btn-elite-primary disabled:opacity-20 disabled:grayscale"
+                className="btn-vael-primary disabled:opacity-20 disabled:grayscale"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" />

@@ -388,13 +388,13 @@ describe("Phone unlock authorization", () => {
 
     const handleSubmitted = await withAuth(agentA.post(`/social-exchange-cases/${caseId}/handle`), tokenA).send({
       platform: "Instagram",
-      handle: "@elite_a"
+      handle: "@vael_a"
     });
     expect(handleSubmitted.status).toBe(200);
 
     const socialReveal = await withAuth(agentB.post(`/social-exchange-cases/${caseId}/reveal`), tokenB).send({});
     expect(socialReveal.status).toBe(200);
-    expect(socialReveal.body.handle).toBe("@elite_a");
+    expect(socialReveal.body.handle).toBe("@vael_a");
   });
 
 });

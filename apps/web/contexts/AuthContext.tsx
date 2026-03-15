@@ -104,9 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     const hydrate = async () => {
-      const storedPendingPhone = localStorage.getItem("elite_pending_phone");
-      const storedSignupToken = localStorage.getItem("elite_signup_token");
-      const storedOnboardingToken = localStorage.getItem("elite_onboarding_token");
+      const storedPendingPhone = localStorage.getItem("vael_pending_phone");
+      const storedSignupToken = localStorage.getItem("vael_signup_token");
+      const storedOnboardingToken = localStorage.getItem("vael_onboarding_token");
       setPendingPhone(storedPendingPhone || null);
       setSignupToken(storedSignupToken || null);
       setOnboardingToken(storedOnboardingToken || null);
@@ -138,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     setPendingPhone(phone);
-    localStorage.setItem("elite_pending_phone", phone);
+    localStorage.setItem("vael_pending_phone", phone);
     router.push("/signup/otp");
   };
 
@@ -151,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     setSignupToken(response.signupToken);
-    localStorage.setItem("elite_signup_token", response.signupToken);
+    localStorage.setItem("vael_signup_token", response.signupToken);
     router.push("/signup/password");
   };
 
@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     setSignupToken(response.signupToken);
-    localStorage.setItem("elite_signup_token", response.signupToken);
+    localStorage.setItem("vael_signup_token", response.signupToken);
     router.push("/signup/password");
   };
 
@@ -207,9 +207,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setPendingPhone(null);
-    localStorage.removeItem("elite_pending_phone");
+    localStorage.removeItem("vael_pending_phone");
     setSignupToken(null);
-    localStorage.removeItem("elite_signup_token");
+    localStorage.removeItem("vael_signup_token");
 
     const nextRoute = routeForOnboardingStep(resolveFrontendOnboardingStep({
       isAuthenticated: true,
@@ -229,7 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     setPendingPhone(phone);
-    localStorage.setItem("elite_pending_phone", phone);
+    localStorage.setItem("vael_pending_phone", phone);
 
     if (response.otpRequired) {
       return { otpRequired: true };
@@ -243,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOnboardingToken(response.onboardingToken ?? response.user.onboardingToken ?? null);
     setUser(response.user);
     setPendingPhone(null);
-    localStorage.removeItem("elite_pending_phone");
+    localStorage.removeItem("vael_pending_phone");
     router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
       isAuthenticated: true,
       backendStep: response.user.onboardingStep,
@@ -266,7 +266,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOnboardingToken(response.onboardingToken);
     setUser(response.user);
     setPendingPhone(null);
-    localStorage.removeItem("elite_pending_phone");
+    localStorage.removeItem("vael_pending_phone");
     router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
       isAuthenticated: true,
       backendStep: response.user.onboardingStep,
@@ -297,7 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOnboardingToken(response.onboardingToken);
     setUser(response.user);
     setPendingPhone(null);
-    localStorage.removeItem("elite_pending_phone");
+    localStorage.removeItem("vael_pending_phone");
     router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
       isAuthenticated: true,
       backendStep: response.user.onboardingStep,
@@ -330,9 +330,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPendingPhone(null);
     setSignupToken(null);
     setOnboardingToken(null);
-    localStorage.removeItem("elite_pending_phone");
-    localStorage.removeItem("elite_signup_token");
-    localStorage.removeItem("elite_onboarding_token");
+    localStorage.removeItem("vael_pending_phone");
+    localStorage.removeItem("vael_signup_token");
+    localStorage.removeItem("vael_onboarding_token");
     router.push("/");
   };
 

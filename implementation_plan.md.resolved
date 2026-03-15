@@ -1,18 +1,18 @@
 # Premium Cinematic Redesign Plan
 
-This plan details the top-to-bottom redesign of the Elite Match application to deliver a "full premium cinematic type" and "high cost" user interface. The goal is to elevate the app into an immersive, editorial-quality experience using a **Pearl White & Rose Gold** aesthetic.
+This plan details the top-to-bottom redesign of the VAEL application to deliver a "full premium cinematic type" and "high cost" user interface. The goal is to elevate the app into an immersive, editorial-quality experience using a **Pearl White & Rose Gold** aesthetic.
 
 ## Proposed Changes
 
 ### Global Styles & Layout Layout
 Refining the core visual language to feel expensive, light, and atmospheric.
 
-#### [MODIFY] [globals.css](file:///c:/Users/MOHITH%20REDDY/Documents/test-case-elite/apps/web/app/globals.css)
+#### [MODIFY] [globals.css](file:///c:/Users/MOHITH%20REDDY/Documents/VAEL/apps/web/app/globals.css)
 - Update CSS variables for a "Pearl White" background (soft, warm white/cream) and "Rose Gold" primary accents.
 - Add advanced utility classes for `ultra-glass` (frosted glass with high blur and subtle white borders), soft dynamic glow effects, and smooth text gradients.
 - Refine typography rules for high elegance, utilizing delicate serif headings and crisp sans-serif body text with ample white space.
 
-#### [MODIFY] [layout.tsx](file:///c:/Users/MOHITH%20REDDY/Documents/test-case-elite/apps/web/app/layout.tsx)
+#### [MODIFY] [layout.tsx](file:///c:/Users/MOHITH%20REDDY/Documents/VAEL/apps/web/app/layout.tsx)
 - Enhance the background with a subtle, slow-moving animated mesh gradient (soft rose and pearl hues) to create a cinematic, breathing "stage" for the content.
 - Change the Next.js `themeColor` and HTML class to support the light premium theme instead of `dark`.
 
@@ -31,7 +31,7 @@ Upgrading the building blocks to advanced, interaction-rich components using Fra
 ### Key Feature Pages
 Transforming standard app layouts into high-end editorial experiences.
 
-#### [MODIFY] [discover/page.tsx](file:///c:/Users/MOHITH%20REDDY/Documents/test-case-elite/apps/web/app/(app)/discover/page.tsx)
+#### [MODIFY] [discover/page.tsx](file:///c:/Users/MOHITH%20REDDY/Documents/VAEL/apps/web/app/(app)/discover/page.tsx)
 - **The Swipe Stack**: Make the images larger (edge-to-edge), with a soft vignette gradient overlay from the bottom. 
 - **Typography Overlay**: Style the user's name and details like a luxury magazine cover.
 - **Interactions**: Smoother physics, haptic-feeling animations, and a glowing auroral effect around the active card based on drag direction (rose gold for like, soft ash/pearl for pass).

@@ -269,7 +269,7 @@ export default function DiscoverPage() {
 
       <div className="absolute left-0 right-0 bottom-10 px-10 flex justify-between items-end z-40 w-full max-w-lg mx-auto pointer-events-none">
         <motion.button whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }} disabled={!card || Boolean(pendingAction) || status !== "success"} onClick={() => void handleInteraction("PASS")} className="w-[76px] h-[76px] rounded-full bg-background/40 backdrop-blur-2xl border border-primary/40 flex items-center justify-center pointer-events-auto relative overflow-hidden group shadow-xl disabled:opacity-40"><div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" /><X size={34} strokeWidth={1} className="text-primary drop-shadow-sm z-10" /></motion.button>
-        <motion.button whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }} disabled={!card || Boolean(pendingAction) || status !== "success"} onClick={() => void handleInteraction("LIKE")} className="w-28 h-28 rounded-full bg-background/40 backdrop-blur-3xl shadow-[0_20px_50px_rgba(200,155,144,0.2)] border border-primary/60 flex items-center justify-center pointer-events-auto relative overflow-hidden group disabled:opacity-40"><div className="absolute inset-0 bg-primary/10 blur-2xl opacity-50 group-hover:opacity-100 transition-opacity" /><div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" /><HeartEliteIcon /></motion.button>
+        <motion.button whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }} disabled={!card || Boolean(pendingAction) || status !== "success"} onClick={() => void handleInteraction("LIKE")} className="w-28 h-28 rounded-full bg-background/40 backdrop-blur-3xl shadow-[0_20px_50px_rgba(200,155,144,0.2)] border border-primary/60 flex items-center justify-center pointer-events-auto relative overflow-hidden group disabled:opacity-40"><div className="absolute inset-0 bg-primary/10 blur-2xl opacity-50 group-hover:opacity-100 transition-opacity" /><div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" /><HeartVaelIcon /></motion.button>
       </div>
 
       {hasScrolled && <div className="sr-only">scrolled</div>}
@@ -286,6 +286,6 @@ function InfoPill({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
   );
 }
 
-function HeartEliteIcon() {
+function HeartVaelIcon() {
   return <svg width="40" height="40" viewBox="0 0 24 24" fill="none" className="z-10 drop-shadow-[0_0_15px_rgba(200,155,144,0.4)]"><path d="M12 21C12 21 4.5 14.5 4.5 8.5C4.5 5.5 6.5 3.5 9 3.5C10.5 3.5 11.5 4 12 5C12.5 4 13.5 3.5 15 3.5C17.5 3.5 19.5 5.5 19.5 8.5C19.5 14.5 12 21 12 21Z" stroke="url(#goldGradient)" strokeWidth="1.2" /><defs><linearGradient id="goldGradient" x1="4.5" y1="3.5" x2="19.5" y2="21" gradientUnits="userSpaceOnUse"><stop stopColor="var(--primary)" stopOpacity="1" /><stop offset="1" stopColor="var(--highlight)" stopOpacity="0.4" /></linearGradient></defs></svg>;
 }

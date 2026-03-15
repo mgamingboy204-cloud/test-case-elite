@@ -96,7 +96,7 @@ export default function PaymentStep() {
           amount: init.razorpay.amountPaise,
           currency: init.razorpay.currency,
           order_id: init.razorpay.orderId,
-          name: "Elite Membership",
+          name: "VAEL Membership",
           description: `Membership ${selectedTier}`,
           handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
             try {
@@ -149,7 +149,7 @@ export default function PaymentStep() {
   return (
     <div className="flex flex-col h-full px-8 pb-[calc(env(safe-area-inset-bottom,0px)+32px)]">
       <div className="flex-none pt-6 mb-8">
-        <h1 className="text-4xl font-serif text-foreground tracking-wide mb-2">Elite <span className="text-primary">Membership</span></h1>
+        <h1 className="text-4xl font-serif text-foreground tracking-wide mb-2">VAEL <span className="text-primary">Membership</span></h1>
       </div>
       <div className="flex-none grid grid-cols-1 gap-4 mb-8">
         {formattedPlans.map((tier) => {
@@ -166,7 +166,7 @@ export default function PaymentStep() {
       <form onSubmit={handlePayment} className="flex flex-col flex-1 gap-6">
         <div className="mt-auto space-y-3">
           {error && <p className="text-sm text-red-400 text-center">{error || FAILURE_MESSAGE}</p>}
-          <motion.button whileTap={{ scale: 0.97 }} type="submit" disabled={!selectedTier || processing} className={`btn-elite-primary ${!selectedTier || processing ? "opacity-20 grayscale cursor-not-allowed" : ""}`}>
+          <motion.button whileTap={{ scale: 0.97 }} type="submit" disabled={!selectedTier || processing} className={`btn-vael-primary ${!selectedTier || processing ? "opacity-20 grayscale cursor-not-allowed" : ""}`}>
             {processing ? "Processing…" : `Pay with Razorpay — ${selectedTier ? PLAN_COPY[selectedTier].price : "INR —"}`}
           </motion.button>
           {allowTestBypass && (

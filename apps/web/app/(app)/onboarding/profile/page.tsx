@@ -179,7 +179,7 @@ export default function OnboardingProfileDetailsPage() {
           <button
             type="submit"
             disabled={Boolean(validationError) || saving}
-            className={`btn-elite-primary ${validationError || saving ? "cursor-not-allowed opacity-30 grayscale" : ""}`}
+            className={`btn-vael-primary ${validationError || saving ? "cursor-not-allowed opacity-30 grayscale" : ""}`}
           >
             {saving ? "Saving…" : "Continue to Photo Upload"}
           </button>

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: elite-api
+    name: vael-api
     runtime: node
     rootDir: .
     buildCommand: npm run render:build

@@ -6,7 +6,7 @@ export default function Apply() {
       </span>
       <h1 className="text-4xl md:text-6xl font-light mb-6 text-foreground">Request an <span className="font-semibold text-primary italic">Invitation</span></h1>
       <p className="text-xl text-foreground/60 font-light max-w-2xl mb-12 leading-relaxed">
-        Membership to Elite is highly selective. Please leave your details, and our concierge team will reach out if we feel you align with our active network.
+        Membership to VAEL is highly selective. Please leave your details, and our concierge team will reach out if we feel you align with our active network.
       </p>
       
       <form className="w-full max-w-md flex flex-col gap-4 text-left">

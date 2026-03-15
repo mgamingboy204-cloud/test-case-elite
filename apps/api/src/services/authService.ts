@@ -5,7 +5,7 @@ import { deviceCookieOptions } from "../config/auth";
 import { env } from "../config/env";
 import { HttpError } from "../utils/httpErrors";
 import { logger } from "../utils/logger";
-import { resolveBackendOnboardingStep } from "@elite/shared";
+import { resolveBackendOnboardingStep } from "@vael/shared";
 import { sendTwilioOtp, verifyTwilioOtp } from "./twilioVerifyService";
 
 function hashToken(token: string) {

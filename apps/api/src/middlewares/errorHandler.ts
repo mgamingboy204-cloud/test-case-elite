@@ -11,7 +11,7 @@ import { formatZodError } from "../utils/validation";
 const PRISMA_ERROR_MAP: Record<string, { status: number; message: string; code: string }> = {
   P2002: {
     status: 409,
-    message: "This account already exists in our Elite network. Please log in instead.",
+    message: "This account already exists in our VAEL network. Please log in instead.",
     code: "DUPLICATE_ENTRY",
   },
   P2025: {
@@ -93,7 +93,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
 
     logger.warn(`Unhandled Prisma Error [${err.code}]:`, err.message);
     return res.status(400).json({
-      message: "Our elite systems encountered a data processing issue. Please try again.",
+      message: "Our VAEL systems encountered a data processing issue. Please try again.",
       code: `DB_ERROR_${err.code}`,
     });
   }
@@ -102,7 +102,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
   if (isPrismaValidationError(err)) {
     logger.error("Prisma Validation Error:", err.message);
     return res.status(400).json({
-      message: "The provided information does not meet our elite quality standards.",
+      message: "The provided information does not meet our VAEL quality standards.",
       code: "DATA_VALIDATION_ERROR",
     });
   }

@@ -129,10 +129,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           <div className="flex items-center justify-between px-6 h-[56px] min-[769px]:h-[72px]">
             <span className="min-[769px]:hidden text-xl font-serif tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-primary to-highlight">
-              ELITE
+              VAEL
             </span>
             <span className="hidden min-[769px]:block text-[11px] uppercase tracking-[0.4em] text-foreground/40 font-medium">
-              {NAV_ITEMS.find(n => n.href === pathname)?.label ?? 'Elite'}
+              {NAV_ITEMS.find(n => n.href === pathname)?.label ?? 'VAEL'}
             </span>
 
             <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-foreground/5 transition-colors">

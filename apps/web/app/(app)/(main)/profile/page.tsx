@@ -283,7 +283,7 @@ function ProfileEditForm({ profile, onCancel, onSaved }: { profile: ProfileViewM
       {validationError ? <p className="text-xs text-amber-300">{validationError}</p> : null}
       {error ? <p className="text-xs text-red-300">{error}</p> : null}
       <div className="flex gap-3 pt-1">
-        <button type="submit" disabled={saving || Boolean(validationError)} className="btn-elite-primary disabled:opacity-40 disabled:cursor-not-allowed">
+        <button type="submit" disabled={saving || Boolean(validationError)} className="btn-vael-primary disabled:opacity-40 disabled:cursor-not-allowed">
           {saving ? "Saving…" : "Save changes"}
         </button>
         <button type="button" onClick={onCancel} className="rounded-xl border border-border px-4 py-2 text-xs uppercase tracking-[0.2em] text-foreground/65">

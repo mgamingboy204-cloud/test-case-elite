@@ -203,7 +203,7 @@ export default function LikesPage() {
                     disabled={!isCenter || Boolean(pendingProfileId)}
                     className="w-[72px] h-[72px] rounded-full bg-background/50 backdrop-blur-xl border border-primary/50 shadow-2xl flex items-center justify-center hover:bg-primary/10 transition-colors pointer-events-auto disabled:opacity-50"
                   >
-                    {isPending ? <Loader2 size={26} className="text-primary animate-spin" /> : <HeartEliteIconSmall />}
+                    {isPending ? <Loader2 size={26} className="text-primary animate-spin" /> : <HeartVaelIconSmall />}
                   </button>
                 </div>
               </motion.div>
@@ -248,7 +248,7 @@ function CheckVerifiedIcon() {
   );
 }
 
-function HeartEliteIconSmall() {
+function HeartVaelIconSmall() {
   return (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="drop-shadow-lg">
       <path

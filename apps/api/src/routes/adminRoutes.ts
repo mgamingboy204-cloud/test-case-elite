@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { OfflineMeetAdminCancelSchema, OfflineMeetFinalizeSchema, OfflineMeetNoResponseSchema, OfflineMeetOptionsSchema, OnlineMeetAdminCancelSchema, OnlineMeetFinalizeSchema, OnlineMeetNoResponseSchema, OnlineMeetOptionsSchema } from "@elite/shared";
+import { OfflineMeetAdminCancelSchema, OfflineMeetFinalizeSchema, OfflineMeetNoResponseSchema, OfflineMeetOptionsSchema, OnlineMeetAdminCancelSchema, OnlineMeetFinalizeSchema, OnlineMeetNoResponseSchema, OnlineMeetOptionsSchema } from "@vael/shared";
 import {
   approveRefundHandler,
   assignVerificationRequestHandler,

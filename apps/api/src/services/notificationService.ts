@@ -100,7 +100,7 @@ const ALERT_TITLES: Record<NotificationType, string> = {
   NEW_LIKE: "New Interest",
   NEW_MATCH: "New Match",
   NEW_MESSAGE: "New Message",
-  SYSTEM_PROMO: "Elite Update",
+  SYSTEM_PROMO: "VAEL Update",
   PROFILE_VIEW: "Profile View",
   VIDEO_VERIFICATION_UPDATE: "Verification Update",
   OFFLINE_MEET_REQUEST: "Offline Meet Request",

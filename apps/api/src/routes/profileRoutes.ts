@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ProfilePatchSchema, ProfileSchema } from "@elite/shared";
+import { ProfilePatchSchema, ProfileSchema } from "@vael/shared";
 import {
   completeProfileHandler,
   getProfileHandler,

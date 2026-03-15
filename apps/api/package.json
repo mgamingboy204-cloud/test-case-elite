@@ -1,5 +1,5 @@
 {
-  "name": "@elite/api",
+  "name": "@vael/api",
   "version": "0.0.1",
   "private": true,
   "main": "dist/server.js",
@@ -16,7 +16,7 @@
     "prisma:generate": "prisma generate"
   },
   "dependencies": {
-    "@elite/shared": "file:../../packages/shared",
+    "@vael/shared": "file:../../packages/shared",
     "@prisma/client": "^5.18.0",
     "@supabase/supabase-js": "^2.45.4",
     "bcrypt": "^5.1.1",

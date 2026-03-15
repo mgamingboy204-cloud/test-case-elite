@@ -15,13 +15,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Elite | Connect with Intention",
+  title: "VAEL | Connect with Intention",
   description: "An exclusive, high-end matchmaking platform.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Elite",
+    title: "VAEL",
   },
   formatDetection: {
     telephone: false,

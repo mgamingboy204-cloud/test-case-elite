@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { ConsentSchema, OfflineMeetSelectionSchema, OnlineMeetSelectionSchema, SocialExchangeHandleSchema, SocialExchangeRespondSchema } from "@elite/shared";
+import { ConsentSchema, OfflineMeetSelectionSchema, OnlineMeetSelectionSchema, SocialExchangeHandleSchema, SocialExchangeRespondSchema } from "@vael/shared";
 import {
   listMatchesHandler,
   offlineMeetUnlockHandler,

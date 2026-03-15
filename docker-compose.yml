@@ -1,15 +1,15 @@
 services:
   db:
     image: postgres:16
-    container_name: elite_db
+    container_name: vael_db
     environment:
-      POSTGRES_USER: elite
-      POSTGRES_PASSWORD: elite_password
-      POSTGRES_DB: elite_mvp
+      POSTGRES_USER: vael
+      POSTGRES_PASSWORD: vael_password
+      POSTGRES_DB: vael_mvp
     ports:
       - "5432:5432"
     volumes:
-      - elite_db_data:/var/lib/postgresql/data
+      - vael_db_data:/var/lib/postgresql/data
 
 volumes:
-  elite_db_data:
+  vael_db_data:

@@ -25,31 +25,31 @@ export class ApiError extends Error {
 
 export function getAuthToken() {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("elite_access_token");
+  return localStorage.getItem("vael_access_token");
 }
 
 
 export function getOnboardingToken() {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("elite_onboarding_token");
+  return localStorage.getItem("vael_onboarding_token");
 }
 
 export function setOnboardingToken(token: string | null) {
   if (typeof window === "undefined") return;
   if (!token) {
-    localStorage.removeItem("elite_onboarding_token");
+    localStorage.removeItem("vael_onboarding_token");
     return;
   }
-  localStorage.setItem("elite_onboarding_token", token);
+  localStorage.setItem("vael_onboarding_token", token);
 }
 
 export function setAuthToken(token: string | null) {
   if (typeof window === "undefined") return;
   if (!token) {
-    localStorage.removeItem("elite_access_token");
+    localStorage.removeItem("vael_access_token");
     return;
   }
-  localStorage.setItem("elite_access_token", token);
+  localStorage.setItem("vael_access_token", token);
 }
 
 let refreshPromise: Promise<string | null> | null = null;
