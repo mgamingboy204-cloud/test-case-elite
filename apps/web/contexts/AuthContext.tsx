@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { apiRequest, setAuthToken, setOnboardingToken } from "@/lib/api";
+import { ApiError, apiRequest, setAuthToken, setOnboardingToken } from "@/lib/api";
 import {
   type BackendOnboardingStep,
   type FrontendOnboardingStep,
@@ -91,7 +91,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         await refreshCurrentUser();
-      } catch {
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          setAuthToken(null);
+          setOnboardingToken(null);
+        }
         setUser(null);
       } finally {
         setIsInitialized(true);
@@ -137,6 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOnboardingToken(response.onboardingToken);
     await refreshCurrentUser();
 
+    setPendingPhone(null);
+    localStorage.removeItem("elite_pending_phone");
     setSignupToken(null);
     localStorage.removeItem("elite_signup_token");
     router.push("/onboarding/verification");
@@ -159,6 +165,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthToken(response.accessToken);
       setOnboardingToken(response.onboardingToken ?? response.user.onboardingToken ?? null);
       setUser(response.user);
+      setPendingPhone(null);
+      localStorage.removeItem("elite_pending_phone");
       router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
         isAuthenticated: true,
         backendStep: response.user.onboardingStep,
@@ -181,6 +189,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthToken(response.accessToken);
     setOnboardingToken(response.onboardingToken);
     setUser(response.user);
+    setPendingPhone(null);
+    localStorage.removeItem("elite_pending_phone");
     router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
       isAuthenticated: true,
       backendStep: response.user.onboardingStep,

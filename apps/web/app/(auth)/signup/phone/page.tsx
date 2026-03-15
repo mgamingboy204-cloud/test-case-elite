@@ -10,6 +10,7 @@ import Link from "next/link";
 export default function SignUpPhone() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const { startSignup } = useAuth();
 
   const handleContinue = async (e: React.FormEvent) => {
@@ -17,8 +18,11 @@ export default function SignUpPhone() {
     if (phone.length !== 10) return;
     
     setLoading(true);
+    setError("");
     try {
       await startSignup(phone);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to start signup.");
     } finally {
       setLoading(false);
     }
@@ -36,6 +40,8 @@ export default function SignUpPhone() {
 
       <form onSubmit={handleContinue} className="flex flex-col gap-6">
         <PhoneInput value={phone} onChange={setPhone} />
+
+        {error ? <p className="text-sm text-red-400 text-center">{error}</p> : null}
         
         <p className="text-xs text-foreground/40 leading-relaxed text-center px-4">
           By proceeding, you agree to our <Link href="/terms" className="underline hover:text-primary">Terms of Service</Link> & <Link href="/privacy" className="underline hover:text-primary">Privacy Policy</Link>.

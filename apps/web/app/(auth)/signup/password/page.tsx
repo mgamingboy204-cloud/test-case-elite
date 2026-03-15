@@ -78,6 +78,8 @@ export default function SignUpPassword() {
             "Complete Account Setup"
           )}
         </Button>
+
+        {error ? <p className="text-sm text-red-400 text-center">{error}</p> : null}
       </form>
     </GlassCard>
   );
