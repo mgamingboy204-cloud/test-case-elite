@@ -8,7 +8,7 @@ import {
   type FrontendOnboardingStep,
   resolveFrontendOnboardingStep,
   routeForFrontendOnboardingStep
-} from "@elite/shared";
+} from "@/lib/onboarding";
 
 export type OnboardingStep = FrontendOnboardingStep;
 
