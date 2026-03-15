@@ -251,7 +251,8 @@ export default function MatchesPage() {
               <SocialExchangePanel
                 matchId={match.id}
                 currentUserId={user?.id ?? ""}
-                socialCase={socialCases[match.id] ?? match.socialExchangeCase ?? null}
+                // Wrap the logic in parentheses and add 'as any'
+                socialCase={(socialCases[match.id] ?? match.socialExchangeCase ?? null) as any}
                 pending={pendingAction === `social:${match.id}`}
                 onRequest={runSocialRequest}
                 onActionStart={() => setPendingAction(`social:${match.id}`)}
@@ -259,7 +260,7 @@ export default function MatchesPage() {
                 onRefresh={refreshSocialCase}
                 onFeedback={setFeedback}
               />
-
+              
               {match.offlineMeetCase ? <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/[0.04] p-3 text-xs text-foreground/75"><p className="font-medium tracking-[0.14em] uppercase text-primary/90">Offline meet status: {match.offlineMeetCase.status.replaceAll("_", " ")}</p>{match.offlineMeetCase.responseDeadlineAt ? <p className="mt-2 inline-flex items-center gap-1"><Clock3 size={12} /> Response deadline: {new Date(match.offlineMeetCase.responseDeadlineAt).toLocaleString()}</p> : null}{match.offlineMeetCase.cooldownUntil ? <p className="mt-2">Cooldown until: {new Date(match.offlineMeetCase.cooldownUntil).toLocaleString()}</p> : null}{match.offlineMeetCase.finalCafe && match.offlineMeetCase.finalTimeSlot ? <p className="mt-2">Finalized at {match.offlineMeetCase.finalCafe.name} — {match.offlineMeetCase.finalTimeSlot.label}</p> : null}{(match.offlineMeetCase.status === "AWAITING_USER_SELECTIONS" || match.offlineMeetCase.status === "OPTIONS_SENT" || match.offlineMeetCase.status === "USER_ONE_RESPONDED" || match.offlineMeetCase.status === "USER_TWO_RESPONDED") ? <button onClick={() => void submitDefaultSelections(match.id)} disabled={pendingAction === `offline:${match.id}`} className="mt-3 rounded-full border border-primary/30 px-3 py-1.5 uppercase tracking-[0.17em] text-[10px] text-primary disabled:opacity-50">{pendingAction === `offline:${match.id}` ? "Submitting…" : "Submit concierge preferences"}</button> : null}</div> : null}
 
               {match.onlineMeetCase ? <div className="mt-4 rounded-2xl border border-highlight/20 bg-highlight/[0.05] p-3 text-xs text-foreground/75"><p className="font-medium tracking-[0.14em] uppercase text-highlight">Online meet status: {match.onlineMeetCase.status.replaceAll("_", " ")}</p>{match.onlineMeetCase.responseDeadlineAt ? <p className="mt-2 inline-flex items-center gap-1"><Clock3 size={12} /> Response deadline: {new Date(match.onlineMeetCase.responseDeadlineAt).toLocaleString()}</p> : null}{match.onlineMeetCase.cooldownUntil ? <p className="mt-2">Cooldown until: {new Date(match.onlineMeetCase.cooldownUntil).toLocaleString()}</p> : null}{match.onlineMeetCase.finalPlatform && match.onlineMeetCase.finalTimeSlot ? <p className="mt-2">Finalized: {match.onlineMeetCase.finalPlatform.replaceAll("_", " ")} — {match.onlineMeetCase.finalTimeSlot.label}</p> : null}{(match.onlineMeetCase.status === "AWAITING_USER_SELECTIONS" || match.onlineMeetCase.status === "OPTIONS_SENT" || match.onlineMeetCase.status === "USER_ONE_RESPONDED" || match.onlineMeetCase.status === "USER_TWO_RESPONDED") ? <OnlineMeetSelectionPanel matchId={match.id} pending={pendingAction === `online:${match.id}`} draft={onlineDraftByMatch[match.id] ?? { platform: null, timeSlots: [] }} onToggleSlot={toggleOnlineTimeSlot} onPlatformSelect={setOnlinePlatform} onSubmit={submitOnlineSelections} /> : null}</div> : null}
