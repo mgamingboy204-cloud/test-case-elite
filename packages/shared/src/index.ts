@@ -105,6 +105,32 @@ export const ConsentSchema = z.object({
   payload: z.record(z.string(), z.unknown()).optional().nullable()
 });
 
+
+export const OfflineMeetSelectionSchema = z.object({
+  cafes: z.array(z.string().min(1)).length(2),
+  timeSlots: z.array(z.string().min(1)).min(3).max(4)
+});
+
+export const OfflineMeetOptionsSchema = z.object({
+  cafes: z.array(z.object({ id: z.string().min(1), name: z.string().min(1), address: z.string().min(1) })).length(3),
+  timeSlots: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), startsAtIso: z.string().datetime().optional().nullable() })).min(3)
+});
+
+export const OfflineMeetFinalizeSchema = z.object({
+  finalCafeId: z.string().min(1),
+  finalTimeSlotId: z.string().min(1)
+});
+
+export const OfflineMeetNoResponseSchema = z.object({
+  nonResponderUserId: z.string().uuid()
+});
+
+export const OfflineMeetAdminCancelSchema = z.object({
+  action: z.enum(["CANCEL", "RESCHEDULE"]),
+  reason: z.string().min(1),
+  requestedByUserId: z.string().uuid().optional().nullable()
+});
+
 export const ReportSchema = z.object({
   reportedUserId: z.string().uuid(),
   reason: z.string().min(1),
