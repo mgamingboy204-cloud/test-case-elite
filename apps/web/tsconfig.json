@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@elite/shared": ["../../packages/shared"],
+      "@elite/shared/*": ["../../packages/shared/*"]
     }
   },
   "include": [
