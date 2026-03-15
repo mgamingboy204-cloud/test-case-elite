@@ -334,6 +334,18 @@ export async function whoAmI(req: Request, res: Response) {
   if (!user) return res.status(401).json({ message: "Invalid token" });
 
   const photoCount = await prisma.photo.count({ where: { userId: user.id } });
+  const resolvedOnboardingStep = resolveOnboardingStep({
+    onboardingStep: user.onboardingStep,
+    videoVerificationStatus: user.videoVerificationStatus,
+    paymentStatus: user.paymentStatus,
+    profileCompletedAt: user.profileCompletedAt,
+    subscriptionEndsAt: user.subscriptionEndsAt,
+    photoCount
+  });
+
+  if (resolvedOnboardingStep !== user.onboardingStep) {
+    await prisma.user.update({ where: { id: user.id }, data: { onboardingStep: resolvedOnboardingStep } });
+  }
 
   return res.json({
     id: user.id,
@@ -348,13 +360,15 @@ export async function whoAmI(req: Request, res: Response) {
     status: user.status,
     verifiedAt: user.verifiedAt,
     phoneVerifiedAt: user.phoneVerifiedAt,
-    onboardingStep: user.onboardingStep,
+    onboardingStep: resolvedOnboardingStep,
     videoVerificationStatus: user.videoVerificationStatus,
     paymentStatus: user.paymentStatus,
     profileCompletedAt: user.profileCompletedAt,
     photoCount,
     onboardingToken: user.onboardingToken,
-    onboardingTokenExpiresAt: user.onboardingTokenExpiresAt
+    onboardingTokenExpiresAt: user.onboardingTokenExpiresAt,
+    subscriptionStartedAt: user.subscriptionStartedAt,
+    subscriptionEndsAt: user.subscriptionEndsAt
   });
 }
 

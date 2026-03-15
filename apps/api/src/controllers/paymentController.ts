@@ -1,11 +1,30 @@
 import { Request, Response } from "express";
-import { getLatestPayment, initiateOnboardingPayment, verifyOnboardingPayment } from "../services/paymentService";
+import {
+  getLatestPayment,
+  initiateOnboardingPayment,
+  markOnboardingPaymentFailed,
+  verifyOnboardingPayment
+} from "../services/paymentService";
 
 export async function getMyPaymentHandler(req: Request, res: Response) {
   const result = await getLatestPayment(res.locals.user.id);
   return res.json({
     payment: result.payment,
-    paymentStatus: res.locals.user.paymentStatus,
+    paymentStatus: result.user?.paymentStatus ?? res.locals.user.paymentStatus,
+    onboardingStep: result.user?.onboardingStep ?? res.locals.user.onboardingStep,
+    plans: result.plans,
+    subscription: {
+      status: result.user?.subscriptionStatus ?? res.locals.user.subscriptionStatus,
+      startedAt: result.user?.subscriptionStartedAt ?? null,
+      endsAt: result.user?.subscriptionEndsAt ?? null,
+      manualRenewalRequired: true
+    },
+    pendingPayment: {
+      plan: result.user?.onboardingPaymentPlan ?? null,
+      amountInr: result.user?.onboardingPaymentAmount ?? null,
+      paymentRef: result.user?.onboardingPaymentRef ?? null
+    },
+    taxIncluded: true,
     renewalPolicy: "MANUAL_ONLY",
     autoRenew: false
   });
@@ -49,4 +68,10 @@ export async function verifyOnboardingPaymentHandler(req: Request, res: Response
   const { paymentRef } = req.body as { paymentRef: string };
   const result = await verifyOnboardingPayment({ user: res.locals.user, paymentRef });
   return res.json(result);
+}
+
+export async function markOnboardingPaymentFailedHandler(req: Request, res: Response) {
+  const { reason } = req.body as { reason?: string };
+  const result = await markOnboardingPaymentFailed({ user: res.locals.user, reason });
+  return res.status(402).json(result);
 }

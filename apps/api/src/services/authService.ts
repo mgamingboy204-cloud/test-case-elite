@@ -16,6 +16,7 @@ export function resolveOnboardingStep(user: {
   videoVerificationStatus?: string;
   paymentStatus?: string;
   profileCompletedAt?: Date | null;
+  subscriptionEndsAt?: Date | null;
   photoCount?: number;
 }) {
   return resolveBackendOnboardingStep(user);
@@ -27,6 +28,7 @@ async function resolveUserOnboardingStep(user: {
   videoVerificationStatus?: string;
   paymentStatus?: string;
   profileCompletedAt?: Date | null;
+  subscriptionEndsAt?: Date | null;
 }) {
   const photoCount = await prisma.photo.count({ where: { userId: user.id } });
   return resolveOnboardingStep({ ...user, photoCount });

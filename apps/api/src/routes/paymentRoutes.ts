@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   getMyPaymentHandler,
   initiateOnboardingPaymentHandler,
+  markOnboardingPaymentFailedHandler,
   validateCouponHandler,
   verifyOnboardingPaymentHandler
 } from "../controllers/paymentController";
@@ -28,6 +29,18 @@ router.post(
     })
   ),
   asyncHandler(initiateOnboardingPaymentHandler)
+);
+router.post(
+  "/payments/fail",
+  requireAuth,
+  requireAuthHeader,
+  requireOnboardingTokenMatch,
+  validateBody(
+    z.object({
+      reason: z.string().max(240).optional()
+    })
+  ),
+  asyncHandler(markOnboardingPaymentFailedHandler)
 );
 router.post(
   "/payments/verify",
