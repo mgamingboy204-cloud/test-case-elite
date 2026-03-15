@@ -53,10 +53,26 @@ type LoginApiResponse =
   | { ok: true; otpRequired: true }
   | { ok: true; otpRequired?: false; accessToken: string; onboardingToken?: string | null; user: User };
 
+type SignupCompleteResponse = {
+  ok: true;
+  accessToken?: string;
+  onboardingToken?: string | null;
+  user?: User;
+};
+
 function isSessionPayload(value: unknown): value is { accessToken: string; user: User; onboardingToken?: string | null } {
   if (!value || typeof value !== "object") return false;
   const candidate = value as { accessToken?: unknown; user?: unknown };
   return typeof candidate.accessToken === "string" && typeof candidate.user === "object" && candidate.user !== null;
+}
+
+function extractAccessToken(value: unknown) {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as { accessToken?: unknown; token?: unknown; access_token?: unknown };
+  if (typeof candidate.accessToken === "string") return candidate.accessToken;
+  if (typeof candidate.token === "string") return candidate.token;
+  if (typeof candidate.access_token === "string") return candidate.access_token;
+  return null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -142,20 +158,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const completeSignup = async (password: string) => {
     if (!signupToken) throw new Error("Signup session missing");
 
-    const response = await apiRequest<{ ok: true; accessToken: string; onboardingToken: string }>("/auth/signup/complete", {
+    const response = await apiRequest<SignupCompleteResponse>("/auth/signup/complete", {
       method: "POST",
       body: JSON.stringify({ signupToken, password })
     });
 
-    setAuthToken(response.accessToken);
-    setOnboardingToken(response.onboardingToken);
-    await refreshCurrentUser();
+    console.info("[signup] complete response", response);
+
+    const accessToken = extractAccessToken(response);
+    if (!accessToken) {
+      console.error("[signup] Missing access token in signup complete response", response);
+      throw new Error("Signup completed, but no access token was returned.");
+    }
+
+    const onboardingToken = response.onboardingToken ?? response.user?.onboardingToken ?? null;
+
+    console.info("[signup] storing tokens", {
+      hasAccessToken: Boolean(accessToken),
+      hasOnboardingToken: Boolean(onboardingToken)
+    });
+
+    setAuthToken(accessToken);
+    setOnboardingToken(onboardingToken);
+
+    if (response.user) {
+      setUser(response.user);
+    } else {
+      try {
+        await refreshCurrentUser();
+      } catch (error) {
+        console.error("[signup] failed to fetch /me immediately after signup complete", error);
+        throw error;
+      }
+    }
 
     setPendingPhone(null);
     localStorage.removeItem("elite_pending_phone");
     setSignupToken(null);
     localStorage.removeItem("elite_signup_token");
-    router.push("/onboarding/verification");
+
+    const nextRoute = routeForOnboardingStep(resolveFrontendOnboardingStep({
+      isAuthenticated: true,
+      backendStep: response.user?.onboardingStep ?? user?.onboardingStep,
+      profileCompletedAt: response.user?.profileCompletedAt ?? user?.profileCompletedAt,
+      photoCount: response.user?.photoCount ?? user?.photoCount
+    }));
+
+    console.info("[signup] navigation target", { nextRoute });
+    router.push(nextRoute);
   };
 
   const startLogin = async (phone: string, password: string) => {
