@@ -99,6 +99,22 @@ export type MatchCard = {
   image: string;
   bio: string | null;
   interactions: Record<MatchRequestType, MatchInteraction>;
+  offlineMeetCase: {
+    id: string;
+    status: string;
+    responseDeadlineAt: string | null;
+    cooldownUntil: string | null;
+    finalCafe: { name: string } | null;
+    finalTimeSlot: { label: string } | null;
+  } | null;
+  onlineMeetCase: {
+    id: string;
+    status: string;
+    responseDeadlineAt: string | null;
+    cooldownUntil: string | null;
+    finalPlatform: string | null;
+    finalTimeSlot: { label: string } | null;
+  } | null;
 };
 
 type ApiMatch = {
@@ -112,6 +128,8 @@ type ApiMatch = {
     primaryPhotoUrl: string | null;
   };
   interactionRequests?: Partial<Record<MatchRequestType, MatchInteraction>>;
+  offlineMeetCase?: MatchCard["offlineMeetCase"];
+  onlineMeetCase?: MatchCard["onlineMeetCase"];
 };
 
 export async function fetchMatches(): Promise<MatchCard[]> {
@@ -131,6 +149,8 @@ export async function fetchMatches(): Promise<MatchCard[]> {
       location: (match.user.locationLabel ?? match.user.city ?? "Private Location").toUpperCase(),
       image: match.user.primaryPhotoUrl ?? FALLBACK_MATCH_IMAGE,
       bio: match.user.bioShort,
+      offlineMeetCase: match.offlineMeetCase ?? null,
+      onlineMeetCase: match.onlineMeetCase ?? null,
       interactions: {
         OFFLINE_MEET: match.interactionRequests?.OFFLINE_MEET ?? {
           type: "OFFLINE_MEET",
@@ -170,7 +190,27 @@ export async function fetchLikesIncoming(): Promise<LikesIncomingProfile[]> {
 
 export interface NotificationApiItem {
   id: string;
-  type: "NEW_LIKE" | "NEW_MATCH" | "NEW_MESSAGE" | "SYSTEM_PROMO" | "PROFILE_VIEW" | "VIDEO_VERIFICATION_UPDATE";
+  type:
+    | "NEW_LIKE"
+    | "NEW_MATCH"
+    | "NEW_MESSAGE"
+    | "SYSTEM_PROMO"
+    | "PROFILE_VIEW"
+    | "VIDEO_VERIFICATION_UPDATE"
+    | "OFFLINE_MEET_REQUEST"
+    | "OFFLINE_MEET_ACCEPTED"
+    | "OFFLINE_MEET_OPTIONS_SENT"
+    | "OFFLINE_MEET_TIMEOUT"
+    | "OFFLINE_MEET_NO_OVERLAP"
+    | "OFFLINE_MEET_FINALIZED"
+    | "OFFLINE_MEET_RESCHEDULE_UPDATE"
+    | "ONLINE_MEET_REQUEST"
+    | "ONLINE_MEET_ACCEPTED"
+    | "ONLINE_MEET_OPTIONS_SENT"
+    | "ONLINE_MEET_TIMEOUT"
+    | "ONLINE_MEET_NO_OVERLAP"
+    | "ONLINE_MEET_FINALIZED"
+    | "ONLINE_MEET_RESCHEDULE_UPDATE";
   isRead: boolean;
   createdAt: string;
   title?: string | null;
@@ -195,7 +235,8 @@ const FALLBACK_ALERT_IMAGE =
   "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&auto=format&fit=crop&q=80";
 
 function toAlert(item: NotificationApiItem): Alert {
-  const normalizedType = item.type === "NEW_MATCH" ? "CONNECTION" : item.type === "SYSTEM_PROMO" ? "CONCIERGE" : "INTEREST";
+  const conciergeTypes = new Set(["SYSTEM_PROMO", "OFFLINE_MEET_REQUEST", "OFFLINE_MEET_ACCEPTED", "OFFLINE_MEET_OPTIONS_SENT", "OFFLINE_MEET_TIMEOUT", "OFFLINE_MEET_NO_OVERLAP", "OFFLINE_MEET_FINALIZED", "OFFLINE_MEET_RESCHEDULE_UPDATE", "ONLINE_MEET_REQUEST", "ONLINE_MEET_ACCEPTED", "ONLINE_MEET_OPTIONS_SENT", "ONLINE_MEET_TIMEOUT", "ONLINE_MEET_NO_OVERLAP", "ONLINE_MEET_FINALIZED", "ONLINE_MEET_RESCHEDULE_UPDATE"]);
+  const normalizedType = item.type === "NEW_MATCH" ? "CONNECTION" : conciergeTypes.has(item.type) ? "CONCIERGE" : "INTEREST";
   const title =
     item.title ??
     (item.type === "NEW_MATCH" ? "New Match" : item.type === "NEW_LIKE" ? "New Interest" : item.type === "SYSTEM_PROMO" ? "Elite Update" : "Update");

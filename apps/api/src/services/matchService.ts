@@ -1,5 +1,7 @@
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
+import { createOrActivateOfflineMeetCase, notifyOfflineMeetRequest } from "./offlineMeetService";
+import { createOrActivateOnlineMeetCase, notifyOnlineMeetRequest } from "./onlineMeetService";
 
 type ConsentType = "PHONE_NUMBER" | "OFFLINE_MEET" | "ONLINE_MEET" | "SOCIAL_EXCHANGE";
 type ConsentResponse = "YES" | "NO";
@@ -43,7 +45,9 @@ export async function listMatches(userId: string) {
       consents: true,
       phoneExchange: true,
       offlineMeet: true,
+      offlineMeetCase: true,
       onlineMeet: true,
+      onlineMeetCase: true,
       socialExchange: true,
       userA: {
         select: {
@@ -136,6 +140,26 @@ export async function listMatches(userId: string) {
           requestedAt: match.consents.find((consent) => consent.userId === userId && consent.type === "SOCIAL_EXCHANGE")?.respondedAt ?? null
         }
       },
+      offlineMeetCase: match.offlineMeetCase
+        ? {
+            id: match.offlineMeetCase.id,
+            status: match.offlineMeetCase.status,
+            responseDeadlineAt: match.offlineMeetCase.responseDeadlineAt,
+            cooldownUntil: match.offlineMeetCase.cooldownUntil,
+            finalCafe: match.offlineMeetCase.finalCafe,
+            finalTimeSlot: match.offlineMeetCase.finalTimeSlot
+          }
+        : null,
+      onlineMeetCase: match.onlineMeetCase
+        ? {
+            id: match.onlineMeetCase.id,
+            status: match.onlineMeetCase.status,
+            responseDeadlineAt: match.onlineMeetCase.responseDeadlineAt,
+            cooldownUntil: match.onlineMeetCase.cooldownUntil,
+            finalPlatform: match.onlineMeetCase.finalPlatform,
+            finalTimeSlot: match.onlineMeetCase.finalTimeSlot
+          }
+        : null,
       consents: match.consents,
       user: {
         id: otherUser.id,
@@ -189,12 +213,32 @@ export async function respondConsent(options: {
         update: { details: { selections: consents.map((consent) => consent.payload) } },
         create: { matchId: options.matchId, details: { selections: consents.map((consent) => consent.payload) } }
       });
+      const responderConsent = consents.find((consent) => consent.userId === options.userId);
+      const otherConsent = consents.find((consent) => consent.userId !== options.userId);
+      if (!responderConsent || !otherConsent) {
+        throw new HttpError(409, { message: "Consent state is incomplete" });
+      }
+      await createOrActivateOfflineMeetCase({
+        matchId: options.matchId,
+        requesterUserId: responderConsent.respondedAt <= otherConsent.respondedAt ? responderConsent.userId : otherConsent.userId,
+        receiverUserId: responderConsent.respondedAt <= otherConsent.respondedAt ? otherConsent.userId : responderConsent.userId
+      });
     }
     if (type === "ONLINE_MEET") {
       await prisma.onlineMeetEvent.upsert({
         where: { matchId: options.matchId },
         update: { details: { selections: consents.map((consent) => consent.payload) } },
         create: { matchId: options.matchId, details: { selections: consents.map((consent) => consent.payload) } }
+      });
+      const responderConsent = consents.find((consent) => consent.userId === options.userId);
+      const otherConsent = consents.find((consent) => consent.userId !== options.userId);
+      if (!responderConsent || !otherConsent) {
+        throw new HttpError(409, { message: "Consent state is incomplete" });
+      }
+      await createOrActivateOnlineMeetCase({
+        matchId: options.matchId,
+        requesterUserId: responderConsent.respondedAt <= otherConsent.respondedAt ? responderConsent.userId : otherConsent.userId,
+        receiverUserId: responderConsent.respondedAt <= otherConsent.respondedAt ? otherConsent.userId : responderConsent.userId
       });
     }
     if (type === "SOCIAL_EXCHANGE") {
@@ -208,6 +252,15 @@ export async function respondConsent(options: {
 
   const mine = consents.find((consent) => consent.userId === options.userId)?.response ?? null;
   const other = consents.find((consent) => consent.userId !== options.userId)?.response ?? null;
+
+  if (type === "OFFLINE_MEET" && options.response === "YES" && !ready && other !== "NO") {
+    const otherUserId = match.userAId === options.userId ? match.userBId : match.userAId;
+    await notifyOfflineMeetRequest(options.matchId, options.userId, otherUserId);
+  }
+  if (type === "ONLINE_MEET" && options.response === "YES" && !ready && other !== "NO") {
+    const otherUserId = match.userAId === options.userId ? match.userBId : match.userAId;
+    await notifyOnlineMeetRequest(options.matchId, options.userId, otherUserId);
+  }
 
   return {
     ok: true,
@@ -226,7 +279,9 @@ export async function getConsentUnlock(options: { matchId: string; userId: strin
     include: {
       consents: true,
       offlineMeet: true,
+      offlineMeetCase: true,
       onlineMeet: true,
+      onlineMeetCase: true,
       socialExchange: true,
       userA: true,
       userB: true

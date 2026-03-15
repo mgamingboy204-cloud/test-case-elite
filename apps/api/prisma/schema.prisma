@@ -120,6 +120,55 @@ enum NotificationType {
   SYSTEM_PROMO
   PROFILE_VIEW
   VIDEO_VERIFICATION_UPDATE
+  OFFLINE_MEET_REQUEST
+  OFFLINE_MEET_ACCEPTED
+  OFFLINE_MEET_OPTIONS_SENT
+  OFFLINE_MEET_TIMEOUT
+  OFFLINE_MEET_NO_OVERLAP
+  OFFLINE_MEET_FINALIZED
+  OFFLINE_MEET_RESCHEDULE_UPDATE
+  ONLINE_MEET_REQUEST
+  ONLINE_MEET_ACCEPTED
+  ONLINE_MEET_OPTIONS_SENT
+  ONLINE_MEET_TIMEOUT
+  ONLINE_MEET_NO_OVERLAP
+  ONLINE_MEET_FINALIZED
+  ONLINE_MEET_RESCHEDULE_UPDATE
+}
+
+enum OfflineMeetCoordinationStatus {
+  REQUESTED
+  ACCEPTED
+  EMPLOYEE_PREPARING_OPTIONS
+  OPTIONS_SENT
+  AWAITING_USER_SELECTIONS
+  USER_ONE_RESPONDED
+  USER_TWO_RESPONDED
+  READY_FOR_FINALIZATION
+  FINALIZED
+  NO_RESPONSE_TIMEOUT
+  NO_COMPATIBLE_OVERLAP
+  COOLDOWN
+  CANCELED
+  RESCHEDULE_REQUESTED
+}
+
+
+enum OnlineMeetCoordinationStatus {
+  REQUESTED
+  ACCEPTED
+  EMPLOYEE_PREPARING_OPTIONS
+  OPTIONS_SENT
+  AWAITING_USER_SELECTIONS
+  USER_ONE_RESPONDED
+  USER_TWO_RESPONDED
+  READY_FOR_FINALIZATION
+  FINALIZED
+  NO_RESPONSE_TIMEOUT
+  NO_COMPATIBLE_OVERLAP
+  COOLDOWN
+  CANCELED
+  RESCHEDULE_REQUESTED
 }
 
 enum SubscriptionTier {
@@ -189,6 +238,12 @@ model User {
   notifications Notification[] @relation("userNotifications")
   notificationsSent Notification[] @relation("notificationActors")
   auditLogs     AuditLog[] @relation("actorLogs")
+  offlineMeetRequestsSent OfflineMeetCase[] @relation("offlineMeetRequester")
+  offlineMeetRequestsReceived OfflineMeetCase[] @relation("offlineMeetReceiver")
+  offlineMeetAssignments OfflineMeetCase[] @relation("offlineMeetAssignee")
+  onlineMeetRequestsSent OnlineMeetCase[] @relation("onlineMeetRequester")
+  onlineMeetRequestsReceived OnlineMeetCase[] @relation("onlineMeetReceiver")
+  onlineMeetAssignments OnlineMeetCase[] @relation("onlineMeetAssignee")
 }
 
 model Profile {
@@ -306,13 +361,94 @@ model Match {
   consents Consent[]
   phoneExchange PhoneExchangeEvent?
   offlineMeet OfflineMeetEvent?
+  offlineMeetCase OfflineMeetCase?
   onlineMeet OnlineMeetEvent?
+  onlineMeetCase OnlineMeetCase?
   socialExchange SocialExchangeEvent?
   notifications Notification[]
 
   @@unique([userAId, userBId])
   @@index([userAId, unmatchedAt])
   @@index([userBId, unmatchedAt])
+}
+
+model OfflineMeetCase {
+  id        String @id @default(uuid())
+  matchId   String @unique
+  requesterUserId String
+  receiverUserId String
+  assignedEmployeeId String?
+  status OfflineMeetCoordinationStatus @default(REQUESTED)
+  cafeOptions Json?
+  timeSlotOptions Json?
+  requesterCafeSelections Json?
+  receiverCafeSelections Json?
+  requesterTimeSelections Json?
+  receiverTimeSelections Json?
+  optionsSentAt DateTime?
+  responseDeadlineAt DateTime?
+  cooldownUntil DateTime?
+  timeoutUserId String?
+  finalCafe Json?
+  finalTimeSlot Json?
+  canceledAt DateTime?
+  canceledByUserId String?
+  cancelReason String?
+  rescheduleRequestedByUserId String?
+  rescheduleReason String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  match Match @relation(fields: [matchId], references: [id])
+  requester User @relation("offlineMeetRequester", fields: [requesterUserId], references: [id])
+  receiver User @relation("offlineMeetReceiver", fields: [receiverUserId], references: [id])
+  assignedEmployee User? @relation("offlineMeetAssignee", fields: [assignedEmployeeId], references: [id])
+
+  @@index([assignedEmployeeId, status])
+  @@index([requesterUserId])
+  @@index([receiverUserId])
+  @@index([status, responseDeadlineAt])
+}
+
+
+
+model OnlineMeetCase {
+  id        String @id @default(uuid())
+  matchId   String @unique
+  requesterUserId String
+  receiverUserId String
+  assignedEmployeeId String?
+  status OnlineMeetCoordinationStatus @default(REQUESTED)
+  platformOptions Json?
+  timeSlotOptions Json?
+  requesterPlatformPreference String?
+  receiverPlatformPreference String?
+  requesterTimeSelections Json?
+  receiverTimeSelections Json?
+  optionsSentAt DateTime?
+  responseDeadlineAt DateTime?
+  cooldownUntil DateTime?
+  timeoutUserId String?
+  finalPlatform String?
+  finalTimeSlot Json?
+  finalMeetingLink String?
+  canceledAt DateTime?
+  canceledByUserId String?
+  cancelReason String?
+  rescheduleRequestedByUserId String?
+  rescheduleReason String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  match Match @relation(fields: [matchId], references: [id])
+  requester User @relation("onlineMeetRequester", fields: [requesterUserId], references: [id])
+  receiver User @relation("onlineMeetReceiver", fields: [receiverUserId], references: [id])
+  assignedEmployee User? @relation("onlineMeetAssignee", fields: [assignedEmployeeId], references: [id])
+
+  @@index([assignedEmployeeId, status])
+  @@index([requesterUserId])
+  @@index([receiverUserId])
+  @@index([status, responseDeadlineAt])
 }
 
 model Consent {
