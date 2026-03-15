@@ -2,10 +2,31 @@
 
 import { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { resolveRouteRedirect } from "@/lib/navigationGuard";
+import { useEffect } from "react";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, isAuthResolved, onboardingStep } = useAuth();
+
+  useEffect(() => {
+    const redirect = resolveRouteRedirect({
+      pathname,
+      isAuthenticated,
+      isAuthResolved,
+      onboardingStep,
+      scope: "auth"
+    });
+    if (redirect && pathname !== redirect) {
+      router.replace(redirect);
+    }
+  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router]);
+
+  if (!isAuthResolved) return <div className="min-h-screen w-full bg-background" />;
+  if (isAuthenticated) return null;
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 relative bg-background">

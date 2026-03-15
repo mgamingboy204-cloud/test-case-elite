@@ -1,7 +1,7 @@
 "use client";
 
-import { routeForOnboardingStep, useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { apiRequest } from "@/lib/api";
@@ -21,12 +21,6 @@ export default function AlertsPage() {
   });
 
   const visibleAlerts = alerts.length > 0 ? alerts : alertsQuery.data ?? [];
-
-  useEffect(() => {
-    if (!isAuthenticated) router.replace("/signin");
-    else if (onboardingStep !== "COMPLETED") router.replace(routeForOnboardingStep(onboardingStep));
-  }, [isAuthenticated, onboardingStep, router]);
-
 
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
 

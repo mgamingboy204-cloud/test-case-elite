@@ -1,9 +1,8 @@
 "use client";
 
-import { routeForOnboardingStep, useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { X, Check } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { motion, PanInfo } from "framer-motion";
 import { respondToIncomingLike, type LikesIncomingProfile } from "@/lib/likes";
 import { fetchLikesIncoming } from "@/lib/queries";
@@ -13,7 +12,6 @@ type LikeProfile = LikesIncomingProfile;
 
 export default function LikesPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
-  const router = useRouter();
   const [profiles, setProfiles] = useState<LikeProfile[]>([]);
 
   const incomingQuery = useStaleWhileRevalidate({
@@ -24,11 +22,6 @@ export default function LikesPage() {
   });
 
   const resolvedProfiles = profiles.length > 0 ? profiles : incomingQuery.data ?? [];
-
-  useEffect(() => {
-    if (!isAuthenticated) router.replace('/signin');
-    else if (onboardingStep !== 'COMPLETED') router.replace(routeForOnboardingStep(onboardingStep)); 
-  }, [isAuthenticated, onboardingStep, router]);
 
   if (!isAuthenticated || onboardingStep !== 'COMPLETED') return null;
 

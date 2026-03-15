@@ -135,7 +135,7 @@ export async function updateProfile(options: UpdateOptions) {
       lastName,
       gender: normalized.gender ?? user.gender,
       profileCompletedAt: user.profileCompletedAt ?? new Date(),
-      onboardingStep: "ACTIVE",
+      onboardingStep: "PROFILE_PENDING",
       status: "APPROVED"
     }
   });
@@ -190,6 +190,16 @@ export async function completeProfile(options: {
 
   const profile = await prisma.profile.findUnique({ where: { userId: options.userId } });
   if (!profile) throw new HttpError(400, { message: "Profile must be completed first." });
+
+  const photoCount = await prisma.photo.count({ where: { userId: options.userId } });
+  if (photoCount < 1) {
+    throw new HttpError(400, {
+      message: "At least one photo is required to complete onboarding.",
+      currentStep: options.onboardingStep,
+      requiredStep: "PHOTOS",
+      redirectTo: "/onboarding/photos"
+    });
+  }
 
   const user = await prisma.user.update({
     where: { id: options.userId },

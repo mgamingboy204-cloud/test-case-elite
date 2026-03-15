@@ -98,3 +98,5 @@ export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type ProfileInput = z.infer<typeof ProfileSchema>;
 export type ProfilePatchInput = z.infer<typeof ProfilePatchSchema>;
+
+export * from "./onboarding";
