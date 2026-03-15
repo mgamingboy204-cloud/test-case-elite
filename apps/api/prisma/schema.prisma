@@ -196,6 +196,7 @@ model Profile {
   name        String
   gender      Gender
   age         Int
+  dateOfBirth DateTime?
   city        String
   profession  String
   bioShort    String

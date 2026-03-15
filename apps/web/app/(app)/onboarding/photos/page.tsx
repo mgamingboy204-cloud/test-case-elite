@@ -1,50 +1,73 @@
 "use client";
 
-import { useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { motion, AnimatePresence } from "framer-motion";
-import { Plus, X } from "lucide-react";
 
-const SAMPLE_PHOTOS = [
-  "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=800&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800&auto=format&fit=crop&q=80",
-];
+type UploadedPhoto = { id: string; url: string };
 
-export default function PhotosSetup() {
+const MAX_PHOTOS = 3;
+const MIN_PHOTOS = 1;
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Unable to read selected file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+export default function OnboardingPhotosPage() {
   const { completeOnboardingStep, refreshCurrentUser } = useAuth();
-  const [error, setError] = useState("");
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
+  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const [error, setError] = useState("");
 
-  const MAX_PHOTOS = 3;
-  const canAdd = photos.length < MAX_PHOTOS && !uploading;
+  useEffect(() => {
+    const loadPhotos = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const data = await apiRequest<{ photos: UploadedPhoto[] }>("/photos/me", { auth: true });
+        setPhotos(data.photos.slice(0, MAX_PHOTOS));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to load photos.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const toDataUrl = async (url: string) => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error("Unable to read image"));
-      reader.readAsDataURL(blob);
-    });
-  };
+    void loadPhotos();
+  }, []);
 
-  const addPhoto = async () => {
-    if (!canAdd) return;
+  const canUpload = photos.length < MAX_PHOTOS;
+  const canComplete = photos.length >= MIN_PHOTOS;
+
+  const statusLabel = useMemo(() => {
+    if (photos.length === 0) return "Upload at least one portrait.";
+    if (photos.length < MAX_PHOTOS) return `${photos.length} of ${MAX_PHOTOS} portraits uploaded.`;
+    return "Maximum portraits uploaded.";
+  }, [photos.length]);
+
+  const handleFilePick = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !canUpload) return;
+
     setUploading(true);
     setError("");
+
     try {
-      const image = SAMPLE_PHOTOS[photos.length % SAMPLE_PHOTOS.length];
-      const dataUrl = await toDataUrl(image);
-      const result = await apiRequest<{ photo: { url: string } }>("/photos/upload", {
+      const dataUrl = await fileToDataUrl(file);
+      const response = await apiRequest<{ photo: UploadedPhoto }>("/photos/upload", {
         method: "POST",
         auth: true,
-        body: JSON.stringify({ filename: `photo-${Date.now()}.jpg`, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
+        body: JSON.stringify({ filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
       });
-      setPhotos(prev => [...prev, result.photo.url]);
+      setPhotos((prev) => [...prev, response.photo].slice(0, MAX_PHOTOS));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to upload photo.");
     } finally {
@@ -52,135 +75,83 @@ export default function PhotosSetup() {
     }
   };
 
-  const removePhoto = (idx: number) => {
-    setPhotos(prev => prev.filter((_, i) => i !== idx));
+  const removePhoto = async (photoId: string) => {
+    setError("");
+    try {
+      await apiRequest(`/photos/${photoId}`, { method: "DELETE", auth: true });
+      setPhotos((prev) => prev.filter((photo) => photo.id !== photoId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to remove photo.");
+    }
   };
 
-  const isEnabled = photos.length >= 1;
-  const isComplete = photos.length >= MAX_PHOTOS;
-
-  const label = isComplete
-    ? "Enter the Circle"
-    : photos.length === 0
-    ? "Add 1 Portrait to Continue"
-    : `Add ${MAX_PHOTOS - photos.length} More ${MAX_PHOTOS - photos.length === 1 ? 'Portrait' : 'Portraits'}`;
-
   const finishOnboarding = async () => {
-    if (!isEnabled) return;
+    if (!canComplete) return;
+    setFinishing(true);
+    setError("");
+
     try {
       await apiRequest("/profile/complete", { method: "POST", auth: true, body: JSON.stringify({}) });
       await refreshCurrentUser();
       completeOnboardingStep("COMPLETED");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to complete onboarding.");
+    } finally {
+      setFinishing(false);
     }
   };
 
-  return (
-    <div className="flex flex-col h-full px-8 pb-[calc(env(safe-area-inset-bottom,0px)+32px)]">
+  if (loading) {
+    return <div className="flex h-full items-center justify-center text-sm text-foreground/50">Loading your gallery…</div>;
+  }
 
-      {/* Header */}
-      <div className="flex-none pt-6 mb-8">
-        <h1 className="text-4xl font-serif text-foreground tracking-wide mb-2">
-          Visual <span className="text-primary">Presence</span>.
-        </h1>
-        <p className="text-foreground/40 font-light uppercase tracking-widest text-[10px]">
-          A minimum of 1 portrait is required. The gallery is curated to 3.
-        </p>
+  return (
+    <div className="flex h-full flex-col px-8 pb-[calc(env(safe-area-inset-bottom,0px)+32px)]">
+      <div className="pt-6 pb-6">
+        <h1 className="text-4xl font-serif text-foreground tracking-wide">Photo <span className="text-primary">Upload</span></h1>
+        <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-foreground/40">1 to 3 portraits required</p>
       </div>
 
-      {/* 3-slot Gallery */}
-      <div className="flex-none grid grid-cols-3 gap-3 mb-8">
-        {[0, 1, 2].map((index) => {
-          const src = photos[index];
-          const isNextSlot = index === photos.length && !uploading;
-          const isLoading = uploading && index === photos.length;
-          const isEmpty = !src && !isLoading;
-
+      <div className="grid grid-cols-3 gap-3">
+        {Array.from({ length: MAX_PHOTOS }).map((_, index) => {
+          const photo = photos[index];
           return (
-            <div
-              key={index}
-              className={`aspect-[3/4] rounded-2xl relative overflow-hidden transition-all duration-400 ${
-                src
-                  ? 'border border-primary/20 shadow-[0_8px_24px_rgba(0,0,0,0.2)]'
-                  : 'metallic-border bg-foreground/[0.02]'
-              } ${isNextSlot && canAdd ? 'cursor-pointer hover:bg-foreground/[0.04]' : ''}`}
-              onClick={() => isNextSlot && addPhoto()}
-            >
-              <AnimatePresence mode="wait">
-                {src ? (
-                  <motion.div
-                    key="photo"
-                    initial={{ opacity: 0, scale: 1.05 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0"
+            <div key={index} className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-primary/20 bg-foreground/[0.03]">
+              {photo ? (
+                <>
+                  <img src={photo.url} alt={`Portrait ${index + 1}`} className="h-full w-full object-cover" />
+                  <button
+                    onClick={() => void removePhoto(photo.id)}
+                    className="absolute right-2 top-2 rounded-full bg-background/70 px-2 py-1 text-[10px] uppercase tracking-wider text-foreground/70"
                   >
-                    <img src={src} alt={`Portrait ${index + 1}`} className="w-full h-full object-cover object-top" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent" />
-                    <p className="absolute bottom-2 left-0 w-full text-center text-[7px] uppercase tracking-[0.25em] text-primary/80 font-semibold">
-                      Index 0{index + 1}
-                    </p>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removePhoto(index); }}
-                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-background/60 backdrop-blur-sm flex items-center justify-center text-foreground/50 hover:text-foreground transition-colors"
-                    >
-                      <X size={12} />
-                    </button>
-                  </motion.div>
-                ) : isLoading ? (
-                  <motion.div
-                    key="loading"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="absolute inset-0 flex items-center justify-center"
-                  >
-                    <div className="w-5 h-5 border border-primary/30 border-t-primary rounded-full animate-spin" />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="empty"
-                    className="absolute inset-0 flex flex-col items-center justify-center gap-2"
-                  >
-                    <Plus
-                      size={18}
-                      strokeWidth={1}
-                      className={isNextSlot ? 'text-primary/50' : 'text-foreground/15'}
-                    />
-                    <span className="text-[7px] uppercase tracking-[0.3em] font-medium text-foreground/20">
-                      {index === 0 ? 'Primary' : index === photos.length ? 'Add' : '—'}
-                    </span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    Remove
+                  </button>
+                </>
+              ) : (
+                <div className="flex h-full items-center justify-center text-[10px] uppercase tracking-[0.2em] text-foreground/35">Empty</div>
+              )}
             </div>
           );
         })}
       </div>
 
-      {/* Status pills */}
-      <div className="flex-none flex items-center justify-center gap-2 mb-8">
-        {[0, 1, 2].map(i => (
-          <div
-            key={i}
-            className={`h-1 rounded-full transition-all duration-400 ${
-              i < photos.length ? 'w-6 bg-primary' : 'w-3 bg-foreground/15'
-            }`}
-          />
-        ))}
-      </div>
+      <div className="mt-6 space-y-3">
+        <p className="text-xs text-foreground/60">{statusLabel}</p>
 
-      {/* CTA */}
-      <div className="flex-none mt-auto">
-        {error && <p className="text-red-400 text-xs text-center mb-2">{error}</p>}
-        <motion.button
-          whileTap={isEnabled ? { scale: 0.97 } : {}}
-          onClick={finishOnboarding}
-          disabled={!isEnabled}
-          className={`btn-elite-primary ${!isEnabled ? 'opacity-20 grayscale cursor-not-allowed' : ''}`}
+        <label className={`block rounded-xl border border-primary/30 px-4 py-3 text-center text-xs uppercase tracking-[0.2em] ${canUpload && !uploading ? "cursor-pointer text-primary" : "cursor-not-allowed text-foreground/40"}`}>
+          <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => void handleFilePick(event)} disabled={!canUpload || uploading} />
+          {uploading ? "Uploading…" : canUpload ? "Upload portrait" : "Maximum reached"}
+        </label>
+
+        {error ? <p className="text-xs text-red-400">{error}</p> : null}
+
+        <button
+          onClick={() => void finishOnboarding()}
+          disabled={!canComplete || finishing}
+          className={`btn-elite-primary ${!canComplete || finishing ? "cursor-not-allowed opacity-30 grayscale" : ""}`}
         >
-          {label}
-        </motion.button>
+          {finishing ? "Finalizing…" : "Complete Onboarding"}
+        </button>
       </div>
     </div>
   );
