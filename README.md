@@ -114,3 +114,113 @@ To reduce hallucination and integration risk, enforce staged execution:
 - Follow existing TypeScript types and import paths.
 - Keep current auth strategy unless an explicit blocker requires change.
 - If a feature is not clearly mappable, implement the smallest possible version that fits existing architecture.
+
+## Can Codex finish this full app spec without duplication?
+
+Yes—**but only if you force staged execution** instead of asking for “build everything” in one pass.
+
+For a spec as large as this one, the safest approach is:
+
+1. Ask Codex to do repo discovery and produce a file-by-file implementation map.
+2. Approve that map.
+3. Execute in bounded phases (auth/verification, payment/onboarding, discovery/likes/matches, employee/admin).
+4. Require each phase to include tests, route checks, and a duplication audit.
+
+If you give one giant prompt, most assistants (including strong ones) can still drift into duplicate routes/components or partially mismatched backend contracts.
+
+### Copy/paste control prompt (use before your product spec)
+
+```md
+You are working in an existing monorepo. Do NOT rebuild. Extend only what exists.
+
+Hard constraints:
+- Scan the full repo first and list exact existing routes/pages/services/db models.
+- Output a “no-duplication plan” before coding:
+  - files to edit
+  - new files (only if required)
+  - duplicate-risk checks
+- Reuse existing layouts/components/hooks/api clients.
+- Do not create parallel folders, alternate route trees, or replacement auth/payment systems.
+- Preserve current UI style and page structure unless integration requires minimal edits.
+- After each phase, run tests and print a changed-files summary.
+
+Delivery order:
+1) Discovery report + architecture map
+2) Verification + payment flow wiring
+3) Onboarding guards + discover/likes/matches integration
+4) Employee console flows
+5) Admin dashboard metrics + operational queues
+
+At the end of each phase, include:
+- What was reused
+- What was newly created and why
+- Any blockers/assumptions
+- Commands run + results
+```
+
+### Practical recommendation
+
+Treat your long business spec as the **vision document**, and combine it with this **execution-control prompt** for each phase. That is the best way to get Codex to scan your current codebase, keep your existing UI/layouts, and avoid duplicate implementations.
+
+## Ready-to-use prompt for your "Premium Private Club" repo
+
+If you want Codex to actually complete this project from your existing pieces **without duplicating UI/routes**, use this exact sequence.
+
+### Step A: Give this control prompt first
+
+```md
+You are implementing features in an existing monorepo. Do not rebuild completed UI.
+
+Non-negotiable rules:
+1. Scan full repo before coding.
+2. Produce a repo map with:
+   - existing pages/routes
+   - existing API endpoints/controllers/services
+   - existing DB models/migrations
+   - existing guards/middleware/auth/session logic
+   - unfinished gaps vs requested product spec
+3. Produce a no-duplication file plan:
+   - files to EDIT
+   - files to CREATE (only if unavoidable)
+   - why each new file is necessary
+4. Keep current UI layout/structure/style; only integration edits allowed.
+5. Never create alternate route trees, duplicate components, or parallel auth/payment systems.
+6. Reuse current services/types/hooks/components first.
+7. Implement in phases and commit after each phase.
+8. After each phase run tests/lint/typecheck and show commands + result.
+9. If blocked, stop and report blocker + smallest safe fallback.
+```
+
+### Step B: Then give your business spec
+
+Paste your full Premium Private Club specification after Step A (the long one you shared).
+
+### Step C: Force delivery in phase tickets (recommended)
+
+Use separate prompts, one by one:
+
+1. **Phase 1 (Discovery only):**
+   - output architecture map + file plan + duplication risks
+   - no code changes yet
+2. **Phase 2 (Critical flow wiring):**
+   - auth/sign-in reliability
+   - verification gating
+   - payment gating
+   - onboarding completion guard
+3. **Phase 3 (Member core):**
+   - discover/likes/matches backend integration
+   - loading/empty/error states polish
+4. **Phase 4 (Operations):**
+   - employee verification page + match handler workflow
+5. **Phase 5 (Founder/admin):**
+   - admin dashboard metrics + workload views + queues
+
+### Step D: Add acceptance checks to every phase
+
+Require these outputs each time:
+- changed files list
+- why each change was needed
+- commands run (tests/lint/typecheck/build)
+- duplication audit (confirm no duplicate routes/components/services added)
+
+This process gives you the highest chance that Codex scans the repo, reuses your current UI structure, and completes missing parts safely instead of generating duplicate implementations.
