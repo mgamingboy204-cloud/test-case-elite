@@ -1,13 +1,14 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { Compass, Heart, Bell, User, Sparkles, LogOut } from "lucide-react";
+import { Compass, Heart, Bell, User, Sparkles, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { fetchAlerts, fetchLikesIncoming, fetchMatches, fetchProfile } from "@/lib/queries";
 import { primeCache } from "@/lib/cache";
 import { motion } from "framer-motion";
+import { resolveRouteRedirect } from "@/lib/navigationGuard";
 
 const NAV_ITEMS = [
   { href: "/discover", icon: Compass, label: "Discover" },
@@ -15,10 +16,11 @@ const NAV_ITEMS = [
   { href: "/matches", icon: Sparkles, label: "Matches" },
   { href: "/alerts", icon: Bell, label: "Alerts" },
   { href: "/profile", icon: User, label: "Profile" },
+  { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isAuthResolved, onboardingStep, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -28,7 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (href === "/likes") void fetchLikesIncoming().then((data) => primeCache("likes-incoming", data));
     if (href === "/matches") void fetchMatches().then((data) => primeCache("matches", data));
     if (href === "/alerts") void fetchAlerts().then((data) => primeCache("alerts", data));
-    if (href === "/profile") void fetchProfile().then((data) => primeCache("profile", data));
+    if (href === "/profile" || href === "/settings") void fetchProfile().then((data) => primeCache("profile", data));
   }, [router]);
 
   useEffect(() => { setMounted(true); }, []);
@@ -37,7 +39,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     NAV_ITEMS.forEach((item) => prefetchRouteBundle(item.href));
   }, [prefetchRouteBundle]);
 
-  if (!mounted || !isAuthenticated) return null;
+  useEffect(() => {
+    const redirect = resolveRouteRedirect({
+      pathname,
+      isAuthenticated,
+      isAuthResolved,
+      onboardingStep,
+      scope: "main"
+    });
+
+    if (redirect && pathname !== redirect) {
+      router.replace(redirect);
+    }
+  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router]);
+
+  if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
   return (
     <div className="flex flex-row h-[100dvh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">

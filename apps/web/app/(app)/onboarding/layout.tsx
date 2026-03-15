@@ -5,16 +5,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { ChevronLeft } from "lucide-react";
+import { resolveRouteRedirect } from "@/lib/navigationGuard";
 
 // Maps each onboarding state to the correct sub-route
-const STEP_ROUTE_MAP: Record<string, string> = {
-  VERIFICATION: '/onboarding/verification',
-  PAYMENT:      '/onboarding/payment',
-  PROFILE:      '/onboarding/profile',
-  PHOTOS:       '/onboarding/photos',
-  COMPLETED:    '/discover',
-};
-
 const ORDERED_ROUTES = [
   '/onboarding/verification',
   '/onboarding/payment',
@@ -27,7 +20,7 @@ const STEP_LABELS = ['Identity', 'Funding', 'Essence', 'Presence'];
 export default function OnboardingLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
-  const { onboardingStep } = useAuth();
+  const { onboardingStep, isAuthenticated, isAuthResolved } = useAuth();
 
   const currentIndex = ORDERED_ROUTES.findIndex(r => pathname.includes(r));
   const progress = Math.max(0, Math.min(100, ((currentIndex + 1) / ORDERED_ROUTES.length) * 100));
@@ -36,11 +29,21 @@ export default function OnboardingLayout({ children }: { children: ReactNode }) 
   // If the user's stored step doesn't match where they are, redirect them to
   // the correct route for their completion status.
   useEffect(() => {
-    const correctRoute = STEP_ROUTE_MAP[onboardingStep];
-    if (correctRoute && !pathname.includes(correctRoute)) {
-      router.replace(correctRoute);
+    const redirect = resolveRouteRedirect({
+      pathname,
+      isAuthenticated,
+      isAuthResolved,
+      onboardingStep,
+      scope: "onboarding"
+    });
+    if (redirect && pathname !== redirect) {
+      router.replace(redirect);
     }
-  }, [onboardingStep, pathname, router]);
+  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router]);
+
+  if (!isAuthResolved) {
+    return <div className="w-full h-[100dvh] bg-background" />;
+  }
 
   const canGoBack = currentIndex > 0;
   const handleBack = () => { if (canGoBack) router.back(); };

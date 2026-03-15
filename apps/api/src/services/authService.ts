@@ -5,6 +5,7 @@ import { deviceCookieOptions } from "../config/auth";
 import { env } from "../config/env";
 import { HttpError } from "../utils/httpErrors";
 import { logger } from "../utils/logger";
+import { resolveBackendOnboardingStep } from "@elite/shared";
 
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -15,16 +16,20 @@ export function resolveOnboardingStep(user: {
   videoVerificationStatus?: string;
   paymentStatus?: string;
   profileCompletedAt?: Date | null;
+  photoCount?: number;
 }) {
-  if (user.onboardingStep === "ACTIVE") return "ACTIVE";
-  if (user.profileCompletedAt) return "ACTIVE";
-  if (user.paymentStatus === "PAID") return "PROFILE_PENDING";
-  if (user.paymentStatus === "PENDING") return "PAYMENT_PENDING";
-  if (user.videoVerificationStatus === "APPROVED") return "VIDEO_VERIFIED";
-  if (user.videoVerificationStatus === "IN_PROGRESS" || user.videoVerificationStatus === "PENDING") {
-    return "VIDEO_VERIFICATION_PENDING";
-  }
-  return "PHONE_VERIFIED";
+  return resolveBackendOnboardingStep(user);
+}
+
+async function resolveUserOnboardingStep(user: {
+  id: string;
+  onboardingStep?: string;
+  videoVerificationStatus?: string;
+  paymentStatus?: string;
+  profileCompletedAt?: Date | null;
+}) {
+  const photoCount = await prisma.photo.count({ where: { userId: user.id } });
+  return resolveOnboardingStep({ ...user, photoCount });
 }
 
 export async function issueOnboardingToken(userId: string) {
@@ -100,7 +105,7 @@ export async function verifyOtpAndGetUser(phone: string, code: string) {
     if (pending) {
       await prisma.pendingUser.delete({ where: { phone } });
     }
-    const onboardingStep = resolveOnboardingStep(user);
+    const onboardingStep = await resolveUserOnboardingStep(user);
     if (!user.phoneVerifiedAt || user.onboardingStep !== onboardingStep) {
       user = await prisma.user.update({
         where: { id: user.id },
@@ -256,7 +261,7 @@ export async function validateLogin(options: {
     throw new HttpError(401, { message: "Invalid credentials" });
   }
 
-  const onboardingStep = resolveOnboardingStep(user);
+  const onboardingStep = await resolveUserOnboardingStep(user);
   if (user.onboardingStep !== onboardingStep) {
     await prisma.user.update({ where: { id: user.id }, data: { onboardingStep } });
   }

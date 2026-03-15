@@ -78,6 +78,7 @@ export async function verifyOtp(req: Request, res: Response) {
 
   try {
     const user = await verifyOtpAndGetUser(phone, code);
+    const photoCount = await prisma.photo.count({ where: { userId: user.id } });
 
     const resolvedRememberMe = rememberMe ?? false;
 
@@ -113,7 +114,8 @@ export async function verifyOtp(req: Request, res: Response) {
         onboardingStep: user.onboardingStep,
         videoVerificationStatus: user.videoVerificationStatus,
         paymentStatus: user.paymentStatus,
-        profileCompletedAt: user.profileCompletedAt
+        profileCompletedAt: user.profileCompletedAt,
+        photoCount
       }
     });
   } catch (error) {
@@ -178,6 +180,7 @@ export async function login(req: Request, res: Response) {
   };
 
   const result = await validateLogin({ phone, password });
+  const photoCount = await prisma.photo.count({ where: { userId: result.user.id } });
 
   if (result.otpRequired) {
     await requestOtp(phone);
@@ -225,10 +228,11 @@ export async function login(req: Request, res: Response) {
       status: result.user.status,
       verifiedAt: result.user.verifiedAt,
       phoneVerifiedAt: result.user.phoneVerifiedAt,
-      onboardingStep: result.onboardingStep ?? resolveOnboardingStep(result.user),
+      onboardingStep: result.onboardingStep ?? resolveOnboardingStep({ ...result.user, photoCount }),
       videoVerificationStatus: result.user.videoVerificationStatus,
       paymentStatus: result.user.paymentStatus,
-      profileCompletedAt: result.user.profileCompletedAt
+      profileCompletedAt: result.user.profileCompletedAt,
+      photoCount
     }
   });
 }
@@ -329,6 +333,8 @@ export async function whoAmI(req: Request, res: Response) {
 
   if (!user) return res.status(401).json({ message: "Invalid token" });
 
+  const photoCount = await prisma.photo.count({ where: { userId: user.id } });
+
   return res.json({
     id: user.id,
     phone: user.phone,
@@ -346,6 +352,7 @@ export async function whoAmI(req: Request, res: Response) {
     videoVerificationStatus: user.videoVerificationStatus,
     paymentStatus: user.paymentStatus,
     profileCompletedAt: user.profileCompletedAt,
+    photoCount,
     onboardingToken: user.onboardingToken,
     onboardingTokenExpiresAt: user.onboardingTokenExpiresAt
   });
