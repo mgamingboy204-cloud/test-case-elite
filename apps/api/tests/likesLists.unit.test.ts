@@ -17,14 +17,17 @@ describe("likes list service", () => {
   });
 
   it("returns incoming likes with fromUser alias", async () => {
-    (prisma.like.findMany as any).mockResolvedValue([
-      {
-        id: "l1",
-        action: "LIKE",
-        createdAt: new Date("2025-01-01T00:00:00Z"),
-        actorUser: { id: "u2", profile: { name: "A" }, photos: [{ url: "p1" }] }
-      }
-    ]);
+    (prisma.like.findMany as any)
+      .mockResolvedValueOnce([
+        {
+          id: "l1",
+          action: "LIKE",
+          actorUserId: "u2",
+          createdAt: new Date("2025-01-01T00:00:00Z"),
+          actorUser: { id: "u2", profile: { name: "A" }, photos: [{ url: "p1" }] }
+        }
+      ])
+      .mockResolvedValueOnce([]);
 
     const result = await getIncomingLikes("u1");
 
@@ -40,6 +43,24 @@ describe("likes list service", () => {
       isBlurred: false,
       matchPercentage: null
     });
+  });
+
+  it("excludes incoming likes that were passed by the current user", async () => {
+    (prisma.like.findMany as any)
+      .mockResolvedValueOnce([
+        {
+          id: "l1",
+          action: "LIKE",
+          actorUserId: "u2",
+          createdAt: new Date("2025-01-01T00:00:00Z"),
+          actorUser: { id: "u2", profile: { name: "A" }, photos: [{ url: "p1" }] }
+        }
+      ])
+      .mockResolvedValueOnce([{ targetUserId: "u2" }]);
+
+    const result = await getIncomingLikes("u1");
+
+    expect(result.incoming).toHaveLength(0);
   });
 
   it("returns outgoing likes with toUser alias", async () => {

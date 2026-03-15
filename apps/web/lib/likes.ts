@@ -57,7 +57,7 @@ function toIncomingProfile(item: LegacyIncomingLike): LikesIncomingProfile | nul
       likedAt: item.likedAt ?? item.createdAt ?? null,
       name: item.liker.name ?? "Member",
       age: item.liker.age ?? 0,
-      location: (item.liker.city ?? "Unknown").toUpperCase(),
+      location: (item.liker.city ?? "Private Location").toUpperCase(),
       image: item.liker.primaryPhotoUrl ?? FALLBACK_IMAGE
     };
   }
@@ -73,7 +73,7 @@ function toIncomingProfile(item: LegacyIncomingLike): LikesIncomingProfile | nul
     likedAt: item.likedAt ?? item.createdAt ?? null,
     name: actor?.profile?.name ?? "Member",
     age: actor?.profile?.age ?? 0,
-    location: (actor?.profile?.city ?? "Unknown").toUpperCase(),
+    location: (actor?.profile?.city ?? "Private Location").toUpperCase(),
     image: actor?.photos?.[0]?.url ?? FALLBACK_IMAGE
   };
 }
@@ -81,10 +81,16 @@ function toIncomingProfile(item: LegacyIncomingLike): LikesIncomingProfile | nul
 export async function fetchIncomingLikes(): Promise<LikesIncomingProfile[]> {
   const response = await apiRequest<IncomingLikesResponse>("/likes/incoming", { auth: true });
   const incoming = response.incoming ?? [];
-
-  return incoming
+  const normalized = incoming
     .map(toIncomingProfile)
     .filter((item): item is LikesIncomingProfile => item !== null);
+
+  return Array.from(new Map(normalized.map((item) => [item.profileId, item])).values());
+}
+
+function buildActionId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return `likes-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
 export async function respondToIncomingLike(options: { targetUserId: string; action: "LIKE" | "PASS" }) {
@@ -92,7 +98,7 @@ export async function respondToIncomingLike(options: { targetUserId: string; act
     method: "POST",
     auth: true,
     body: JSON.stringify({
-      actionId: crypto.randomUUID(),
+      actionId: buildActionId(),
       targetUserId: options.targetUserId,
       action: options.action
     })
