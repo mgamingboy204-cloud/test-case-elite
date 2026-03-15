@@ -7,6 +7,7 @@ import {
   approveUserHandler,
   banUserHandler,
   dashboardHandler,
+  employeeWorkloadsHandler,
   deactivateUserHandler,
   deleteUserHandler,
   denyRefundHandler,
@@ -41,7 +42,7 @@ import {
   sendOnlineMeetOptionsHandler,
   updateOnlineMeetCancelOrRescheduleHandler
 } from "../controllers/onlineMeetController";
-import { requireAdmin, requireAuth } from "../middlewares/auth";
+import { requireAdmin, requireAuth, requireEmployee } from "../middlewares/auth";
 import { validateBody, validateParams } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 
@@ -77,6 +78,7 @@ router.post(
 );
 router.get("/admin/users", requireAuth, requireAdmin, asyncHandler(listUsersHandler));
 router.get("/admin/dashboard", requireAuth, requireAdmin, asyncHandler(dashboardHandler));
+router.get("/admin/employees/workloads", requireAuth, requireAdmin, asyncHandler(employeeWorkloadsHandler));
 router.post(
   "/admin/users/:id/deactivate",
   requireAuth,
@@ -109,18 +111,18 @@ router.post(
   asyncHandler(denyRefundHandler)
 );
 
-router.get("/admin/verification-requests", requireAuth, requireAdmin, asyncHandler(listVerificationRequestsHandler));
+router.get("/admin/verification-requests", requireAuth, requireEmployee, asyncHandler(listVerificationRequestsHandler));
 router.post(
   "/admin/verification-requests/:id/assign",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ id: z.string() })),
   asyncHandler(assignVerificationRequestHandler)
 );
 router.post(
   "/admin/verification-requests/:id/start",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ id: z.string() })),
   validateBody(z.object({ meetUrl: meetUrlSchema })),
   asyncHandler(startVerificationRequestHandler)
@@ -128,14 +130,14 @@ router.post(
 router.post(
   "/admin/verification-requests/:id/approve",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ id: z.string() })),
   asyncHandler(approveVerificationRequestHandler)
 );
 router.post(
   "/admin/verification-requests/:id/reject",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ id: z.string() })),
   validateBody(z.object({ reason: z.string().min(1) })),
   asyncHandler(rejectVerificationRequestHandler)
@@ -176,18 +178,18 @@ router.post(
 
 
 
-router.get("/admin/offline-meets", requireAuth, requireAdmin, asyncHandler(listOfflineMeetCasesHandler));
+router.get("/admin/offline-meets", requireAuth, requireEmployee, asyncHandler(listOfflineMeetCasesHandler));
 router.post(
   "/admin/offline-meets/:caseId/assign",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ caseId: z.string().uuid() })),
   asyncHandler(assignOfflineMeetCaseHandler)
 );
 router.post(
   "/admin/offline-meets/:caseId/options",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ caseId: z.string().uuid() })),
   validateBody(OfflineMeetOptionsSchema),
   asyncHandler(sendOfflineMeetOptionsHandler)
@@ -195,7 +197,7 @@ router.post(
 router.post(
   "/admin/offline-meets/:caseId/finalize",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ caseId: z.string().uuid() })),
   validateBody(OfflineMeetFinalizeSchema),
   asyncHandler(finalizeOfflineMeetCaseHandler)
@@ -203,7 +205,7 @@ router.post(
 router.post(
   "/admin/offline-meets/:caseId/timeout",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ caseId: z.string().uuid() })),
   validateBody(OfflineMeetNoResponseSchema),
   asyncHandler(markOfflineMeetTimeoutHandler)
@@ -211,14 +213,14 @@ router.post(
 router.post(
   "/admin/offline-meets/:caseId/no-overlap",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ caseId: z.string().uuid() })),
   asyncHandler(markOfflineMeetNoOverlapHandler)
 );
 router.post(
   "/admin/offline-meets/:caseId/case-update",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ caseId: z.string().uuid() })),
   validateBody(OfflineMeetAdminCancelSchema),
   asyncHandler(updateOfflineMeetCancelOrRescheduleHandler)
@@ -226,18 +228,18 @@ router.post(
 
 
 
-router.get("/admin/online-meets", requireAuth, requireAdmin, asyncHandler(listOnlineMeetCasesHandler));
+router.get("/admin/online-meets", requireAuth, requireEmployee, asyncHandler(listOnlineMeetCasesHandler));
 router.post(
   "/admin/online-meets/:caseId/assign",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ caseId: z.string().uuid() })),
   asyncHandler(assignOnlineMeetCaseHandler)
 );
 router.post(
   "/admin/online-meets/:caseId/options",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ caseId: z.string().uuid() })),
   validateBody(OnlineMeetOptionsSchema),
   asyncHandler(sendOnlineMeetOptionsHandler)
@@ -245,7 +247,7 @@ router.post(
 router.post(
   "/admin/online-meets/:caseId/finalize",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ caseId: z.string().uuid() })),
   validateBody(OnlineMeetFinalizeSchema),
   asyncHandler(finalizeOnlineMeetCaseHandler)
@@ -253,7 +255,7 @@ router.post(
 router.post(
   "/admin/online-meets/:caseId/timeout",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ caseId: z.string().uuid() })),
   validateBody(OnlineMeetNoResponseSchema),
   asyncHandler(markOnlineMeetTimeoutHandler)
@@ -261,14 +263,14 @@ router.post(
 router.post(
   "/admin/online-meets/:caseId/no-overlap",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ caseId: z.string().uuid() })),
   asyncHandler(markOnlineMeetNoOverlapHandler)
 );
 router.post(
   "/admin/online-meets/:caseId/case-update",
   requireAuth,
-  requireAdmin,
+  requireEmployee,
   validateParams(z.object({ caseId: z.string().uuid() })),
   validateBody(OnlineMeetAdminCancelSchema),
   asyncHandler(updateOnlineMeetCancelOrRescheduleHandler)

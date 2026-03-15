@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   LoginBodySchema,
+  EmployeeLoginSchema,
   OtpSendSchema,
   OtpVerifySchema,
   RefreshTokenSchema,
@@ -11,6 +12,7 @@ import {
 } from "../validators/authValidators";
 import {
   debugCookies,
+  employeeLogin,
   login,
   logout,
   refreshAccessToken,
@@ -53,6 +55,13 @@ router.post(
   loginLimiter,
   validateBody(LoginBodySchema),
   asyncHandler(login)
+);
+
+router.post(
+  "/employee/auth/login",
+  loginLimiter,
+  validateBody(EmployeeLoginSchema),
+  asyncHandler(employeeLogin)
 );
 
 router.post("/auth/token/refresh", validateBody(RefreshTokenSchema), asyncHandler(refreshAccessToken));

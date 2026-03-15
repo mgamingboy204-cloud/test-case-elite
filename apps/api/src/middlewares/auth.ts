@@ -114,3 +114,14 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   }
   return next();
 }
+
+export function requireEmployee(req: Request, res: Response, next: NextFunction) {
+  const user = res.locals.user;
+  if (!user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  if (user.role !== "EMPLOYEE" && user.role !== "ADMIN") {
+    return res.status(403).json({ message: "Employee access required" });
+  }
+  return next();
+}
