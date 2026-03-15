@@ -87,8 +87,10 @@ export async function denyRefundHandler(req: Request, res: Response) {
 
 export async function listVerificationRequestsHandler(req: Request, res: Response) {
   const statusFilter = typeof req.query.status === "string" ? req.query.status : undefined;
+  const statusView = typeof req.query.statusView === "string" ? req.query.statusView : undefined;
   const result = await listVerificationRequestsForActor({
     statusFilter,
+    statusView,
     actorUserId: res.locals.user.id,
     actorRole: res.locals.user.role,
     isAdmin: Boolean(res.locals.user.isAdmin)

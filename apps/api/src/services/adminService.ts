@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, VerificationRequestStatus } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { listEmployeeWorkloads } from "./employeeService";
@@ -35,6 +35,25 @@ type ReportListItem = Prisma.ReportGetPayload<{
 type RefundListItem = Prisma.RefundRequestGetPayload<{
   include: { user: { select: { id: true; phone: true; email: true } } };
 }>;
+
+type VerificationWorkerView = "ACTIVE" | "COMPLETED" | "REJECTED" | "TIMEOUT" | "ALL";
+
+const VERIFICATION_VIEW_STATUS_MAP: Record<Exclude<VerificationWorkerView, "ALL">, VerificationRequestStatus[]> = {
+  ACTIVE: ["REQUESTED", "ASSIGNED", "IN_PROGRESS"],
+  COMPLETED: ["COMPLETED"],
+  REJECTED: ["REJECTED"],
+  TIMEOUT: ["TIMED_OUT"]
+};
+
+function resolveVerificationWorkerView(value?: string): VerificationWorkerView {
+  if (!value) return "ACTIVE";
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "ALL") return "ALL";
+  if (normalized in VERIFICATION_VIEW_STATUS_MAP) {
+    return normalized as keyof typeof VERIFICATION_VIEW_STATUS_MAP;
+  }
+  throw new HttpError(400, { message: "Invalid verification status view." });
+}
 
 export async function approveUser(userId: string, actorUserId: string) {
   const user = await prisma.user.update({
@@ -236,18 +255,25 @@ async function pushVerificationAlert(options: {
 }
 export async function listVerificationRequestsForActor(options: {
   statusFilter?: string;
+  statusView?: string;
   actorUserId: string;
   actorRole: "USER" | "EMPLOYEE" | "ADMIN";
   isAdmin: boolean;
-}): Promise<{ requests: VerificationRequestListItem[] }> {
+}): Promise<{ statusView: VerificationWorkerView; requests: VerificationRequestListItem[] }> {
   if (options.actorRole === "USER") {
     throw new HttpError(403, { message: "Employee access required" });
   }
 
   const isPrivileged = options.isAdmin || options.actorRole === "ADMIN";
+  const statusView = resolveVerificationWorkerView(options.statusView);
+  const statusInView = statusView === "ALL" ? undefined : VERIFICATION_VIEW_STATUS_MAP[statusView];
   const requests: VerificationRequestListItem[] = await prisma.verificationRequest.findMany({
     where: {
-      ...(options.statusFilter && options.statusFilter !== "ALL" ? { status: options.statusFilter as any } : {}),
+      ...(options.statusFilter && options.statusFilter !== "ALL"
+        ? { status: options.statusFilter as VerificationRequestStatus }
+        : statusInView
+        ? { status: { in: statusInView } }
+        : {}),
       ...(!isPrivileged
         ? {
             OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: options.actorUserId }]
@@ -257,7 +283,7 @@ export async function listVerificationRequestsForActor(options: {
     include: { user: { select: { id: true, phone: true, email: true } } },
     orderBy: { createdAt: "desc" }
   });
-  return { requests };
+  return { statusView, requests };
 }
 
 function ensureAssignableToActor(caseItem: { assignedEmployeeId: string | null }, actorUserId: string, isPrivileged: boolean) {
@@ -307,15 +333,28 @@ export async function startVerificationRequest(requestId: string, meetUrl: strin
 }
 
 export async function assignVerificationRequest(requestId: string, actorUserId: string) {
+  const existing = await prisma.verificationRequest.findUnique({ where: { id: requestId }, select: { status: true } });
+  if (!existing) throw new HttpError(404, { message: "Verification request not found" });
+  if (!["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(existing.status)) {
+    throw new HttpError(409, { message: "This verification request is already closed." });
+  }
   const now = new Date();
-  const request = await prisma.verificationRequest.update({
-    where: { id: requestId },
+  const claimResult = await prisma.verificationRequest.updateMany({
+    where: {
+      id: requestId,
+      OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: actorUserId }]
+    },
     data: {
       status: "ASSIGNED",
       assignedEmployeeId: actorUserId,
       assignedAt: now
     }
   });
+  if (claimResult.count === 0) {
+    throw new HttpError(409, { message: "This request is already assigned to another employee." });
+  }
+  const request = await prisma.verificationRequest.findUnique({ where: { id: requestId } });
+  if (!request) throw new HttpError(404, { message: "Verification request not found" });
   await prisma.user.update({
     where: { id: request.userId },
     data: { videoVerificationStatus: "IN_PROGRESS", onboardingStep: "VIDEO_VERIFICATION_PENDING" }

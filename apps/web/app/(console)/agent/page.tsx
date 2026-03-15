@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, RefreshCcw } from "lucide-react";
 import {
   assignOfflineMeetCase,
@@ -9,7 +9,9 @@ import {
   markOfflineMeetNoOverlap,
   markOfflineMeetTimeout,
   sendOfflineMeetOptions,
-  updateOfflineMeetCase
+  updateOfflineMeetCase,
+  type OfflineMeetEmployeeCase,
+  type OfflineMeetStatusView
 } from "@/lib/offlineMeet";
 import {
   assignOnlineMeetCase,
@@ -19,163 +21,292 @@ import {
   markOnlineMeetTimeout,
   sendOnlineMeetOptions,
   updateOnlineMeetCase,
-  type MeetPlatform
+  type MeetPlatform,
+  type OnlineMeetEmployeeCase,
+  type OnlineMeetStatusView
 } from "@/lib/onlineMeet";
-import { useStaleWhileRevalidate } from "@/lib/cache";
 import { ApiError } from "@/lib/api";
+
+type MeetMode = "OFFLINE" | "ONLINE";
+
+const OFFLINE_VIEWS: Array<{ value: OfflineMeetStatusView; label: string }> = [
+  { value: "ACTIVE", label: "Active" },
+  { value: "FINALIZED", label: "Finalized" },
+  { value: "CONFLICT", label: "No overlap / conflict" },
+  { value: "TIMEOUT", label: "Timeout" },
+  { value: "CANCELED", label: "Canceled" }
+];
+
+const ONLINE_VIEWS: Array<{ value: OnlineMeetStatusView; label: string }> = OFFLINE_VIEWS as Array<{ value: OnlineMeetStatusView; label: string }>;
 
 function makeOptionId(prefix: string, idx: number) {
   return `${prefix}-${idx + 1}`;
 }
 
 export default function AgentWorkspace() {
-  const [mode, setMode] = useState<"OFFLINE" | "ONLINE">("OFFLINE");
+  const [mode, setMode] = useState<MeetMode>("OFFLINE");
+  const [offlineView, setOfflineView] = useState<OfflineMeetStatusView>("ACTIVE");
+  const [onlineView, setOnlineView] = useState<OnlineMeetStatusView>("ACTIVE");
+  const [offlineCases, setOfflineCases] = useState<OfflineMeetEmployeeCase[]>([]);
+  const [onlineCases, setOnlineCases] = useState<OnlineMeetEmployeeCase[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const [cafes, setCafes] = useState([{ name: "", address: "" }, { name: "", address: "" }, { name: "", address: "" }]);
   const [offlineTimeSlots, setOfflineTimeSlots] = useState(["", "", ""]);
-
   const [platforms, setPlatforms] = useState<MeetPlatform[]>(["ZOOM", "GOOGLE_MEET"]);
   const [onlineTimeSlots, setOnlineTimeSlots] = useState(["", "", ""]);
   const [finalOnlineLink, setFinalOnlineLink] = useState("");
 
-  const offlineCasesQuery = useStaleWhileRevalidate({ key: "agent-offline-meets", fetcher: async () => (await listOfflineMeetCasesForEmployee()).cases, staleTimeMs: 30_000, enabled: true });
-  const onlineCasesQuery = useStaleWhileRevalidate({ key: "agent-online-meets", fetcher: async () => (await listOnlineMeetCasesForEmployee()).cases, staleTimeMs: 30_000, enabled: true });
+  const activeView = mode === "OFFLINE" ? offlineView : onlineView;
+  const activeItems = mode === "OFFLINE" ? offlineCases : onlineCases;
+  const selectedOffline = offlineCases.find((entry) => entry.id === selectedCaseId) ?? null;
+  const selectedOnline = onlineCases.find((entry) => entry.id === selectedCaseId) ?? null;
+  const selectedAny = mode === "OFFLINE" ? selectedOffline : selectedOnline;
 
-  const offlineItems = useMemo(() => offlineCasesQuery.data ?? [], [offlineCasesQuery.data]);
-  const onlineItems = useMemo(() => onlineCasesQuery.data ?? [], [onlineCasesQuery.data]);
-  const items = mode === "OFFLINE" ? offlineItems : onlineItems;
-  const selectedOffline = offlineItems.find((entry) => entry.id === selectedCaseId) ?? null;
-  const selectedOnline = onlineItems.find((entry) => entry.id === selectedCaseId) ?? null;
-
-  const refreshActive = async () => {
-    if (mode === "OFFLINE") await offlineCasesQuery.refresh(true);
-    else await onlineCasesQuery.refresh(true);
+  const loadCases = async (targetMode: MeetMode, view = targetMode === "OFFLINE" ? offlineView : onlineView) => {
+    if (targetMode === "OFFLINE") {
+      const payload = await listOfflineMeetCasesForEmployee(view as OfflineMeetStatusView);
+      setOfflineCases(payload.cases);
+      setSelectedCaseId((prev) => (prev && payload.cases.some((item) => item.id === prev) ? prev : payload.cases[0]?.id ?? null));
+      return;
+    }
+    const payload = await listOnlineMeetCasesForEmployee(view as OnlineMeetStatusView);
+    setOnlineCases(payload.cases);
+    setSelectedCaseId((prev) => (prev && payload.cases.some((item) => item.id === prev) ? prev : payload.cases[0]?.id ?? null));
   };
 
-  const withAction = async (key: string, run: () => Promise<void>) => {
-    setBusy(key);
-    setFeedback(null);
+  useEffect(() => {
+    const run = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await loadCases(mode, activeView);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to load meet coordination queue.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    void run();
+  }, [mode, activeView]);
+
+  const refreshActive = async () => {
+    setRefreshing(true);
+    setError(null);
     try {
-      await run();
-      await refreshActive();
-    } catch (error) {
-      setFeedback(error instanceof ApiError ? error.message : "Operation failed.");
+      await loadCases(mode, activeView);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to refresh queue.");
     } finally {
-      setBusy(null);
+      setRefreshing(false);
     }
   };
 
+  const withAction = async (key: string, run: () => Promise<void>, successMessage: string) => {
+    setBusyAction(key);
+    setFeedback(null);
+    setError(null);
+    try {
+      await run();
+      await refreshActive();
+      setFeedback(successMessage);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Operation failed.");
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const offlineCandidateChoices = useMemo(() => {
+    if (!selectedOffline) return { cafes: [], slots: [] };
+    const requesterCafe = new Set(selectedOffline.selections.requester.cafes);
+    const receiverCafe = new Set(selectedOffline.selections.receiver.cafes);
+    const requesterSlots = new Set(selectedOffline.selections.requester.timeSlots);
+    const receiverSlots = new Set(selectedOffline.selections.receiver.timeSlots);
+    return {
+      cafes: selectedOffline.options.cafes.filter((entry) => requesterCafe.has(entry.id) && receiverCafe.has(entry.id)),
+      slots: selectedOffline.options.timeSlots.filter((entry) => requesterSlots.has(entry.id) && receiverSlots.has(entry.id))
+    };
+  }, [selectedOffline]);
+
+  const onlineCandidateChoices = useMemo(() => {
+    if (!selectedOnline) return { platform: null as MeetPlatform | null, slots: [] as Array<{ id: string; label: string }> };
+    const sharedPlatform = selectedOnline.selections.requester.platform && selectedOnline.selections.requester.platform === selectedOnline.selections.receiver.platform
+      ? selectedOnline.selections.requester.platform
+      : null;
+    const requesterSlots = new Set(selectedOnline.selections.requester.timeSlots);
+    const receiverSlots = new Set(selectedOnline.selections.receiver.timeSlots);
+    return {
+      platform: sharedPlatform,
+      slots: selectedOnline.options.timeSlots.filter((entry) => requesterSlots.has(entry.id) && receiverSlots.has(entry.id))
+    };
+  }, [selectedOnline]);
+
   return (
-    <div className="p-8 text-foreground">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl tracking-[0.2em] uppercase">Meet Concierge Desk</h1>
-        <button onClick={() => void refreshActive()} className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] border border-border/40 rounded-full px-3 py-1.5">
-          <RefreshCcw size={14} /> Refresh
+    <div className="p-8 text-white space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl tracking-[0.2em] uppercase">Match Handler Desk</h1>
+          <p className="mt-2 text-[11px] uppercase tracking-[0.16em] text-white/45">Employee-managed online/offline meet coordination</p>
+        </div>
+        <button
+          onClick={() => void refreshActive()}
+          className="inline-flex items-center gap-2 rounded-full border border-[#2a2f3b] px-3 py-1.5 text-[11px] uppercase tracking-[0.16em]"
+        >
+          {refreshing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />} Refresh
         </button>
       </div>
 
-      <div className="mb-4 flex gap-2">
-        <button onClick={() => { setMode("OFFLINE"); setSelectedCaseId(null); }} className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em] ${mode === "OFFLINE" ? "border-primary/40 bg-primary/10" : "border-border/40"}`}>Offline Meets</button>
-        <button onClick={() => { setMode("ONLINE"); setSelectedCaseId(null); }} className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em] ${mode === "ONLINE" ? "border-highlight/40 bg-highlight/10" : "border-border/40"}`}>Online Meets</button>
+      <div className="flex gap-2">
+        <button onClick={() => { setMode("OFFLINE"); setSelectedCaseId(null); }} className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em] ${mode === "OFFLINE" ? "border-primary/45 bg-primary/10" : "border-[#2a2f3b]"}`}>Offline meet cases</button>
+        <button onClick={() => { setMode("ONLINE"); setSelectedCaseId(null); }} className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em] ${mode === "ONLINE" ? "border-highlight/45 bg-highlight/10" : "border-[#2a2f3b]"}`}>Online meet cases</button>
       </div>
 
-      {feedback ? <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs">{feedback}</div> : null}
+      <div className="flex flex-wrap gap-2">
+        {(mode === "OFFLINE" ? OFFLINE_VIEWS : ONLINE_VIEWS).map((item) => (
+          <button
+            key={item.value}
+            onClick={() => {
+              setSelectedCaseId(null);
+              if (mode === "OFFLINE") setOfflineView(item.value as OfflineMeetStatusView);
+              else setOnlineView(item.value as OnlineMeetStatusView);
+            }}
+            className={`rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.16em] ${activeView === item.value ? "border-[#C89B90]/45 bg-[#C89B90]/10 text-[#f0c8be]" : "border-[#2a2f3b] text-white/70"}`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-1 space-y-3">
-          {items.map((item) => (
-            <button key={item.id} onClick={() => setSelectedCaseId(item.id)} className={`w-full text-left rounded-xl border p-3 ${selectedCaseId === item.id ? "border-primary/40 bg-primary/5" : "border-border/40"}`}>
-              <p className="text-xs uppercase tracking-[0.15em] text-primary/80">{item.status.replaceAll("_", " ")}</p>
-              <p className="mt-1 text-sm">{item.users[0]?.name} & {item.users[1]?.name}</p>
-              <p className="mt-1 text-[11px] text-foreground/60">{item.users[0]?.locationLabel} • {item.users[1]?.locationLabel}</p>
-            </button>
-          ))}
-          {!((mode === "OFFLINE" ? offlineCasesQuery : onlineCasesQuery).isRefreshing) && items.length === 0 ? (
-            <div className="rounded-xl border border-border/40 p-4 text-sm text-foreground/65">No active {mode.toLowerCase()} meet cases.</div>
-          ) : null}
+      {feedback ? <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-300">{feedback}</div> : null}
+      {error ? <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs text-red-300">{error}</div> : null}
+
+      {loading ? (
+        <div className="rounded-xl border border-[#1f222b] bg-[#0d1016] p-6 text-sm text-white/65 inline-flex items-center gap-2">
+          <Loader2 size={16} className="animate-spin" /> Loading coordination cases…
         </div>
+      ) : activeItems.length === 0 ? (
+        <div className="rounded-xl border border-[#1f222b] bg-[#0d1016] p-8 text-sm text-white/60">No cases in this state.</div>
+      ) : (
+        <div className="grid grid-cols-12 gap-5">
+          <aside className="col-span-4 rounded-xl border border-[#1f222b] bg-[#0d1016] p-3 space-y-2 max-h-[70vh] overflow-y-auto">
+            {activeItems.map((item) => (
+              <button key={item.id} onClick={() => setSelectedCaseId(item.id)} className={`w-full text-left rounded-lg border p-3 ${selectedCaseId === item.id ? "border-[#C89B90]/45 bg-[#C89B90]/10" : "border-[#2a2f3b]"}`}>
+                <p className="text-[11px] uppercase tracking-[0.14em] text-white/55">{item.status.replaceAll("_", " ")}</p>
+                <p className="mt-1 text-sm">{item.users[0]?.name} × {item.users[1]?.name}</p>
+                <p className="mt-1 text-[11px] text-white/50">{item.users[0]?.locationLabel} • {item.users[1]?.locationLabel}</p>
+                <p className="mt-1 text-[10px] text-white/40">{item.assignedEmployeeId ? "Assigned" : "Unassigned"}</p>
+              </button>
+            ))}
+          </aside>
 
-        <div className="col-span-2 rounded-2xl border border-border/40 p-5">
-          {(mode === "OFFLINE" ? !selectedOffline : !selectedOnline) ? (
-            <p className="text-sm text-foreground/60">Select a case to manage concierge coordination.</p>
-          ) : mode === "OFFLINE" ? (
-            <div className="space-y-5">
-              <p className="text-xs uppercase tracking-[0.2em] text-primary">{selectedOffline!.status.replaceAll("_", " ")}</p>
-              <h2 className="text-xl">{selectedOffline!.users[0]?.name} × {selectedOffline!.users[1]?.name}</h2>
+          <section className="col-span-8 rounded-xl border border-[#1f222b] bg-[#0d1016] p-6">
+            {!selectedAny ? (
+              <p className="text-sm text-white/60">Select a case to continue concierge coordination.</p>
+            ) : mode === "OFFLINE" && selectedOffline ? (
+              <div className="space-y-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-primary">{selectedOffline.status.replaceAll("_", " ")}</p>
+                <h2 className="text-xl">{selectedOffline.users[0]?.name} × {selectedOffline.users[1]?.name}</h2>
+                <div className="rounded-xl border border-[#2a2f3b] p-3 text-xs text-white/65">Offline meets remain employee-managed. Use this panel for options, overlap handling, finalization, and serious-condition cancel/reschedule actions.</div>
 
-              <div className="rounded-xl border border-border/40 p-3 text-xs text-foreground/70">Manual follow-up required when members need personal WhatsApp or concierge intervention. Log all sensitive updates through case actions only.</div>
-              <div className="flex gap-2 flex-wrap">
-                <button disabled={busy === "assign"} onClick={() => void withAction("assign", async () => { await assignOfflineMeetCase(selectedOffline!.id); setFeedback("Case assigned to you."); })} className="rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.15em]">{busy === "assign" ? <Loader2 size={12} className="animate-spin inline" /> : "Assign"}</button>
-                <button onClick={() => void withAction("no-overlap", async () => { await markOfflineMeetNoOverlap(selectedOffline!.id); setFeedback("No-overlap recorded with 1-day cooldown."); })} className="rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.15em]">Mark No Overlap</button>
-                <button onClick={() => void withAction("timeout", async () => { await markOfflineMeetTimeout(selectedOffline!.id, selectedOffline!.users[1]?.id ?? ""); setFeedback("Timeout marked."); })} className="rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.15em]">Mark Timeout</button>
-                <button onClick={() => void withAction("reschedule", async () => { await updateOfflineMeetCase(selectedOffline!.id, { action: "RESCHEDULE", reason: "Member requested reschedule for serious reason." }); setFeedback("Reschedule request recorded."); })} className="rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.15em]">Reschedule</button>
-              </div>
+                <div className="flex flex-wrap gap-2">
+                  <button disabled={busyAction === "assign-offline"} onClick={() => void withAction("assign-offline", async () => { await assignOfflineMeetCase(selectedOffline.id); }, "Case assigned to you.")} className="rounded-full border border-[#2a2f3b] px-3 py-1 text-xs uppercase tracking-[0.14em] disabled:opacity-45">Assign</button>
+                  <button disabled={busyAction === "timeout-offline"} onClick={() => void withAction("timeout-offline", async () => { await markOfflineMeetTimeout(selectedOffline.id, selectedOffline.users[1]?.id ?? ""); }, "No-response recorded.")} className="rounded-full border border-[#2a2f3b] px-3 py-1 text-xs uppercase tracking-[0.14em] disabled:opacity-45">Mark timeout</button>
+                  <button disabled={busyAction === "no-overlap-offline"} onClick={() => void withAction("no-overlap-offline", async () => { await markOfflineMeetNoOverlap(selectedOffline.id); }, "No-overlap status recorded.")} className="rounded-full border border-[#2a2f3b] px-3 py-1 text-xs uppercase tracking-[0.14em] disabled:opacity-45">Mark no overlap</button>
+                  <button disabled={busyAction === "reschedule-offline"} onClick={() => void withAction("reschedule-offline", async () => { await updateOfflineMeetCase(selectedOffline.id, { action: "RESCHEDULE", reason: "Serious-condition reschedule request handled by concierge." }); }, "Reschedule request logged.")} className="rounded-full border border-[#2a2f3b] px-3 py-1 text-xs uppercase tracking-[0.14em] disabled:opacity-45">Reschedule</button>
+                  <button disabled={busyAction === "cancel-offline"} onClick={() => void withAction("cancel-offline", async () => { await updateOfflineMeetCase(selectedOffline.id, { action: "CANCEL", reason: "Serious-condition cancellation handled by concierge." }); }, "Case canceled.")} className="rounded-full border border-red-500/45 px-3 py-1 text-xs uppercase tracking-[0.14em] text-red-300 disabled:opacity-45">Cancel</button>
+                </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {[0, 1, 2].map((idx) => (
-                  <div key={idx} className="rounded-xl border border-border/40 p-3">
-                    <p className="text-[11px] uppercase tracking-[0.15em] text-foreground/50">Cafe option {idx + 1}</p>
-                    <input value={cafes[idx].name} onChange={(e) => setCafes((prev) => prev.map((row, i) => i === idx ? { ...row, name: e.target.value } : row))} placeholder="Cafe name" className="mt-2 w-full bg-transparent border-b border-border/50 text-sm py-1" />
-                    <input value={cafes[idx].address} onChange={(e) => setCafes((prev) => prev.map((row, i) => i === idx ? { ...row, address: e.target.value } : row))} placeholder="Address" className="mt-2 w-full bg-transparent border-b border-border/50 text-xs py-1" />
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                {offlineTimeSlots.map((slot, idx) => (
-                  <input key={idx} value={slot} onChange={(e) => setOfflineTimeSlots((prev) => prev.map((v, i) => i === idx ? e.target.value : v))} placeholder="e.g. Saturday 7:30 PM" className="bg-transparent border-b border-border/50 text-xs py-1" />
-                ))}
-              </div>
-
-              <div className="flex gap-3">
-                <button onClick={() => void withAction("send-options", async () => { await sendOfflineMeetOptions(selectedOffline!.id, { cafes: cafes.map((entry, idx) => ({ id: makeOptionId("cafe", idx), name: entry.name, address: entry.address })), timeSlots: offlineTimeSlots.map((entry, idx) => ({ id: makeOptionId("slot", idx), label: entry })) }); setFeedback("Options sent to both members with a 12-hour deadline."); })} className="rounded-full border border-primary/40 px-3 py-1 text-xs uppercase tracking-[0.15em] text-primary">Send Options</button>
-                <button onClick={() => void withAction("finalize", async () => { await finalizeOfflineMeet(selectedOffline!.id, selectedOffline!.options.cafes[0]?.id ?? "", selectedOffline!.options.timeSlots[0]?.id ?? ""); setFeedback("Offline meet finalized and both members notified."); })} className="rounded-full border border-primary/40 px-3 py-1 text-xs uppercase tracking-[0.15em] text-primary">Finalize First Overlap</button>
-                <button onClick={() => void withAction("cancel", async () => { await updateOfflineMeetCase(selectedOffline!.id, { action: "CANCEL", reason: "Serious-condition cancellation handled by concierge." }); setFeedback("Case marked canceled."); })} className="rounded-full border border-red-400/40 px-3 py-1 text-xs uppercase tracking-[0.15em] text-red-300">Cancel</button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              <p className="text-xs uppercase tracking-[0.2em] text-highlight">{selectedOnline!.status.replaceAll("_", " ")}</p>
-              <h2 className="text-xl">{selectedOnline!.users[0]?.name} × {selectedOnline!.users[1]?.name}</h2>
-
-              <div className="flex gap-2 flex-wrap">
-                <button disabled={busy === "assign-online"} onClick={() => void withAction("assign-online", async () => { await assignOnlineMeetCase(selectedOnline!.id); setFeedback("Online meet case assigned to you."); })} className="rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.15em]">Assign</button>
-                <button onClick={() => void withAction("no-overlap-online", async () => { await markOnlineMeetNoOverlap(selectedOnline!.id); setFeedback("No-overlap recorded with cooldown."); })} className="rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.15em]">Mark No Overlap</button>
-                <button onClick={() => void withAction("timeout-online", async () => { await markOnlineMeetTimeout(selectedOnline!.id, selectedOnline!.users[1]?.id ?? ""); setFeedback("Timeout marked."); })} className="rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.15em]">Mark Timeout</button>
-                <button onClick={() => void withAction("reschedule-online", async () => { await updateOnlineMeetCase(selectedOnline!.id, { action: "RESCHEDULE", reason: "Serious-condition reschedule request received." }); setFeedback("Reschedule request recorded."); })} className="rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.15em]">Reschedule</button>
-              </div>
-
-              <div className="rounded-xl border border-border/40 p-3">
-                <p className="text-[11px] uppercase tracking-[0.15em] text-foreground/50">Allowed platforms</p>
-                <div className="mt-2 flex gap-2">
-                  {(["ZOOM", "GOOGLE_MEET"] as MeetPlatform[]).map((platform) => (
-                    <button key={platform} onClick={() => setPlatforms((prev) => prev.includes(platform) ? prev.filter((item) => item !== platform) : [...prev, platform])} className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.12em] ${platforms.includes(platform) ? "border-highlight/50 bg-highlight/10" : "border-border/40"}`}>
-                      {platform.replace("_", " ")}
-                    </button>
+                <div className="grid grid-cols-3 gap-3">
+                  {cafes.map((entry, idx) => (
+                    <div key={`cafe-${idx}`} className="space-y-2 rounded-xl border border-[#2a2f3b] p-3">
+                      <input value={entry.name} onChange={(event) => setCafes((prev) => prev.map((row, rowIdx) => rowIdx === idx ? { ...row, name: event.target.value } : row))} placeholder="Cafe name" className="w-full bg-transparent border-b border-[#2a2f3b] text-xs py-1" />
+                      <input value={entry.address} onChange={(event) => setCafes((prev) => prev.map((row, rowIdx) => rowIdx === idx ? { ...row, address: event.target.value } : row))} placeholder="Address" className="w-full bg-transparent border-b border-[#2a2f3b] text-xs py-1" />
+                    </div>
                   ))}
                 </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {offlineTimeSlots.map((slot, idx) => (
+                    <input key={`slot-${idx}`} value={slot} onChange={(event) => setOfflineTimeSlots((prev) => prev.map((item, itemIdx) => itemIdx === idx ? event.target.value : item))} placeholder="Time slot" className="bg-transparent border-b border-[#2a2f3b] text-xs py-1" />
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => void withAction("send-options-offline", async () => { await sendOfflineMeetOptions(selectedOffline.id, { cafes: cafes.map((entry, idx) => ({ id: makeOptionId("cafe", idx), name: entry.name.trim(), address: entry.address.trim() })), timeSlots: offlineTimeSlots.map((entry, idx) => ({ id: makeOptionId("slot", idx), label: entry.trim() })) }); }, "Curated cafe and time options sent to members.")} className="rounded-full border border-primary/45 px-3 py-1 text-xs uppercase tracking-[0.14em] text-primary">Send options</button>
+                  <button
+                    onClick={() => void withAction("finalize-offline", async () => {
+                      const firstCafe = offlineCandidateChoices.cafes[0];
+                      const firstSlot = offlineCandidateChoices.slots[0];
+                      if (!firstCafe || !firstSlot) {
+                        throw new ApiError("No overlapping selections available to finalize.", 409, null);
+                      }
+                      await finalizeOfflineMeet(selectedOffline.id, firstCafe.id, firstSlot.id);
+                    }, "Offline meeting finalized and members notified.")}
+                    className="rounded-full border border-primary/45 px-3 py-1 text-xs uppercase tracking-[0.14em] text-primary"
+                  >
+                    Finalize overlap
+                  </button>
+                </div>
               </div>
+            ) : selectedOnline ? (
+              <div className="space-y-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-highlight">{selectedOnline.status.replaceAll("_", " ")}</p>
+                <h2 className="text-xl">{selectedOnline.users[0]?.name} × {selectedOnline.users[1]?.name}</h2>
+                <div className="rounded-xl border border-[#2a2f3b] p-3 text-xs text-white/65">Online coordination is worker-led. Keep options curated, resolve overlap, and finalize meeting details cleanly.</div>
 
-              <div className="grid grid-cols-3 gap-3">
-                {onlineTimeSlots.map((slot, idx) => (
-                  <input key={idx} value={slot} onChange={(e) => setOnlineTimeSlots((prev) => prev.map((v, i) => i === idx ? e.target.value : v))} placeholder="e.g. Saturday 9:00 PM" className="bg-transparent border-b border-border/50 text-xs py-1" />
-                ))}
+                <div className="flex flex-wrap gap-2">
+                  <button disabled={busyAction === "assign-online"} onClick={() => void withAction("assign-online", async () => { await assignOnlineMeetCase(selectedOnline.id); }, "Case assigned to you.")} className="rounded-full border border-[#2a2f3b] px-3 py-1 text-xs uppercase tracking-[0.14em] disabled:opacity-45">Assign</button>
+                  <button disabled={busyAction === "timeout-online"} onClick={() => void withAction("timeout-online", async () => { await markOnlineMeetTimeout(selectedOnline.id, selectedOnline.users[1]?.id ?? ""); }, "No-response recorded.")} className="rounded-full border border-[#2a2f3b] px-3 py-1 text-xs uppercase tracking-[0.14em] disabled:opacity-45">Mark timeout</button>
+                  <button disabled={busyAction === "no-overlap-online"} onClick={() => void withAction("no-overlap-online", async () => { await markOnlineMeetNoOverlap(selectedOnline.id); }, "No-overlap status recorded.")} className="rounded-full border border-[#2a2f3b] px-3 py-1 text-xs uppercase tracking-[0.14em] disabled:opacity-45">Mark no overlap</button>
+                  <button disabled={busyAction === "reschedule-online"} onClick={() => void withAction("reschedule-online", async () => { await updateOnlineMeetCase(selectedOnline.id, { action: "RESCHEDULE", reason: "Serious-condition reschedule request handled by concierge." }); }, "Reschedule request logged.")} className="rounded-full border border-[#2a2f3b] px-3 py-1 text-xs uppercase tracking-[0.14em] disabled:opacity-45">Reschedule</button>
+                  <button disabled={busyAction === "cancel-online"} onClick={() => void withAction("cancel-online", async () => { await updateOnlineMeetCase(selectedOnline.id, { action: "CANCEL", reason: "Serious-condition cancellation handled by concierge." }); }, "Case canceled.")} className="rounded-full border border-red-500/45 px-3 py-1 text-xs uppercase tracking-[0.14em] text-red-300 disabled:opacity-45">Cancel</button>
+                </div>
+
+                <div className="rounded-xl border border-[#2a2f3b] p-3">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-white/45">Allowed platforms</p>
+                  <div className="mt-2 flex gap-2">
+                    {(["ZOOM", "GOOGLE_MEET"] as MeetPlatform[]).map((platform) => (
+                      <button key={platform} onClick={() => setPlatforms((prev) => prev.includes(platform) ? prev.filter((entry) => entry !== platform) : [...prev, platform])} className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.14em] ${platforms.includes(platform) ? "border-highlight/45 bg-highlight/10" : "border-[#2a2f3b]"}`}>{platform.replace("_", " ")}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {onlineTimeSlots.map((slot, idx) => (
+                    <input key={`online-slot-${idx}`} value={slot} onChange={(event) => setOnlineTimeSlots((prev) => prev.map((entry, entryIdx) => entryIdx === idx ? event.target.value : entry))} placeholder="Time slot" className="bg-transparent border-b border-[#2a2f3b] text-xs py-1" />
+                  ))}
+                </div>
+                <input value={finalOnlineLink} onChange={(event) => setFinalOnlineLink(event.target.value)} placeholder="Final meeting link (https://...)" className="w-full bg-transparent border-b border-[#2a2f3b] text-xs py-1" />
+
+                <div className="flex gap-2">
+                  <button onClick={() => void withAction("send-options-online", async () => { await sendOnlineMeetOptions(selectedOnline.id, { platforms, timeSlots: onlineTimeSlots.map((entry, idx) => ({ id: makeOptionId("slot", idx), label: entry.trim() })) }); }, "Platform and time options sent to members.")} className="rounded-full border border-highlight/45 px-3 py-1 text-xs uppercase tracking-[0.14em] text-highlight">Send options</button>
+                  <button
+                    onClick={() => void withAction("finalize-online", async () => {
+                      const selectedPlatform = onlineCandidateChoices.platform;
+                      const selectedSlot = onlineCandidateChoices.slots[0];
+                      if (!selectedPlatform || !selectedSlot) {
+                        throw new ApiError("No shared platform/time overlap is available yet.", 409, null);
+                      }
+                      await finalizeOnlineMeet(selectedOnline.id, {
+                        finalPlatform: selectedPlatform,
+                        finalTimeSlotId: selectedSlot.id,
+                        finalMeetingLink: finalOnlineLink.trim()
+                      });
+                    }, "Online meeting finalized and details delivered.")}
+                    className="rounded-full border border-highlight/45 px-3 py-1 text-xs uppercase tracking-[0.14em] text-highlight"
+                  >
+                    Finalize overlap
+                  </button>
+                </div>
               </div>
-
-              <input value={finalOnlineLink} onChange={(e) => setFinalOnlineLink(e.target.value)} placeholder="Final meeting link (Zoom/Meet URL)" className="w-full bg-transparent border-b border-border/50 text-xs py-1" />
-
-              <div className="flex gap-3">
-                <button onClick={() => void withAction("send-options-online", async () => { await sendOnlineMeetOptions(selectedOnline!.id, { platforms, timeSlots: onlineTimeSlots.map((entry, idx) => ({ id: makeOptionId("slot", idx), label: entry })) }); setFeedback("Online options sent to both members with a 12-hour response window."); })} className="rounded-full border border-highlight/40 px-3 py-1 text-xs uppercase tracking-[0.15em] text-highlight">Send Options</button>
-                <button onClick={() => void withAction("finalize-online", async () => { await finalizeOnlineMeet(selectedOnline!.id, { finalPlatform: selectedOnline!.options.platforms[0] ?? "ZOOM", finalTimeSlotId: selectedOnline!.options.timeSlots[0]?.id ?? "", finalMeetingLink: finalOnlineLink }); setFeedback("Online meet finalized and details sent."); })} className="rounded-full border border-highlight/40 px-3 py-1 text-xs uppercase tracking-[0.15em] text-highlight">Finalize</button>
-                <button onClick={() => void withAction("cancel-online", async () => { await updateOnlineMeetCase(selectedOnline!.id, { action: "CANCEL", reason: "Serious-condition cancellation handled by concierge." }); setFeedback("Online meet case marked canceled."); })} className="rounded-full border border-red-400/40 px-3 py-1 text-xs uppercase tracking-[0.15em] text-red-300">Cancel</button>
-              </div>
-            </div>
-          )}
+            ) : null}
+          </section>
         </div>
-      </div>
+      )}
     </div>
   );
 }
