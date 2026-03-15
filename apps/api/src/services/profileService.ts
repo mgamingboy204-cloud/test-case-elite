@@ -1,7 +1,9 @@
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
+import { type ProfileInput, type ProfilePatchInput, hasRequiredOnboardingProfile } from "@elite/shared";
+import { Gender } from "@prisma/client";
 
-type UpdateOptions = { userId: string; paymentStatus: string; onboardingStep: string; data: any };
+type UpdateOptions = { userId: string; paymentStatus: string; onboardingStep: string; data: ProfileInput | ProfilePatchInput };
 
 function toHeightLabel(heightCm: number | null | undefined) {
   if (!heightCm) return null;
@@ -74,7 +76,7 @@ export async function updateProfile(options: UpdateOptions) {
     });
   }
 
-  const normalized = { ...options.data };
+  const normalized = { ...options.data } as Record<string, unknown>;
   const rawFirstName = normalized.firstName;
   const rawLastName = normalized.lastName;
   const displayName = (normalized.displayName ?? normalized.name ?? "").toString().trim();
@@ -92,14 +94,15 @@ export async function updateProfile(options: UpdateOptions) {
   assignIfDefined("name", normalized.name);
   assignIfDefined("gender", normalized.gender);
   assignIfDefined("age", normalized.age);
+  assignIfDefined("dateOfBirth", normalized.dateOfBirth);
   assignIfDefined("city", normalized.city);
   assignIfDefined("profession", normalized.profession);
-  assignIfDefined("bioShort", normalized.bioShort);
+  assignIfDefined("bioShort", normalized.bioShort ?? normalized.bio);
   assignIfDefined("story", normalized.story);
-  assignIfDefined("locationLabel", normalized.locationLabel ?? normalized.city);
+  assignIfDefined("locationLabel", normalized.locationLabel ?? normalized.place ?? normalized.city);
   assignIfDefined("intent", normalized.intent ?? "dating");
 
-  const parsedHeightCm = toHeightCm(normalized.heightCm ?? normalized.height);
+  const parsedHeightCm = toHeightCm((normalized.heightCm ?? normalized.height) as string | number | null | undefined);
   if (parsedHeightCm !== undefined) assignIfDefined("heightCm", parsedHeightCm);
 
   const profile = await prisma.profile.upsert({
@@ -108,14 +111,15 @@ export async function updateProfile(options: UpdateOptions) {
     create: {
       userId: options.userId,
       name: String(normalized.name ?? ""),
-      gender: (normalized.gender ?? "OTHER") as any,
+      gender: (normalized.gender ?? "OTHER") as Gender,
       age: Number(normalized.age ?? 18),
+      dateOfBirth: normalized.dateOfBirth ? new Date(String(normalized.dateOfBirth)) : null,
       city: String(normalized.city ?? ""),
       profession: String(normalized.profession ?? ""),
-      bioShort: String(normalized.bioShort ?? ""),
+      bioShort: String(normalized.bioShort ?? normalized.bio ?? ""),
       intent: String(normalized.intent ?? "dating"),
-      story: normalized.story ?? normalized.bioShort,
-      locationLabel: normalized.locationLabel ?? normalized.city,
+      story: (normalized.story ?? normalized.bioShort ?? normalized.bio) as string | undefined,
+      locationLabel: (normalized.locationLabel ?? normalized.place ?? normalized.city) as string | undefined,
       heightCm: parsedHeightCm
     }
   });
@@ -134,7 +138,7 @@ export async function updateProfile(options: UpdateOptions) {
       firstName,
       lastName,
       gender: normalized.gender ?? user.gender,
-      profileCompletedAt: user.profileCompletedAt ?? new Date(),
+      profileCompletedAt: hasRequiredOnboardingProfile(profile) ? user.profileCompletedAt ?? new Date() : null,
       onboardingStep: "PROFILE_PENDING",
       status: "APPROVED"
     }
@@ -158,7 +162,12 @@ export async function updateProfile(options: UpdateOptions) {
   return { profile, requiresPhoto: false, onboardingStep: updatedUser.onboardingStep };
 }
 
-export async function updateProfileSettings(userId: string, data: any) {
+export async function updateProfileSettings(userId: string, data: {
+  pushNotificationsEnabled?: boolean;
+  profileVisible?: boolean;
+  showOnlineStatus?: boolean;
+  discoverableByPremiumOnly?: boolean;
+}) {
   const current = await prisma.userPreference.upsert({ where: { userId }, create: { userId }, update: {} });
   const updated = await prisma.userPreference.update({
     where: { userId },
@@ -189,7 +198,9 @@ export async function completeProfile(options: {
   }
 
   const profile = await prisma.profile.findUnique({ where: { userId: options.userId } });
-  if (!profile) throw new HttpError(400, { message: "Profile must be completed first." });
+  if (!profile || !hasRequiredOnboardingProfile(profile)) {
+    throw new HttpError(400, { message: "Please complete all required profile fields before continuing." });
+  }
 
   const photoCount = await prisma.photo.count({ where: { userId: options.userId } });
   if (photoCount < 1) {

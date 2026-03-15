@@ -25,11 +25,15 @@ export const ProfileSchema = z
     displayName: z.string().min(1).optional(),
     firstName: z.string().min(1).optional().nullable(),
     lastName: z.string().min(1).optional().nullable(),
+    dateOfBirth: z.coerce.date(),
     gender: GenderSchema,
     age: z.number().int().min(18),
+    heightCm: z.number().int().min(120).max(240),
     city: z.string().min(1),
+    place: z.string().min(1).optional(),
     profession: z.string().min(1),
     bioShort: z.string().min(1),
+    bio: z.string().min(1).optional(),
     intent: z.enum(["dating", "friends", "all"]).default("dating")
   })
   .superRefine((value, ctx) => {
@@ -39,6 +43,23 @@ export const ProfileSchema = z
         path: ["displayName"],
         message: "Display name is required."
       });
+    }
+
+    if (value.dateOfBirth) {
+      const now = new Date();
+      let age = now.getUTCFullYear() - value.dateOfBirth.getUTCFullYear();
+      const monthDiff = now.getUTCMonth() - value.dateOfBirth.getUTCMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && now.getUTCDate() < value.dateOfBirth.getUTCDate())) {
+        age -= 1;
+      }
+
+      if (age < 18) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["dateOfBirth"],
+          message: "Members must be 18 or older."
+        });
+      }
     }
   });
 

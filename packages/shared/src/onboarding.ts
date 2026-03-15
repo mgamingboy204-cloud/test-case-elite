@@ -20,6 +20,32 @@ export type FrontendOnboardingStep =
   | "PHOTOS"
   | "COMPLETED";
 
+export type OnboardingProfileSnapshot = {
+  name?: string | null;
+  dateOfBirth?: Date | string | null;
+  gender?: string | null;
+  heightCm?: number | null;
+  profession?: string | null;
+  city?: string | null;
+  bioShort?: string | null;
+};
+
+export function hasRequiredOnboardingProfile(profile?: OnboardingProfileSnapshot | null) {
+  if (!profile) return false;
+
+  return Boolean(
+    profile.name?.trim() &&
+      profile.dateOfBirth &&
+      profile.gender &&
+      typeof profile.heightCm === "number" &&
+      profile.heightCm >= 120 &&
+      profile.heightCm <= 240 &&
+      profile.profession?.trim() &&
+      profile.city?.trim() &&
+      profile.bioShort?.trim()
+  );
+}
+
 export function routeForFrontendOnboardingStep(step: FrontendOnboardingStep) {
   const routeMap: Record<FrontendOnboardingStep, string> = {
     PHONE: "/signup/phone",
@@ -77,6 +103,7 @@ export function resolveFrontendOnboardingStep(input: {
   if (backendStep === "ACTIVE") return "COMPLETED";
 
   if (backendStep === "PAID" || backendStep === "PROFILE_PENDING") {
+    if (input.profileCompletedAt && (input.photoCount ?? 0) >= 1) return "COMPLETED";
     if (input.profileCompletedAt && (input.photoCount ?? 0) < 1) return "PHOTOS";
     return "PROFILE";
   }

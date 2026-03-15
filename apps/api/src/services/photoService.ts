@@ -28,7 +28,7 @@ export function ensureUploadsDir() {
 export async function listPhotos(userId: string) {
   return prisma.photo.findMany({
     where: { userId },
-    orderBy: { createdAt: "asc" }
+    orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }]
   });
 }
 
@@ -45,10 +45,6 @@ function getSupabaseClient() {
 function calculateBase64Size(base64: string) {
   const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
   return (base64.length * 3) / 4 - padding;
-}
-
-function resolveStoragePath(userId: string, extension: string) {
-  return `profiles/${userId}/avatar.${extension}`;
 }
 
 async function deleteLocalFileFromUrl(url: string | null | undefined) {
@@ -80,19 +76,16 @@ async function ensureSupabaseBucket() {
   }
 }
 
-async function removeExistingPhoto(userId: string) {
-  const existing = await prisma.photo.findFirst({ where: { userId }, orderBy: { createdAt: "desc" } });
-  if (!existing) return;
+async function removePhotoAsset(url: string) {
   if (env.STORAGE_PROVIDER === "supabase") {
-    const storagePath = extractSupabasePath(existing.url);
+    const storagePath = extractSupabasePath(url);
     if (storagePath) {
       const supabase = getSupabaseClient();
       await supabase.storage.from(PROFILE_BUCKET).remove([storagePath]);
     }
   } else {
-    await deleteLocalFileFromUrl(existing.url);
+    await deleteLocalFileFromUrl(url);
   }
-  await prisma.photo.deleteMany({ where: { userId } });
 }
 
 export async function uploadPhoto(options: { userId: string; filename: string; dataUrl: string; cropX?: number; cropY?: number; cropZoom?: number }) {
@@ -109,10 +102,13 @@ export async function uploadPhoto(options: { userId: string; filename: string; d
   if (size > MAX_FILE_SIZE_BYTES) {
     throw new HttpError(413, { message: "Image must be 10MB or smaller." });
   }
-  await removeExistingPhoto(options.userId);
+  const existingCount = await prisma.photo.count({ where: { userId: options.userId } });
+  if (existingCount >= 3) {
+    throw new HttpError(400, { message: "You can upload up to 3 photos only." });
+  }
 
   const buffer = Buffer.from(base64Data, "base64");
-  const storagePath = resolveStoragePath(options.userId, extension);
+  const storagePath = `profiles/${options.userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
   let url: string;
   if (env.STORAGE_PROVIDER === "supabase") {
     await ensureSupabaseBucket();
@@ -138,7 +134,18 @@ export async function uploadPhoto(options: { userId: string; filename: string; d
       url,
       cropX: options.cropX,
       cropY: options.cropY,
-      cropZoom: options.cropZoom
+      cropZoom: options.cropZoom,
+      photoIndex: existingCount
     }
   });
+}
+
+export async function deletePhoto(options: { userId: string; photoId: string }) {
+  const photo = await prisma.photo.findFirst({ where: { id: options.photoId, userId: options.userId } });
+  if (!photo) {
+    throw new HttpError(404, { message: "Photo not found." });
+  }
+
+  await removePhotoAsset(photo.url);
+  await prisma.photo.delete({ where: { id: photo.id } });
 }

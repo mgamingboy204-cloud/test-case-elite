@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { listPhotosHandler, uploadPhotoHandler } from "../controllers/photoController";
+import { deletePhotoHandler, listPhotosHandler, uploadPhotoHandler } from "../controllers/photoController";
 import { requireAuth, requireAuthHeader, requireOnboardingTokenMatch } from "../middlewares/auth";
 import { validateBody } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -23,6 +23,13 @@ router.post(
     })
   ),
   asyncHandler(uploadPhotoHandler)
+);
+router.delete(
+  "/photos/:photoId",
+  requireAuth,
+  requireAuthHeader,
+  requireOnboardingTokenMatch,
+  asyncHandler(deletePhotoHandler)
 );
 
 export default router;
