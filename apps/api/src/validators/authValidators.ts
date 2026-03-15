@@ -19,6 +19,11 @@ export const OtpVerifySchema = z.object({
   rememberMe: z.boolean().optional()
 });
 
+export const OtpMockVerifySchema = z.object({
+  phone: z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits."),
+  rememberMe: z.boolean().optional()
+});
+
 export const RefreshTokenSchema = z
   .object({
     refreshToken: z.string().optional()

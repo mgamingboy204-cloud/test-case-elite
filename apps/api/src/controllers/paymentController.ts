@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import {
   getLatestPayment,
+  completeMockOnboardingPayment,
   initiateOnboardingPayment,
   markOnboardingPaymentFailed,
   verifyOnboardingPayment
@@ -49,24 +50,27 @@ export async function validateCouponHandler(req: Request, res: Response) {
   if (!/^[A-Z0-9]+$/.test(code)) {
     return res.json({ valid: false, message: "Use only letters and numbers." });
   }
-  return res.json({
-    valid: true,
+  return res.status(501).json({
+    valid: false,
     code,
-    discountType: "PERCENT",
-    discountValue: 10,
-    message: "10% membership savings applied."
+    message: "Coupons are not configured for this deployment."
   });
 }
 
 export async function initiateOnboardingPaymentHandler(req: Request, res: Response) {
-  const { tier, cardLast4 } = req.body as { tier: string; cardLast4: string };
-  const result = await initiateOnboardingPayment({ user: res.locals.user, tier, cardLast4 });
+  const { tier } = req.body as { tier: string };
+  const result = await initiateOnboardingPayment({ user: res.locals.user, tier });
   return res.json(result);
 }
 
 export async function verifyOnboardingPaymentHandler(req: Request, res: Response) {
-  const { paymentRef } = req.body as { paymentRef: string };
-  const result = await verifyOnboardingPayment({ user: res.locals.user, paymentRef });
+  const { orderId, paymentId, signature } = req.body as { orderId: string; paymentId: string; signature: string };
+  const result = await verifyOnboardingPayment({ user: res.locals.user, orderId, paymentId, signature });
+  return res.json(result);
+}
+
+export async function completeMockOnboardingPaymentHandler(req: Request, res: Response) {
+  const result = await completeMockOnboardingPayment({ user: res.locals.user });
   return res.json(result);
 }
 

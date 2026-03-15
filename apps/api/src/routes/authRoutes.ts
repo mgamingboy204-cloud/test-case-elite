@@ -3,6 +3,7 @@ import {
   LoginBodySchema,
   EmployeeLoginSchema,
   OtpSendSchema,
+  OtpMockVerifySchema,
   OtpVerifySchema,
   RefreshTokenSchema,
   RegisterBodySchema,
@@ -21,6 +22,8 @@ import {
   signupComplete,
   signupStart,
   signupVerify,
+  signupVerifyMock,
+  verifyOtpMock,
   verifyOtp
 } from "../controllers/authController";
 import { loginLimiter, otpLimiterByIp, otpLimiterByPhone, otpVerifyLimiter, registerLimiter } from "../middlewares/rateLimiters";
@@ -45,9 +48,17 @@ router.post(
   asyncHandler(verifyOtp)
 );
 
+router.post(
+  "/auth/otp/mock-verify",
+  otpVerifyLimiter,
+  validateBody(OtpMockVerifySchema),
+  asyncHandler(verifyOtpMock)
+);
+
 router.post("/auth/register", registerLimiter, validateBody(RegisterBodySchema), asyncHandler(register));
 router.post("/auth/signup/start", otpLimiterByIp, otpLimiterByPhone, validateBody(SignupStartSchema), asyncHandler(signupStart));
 router.post("/auth/signup/verify", otpVerifyLimiter, validateBody(SignupVerifySchema), asyncHandler(signupVerify));
+router.post("/auth/signup/mock-verify", otpVerifyLimiter, validateBody(OtpMockVerifySchema), asyncHandler(signupVerifyMock));
 router.post("/auth/signup/complete", registerLimiter, validateBody(SignupCompleteSchema), asyncHandler(signupComplete));
 
 router.post(

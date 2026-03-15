@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import {
   getMyPaymentHandler,
+  completeMockOnboardingPaymentHandler,
   initiateOnboardingPaymentHandler,
   markOnboardingPaymentFailedHandler,
   validateCouponHandler,
@@ -24,8 +25,7 @@ router.post(
   requireOnboardingTokenMatch,
   validateBody(
     z.object({
-      tier: PaymentPlanSchema,
-      cardLast4: z.string().regex(/^\d{4}$/)
+      tier: PaymentPlanSchema
     })
   ),
   asyncHandler(initiateOnboardingPaymentHandler)
@@ -49,10 +49,20 @@ router.post(
   requireOnboardingTokenMatch,
   validateBody(
     z.object({
-      paymentRef: z.string().min(5)
+      orderId: z.string().min(5),
+      paymentId: z.string().min(5),
+      signature: z.string().min(16)
     })
   ),
   asyncHandler(verifyOnboardingPaymentHandler)
+);
+
+router.post(
+  "/payments/mock/complete",
+  requireAuth,
+  requireAuthHeader,
+  requireOnboardingTokenMatch,
+  asyncHandler(completeMockOnboardingPaymentHandler)
 );
 
 export default router;

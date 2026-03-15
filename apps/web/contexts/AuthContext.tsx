@@ -39,9 +39,11 @@ interface AuthContextType {
   signupToken: string | null;
   startSignup: (phone: string) => Promise<void>;
   verifySignupOtp: (otp: string) => Promise<void>;
+  verifySignupOtpMock: () => Promise<void>;
   completeSignup: (password: string) => Promise<void>;
   startLogin: (phone: string, password: string) => Promise<{ otpRequired: boolean }>;
   verifySigninOtp: (otp: string) => Promise<void>;
+  verifySigninOtpMock: () => Promise<void>;
   resendSigninOtp: () => Promise<void>;
   resendSignupOtp: () => Promise<void>;
   refreshCurrentUser: () => Promise<void>;
@@ -76,6 +78,7 @@ function extractAccessToken(value: unknown) {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const allowTestBypass = process.env.NEXT_PUBLIC_ALLOW_TEST_BYPASS === "true";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -148,6 +151,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const response = await apiRequest<{ ok: true; signupToken: string }>("/auth/signup/verify", {
       method: "POST",
       body: JSON.stringify({ phone: pendingPhone, code: otp })
+    });
+
+    setSignupToken(response.signupToken);
+    localStorage.setItem("elite_signup_token", response.signupToken);
+    router.push("/signup/password");
+  };
+
+  const verifySignupOtpMock = async () => {
+    if (!pendingPhone) throw new Error("Phone number is missing");
+    if (!allowTestBypass) throw new Error("Mock OTP is disabled.");
+
+    const response = await apiRequest<{ ok: true; signupToken: string }>("/auth/signup/mock-verify", {
+      method: "POST",
+      body: JSON.stringify({ phone: pendingPhone })
     });
 
     setSignupToken(response.signupToken);
@@ -270,6 +287,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const verifySigninOtpMock = async () => {
+    if (!pendingPhone) throw new Error("Phone number is missing");
+    if (!allowTestBypass) throw new Error("Mock OTP is disabled.");
+
+    const response = await apiRequest<{ ok: true; accessToken: string; onboardingToken: string; user: User }>("/auth/otp/mock-verify", {
+      method: "POST",
+      body: JSON.stringify({ phone: pendingPhone, rememberMe: true })
+    });
+
+    setAuthToken(response.accessToken);
+    setOnboardingToken(response.onboardingToken);
+    setUser(response.user);
+    setPendingPhone(null);
+    localStorage.removeItem("elite_pending_phone");
+    router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
+      isAuthenticated: true,
+      backendStep: response.user.onboardingStep,
+      profileCompletedAt: response.user.profileCompletedAt,
+      photoCount: response.user.photoCount
+    })));
+  };
+
   const resendSignupOtp = async () => {
     if (!pendingPhone) throw new Error("Phone number is missing");
 
@@ -313,9 +352,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signupToken,
         startSignup,
         verifySignupOtp,
+        verifySignupOtpMock,
         completeSignup,
         startLogin,
         verifySigninOtp,
+        verifySigninOtpMock,
         resendSigninOtp,
         resendSignupOtp,
         refreshCurrentUser,
