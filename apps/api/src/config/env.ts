@@ -28,13 +28,15 @@ const EnvSchema = z
     AUTH_OTP_WINDOW_MS: z.coerce.number().default(1000 * 60 * 60),
     AUTH_OTP_SEND_LIMIT: z.coerce.number().default(5),
     AUTH_OTP_VERIFY_LIMIT: z.coerce.number().default(10),
-    MIN_LIKES_FOR_REFUND: z.coerce.number().default(5)
-    ,TWILIO_ACCOUNT_SID: z.string().optional()
-    ,TWILIO_AUTH_TOKEN: z.string().optional()
-    ,TWILIO_VERIFY_SERVICE_SID: z.string().optional()
-    ,OTP_COUNTRY_CODE: z.string().optional().default("+91")
-    ,RAZORPAY_KEY_ID: z.string().optional()
-    ,RAZORPAY_KEY_SECRET: z.string().optional()
+    MIN_LIKES_FOR_REFUND: z.coerce.number().default(5),
+    OTP_PROVIDER: z.enum(["mock", "twilio"]).optional().default("mock"),
+    TWILIO_ACCOUNT_SID: z.string().optional(),
+    TWILIO_AUTH_TOKEN: z.string().optional(),
+    TWILIO_VERIFY_SERVICE_SID: z.string().optional(),
+    OTP_COUNTRY_CODE: z.string().optional().default("+91"),
+    PAYMENT_PROVIDER: z.enum(["mock", "razorpay"]).optional().default("mock"),
+    RAZORPAY_KEY_ID: z.string().optional(),
+    RAZORPAY_KEY_SECRET: z.string().optional()
   })
   .superRefine((value, ctx) => {
     const isLocal = (url: string) =>
@@ -93,6 +95,7 @@ const EnvSchema = z
         });
       }
     }
+
     const provider = value.STORAGE_PROVIDER ?? (value.NODE_ENV === "production" ? "supabase" : "local");
     if (provider === "supabase") {
       if (!value.SUPABASE_URL) {
@@ -110,22 +113,27 @@ const EnvSchema = z
         });
       }
     }
-    if (value.NODE_ENV === "production") {
+
+    if (value.OTP_PROVIDER === "twilio") {
       if (!value.TWILIO_ACCOUNT_SID || !value.TWILIO_AUTH_TOKEN || !value.TWILIO_VERIFY_SERVICE_SID) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["TWILIO_ACCOUNT_SID"],
-          message: "Twilio credentials are required in production."
+          message: "Twilio credentials are required when OTP_PROVIDER=twilio."
         });
       }
+    }
+
+    if (value.PAYMENT_PROVIDER === "razorpay") {
       if (!value.RAZORPAY_KEY_ID || !value.RAZORPAY_KEY_SECRET) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["RAZORPAY_KEY_ID"],
-          message: "Razorpay credentials are required in production."
+          message: "Razorpay credentials are required when PAYMENT_PROVIDER=razorpay."
         });
       }
     }
+
     return ctx;
   });
 
