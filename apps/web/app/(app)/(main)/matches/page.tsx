@@ -4,10 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { getOfflineMeet, getOnlineMeet, getPhoneUnlock, getSocialExchange, respondMatchConsent } from "@/lib/matches";
+import { getOfflineMeet, getOnlineMeet, getPhoneUnlock, getSocialExchange, respondMatchConsent, unmatch } from "@/lib/matches";
 import { fetchMatches, type MatchCard } from "@/lib/queries";
-import { useStaleWhileRevalidate } from "@/lib/cache";
-import { MapPin, Video, Link as LinkIcon, Unlock, ChevronRight, Loader2, Instagram, Linkedin, Ghost, X, CheckCircle2, Copy } from "lucide-react";
+import { primeCache, useStaleWhileRevalidate } from "@/lib/cache";
+import { MapPin, Video, Link as LinkIcon, Unlock, ChevronRight, Loader2, Instagram, Linkedin, Ghost, X, CheckCircle2, Copy, UserMinus } from "lucide-react";
 
 
 const springTransition = { type: "spring", bounce: 0.15, duration: 0.6 } as any;
@@ -46,7 +46,11 @@ export default function MatchesPage() {
         </div>
 
         {/* Grid Layout */}
-        <div className="grid grid-cols-2 gap-4 auto-rows-max">
+        {matchesQuery.isRefreshing && matches.length === 0 ? (
+          <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-foreground/50" /></div>
+        ) : matches.length === 0 ? (
+          <div className="py-20 text-center text-sm text-foreground/60">No active matches yet. Mutual interest will appear here discreetly.</div>
+        ) : <div className="grid grid-cols-2 gap-4 auto-rows-max">
           {matches.map((match) => (
             <motion.div
               key={match.id}
@@ -76,14 +80,23 @@ export default function MatchesPage() {
               </motion.div>
             </motion.div>
           ))}
-        </div>
+        </div>}
 
       </div>
 
       {/* Expanded Modal (Shared Layout Morph) */}
       <AnimatePresence>
         {selectedMatch && (
-           <MatchModal match={selectedMatch} onClose={() => setSelectedMatch(null)} />
+           <MatchModal
+             match={selectedMatch}
+             onClose={() => setSelectedMatch(null)}
+             onUnmatch={(matchId) => {
+               const next = matches.filter((entry) => entry.id !== matchId);
+               primeCache("matches", next);
+               matchesQuery.setData(next);
+               setSelectedMatch(null);
+             }}
+           />
         )}
       </AnimatePresence>
     </div>
@@ -91,7 +104,7 @@ export default function MatchesPage() {
 }
 
 // --- Match Expanded Modal & State Machine ---
-function MatchModal({ match, onClose }: { match: MatchCard, onClose: () => void }) {
+function MatchModal({ match, onClose, onUnmatch }: { match: MatchCard, onClose: () => void; onUnmatch: (matchId: string) => void }) {
   const [flowState, setFlowState] = useState<
     'idle' | 
     'offline_step1' | 'offline_pending_match' | 'offline_agent' | 'offline_selection' | 'offline_pending_final' | 'offline_success' |
@@ -107,9 +120,20 @@ function MatchModal({ match, onClose }: { match: MatchCard, onClose: () => void 
   const [selectedSocial, setSelectedSocial] = useState<string | null>(null);
   const [unlockedPhone, setUnlockedPhone] = useState<string | null>(null);
   const [socialHandle, setSocialHandle] = useState<string>("@liam_creative");
+  const [isUnmatching, setIsUnmatching] = useState(false);
 
   // Flow Triggers
   const startFlow = (flow: string) => setFlowState(`${flow}_step1` as any);
+  const handleUnmatch = async () => {
+    if (isUnmatching) return;
+    setIsUnmatching(true);
+    try {
+      await unmatch(match.id);
+      onUnmatch(match.id);
+    } finally {
+      setIsUnmatching(false);
+    }
+  };
   const proceedOfflineInvite = async () => {
     setFlowState('offline_pending_match');
     await respondMatchConsent({ matchId: match.id, type: 'OFFLINE_MEET', response: 'YES' });
@@ -335,6 +359,14 @@ function MatchModal({ match, onClose }: { match: MatchCard, onClose: () => void 
                  className="flex flex-col w-full h-full"
               >
                   {renderFlowContent()}
+                  <button
+                    onClick={() => void handleUnmatch()}
+                    disabled={isUnmatching}
+                    className="w-full mt-6 inline-flex items-center justify-center gap-2 rounded-full border border-primary/25 px-4 py-2 text-[11px] uppercase tracking-[0.2em] text-foreground/70 hover:bg-primary/10 disabled:opacity-50"
+                  >
+                    {isUnmatching ? <Loader2 size={14} className="animate-spin" /> : <UserMinus size={14} />}
+                    Unmatch
+                  </button>
               </motion.div>
            </AnimatePresence>
         </div>

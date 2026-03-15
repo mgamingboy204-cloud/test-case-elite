@@ -909,6 +909,62 @@ describe("Likes, matches, and notifications", () => {
     });
     expect(matchNotifications).toHaveLength(2);
   });
+
+  it("supports unmatch by deactivating active match state", async () => {
+    const agentA = request.agent(app);
+    const agentB = request.agent(app);
+    const tokenA = await registerAndLogin(agentA, "5554100010", "Password@1");
+    const tokenB = await registerAndLogin(agentB, "5554100011", "Password@1");
+
+    const userA = await prisma.user.findUnique({ where: { phone: "5554100010" } });
+    const userB = await prisma.user.findUnique({ where: { phone: "5554100011" } });
+    if (!userA || !userB) throw new Error("Users missing");
+
+    await prisma.user.updateMany({
+      where: { id: { in: [userA.id, userB.id] } },
+      data: {
+        status: "APPROVED",
+        verifiedAt: new Date(),
+        phoneVerifiedAt: new Date(),
+        onboardingStep: "ACTIVE",
+        videoVerificationStatus: "APPROVED",
+        paymentStatus: "PAID",
+        profileCompletedAt: new Date()
+      }
+    });
+
+    await prisma.profile.createMany({
+      data: [
+        { userId: userA.id, name: "User A", gender: "MALE", age: 28, city: "City", profession: "Engineer", bioShort: "Bio", preferences: {} },
+        { userId: userB.id, name: "User B", gender: "FEMALE", age: 26, city: "City", profession: "Designer", bioShort: "Bio", preferences: {} }
+      ]
+    });
+    await prisma.photo.createMany({ data: [{ userId: userA.id, url: "/uploads/a.jpg" }, { userId: userB.id, url: "/uploads/b.jpg" }] });
+
+    await withAuth(agentA.post("/likes"), tokenA).send({ actionId: "u-a-like", targetUserId: userB.id, action: "LIKE" });
+    const likeBack = await withAuth(agentB.post("/likes"), tokenB).send({ actionId: "u-b-like", targetUserId: userA.id, action: "LIKE" });
+    expect(likeBack.status).toBe(200);
+    expect(likeBack.body.matchId).toBeTypeOf("string");
+
+    const beforeUnmatch = await withAuth(agentA.get("/matches"), tokenA);
+    expect(beforeUnmatch.body.matches).toHaveLength(1);
+
+    const unmatchResponse = await withAuth(agentA.delete(`/matches/${likeBack.body.matchId}`), tokenA);
+    expect(unmatchResponse.status).toBe(200);
+    expect(unmatchResponse.body.ok).toBe(true);
+
+    const afterUnmatchA = await withAuth(agentA.get("/matches"), tokenA);
+    const afterUnmatchB = await withAuth(agentB.get("/matches"), tokenB);
+    expect(afterUnmatchA.body.matches).toHaveLength(0);
+    expect(afterUnmatchB.body.matches).toHaveLength(0);
+
+    const storedMatch = await prisma.match.findUnique({ where: { id: likeBack.body.matchId } });
+    expect(storedMatch?.unmatchedAt).toBeTruthy();
+
+    const secondUnmatch = await withAuth(agentA.delete(`/matches/${likeBack.body.matchId}`), tokenA);
+    expect(secondUnmatch.status).toBe(200);
+    expect(secondUnmatch.body.alreadyUnmatched).toBe(true);
+  });
 });
 
 describe("Discover feed filtering", () => {

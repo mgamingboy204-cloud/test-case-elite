@@ -7,51 +7,59 @@ import {
   onlineMeetUnlockHandler,
   phoneUnlockHandler,
   respondConsentHandler,
-  socialExchangeUnlockHandler
+  socialExchangeUnlockHandler,
+  unmatchHandler
 } from "../controllers/matchController";
 import { requireAuth, requireAuthHeader } from "../middlewares/auth";
-import { requireActive } from "../middlewares/onboarding";
+import { requireMatchingEligible } from "../middlewares/onboarding";
 import { validateBody, validateParams } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 
 const router = Router();
 
-router.get("/matches", requireAuth, requireActive, asyncHandler(listMatchesHandler));
+router.get("/matches", requireAuth, requireMatchingEligible, asyncHandler(listMatchesHandler));
 router.post(
   "/consent/respond",
   requireAuth,
   requireAuthHeader,
-  requireActive,
+  requireMatchingEligible,
   validateBody(ConsentSchema),
   asyncHandler(respondConsentHandler)
 );
 router.get(
   "/phone-unlock/:matchId",
   requireAuth,
-  requireActive,
+  requireMatchingEligible,
   validateParams(z.object({ matchId: z.string() })),
   asyncHandler(phoneUnlockHandler)
 );
 router.get(
   "/offline-meet/:matchId",
   requireAuth,
-  requireActive,
+  requireMatchingEligible,
   validateParams(z.object({ matchId: z.string() })),
   asyncHandler(offlineMeetUnlockHandler)
 );
 router.get(
   "/online-meet/:matchId",
   requireAuth,
-  requireActive,
+  requireMatchingEligible,
   validateParams(z.object({ matchId: z.string() })),
   asyncHandler(onlineMeetUnlockHandler)
 );
 router.get(
   "/social-exchange/:matchId",
   requireAuth,
-  requireActive,
+  requireMatchingEligible,
   validateParams(z.object({ matchId: z.string() })),
   asyncHandler(socialExchangeUnlockHandler)
+);
+router.delete(
+  "/matches/:matchId",
+  requireAuth,
+  requireMatchingEligible,
+  validateParams(z.object({ matchId: z.string() })),
+  asyncHandler(unmatchHandler)
 );
 
 export default router;

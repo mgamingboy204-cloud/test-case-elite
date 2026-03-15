@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getConsentUnlock, getPhoneUnlock, listMatches, respondConsent } from "../services/matchService";
+import { getConsentUnlock, getPhoneUnlock, listMatches, respondConsent, unmatch } from "../services/matchService";
 
 export async function listMatchesHandler(req: Request, res: Response) {
   const result = await listMatches(req.user!.id);
@@ -38,5 +38,11 @@ export async function onlineMeetUnlockHandler(req: Request, res: Response) {
 export async function socialExchangeUnlockHandler(req: Request, res: Response) {
   const { matchId } = req.params as { matchId: string };
   const result = await getConsentUnlock({ matchId, userId: req.user!.id, type: "SOCIAL_EXCHANGE" });
+  return res.json(result);
+}
+
+export async function unmatchHandler(req: Request, res: Response) {
+  const { matchId } = req.params as { matchId: string };
+  const result = await unmatch({ matchId, userId: req.user!.id });
   return res.json(result);
 }
