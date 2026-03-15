@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // This is the ONLY configuration Next.js actually needs for a monorepo
-  transpilePackages: ["@elite/shared"],
+  /* config options here */
 };
 
 export default nextConfig;
