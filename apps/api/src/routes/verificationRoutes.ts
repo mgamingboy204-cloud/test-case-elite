@@ -5,6 +5,7 @@ import {
   getMyVerificationRequestHandler,
   getMyVerificationStatusHandler,
   getVerificationStatusHandler,
+  requestVerificationWhatsAppHelpHandler,
   uploadVerificationVideoHandler
 } from "../controllers/verificationController";
 import { requireAuth, requireAuthHeader, requireOnboardingTokenMatch } from "../middlewares/auth";
@@ -31,6 +32,13 @@ router.post(
     })
   ),
   asyncHandler(uploadVerificationVideoHandler)
+);
+router.post(
+  "/verification/help/whatsapp",
+  requireAuth,
+  requireAuthHeader,
+  requireOnboardingTokenMatch,
+  asyncHandler(requestVerificationWhatsAppHelpHandler)
 );
 router.get("/verification-requests/me", requireAuth, asyncHandler(getMyVerificationRequestHandler));
 router.get("/verification/status", requireAuth, asyncHandler(getVerificationStatusHandler));

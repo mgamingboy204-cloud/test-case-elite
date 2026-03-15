@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { env } from "../config/env";
 import {
   approveRefund,
+  assignVerificationRequest,
   approveUser,
   banUser,
   deactivateUser,
@@ -87,6 +88,11 @@ export async function listVerificationRequestsHandler(req: Request, res: Respons
 export async function startVerificationRequestHandler(req: Request, res: Response) {
   const { meetUrl } = req.body as { meetUrl: string };
   const result = await startVerificationRequest(req.params.id, meetUrl, res.locals.user.id);
+  return res.json(result);
+}
+
+export async function assignVerificationRequestHandler(req: Request, res: Response) {
+  const result = await assignVerificationRequest(req.params.id, res.locals.user.id);
   return res.json(result);
 }
 

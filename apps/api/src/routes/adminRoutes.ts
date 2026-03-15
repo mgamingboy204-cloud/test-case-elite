@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import {
   approveRefundHandler,
+  assignVerificationRequestHandler,
   approveUserHandler,
   banUserHandler,
   dashboardHandler,
@@ -90,6 +91,13 @@ router.post(
 );
 
 router.get("/admin/verification-requests", requireAuth, requireAdmin, asyncHandler(listVerificationRequestsHandler));
+router.post(
+  "/admin/verification-requests/:id/assign",
+  requireAuth,
+  requireAdmin,
+  validateParams(z.object({ id: z.string() })),
+  asyncHandler(assignVerificationRequestHandler)
+);
 router.post(
   "/admin/verification-requests/:id/start",
   requireAuth,

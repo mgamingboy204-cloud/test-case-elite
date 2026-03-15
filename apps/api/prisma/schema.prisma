@@ -102,9 +102,11 @@ enum RefundStatus {
 
 enum VerificationRequestStatus {
   REQUESTED
+  ASSIGNED
   IN_PROGRESS
   COMPLETED
   REJECTED
+  TIMED_OUT
 }
 
 enum NotificationType {
@@ -404,6 +406,8 @@ model VerificationRequest {
   completedAt DateTime?
   decidedAt DateTime?
   decidedBy String?
+  assignedEmployeeId String?
+  assignedAt DateTime?
   reason    String?
   updatedAt DateTime @updatedAt
 
