@@ -38,7 +38,12 @@ export async function assignOfflineMeetCaseHandler(req: Request, res: Response) 
 export async function sendOfflineMeetOptionsHandler(req: Request, res: Response) {
   const { caseId } = req.params as { caseId: string };
   const { cafes, timeSlots } = req.body as { cafes: Array<{ id: string; name: string; address: string }>; timeSlots: Array<{ id: string; label: string; startsAtIso?: string | null }> };
-  const result = await sendOfflineMeetOptions({ caseId, employeeUserId: res.locals.user.id, cafes, timeSlots });
+  const result = await sendOfflineMeetOptions({
+    caseId,
+    employeeUserId: res.locals.user.id,
+    cafes,
+    timeSlots: timeSlots.map((entry) => ({ ...entry, startsAtIso: entry.startsAtIso ?? null }))
+  });
   return res.json(result);
 }
 

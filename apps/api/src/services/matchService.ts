@@ -1,6 +1,7 @@
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { createOrActivateOfflineMeetCase, notifyOfflineMeetRequest } from "./offlineMeetService";
+import { createOrActivateOnlineMeetCase, notifyOnlineMeetRequest } from "./onlineMeetService";
 
 type ConsentType = "PHONE_NUMBER" | "OFFLINE_MEET" | "ONLINE_MEET" | "SOCIAL_EXCHANGE";
 type ConsentResponse = "YES" | "NO";
@@ -46,6 +47,7 @@ export async function listMatches(userId: string) {
       offlineMeet: true,
       offlineMeetCase: true,
       onlineMeet: true,
+      onlineMeetCase: true,
       socialExchange: true,
       userA: {
         select: {
@@ -148,6 +150,16 @@ export async function listMatches(userId: string) {
             finalTimeSlot: match.offlineMeetCase.finalTimeSlot
           }
         : null,
+      onlineMeetCase: match.onlineMeetCase
+        ? {
+            id: match.onlineMeetCase.id,
+            status: match.onlineMeetCase.status,
+            responseDeadlineAt: match.onlineMeetCase.responseDeadlineAt,
+            cooldownUntil: match.onlineMeetCase.cooldownUntil,
+            finalPlatform: match.onlineMeetCase.finalPlatform,
+            finalTimeSlot: match.onlineMeetCase.finalTimeSlot
+          }
+        : null,
       consents: match.consents,
       user: {
         id: otherUser.id,
@@ -218,6 +230,16 @@ export async function respondConsent(options: {
         update: { details: { selections: consents.map((consent) => consent.payload) } },
         create: { matchId: options.matchId, details: { selections: consents.map((consent) => consent.payload) } }
       });
+      const responderConsent = consents.find((consent) => consent.userId === options.userId);
+      const otherConsent = consents.find((consent) => consent.userId !== options.userId);
+      if (!responderConsent || !otherConsent) {
+        throw new HttpError(409, { message: "Consent state is incomplete" });
+      }
+      await createOrActivateOnlineMeetCase({
+        matchId: options.matchId,
+        requesterUserId: responderConsent.respondedAt <= otherConsent.respondedAt ? responderConsent.userId : otherConsent.userId,
+        receiverUserId: responderConsent.respondedAt <= otherConsent.respondedAt ? otherConsent.userId : responderConsent.userId
+      });
     }
     if (type === "SOCIAL_EXCHANGE") {
       await prisma.socialExchangeEvent.upsert({
@@ -234,6 +256,10 @@ export async function respondConsent(options: {
   if (type === "OFFLINE_MEET" && options.response === "YES" && !ready && other !== "NO") {
     const otherUserId = match.userAId === options.userId ? match.userBId : match.userAId;
     await notifyOfflineMeetRequest(options.matchId, options.userId, otherUserId);
+  }
+  if (type === "ONLINE_MEET" && options.response === "YES" && !ready && other !== "NO") {
+    const otherUserId = match.userAId === options.userId ? match.userBId : match.userAId;
+    await notifyOnlineMeetRequest(options.matchId, options.userId, otherUserId);
   }
 
   return {
@@ -255,6 +281,7 @@ export async function getConsentUnlock(options: { matchId: string; userId: strin
       offlineMeet: true,
       offlineMeetCase: true,
       onlineMeet: true,
+      onlineMeetCase: true,
       socialExchange: true,
       userA: true,
       userB: true

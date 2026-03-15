@@ -14,7 +14,14 @@ const ALERT_DEEP_LINKS: Record<NotificationType, string> = {
   OFFLINE_MEET_TIMEOUT: "/matches",
   OFFLINE_MEET_NO_OVERLAP: "/matches",
   OFFLINE_MEET_FINALIZED: "/matches",
-  OFFLINE_MEET_RESCHEDULE_UPDATE: "/matches"
+  OFFLINE_MEET_RESCHEDULE_UPDATE: "/matches",
+  ONLINE_MEET_REQUEST: "/matches",
+  ONLINE_MEET_ACCEPTED: "/matches",
+  ONLINE_MEET_OPTIONS_SENT: "/matches",
+  ONLINE_MEET_TIMEOUT: "/matches",
+  ONLINE_MEET_NO_OVERLAP: "/matches",
+  ONLINE_MEET_FINALIZED: "/matches",
+  ONLINE_MEET_RESCHEDULE_UPDATE: "/matches"
 };
 
 const ALERT_TITLES: Record<NotificationType, string> = {
@@ -30,7 +37,14 @@ const ALERT_TITLES: Record<NotificationType, string> = {
   OFFLINE_MEET_TIMEOUT: "Offline Meet Timeout",
   OFFLINE_MEET_NO_OVERLAP: "Offline Meet Not Compatible",
   OFFLINE_MEET_FINALIZED: "Offline Meet Finalized",
-  OFFLINE_MEET_RESCHEDULE_UPDATE: "Offline Meet Update"
+  OFFLINE_MEET_RESCHEDULE_UPDATE: "Offline Meet Update",
+  ONLINE_MEET_REQUEST: "Online Meet Request",
+  ONLINE_MEET_ACCEPTED: "Online Meet Approved",
+  ONLINE_MEET_OPTIONS_SENT: "Online Meet Options",
+  ONLINE_MEET_TIMEOUT: "Online Meet Timeout",
+  ONLINE_MEET_NO_OVERLAP: "Online Meet Not Compatible",
+  ONLINE_MEET_FINALIZED: "Online Meet Finalized",
+  ONLINE_MEET_RESCHEDULE_UPDATE: "Online Meet Update"
 };
 
 const ALERT_MESSAGES: Record<NotificationType, string> = {
@@ -46,7 +60,14 @@ const ALERT_MESSAGES: Record<NotificationType, string> = {
   OFFLINE_MEET_TIMEOUT: "The previous coordination timed out.",
   OFFLINE_MEET_NO_OVERLAP: "No overlap found. You can retry later.",
   OFFLINE_MEET_FINALIZED: "Your offline meet has been scheduled.",
-  OFFLINE_MEET_RESCHEDULE_UPDATE: "There is an update on your offline meet coordination."
+  OFFLINE_MEET_RESCHEDULE_UPDATE: "There is an update on your offline meet coordination.",
+  ONLINE_MEET_REQUEST: "Your match requested an online meet.",
+  ONLINE_MEET_ACCEPTED: "Both members accepted. Concierge will coordinate online details.",
+  ONLINE_MEET_OPTIONS_SENT: "Review platform and time options for your online meet.",
+  ONLINE_MEET_TIMEOUT: "The online meet coordination timed out due to non-response.",
+  ONLINE_MEET_NO_OVERLAP: "No compatible platform/time overlap was found.",
+  ONLINE_MEET_FINALIZED: "Your online meeting details are finalized.",
+  ONLINE_MEET_RESCHEDULE_UPDATE: "There is an update on your online meet coordination."
 };
 
 export async function listNotifications(userId: string, options?: { cursor?: string; limit?: number }) {

@@ -131,6 +131,33 @@ export const OfflineMeetAdminCancelSchema = z.object({
   requestedByUserId: z.string().uuid().optional().nullable()
 });
 
+
+export const OnlineMeetSelectionSchema = z.object({
+  platform: z.enum(["ZOOM", "GOOGLE_MEET"]),
+  timeSlots: z.array(z.string().min(1)).min(2).max(4)
+});
+
+export const OnlineMeetOptionsSchema = z.object({
+  platforms: z.array(z.enum(["ZOOM", "GOOGLE_MEET"])) .min(1),
+  timeSlots: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), startsAtIso: z.string().datetime().optional().nullable() })).min(2)
+});
+
+export const OnlineMeetFinalizeSchema = z.object({
+  finalPlatform: z.enum(["ZOOM", "GOOGLE_MEET"]),
+  finalTimeSlotId: z.string().min(1),
+  finalMeetingLink: z.string().url()
+});
+
+export const OnlineMeetNoResponseSchema = z.object({
+  nonResponderUserId: z.string().uuid()
+});
+
+export const OnlineMeetAdminCancelSchema = z.object({
+  action: z.enum(["CANCEL", "RESCHEDULE"]),
+  reason: z.string().min(1),
+  requestedByUserId: z.string().uuid().optional().nullable()
+});
+
 export const ReportSchema = z.object({
   reportedUserId: z.string().uuid(),
   reason: z.string().min(1),

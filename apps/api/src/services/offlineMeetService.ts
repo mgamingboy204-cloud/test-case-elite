@@ -605,14 +605,14 @@ export async function updateOfflineMeetCancelOrReschedule(params: {
   const data = params.action === "CANCEL"
     ? {
         assignedEmployeeId: params.employeeUserId,
-        status: "CANCELED",
+        status: "CANCELED" as const,
         canceledAt: new Date(),
         canceledByUserId: params.requestedByUserId ?? null,
         cancelReason: params.reason
       }
     : {
         assignedEmployeeId: params.employeeUserId,
-        status: "RESCHEDULE_REQUESTED",
+        status: "RESCHEDULE_REQUESTED" as const,
         rescheduleRequestedByUserId: params.requestedByUserId ?? null,
         rescheduleReason: params.reason
       };
