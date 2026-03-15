@@ -49,6 +49,16 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
+type LoginApiResponse =
+  | { ok: true; otpRequired: true }
+  | { ok: true; otpRequired?: false; accessToken: string; onboardingToken?: string | null; user: User };
+
+function isSessionPayload(value: unknown): value is { accessToken: string; user: User; onboardingToken?: string | null } {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { accessToken?: unknown; user?: unknown };
+  return typeof candidate.accessToken === "string" && typeof candidate.user === "object" && candidate.user !== null;
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -149,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const startLogin = async (phone: string, password: string) => {
-    const response = await apiRequest<{ ok: true; otpRequired?: boolean; accessToken?: string; onboardingToken?: string; user?: User }>("/auth/login", {
+    const response = await apiRequest<LoginApiResponse>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ phone, password, rememberMe: true })
     });
@@ -161,19 +171,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { otpRequired: true };
     }
 
-    if (response.accessToken && response.user) {
-      setAuthToken(response.accessToken);
-      setOnboardingToken(response.onboardingToken ?? response.user.onboardingToken ?? null);
-      setUser(response.user);
-      setPendingPhone(null);
-      localStorage.removeItem("elite_pending_phone");
-      router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
-        isAuthenticated: true,
-        backendStep: response.user.onboardingStep,
-        profileCompletedAt: response.user.profileCompletedAt,
-        photoCount: response.user.photoCount
-      })));
+    if (!isSessionPayload(response)) {
+      throw new Error("Unexpected login response. Please try again.");
     }
+
+    setAuthToken(response.accessToken);
+    setOnboardingToken(response.onboardingToken ?? response.user.onboardingToken ?? null);
+    setUser(response.user);
+    setPendingPhone(null);
+    localStorage.removeItem("elite_pending_phone");
+    router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
+      isAuthenticated: true,
+      backendStep: response.user.onboardingStep,
+      profileCompletedAt: response.user.profileCompletedAt,
+      photoCount: response.user.photoCount
+    })));
 
     return { otpRequired: false };
   };

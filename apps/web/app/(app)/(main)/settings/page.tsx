@@ -38,7 +38,7 @@ export default function SettingsPage() {
         auth: true,
         body: JSON.stringify({ [key]: value })
       });
-      await profileQuery.revalidate();
+      await profileQuery.refresh(true);
     } finally {
       setSaving(false);
     }

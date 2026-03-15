@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Settings, X, BadgeCheck, Briefcase, Ruler, LogOut, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
