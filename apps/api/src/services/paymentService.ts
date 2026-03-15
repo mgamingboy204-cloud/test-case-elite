@@ -1,9 +1,8 @@
-import crypto from "crypto";
 import { PaymentPlan } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
-import { createRazorpayOrder, verifyRazorpaySignature } from "./razorpayService";
 import { env } from "../config/env";
+import { getPaymentProviderMode, initiatePaymentGatewayOrder, verifyPaymentGatewaySignature } from "./paymentGatewayService";
 
 const PLAN_DETAILS: Record<PaymentPlan, { amountInr: number; durationMonths: number; label: string }> = {
   ONE_MONTH: { amountInr: 30000, durationMonths: 1, label: "1 month" },
@@ -96,8 +95,8 @@ export async function initiateOnboardingPayment(options: {
   const plan = parsePaymentPlan(options.tier);
   const planDetails = PLAN_DETAILS[plan];
   const receipt = `rcpt_${options.user.id.slice(0, 8)}_${Date.now()}`;
-  const razorpayOrder = await createRazorpayOrder({ amountInr: planDetails.amountInr, receipt });
-  const paymentRef = razorpayOrder.orderId;
+  const gatewayOrder = await initiatePaymentGatewayOrder({ amountInr: planDetails.amountInr, receipt });
+  const paymentRef = gatewayOrder.paymentRef;
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
@@ -124,14 +123,15 @@ export async function initiateOnboardingPayment(options: {
   return {
     ok: true,
     paymentRef,
-    gateway: "razorpay",
-    nextAction: "OPEN_CHECKOUT",
-    razorpay: {
-      keyId: razorpayOrder.keyId,
-      orderId: razorpayOrder.orderId,
-      amountPaise: razorpayOrder.amountPaise,
-      currency: razorpayOrder.currency
-    },
+    gateway: gatewayOrder.gateway,
+    nextAction: gatewayOrder.nextAction,
+    ...(gatewayOrder.gateway === "razorpay"
+      ? {
+          razorpay: gatewayOrder.razorpay
+        }
+      : {
+          mock: gatewayOrder.mock
+        }),
     plan,
     amountInr: planDetails.amountInr,
     durationMonths: planDetails.durationMonths,
@@ -205,11 +205,7 @@ export async function verifyOnboardingPayment(options: {
     };
   }
 
-  verifyRazorpaySignature({
-    orderId: options.orderId,
-    paymentId: options.paymentId,
-    signature: options.signature
-  });
+  verifyPaymentGatewaySignature({ orderId: options.orderId, paymentId: options.paymentId, signature: options.signature });
 
   const selectedPlan = options.user.onboardingPaymentPlan;
   const selectedAmount = options.user.onboardingPaymentAmount;
@@ -290,7 +286,7 @@ export async function completeMockOnboardingPayment(options: {
     onboardingStep: string;
   };
 }) {
-  if (!env.ALLOW_TEST_BYPASS) {
+  if (getPaymentProviderMode() !== "mock" && !env.ALLOW_TEST_BYPASS) {
     throw new HttpError(404, { message: "Not found" });
   }
   if (!options.user.onboardingPaymentPlan || !options.user.onboardingPaymentAmount) {

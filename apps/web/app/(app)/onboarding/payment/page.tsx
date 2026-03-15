@@ -16,10 +16,17 @@ interface PaymentOverview {
   plans: Array<{ plan: PlanId; amountInr: number; durationMonths: number; taxIncluded: boolean; autoRenew: boolean; renewalPolicy: "MANUAL_ONLY" }>;
 }
 
-type PaymentInitResponse = {
-  paymentRef: string;
-  razorpay: { keyId: string; orderId: string; amountPaise: number; currency: string };
-};
+type PaymentInitResponse =
+  | {
+      paymentRef: string;
+      gateway: "razorpay";
+      razorpay: { keyId: string; orderId: string; amountPaise: number; currency: string };
+    }
+  | {
+      paymentRef: string;
+      gateway: "mock";
+      mock: { orderId: string; paymentId: string; signature: string };
+    };
 
 const PLAN_COPY: Record<PlanId, { label: string; price: string }> = {
   ONE_MONTH: { label: "1 Month", price: "INR 30,000" },
@@ -82,43 +89,56 @@ export default function PaymentStep() {
     setProcessing(true);
     try {
       const init = await apiRequest<PaymentInitResponse>("/payments/initiate", { method: "POST", auth: true, body: JSON.stringify({ tier: selectedTier }) });
-      const loaded = await ensureRazorpayCheckoutLoaded();
-      if (!loaded || !window.Razorpay) throw new Error("Payment gateway unavailable.");
 
-      await new Promise<void>((resolve, reject) => {
-        if (!window.Razorpay) {
-          reject(new Error("Razorpay checkout failed to load. Please check your network connection and try again."));
-          return;
-        }
-
-        const paymentObject = new window.Razorpay({
-          key: init.razorpay.keyId,
-          amount: init.razorpay.amountPaise,
-          currency: init.razorpay.currency,
-          order_id: init.razorpay.orderId,
-          name: "VAEL Membership",
-          description: `Membership ${selectedTier}`,
-          handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-            try {
-              await apiRequest("/payments/verify", {
-                method: "POST",
-                auth: true,
-                body: JSON.stringify({ orderId: response.razorpay_order_id, paymentId: response.razorpay_payment_id, signature: response.razorpay_signature })
-              });
-              resolve();
-            } catch (verificationError) {
-              reject(verificationError);
-            }
-          },
-          modal: {
-            ondismiss: async () => {
-              await apiRequest("/payments/fail", { method: "POST", auth: true, body: JSON.stringify({ reason: "Payment canceled by user." }) });
-              reject(new Error("Payment canceled."));
-            }
-          }
+      if (init.gateway === "mock") {
+        await apiRequest("/payments/verify", {
+          method: "POST",
+          auth: true,
+          body: JSON.stringify({
+            orderId: init.mock.orderId,
+            paymentId: init.mock.paymentId,
+            signature: init.mock.signature
+          })
         });
-        paymentObject.open();
-      });
+      } else {
+        const loaded = await ensureRazorpayCheckoutLoaded();
+        if (!loaded || !window.Razorpay) throw new Error("Payment gateway unavailable.");
+
+        await new Promise<void>((resolve, reject) => {
+          if (!window.Razorpay) {
+            reject(new Error("Razorpay checkout failed to load. Please check your network connection and try again."));
+            return;
+          }
+
+          const paymentObject = new window.Razorpay({
+            key: init.razorpay.keyId,
+            amount: init.razorpay.amountPaise,
+            currency: init.razorpay.currency,
+            order_id: init.razorpay.orderId,
+            name: "VAEL Membership",
+            description: `Membership ${selectedTier}`,
+            handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+              try {
+                await apiRequest("/payments/verify", {
+                  method: "POST",
+                  auth: true,
+                  body: JSON.stringify({ orderId: response.razorpay_order_id, paymentId: response.razorpay_payment_id, signature: response.razorpay_signature })
+                });
+                resolve();
+              } catch (verificationError) {
+                reject(verificationError);
+              }
+            },
+            modal: {
+              ondismiss: async () => {
+                await apiRequest("/payments/fail", { method: "POST", auth: true, body: JSON.stringify({ reason: "Payment canceled by user." }) });
+                reject(new Error("Payment canceled."));
+              }
+            }
+          });
+          paymentObject.open();
+        });
+      }
 
       await refreshCurrentUser();
       completeOnboardingStep("PROFILE");

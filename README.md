@@ -14,6 +14,10 @@ User authentication now relies on short-lived access tokens (JWT) sent via the `
 - `STORAGE_PROVIDER` (local | supabase)
 - `SUPABASE_URL` (required when using supabase storage)
 - `SUPABASE_SERVICE_ROLE_KEY` (required when using supabase storage)
+- `OTP_PROVIDER` (`mock` | `twilio`)
+- `PAYMENT_PROVIDER` (`mock` | `razorpay`)
+- `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_VERIFY_SERVICE_SID` (required only when `OTP_PROVIDER=twilio`)
+- `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` (required only when `PAYMENT_PROVIDER=razorpay`)
 
 ## Developer notes
 
@@ -224,3 +228,10 @@ Require these outputs each time:
 - duplication audit (confirm no duplicate routes/components/services added)
 
 This process gives you the highest chance that Codex scans the repo, reuses your current UI structure, and completes missing parts safely instead of generating duplicate implementations.
+
+
+## Provider modes (OTP + payment)
+
+- **Mock deployment now**: set `NODE_ENV=production`, `OTP_PROVIDER=mock`, and `PAYMENT_PROVIDER=mock`. Twilio and Razorpay credentials are not required in this mode.
+- **Real provider launch later**: switch to `OTP_PROVIDER=twilio` and `PAYMENT_PROVIDER=razorpay`, then provide valid Twilio Verify and Razorpay credentials.
+- The onboarding/auth/payment routes stay unchanged; only provider execution is selected by env.

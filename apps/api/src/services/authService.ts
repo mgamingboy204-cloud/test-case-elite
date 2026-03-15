@@ -6,7 +6,7 @@ import { env } from "../config/env";
 import { HttpError } from "../utils/httpErrors";
 import { logger } from "../utils/logger";
 import { resolveBackendOnboardingStep } from "@vael/shared";
-import { sendTwilioOtp, verifyTwilioOtp } from "./twilioVerifyService";
+import { getOtpProviderMode, issueOtpFromProvider, verifyOtpFromProvider } from "./otpProviderService";
 
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -46,8 +46,7 @@ export async function issueOnboardingToken(userId: string) {
 }
 
 export async function upsertOtpCode(phone: string) {
-  const marker = crypto.randomBytes(16).toString("hex");
-  const codeHash = await bcrypt.hash(marker, 10);
+  const { codeHash } = await issueOtpFromProvider(phone);
   const expiresAt = new Date(Date.now() + 1000 * 60 * 5);
 
   await prisma.otpCode.upsert({
@@ -56,8 +55,12 @@ export async function upsertOtpCode(phone: string) {
     create: { phone, codeHash, expiresAt, attempts: 0 }
   });
 
-  await sendTwilioOtp(phone);
-  if (env.DEV_OTP_LOG === "true") logger.info(`[OTP SENT] ${phone}`);
+  if (env.DEV_OTP_LOG === "true") {
+    logger.info(`[OTP SENT] ${phone} via ${getOtpProviderMode()} provider`);
+    if (getOtpProviderMode() === "mock") {
+      logger.info(`[OTP MOCK CODE] ${phone} => 123456`);
+    }
+  }
 }
 
 export async function verifyOtpAndGetUser(phone: string, code: string) {
@@ -72,7 +75,7 @@ export async function verifyOtpAndGetUser(phone: string, code: string) {
     throw new HttpError(401, { message: "Too many attempts. Request a new OTP." });
   }
   try {
-    await verifyTwilioOtp(phone, code);
+    await verifyOtpFromProvider({ phone, code, codeHash: record.codeHash });
   } catch (error) {
     if (error instanceof HttpError && error.status >= 500) {
       throw error;
@@ -243,7 +246,7 @@ export async function verifyOtpCodeOnly(phone: string, code: string) {
   }
 
   try {
-    await verifyTwilioOtp(phone, code);
+    await verifyOtpFromProvider({ phone, code, codeHash: record.codeHash });
   } catch (error) {
     if (error instanceof HttpError && error.status >= 500) {
       throw error;
