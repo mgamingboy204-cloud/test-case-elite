@@ -53,6 +53,8 @@ export function useStaleWhileRevalidate<T>(options: {
   const cached = readCache<T>(key);
   const [data, setData] = useState<T | undefined>(cached?.value);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [isLoading, setIsLoading] = useState(!cached?.value && enabled);
 
   const refresh = useCallback(async (force = false) => {
     if (!enabled) return;
@@ -61,22 +63,38 @@ export function useStaleWhileRevalidate<T>(options: {
     if (!force && !isStale) return;
 
     setIsRefreshing(true);
+    if (!readCache<T>(key)?.value) setIsLoading(true);
     try {
       const next = await fetcher();
       primeCache(key, next);
       setData(next);
+      setError(null);
+    } catch (err) {
+      setError(err);
     } finally {
       setIsRefreshing(false);
+      setIsLoading(false);
     }
   }, [enabled, fetcher, key, staleTimeMs]);
 
   useEffect(() => {
     if (enabled) {
       const current = readCache<T>(key);
-      if (current) setData(current.value);
+      if (current) {
+        setData(current.value);
+        setIsLoading(false);
+      }
       void refresh();
     }
   }, [enabled, key, refresh]);
 
-  return { data, setData, refresh, isRefreshing };
+  const mutate = (updater: T | ((current?: T) => T)) => {
+    setData((current) => {
+      const next = typeof updater === "function" ? (updater as (value?: T) => T)(current) : updater;
+      primeCache(key, next);
+      return next;
+    });
+  };
+
+  return { data, setData, refresh, revalidate: () => refresh(true), mutate, isRefreshing, isLoading, error };
 }

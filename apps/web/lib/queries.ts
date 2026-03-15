@@ -252,6 +252,30 @@ export interface NotificationApiItem {
     | "PHONE_EXCHANGE_REJECTED"
     | "PHONE_EXCHANGE_MUTUAL_CONSENT_CONFIRMED"
     | "PHONE_EXCHANGE_REVEALED";
+  eventType?:
+    | "LIKE_RECEIVED"
+    | "MATCH_CREATED"
+    | "INTERACTION_REQUEST_RECEIVED"
+    | "INTERACTION_REQUEST_ACCEPTED"
+    | "INTERACTION_REQUEST_REJECTED"
+    | "OFFLINE_MEET_OPTIONS_SENT"
+    | "OFFLINE_MEET_TIMEOUT"
+    | "OFFLINE_MEET_NO_OVERLAP"
+    | "OFFLINE_MEET_FINALIZED"
+    | "ONLINE_MEET_OPTIONS_SENT"
+    | "ONLINE_MEET_TIMEOUT"
+    | "ONLINE_MEET_NO_OVERLAP"
+    | "ONLINE_MEET_FINALIZED"
+    | "SOCIAL_EXCHANGE_REQUEST"
+    | "SOCIAL_EXCHANGE_READY"
+    | "SOCIAL_EXCHANGE_EXPIRED"
+    | "PHONE_EXCHANGE_REQUEST"
+    | "PHONE_EXCHANGE_CONFIRMED"
+    | "VERIFICATION_ASSIGNED"
+    | "VERIFICATION_APPROVED"
+    | "VERIFICATION_REJECTED"
+    | "PAYMENT_ISSUE"
+    | "MEMBERSHIP_UPDATE";
   isRead: boolean;
   createdAt: string;
   title?: string | null;
@@ -264,12 +288,13 @@ export interface NotificationApiItem {
 export interface Alert {
   id: string;
   type: "INTEREST" | "CONNECTION" | "CONCIERGE";
+  eventType?: NotificationApiItem["eventType"];
   title: string;
   message: string;
   timestamp: string;
   image: string;
   isUnread: boolean;
-  targetId?: number;
+  deepLinkUrl?: string | null;
 }
 
 const FALLBACK_ALERT_IMAGE =
@@ -298,7 +323,9 @@ function toAlert(item: NotificationApiItem): Alert {
     message,
     timestamp: new Date(item.createdAt).toLocaleDateString(),
     image: item.imageUrl ?? item.actor?.photos[0]?.url ?? FALLBACK_ALERT_IMAGE,
-    isUnread: !item.isRead
+    isUnread: !item.isRead,
+    eventType: item.eventType,
+    deepLinkUrl: item.deepLinkUrl
   };
 }
 
