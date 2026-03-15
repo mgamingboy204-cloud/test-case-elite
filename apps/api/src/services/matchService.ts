@@ -49,6 +49,10 @@ export async function listMatches(userId: string) {
       onlineMeet: true,
       onlineMeetCase: true,
       socialExchange: true,
+      socialExchangeCases: {
+        orderBy: { createdAt: "desc" },
+        take: 1
+      },
       userA: {
         select: {
           id: true,
@@ -77,6 +81,8 @@ export async function listMatches(userId: string) {
     const offlinePair = getPair("OFFLINE_MEET");
     const onlinePair = getPair("ONLINE_MEET");
     const socialPair = getPair("SOCIAL_EXCHANGE");
+    const socialCase = match.socialExchangeCases[0] ?? null;
+    const socialActive = socialCase && ["REQUESTED", "ACCEPTED", "AWAITING_HANDLE_SUBMISSION", "HANDLE_SUBMITTED", "READY_TO_REVEAL", "REVEALED"].includes(socialCase.status);
 
     return {
       id: match.id,
@@ -103,10 +109,10 @@ export async function listMatches(userId: string) {
           ready: Boolean(match.onlineMeet)
         },
         SOCIAL_EXCHANGE: {
-          status: getConsentStatus(socialPair.mine, socialPair.other, Boolean(match.socialExchange)),
+          status: socialCase ? socialCase.status : getConsentStatus(socialPair.mine, socialPair.other, Boolean(match.socialExchange)),
           myResponse: socialPair.mine,
           otherResponse: socialPair.other,
-          ready: Boolean(match.socialExchange)
+          ready: Boolean(match.socialExchange) || Boolean(socialCase && ["READY_TO_REVEAL", "REVEALED"].includes(socialCase.status))
         }
       },
       consentPayloads: getConsentPayloadMap(match.consents as any, userId, otherUser.id),
@@ -134,12 +140,27 @@ export async function listMatches(userId: string) {
         },
         SOCIAL_EXCHANGE: {
           type: "SOCIAL_EXCHANGE",
-          status: toInteractionStatus(socialPair.mine, socialPair.other, Boolean(match.socialExchange)),
-          isInitiatedByMe: socialPair.mine !== null,
-          canInitiate: socialPair.mine !== "YES" && !match.socialExchange,
-          requestedAt: match.consents.find((consent) => consent.userId === userId && consent.type === "SOCIAL_EXCHANGE")?.respondedAt ?? null
+          status: socialCase
+            ? (socialCase.status === "REJECTED" ? "REJECTED" : socialCase.status === "CANCELED" ? "CANCELED" : socialCase.status === "EXPIRED" ? "CANCELED" : "PENDING")
+            : toInteractionStatus(socialPair.mine, socialPair.other, Boolean(match.socialExchange)),
+          isInitiatedByMe: socialCase ? socialCase.requesterUserId === userId : socialPair.mine !== null,
+          canInitiate: !socialActive,
+          requestedAt: socialCase?.createdAt ?? match.consents.find((consent) => consent.userId === userId && consent.type === "SOCIAL_EXCHANGE")?.respondedAt ?? null
         }
       },
+      socialExchangeCase: socialCase
+        ? {
+            id: socialCase.id,
+            requesterUserId: socialCase.requesterUserId,
+            receiverUserId: socialCase.receiverUserId,
+            status: socialCase.status,
+            platform: socialCase.platform,
+            revealOpenedAt: socialCase.revealOpenedAt,
+            revealExpiresAt: socialCase.revealExpiresAt,
+            unopenedExpiresAt: socialCase.unopenedExpiresAt,
+            cooldownUntil: socialCase.cooldownUntil
+          }
+        : null,
       offlineMeetCase: match.offlineMeetCase
         ? {
             id: match.offlineMeetCase.id,

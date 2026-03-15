@@ -53,6 +53,58 @@ export async function getSocialExchange(matchId: string) {
   return apiRequest<{ matchId: string; type: "SOCIAL_EXCHANGE"; payloads: Array<{ userId: string; payload: unknown }> }>(`/social-exchange/${matchId}`, { auth: true });
 }
 
+export type SocialExchangeCase = {
+  id: string;
+  matchId: string;
+  requesterUserId: string;
+  receiverUserId: string;
+  status: "REQUESTED" | "ACCEPTED" | "REJECTED" | "AWAITING_HANDLE_SUBMISSION" | "HANDLE_SUBMITTED" | "READY_TO_REVEAL" | "REVEALED" | "EXPIRED" | "COOLDOWN" | "CANCELED";
+  platform: "SNAPCHAT" | "INSTAGRAM" | "LINKEDIN" | null;
+  handleVisible: boolean;
+  revealOpenedAt: string | null;
+  revealExpiresAt: string | null;
+  unopenedExpiresAt: string | null;
+  cooldownUntil: string | null;
+  createdAt: string;
+  canRespond?: boolean;
+  canSubmitHandle?: boolean;
+  canReveal?: boolean;
+};
+
+export async function listSocialExchangeCases(matchId: string) {
+  return apiRequest<{ cases: SocialExchangeCase[] }>(`/social-exchange-cases/${matchId}`, { auth: true });
+}
+
+export async function requestSocialExchange(matchId: string) {
+  return apiRequest<{ ok: boolean; socialExchange: SocialExchangeCase }>(`/social-exchange-cases/${matchId}/request`, {
+    method: "POST",
+    auth: true
+  });
+}
+
+export async function respondSocialExchange(caseId: string, response: "ACCEPT" | "REJECT") {
+  return apiRequest<{ ok: boolean; socialExchange: SocialExchangeCase }>(`/social-exchange-cases/${caseId}/respond`, {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify({ response })
+  });
+}
+
+export async function submitSocialExchangeHandle(caseId: string, platform: "Snapchat" | "Instagram" | "LinkedIn", handle: string) {
+  return apiRequest<{ ok: boolean; socialExchange: SocialExchangeCase }>(`/social-exchange-cases/${caseId}/handle`, {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify({ platform, handle })
+  });
+}
+
+export async function revealSocialExchange(caseId: string) {
+  return apiRequest<{ ok: boolean; status: string; platform: string | null; handle: string | null; revealExpiresAt: string | null }>(`/social-exchange-cases/${caseId}/reveal`, {
+    method: "POST",
+    auth: true
+  });
+}
+
 export async function unmatch(matchId: string) {
   return apiRequest<{ ok: boolean; matchId: string; alreadyUnmatched: boolean }>(`/matches/${matchId}`, {
     method: "DELETE",

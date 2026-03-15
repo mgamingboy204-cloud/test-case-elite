@@ -21,7 +21,14 @@ const ALERT_DEEP_LINKS: Record<NotificationType, string> = {
   ONLINE_MEET_TIMEOUT: "/matches",
   ONLINE_MEET_NO_OVERLAP: "/matches",
   ONLINE_MEET_FINALIZED: "/matches",
-  ONLINE_MEET_RESCHEDULE_UPDATE: "/matches"
+  ONLINE_MEET_RESCHEDULE_UPDATE: "/matches",
+  SOCIAL_EXCHANGE_REQUEST: "/matches",
+  SOCIAL_EXCHANGE_ACCEPTED: "/matches",
+  SOCIAL_EXCHANGE_REJECTED: "/matches",
+  SOCIAL_EXCHANGE_HANDLE_READY: "/matches",
+  SOCIAL_EXCHANGE_VIEWED: "/matches",
+  SOCIAL_EXCHANGE_EXPIRED: "/matches",
+  SOCIAL_EXCHANGE_RESEND_AVAILABLE: "/matches"
 };
 
 const ALERT_TITLES: Record<NotificationType, string> = {
@@ -44,7 +51,14 @@ const ALERT_TITLES: Record<NotificationType, string> = {
   ONLINE_MEET_TIMEOUT: "Online Meet Timeout",
   ONLINE_MEET_NO_OVERLAP: "Online Meet Not Compatible",
   ONLINE_MEET_FINALIZED: "Online Meet Finalized",
-  ONLINE_MEET_RESCHEDULE_UPDATE: "Online Meet Update"
+  ONLINE_MEET_RESCHEDULE_UPDATE: "Online Meet Update",
+  SOCIAL_EXCHANGE_REQUEST: "Social Exchange Request",
+  SOCIAL_EXCHANGE_ACCEPTED: "Social Exchange Accepted",
+  SOCIAL_EXCHANGE_REJECTED: "Social Exchange Declined",
+  SOCIAL_EXCHANGE_HANDLE_READY: "Handle Ready to Reveal",
+  SOCIAL_EXCHANGE_VIEWED: "Handle Revealed",
+  SOCIAL_EXCHANGE_EXPIRED: "Handle Expired",
+  SOCIAL_EXCHANGE_RESEND_AVAILABLE: "Social Exchange Available"
 };
 
 const ALERT_MESSAGES: Record<NotificationType, string> = {
@@ -67,7 +81,14 @@ const ALERT_MESSAGES: Record<NotificationType, string> = {
   ONLINE_MEET_TIMEOUT: "The online meet coordination timed out due to non-response.",
   ONLINE_MEET_NO_OVERLAP: "No compatible platform/time overlap was found.",
   ONLINE_MEET_FINALIZED: "Your online meeting details are finalized.",
-  ONLINE_MEET_RESCHEDULE_UPDATE: "There is an update on your online meet coordination."
+  ONLINE_MEET_RESCHEDULE_UPDATE: "There is an update on your online meet coordination.",
+  SOCIAL_EXCHANGE_REQUEST: "Your match requested a temporary social exchange.",
+  SOCIAL_EXCHANGE_ACCEPTED: "Your match accepted social exchange.",
+  SOCIAL_EXCHANGE_REJECTED: "Your match declined the social exchange request.",
+  SOCIAL_EXCHANGE_HANDLE_READY: "A temporary social handle is ready to view.",
+  SOCIAL_EXCHANGE_VIEWED: "Your social handle was viewed.",
+  SOCIAL_EXCHANGE_EXPIRED: "This social exchange has expired.",
+  SOCIAL_EXCHANGE_RESEND_AVAILABLE: "You can send another social exchange request now."
 };
 
 export async function listNotifications(userId: string, options?: { cursor?: string; limit?: number }) {
