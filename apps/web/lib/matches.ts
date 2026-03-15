@@ -1,6 +1,28 @@
 import { apiRequest } from "./api";
 
+export type MatchInteractionType = "PHONE_EXCHANGE" | "OFFLINE_MEET" | "ONLINE_MEET" | "SOCIAL_EXCHANGE";
 export type MatchConsentType = "PHONE_NUMBER" | "OFFLINE_MEET" | "ONLINE_MEET" | "SOCIAL_EXCHANGE";
+
+function toConsentType(type: MatchInteractionType): MatchConsentType {
+  return type === "PHONE_EXCHANGE" ? "PHONE_NUMBER" : type;
+}
+
+export async function initiateMatchInteractionRequest(options: {
+  matchId: string;
+  type: MatchInteractionType;
+  payload?: Record<string, unknown>;
+}) {
+  return apiRequest<{ ok: boolean; matchId: string; type: MatchConsentType; ready: boolean; status: "PENDING" | "ACCEPTED" | "REJECTED" | "CANCELED"; message: string }>("/consent/respond", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify({
+      matchId: options.matchId,
+      type: toConsentType(options.type),
+      response: "YES",
+      payload: options.payload
+    })
+  });
+}
 
 export async function respondMatchConsent(options: {
   matchId: string;
