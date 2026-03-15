@@ -1,4 +1,15 @@
-import { Prisma, VerificationRequestStatus } from "@prisma/client";
+import {
+  NotificationType,
+  OfflineMeetCoordinationStatus,
+  OnlineMeetCoordinationStatus,
+  PaymentPlan,
+  PaymentStatus,
+  PhoneExchangeCaseStatus,
+  Prisma,
+  SocialExchangeStatus,
+  SubscriptionStatus,
+  VerificationRequestStatus
+} from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { listEmployeeWorkloads } from "./employeeService";
@@ -118,17 +129,219 @@ export async function listUsers(status?: string): Promise<{ users: UserListItem[
 }
 
 export async function getDashboard() {
-  const [totalUsers, activeUsers, pendingVerification, rejectedVerification] = await Promise.all([
-    prisma.user.count({ where: { deletedAt: null } }),
-    prisma.user.count({ where: { onboardingStep: "ACTIVE", deletedAt: null } }),
-    prisma.verificationRequest.count({ where: { status: "REQUESTED" } }),
-    prisma.verificationRequest.count({ where: { status: "REJECTED" } })
-  ]);
-  return {
+  const activeSubscriptionStatuses: SubscriptionStatus[] = ["ACTIVE"];
+  const pendingVerificationStatuses: VerificationRequestStatus[] = ["REQUESTED", "ASSIGNED", "IN_PROGRESS"];
+  const pendingOfflineStatuses: OfflineMeetCoordinationStatus[] = [
+    "REQUESTED",
+    "ACCEPTED",
+    "EMPLOYEE_PREPARING_OPTIONS",
+    "READY_FOR_FINALIZATION",
+    "RESCHEDULE_REQUESTED"
+  ];
+  const pendingOnlineStatuses: OnlineMeetCoordinationStatus[] = [
+    "REQUESTED",
+    "ACCEPTED",
+    "EMPLOYEE_PREPARING_OPTIONS",
+    "READY_FOR_FINALIZATION",
+    "RESCHEDULE_REQUESTED"
+  ];
+  const activeSocialExchangeStatuses: SocialExchangeStatus[] = [
+    "REQUESTED",
+    "ACCEPTED",
+    "AWAITING_HANDLE_SUBMISSION",
+    "HANDLE_SUBMITTED",
+    "READY_TO_REVEAL"
+  ];
+  const activePhoneExchangeStatuses: PhoneExchangeCaseStatus[] = ["REQUESTED", "ACCEPTED", "MUTUAL_CONSENT_CONFIRMED"];
+  const paymentIssueStatuses: PaymentStatus[] = ["FAILED", "CANCELED"];
+  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const [
     totalUsers,
-    activeUsers,
-    pendingVerificationRequests: pendingVerification,
-    rejectedVerificationRequests: rejectedVerification
+    verifiedUsers,
+    bannedUsers,
+    rejectedUsers,
+    onboardingCompleted,
+    activeSubscriptions,
+    likesCount,
+    matchesCount,
+    offlineMeetCaseCount,
+    onlineMeetCaseCount,
+    socialExchangeCaseCount,
+    phoneExchangeCaseCount,
+    verificationQueue,
+    pendingOfflineCoordination,
+    pendingOnlineCoordination,
+    paymentIssueCount,
+    activeSocialExchangeRequests,
+    activePhoneExchangeRequests,
+    employees,
+    notificationsInPastWeek,
+    unreadOperationalAlerts
+  ] = await Promise.all([
+    prisma.user.count({ where: { deletedAt: null } }),
+    prisma.user.count({ where: { deletedAt: null, status: "APPROVED", isVideoVerified: true } }),
+    prisma.user.count({ where: { deletedAt: null, status: "BANNED" } }),
+    prisma.user.count({ where: { deletedAt: null, status: "REJECTED" } }),
+    prisma.user.count({ where: { deletedAt: null, onboardingStep: "ACTIVE" } }),
+    prisma.user.count({ where: { deletedAt: null, subscriptionStatus: { in: activeSubscriptionStatuses } } }),
+    prisma.like.count({ where: { action: "LIKE" } }),
+    prisma.match.count({ where: { unmatchedAt: null } }),
+    prisma.offlineMeetCase.count(),
+    prisma.onlineMeetCase.count(),
+    prisma.socialExchangeCase.count(),
+    prisma.phoneExchangeCase.count(),
+    prisma.verificationRequest.count({ where: { status: { in: pendingVerificationStatuses } } }),
+    prisma.offlineMeetCase.count({ where: { status: { in: pendingOfflineStatuses } } }),
+    prisma.onlineMeetCase.count({ where: { status: { in: pendingOnlineStatuses } } }),
+    prisma.payment.count({ where: { status: { in: paymentIssueStatuses } } }),
+    prisma.socialExchangeCase.count({ where: { status: { in: activeSocialExchangeStatuses } } }),
+    prisma.phoneExchangeCase.count({ where: { status: { in: activePhoneExchangeStatuses } } }),
+    listEmployeeWorkloads(),
+    prisma.notification.count({ where: { createdAt: { gte: oneWeekAgo } } }),
+    prisma.notification.count({
+      where: {
+        createdAt: { gte: oneWeekAgo },
+        isRead: false,
+        type: {
+          in: [
+            "VIDEO_VERIFICATION_UPDATE",
+            "OFFLINE_MEET_REQUEST",
+            "OFFLINE_MEET_TIMEOUT",
+            "OFFLINE_MEET_NO_OVERLAP",
+            "ONLINE_MEET_REQUEST",
+            "ONLINE_MEET_TIMEOUT",
+            "ONLINE_MEET_NO_OVERLAP",
+            "PHONE_EXCHANGE_REQUEST",
+            "SOCIAL_EXCHANGE_REQUEST"
+          ]
+        }
+      }
+    })
+  ]);
+
+  const [subscriptionPlans, verificationAssigned, notificationsByType] = await Promise.all([
+    prisma.user.groupBy({
+      by: ["onboardingPaymentPlan"],
+      where: {
+        deletedAt: null,
+        subscriptionStatus: { in: activeSubscriptionStatuses },
+        onboardingPaymentPlan: { not: null }
+      },
+      _count: { _all: true }
+    }),
+    prisma.verificationRequest.groupBy({
+      by: ["assignedEmployeeId"],
+      where: {
+        status: { in: pendingVerificationStatuses },
+        assignedEmployeeId: { not: null }
+      },
+      _count: { _all: true }
+    }),
+    prisma.notification.groupBy({
+      by: ["type"],
+      where: { createdAt: { gte: oneWeekAgo } },
+      _count: { _all: true }
+    })
+  ]);
+
+  const planDistribution: Record<PaymentPlan, number> = {
+    ONE_MONTH: 0,
+    FIVE_MONTHS: 0,
+    TWELVE_MONTHS: 0
+  };
+  for (const planCount of subscriptionPlans) {
+    if (planCount.onboardingPaymentPlan) {
+      planDistribution[planCount.onboardingPaymentPlan] = planCount._count._all;
+    }
+  }
+
+  const verificationByEmployee = new Map(
+    verificationAssigned
+      .filter((item) => item.assignedEmployeeId)
+      .map((item) => [item.assignedEmployeeId as string, item._count._all])
+  );
+
+  const perEmployeeWorkload = employees.map((employee) => {
+    const verificationActive = verificationByEmployee.get(employee.id) ?? 0;
+    return {
+      id: employee.id,
+      employeeId: employee.employeeId,
+      name: employee.name,
+      assignedMembers: employee.assignedMembers,
+      verificationActive,
+      activeOfflineCases: employee.activeOfflineCases,
+      activeOnlineCases: employee.activeOnlineCases,
+      totalActiveTasks: verificationActive + employee.activeOfflineCases + employee.activeOnlineCases
+    };
+  });
+
+  const recentAlertBreakdown = notificationsByType
+    .filter((entry) => [
+      NotificationType.VIDEO_VERIFICATION_UPDATE,
+      NotificationType.OFFLINE_MEET_REQUEST,
+      NotificationType.OFFLINE_MEET_TIMEOUT,
+      NotificationType.ONLINE_MEET_REQUEST,
+      NotificationType.ONLINE_MEET_TIMEOUT,
+      NotificationType.SOCIAL_EXCHANGE_REQUEST,
+      NotificationType.PHONE_EXCHANGE_REQUEST
+    ].includes(entry.type))
+    .map((entry) => ({ type: entry.type, count: entry._count._all }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    businessOverview: {
+      totalUsers,
+      activeSubscriptions,
+      onboardingCompleted,
+      employeeCount: employees.length
+    },
+    membershipAndVerification: {
+      totalUsers,
+      verifiedUsers,
+      rejectedOrBannedUsers: rejectedUsers + bannedUsers,
+      rejectedUsers,
+      bannedUsers,
+      onboardingCompleted,
+      verificationQueue
+    },
+    subscriptionOverview: {
+      activeSubscriptions,
+      planDistribution,
+      paymentIssueCount
+    },
+    engagementAndMatchActivity: {
+      likesCount,
+      matchesCount,
+      offlineMeetRequests: offlineMeetCaseCount,
+      onlineMeetRequests: onlineMeetCaseCount,
+      socialExchangeRequests: socialExchangeCaseCount,
+      phoneExchangeRequests: phoneExchangeCaseCount,
+      activeSocialExchangeRequests,
+      activePhoneExchangeRequests
+    },
+    coordinationOperations: {
+      pendingOfflineCoordination,
+      pendingOnlineCoordination,
+      pendingCoordinationTotal: pendingOfflineCoordination + pendingOnlineCoordination
+    },
+    queuesAndAttention: {
+      verificationQueue,
+      pendingMatchCoordinationQueue: pendingOfflineCoordination + pendingOnlineCoordination,
+      paymentIssueQueue: paymentIssueCount,
+      pendingOperationalFollowUps: unreadOperationalAlerts
+    },
+    employeeWorkload: {
+      totalEmployees: employees.length,
+      perEmployee: perEmployeeWorkload
+    },
+    alertsActivity: {
+      recentWindowDays: 7,
+      recentAlertsTotal: notificationsInPastWeek,
+      unreadOperationalAlerts,
+      byType: recentAlertBreakdown
+    }
   };
 }
 

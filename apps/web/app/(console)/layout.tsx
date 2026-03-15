@@ -2,17 +2,18 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Users, Video, LogOut } from "lucide-react";
+import { Users, Video, LogOut, Shield } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { apiRequest, setAuthToken } from "@/lib/api";
 
-type MePayload = { role: "USER" | "EMPLOYEE" | "ADMIN"; firstName?: string | null; lastName?: string | null; displayName?: string | null };
+type MePayload = { role: "USER" | "EMPLOYEE" | "ADMIN"; isAdmin?: boolean; firstName?: string | null; lastName?: string | null; displayName?: string | null };
 
 export default function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("Employee");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -20,6 +21,12 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
         const me = await apiRequest<MePayload>("/me", { auth: true });
         if (me.role !== "EMPLOYEE" && me.role !== "ADMIN") {
           throw new Error("forbidden");
+        }
+        const hasAdminAccess = me.role === "ADMIN" || me.isAdmin === true;
+        setIsAdmin(hasAdminAccess);
+        if (pathname === "/admin" && !hasAdminAccess) {
+          router.replace("/verify");
+          return;
         }
         setName([me.firstName, me.lastName].filter(Boolean).join(" ") || me.displayName || "Employee");
       } catch {
@@ -30,14 +37,15 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
       }
     };
     void run();
-  }, [router]);
+  }, [pathname, router]);
 
   const navItems = useMemo(
     () => [
       { label: "Video Verification", icon: Video, href: "/verify" },
-      { label: "Match Handler", icon: Users, href: "/agent" }
+      { label: "Match Handler", icon: Users, href: "/agent" },
+      ...(isAdmin ? [{ label: "Founder Dashboard", icon: Shield, href: "/admin" }] : [])
     ],
-    []
+    [isAdmin]
   );
 
   if (loading) {
