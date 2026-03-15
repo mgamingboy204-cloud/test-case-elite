@@ -21,7 +21,7 @@
     "react-dom": "19.2.3",
     "tailwind-merge": "^3.5.0",
     "three": "^0.183.2",
-    "@elite/shared": "file:../../packages/shared"
+    "@elite/shared": "*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
