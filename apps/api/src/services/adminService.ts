@@ -49,6 +49,26 @@ type RefundListItem = Prisma.RefundRequestGetPayload<{
 
 type VerificationWorkerView = "ACTIVE" | "COMPLETED" | "REJECTED" | "TIMEOUT" | "ALL";
 
+const ADMIN_NOTIFICATION_TYPES = [
+  NotificationType.VIDEO_VERIFICATION_UPDATE,
+  NotificationType.OFFLINE_MEET_REQUEST,
+  NotificationType.OFFLINE_MEET_TIMEOUT,
+  NotificationType.OFFLINE_MEET_NO_OVERLAP,
+  NotificationType.ONLINE_MEET_REQUEST,
+  NotificationType.ONLINE_MEET_TIMEOUT,
+  NotificationType.ONLINE_MEET_NO_OVERLAP,
+  NotificationType.SOCIAL_EXCHANGE_REQUEST,
+  NotificationType.PHONE_EXCHANGE_REQUEST
+] as const;
+
+type AdminNotificationType = (typeof ADMIN_NOTIFICATION_TYPES)[number];
+
+const ADMIN_NOTIFICATION_TYPE_SET: ReadonlySet<NotificationType> = new Set(ADMIN_NOTIFICATION_TYPES);
+
+function isAdminNotificationType(type: NotificationType): type is AdminNotificationType {
+  return ADMIN_NOTIFICATION_TYPE_SET.has(type);
+}
+
 const VERIFICATION_VIEW_STATUS_MAP: Record<Exclude<VerificationWorkerView, "ALL">, VerificationRequestStatus[]> = {
   ACTIVE: ["REQUESTED", "ASSIGNED", "IN_PROGRESS"],
   COMPLETED: ["COMPLETED"],
@@ -204,17 +224,7 @@ export async function getDashboard() {
         createdAt: { gte: oneWeekAgo },
         isRead: false,
         type: {
-          in: [
-            "VIDEO_VERIFICATION_UPDATE",
-            "OFFLINE_MEET_REQUEST",
-            "OFFLINE_MEET_TIMEOUT",
-            "OFFLINE_MEET_NO_OVERLAP",
-            "ONLINE_MEET_REQUEST",
-            "ONLINE_MEET_TIMEOUT",
-            "ONLINE_MEET_NO_OVERLAP",
-            "PHONE_EXCHANGE_REQUEST",
-            "SOCIAL_EXCHANGE_REQUEST"
-          ]
+          in: ADMIN_NOTIFICATION_TYPES
         }
       }
     })
@@ -277,15 +287,7 @@ export async function getDashboard() {
   });
 
   const recentAlertBreakdown = notificationsByType
-    .filter((entry) => [
-      NotificationType.VIDEO_VERIFICATION_UPDATE,
-      NotificationType.OFFLINE_MEET_REQUEST,
-      NotificationType.OFFLINE_MEET_TIMEOUT,
-      NotificationType.ONLINE_MEET_REQUEST,
-      NotificationType.ONLINE_MEET_TIMEOUT,
-      NotificationType.SOCIAL_EXCHANGE_REQUEST,
-      NotificationType.PHONE_EXCHANGE_REQUEST
-    ].includes(entry.type))
+    .filter((entry) => isAdminNotificationType(entry.type))
     .map((entry) => ({ type: entry.type, count: entry._count._all }))
     .sort((a, b) => b.count - a.count);
 
