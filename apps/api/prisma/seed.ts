@@ -87,7 +87,6 @@ async function main() {
       city: "HQ",
       profession: "Administrator",
       bioShort: "Administrative account.",
-      preferences: {}
     },
     create: {
       userId: admin.id,
@@ -97,7 +96,6 @@ async function main() {
       city: "HQ",
       profession: "Administrator",
       bioShort: "Administrative account.",
-      preferences: {}
     }
   });
 
@@ -111,72 +109,7 @@ async function main() {
     }
   });
 
-  const userPasswordHash = await bcrypt.hash("Password@123", 10);
-  const demoUsers = Array.from({ length: 10 }, (_, index) => ({
-    phone: `55500000${index + 1}`.padEnd(10, "0"),
-    email: `user${index + 1}@example.com`,
-    name: `Verified User ${index + 1}`,
-    gender: index % 2 === 0 ? Gender.FEMALE : Gender.MALE,
-    age: 24 + index,
-    city: "Metro City",
-    profession: "Professional",
-    bioShort: "Verified member of Elite Match.",
-    preferences: {}
-  }));
-
-  for (const demo of demoUsers) {
-    const user = await prisma.user.upsert({
-      where: { phone: demo.phone },
-      update: {
-        email: demo.email,
-        passwordHash: userPasswordHash,
-        status: UserStatus.APPROVED,
-        verifiedAt: new Date(),
-        phoneVerifiedAt: new Date(),
-        onboardingStep: OnboardingStep.ACTIVE,
-        videoVerificationStatus: VideoVerificationStatus.APPROVED,
-        paymentStatus: OnboardingPaymentStatus.PAID,
-        profileCompletedAt: new Date()
-      },
-      create: {
-        phone: demo.phone,
-        email: demo.email,
-        passwordHash: userPasswordHash,
-        status: UserStatus.APPROVED,
-        verifiedAt: new Date(),
-        phoneVerifiedAt: new Date(),
-        onboardingStep: OnboardingStep.ACTIVE,
-        videoVerificationStatus: VideoVerificationStatus.APPROVED,
-        paymentStatus: OnboardingPaymentStatus.PAID,
-        profileCompletedAt: new Date()
-      }
-    });
-
-    await prisma.profile.upsert({
-      where: { userId: user.id },
-      update: {
-        name: demo.name,
-        gender: demo.gender,
-        age: demo.age,
-        city: demo.city,
-        profession: demo.profession,
-        bioShort: demo.bioShort,
-        preferences: demo.preferences
-      },
-      create: {
-        userId: user.id,
-        name: demo.name,
-        gender: demo.gender,
-        age: demo.age,
-        city: demo.city,
-        profession: demo.profession,
-        bioShort: demo.bioShort,
-        preferences: demo.preferences
-      }
-    });
-  }
-
-  console.log("Seed completed: admin + verified demo users.");
+  console.log("Seed completed: bootstrap admin + employee users.");
 }
 
 main()

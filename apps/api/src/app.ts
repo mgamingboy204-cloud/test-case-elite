@@ -50,7 +50,11 @@ if (env.NODE_ENV === "production") {
   });
 }
 app.use(express.json({ limit: "20mb" }));
-const allowedOrigins = [env.WEB_ORIGIN, env.ADMIN_ORIGIN].filter(Boolean);
+const configuredOrigins = [env.WEB_ORIGIN, env.ADMIN_ORIGIN, ...(env.CORS_ALLOWED_ORIGINS?.split(",") ?? [])]
+  .map((value) => value?.trim() ?? "")
+  .filter((value): value is string => value.length > 0);
+const allowedOrigins = Array.from(new Set(configuredOrigins));
+
 const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
     if (!origin) {
@@ -64,7 +68,9 @@ const corsOptions: CorsOptions = {
     callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
-  allowedHeaders: ["Authorization", "Content-Type", "X-Request-Id"]
+  methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Authorization", "Content-Type", "X-Request-Id", "x-onboarding-token"],
+  optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));

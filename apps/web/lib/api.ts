@@ -1,4 +1,16 @@
-export const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000"}`;
+function resolveApiBaseUrl() {
+  const configured = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").trim();
+  const fallback = "http://localhost:4000";
+  const baseUrl = (configured || fallback).replace(/\/$/, "");
+
+  if (process.env.NODE_ENV === "production" && /localhost|127\.0\.0\.1/.test(baseUrl)) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL must not point to localhost in production.");
+  }
+
+  return baseUrl;
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 export class ApiError extends Error {
   status: number;
@@ -89,7 +101,10 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
 
   const runRequest = async () => {
     const headers = new Headers(options?.headers);
-    headers.set("Content-Type", "application/json");
+    const hasJsonBody = options?.body !== undefined && !(options.body instanceof FormData);
+    if (hasJsonBody && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
 
     if (options?.auth) {
       const token = getAuthToken();

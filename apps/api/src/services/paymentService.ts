@@ -169,6 +169,42 @@ export async function verifyOnboardingPayment(options: {
     throw new HttpError(400, { message: "Missing payment plan details. Please initiate payment again." });
   }
 
+  const existingPaidUser = await prisma.user.findUnique({
+    where: { id: options.user.id },
+    select: {
+      paymentStatus: true,
+      onboardingPaymentRef: true,
+      onboardingPaymentVerifiedAt: true,
+      subscriptionStartedAt: true,
+      subscriptionEndsAt: true
+    }
+  });
+
+  if (
+    existingPaidUser?.paymentStatus === "PAID" &&
+    existingPaidUser.onboardingPaymentRef === options.orderId &&
+    existingPaidUser.onboardingPaymentVerifiedAt
+  ) {
+    const latestPaid = await prisma.payment.findFirst({
+      where: { userId: options.user.id, status: "PAID" },
+      orderBy: { paidAt: "desc" }
+    });
+
+    return {
+      ok: true,
+      payment: latestPaid,
+      paymentStatus: "PAID",
+      onboardingStep: "PAID",
+      renewalPolicy: "MANUAL_ONLY",
+      autoRenew: false,
+      taxIncluded: true,
+      amountInr: options.user.onboardingPaymentAmount,
+      durationMonths: PLAN_DETAILS[options.user.onboardingPaymentPlan].durationMonths,
+      subscriptionStartedAt: existingPaidUser.subscriptionStartedAt,
+      subscriptionEndsAt: existingPaidUser.subscriptionEndsAt
+    };
+  }
+
   verifyRazorpaySignature({
     orderId: options.orderId,
     paymentId: options.paymentId,
@@ -325,33 +361,40 @@ export async function markOnboardingPaymentFailed(options: {
       }
     });
 
-    await tx.notification.upsert({
+    const existingPaymentIssueNotification = await tx.notification.findFirst({
       where: {
-        userId_type_actorUserId_matchId: {
-          userId: options.user.id,
-          type: "SYSTEM_PROMO",
-          actorUserId: undefined as any,
-          matchId: undefined as any
-        }
-      },
-      update: {
-        title: "Payment Action Required",
-        message: "Your membership payment did not complete. Please retry or contact premium support.",
-        metadata: { eventType: "PAYMENT_ISSUE" },
-        deepLinkUrl: "/onboarding/payment",
-        isRead: false,
-        readAt: null,
-        createdAt: new Date()
-      },
-      create: {
         userId: options.user.id,
         type: "SYSTEM_PROMO",
-        title: "Payment Action Required",
-        message: "Your membership payment did not complete. Please retry or contact premium support.",
-        metadata: { eventType: "PAYMENT_ISSUE" },
         deepLinkUrl: "/onboarding/payment"
-      }
+      },
+      orderBy: { createdAt: "desc" }
     });
+
+    if (existingPaymentIssueNotification) {
+      await tx.notification.update({
+        where: { id: existingPaymentIssueNotification.id },
+        data: {
+          title: "Payment Action Required",
+          message: "Your membership payment did not complete. Please retry or contact premium support.",
+          metadata: { eventType: "PAYMENT_ISSUE" },
+          deepLinkUrl: "/onboarding/payment",
+          isRead: false,
+          readAt: null,
+          createdAt: new Date()
+        }
+      });
+    } else {
+      await tx.notification.create({
+        data: {
+          userId: options.user.id,
+          type: "SYSTEM_PROMO",
+          title: "Payment Action Required",
+          message: "Your membership payment did not complete. Please retry or contact premium support.",
+          metadata: { eventType: "PAYMENT_ISSUE" },
+          deepLinkUrl: "/onboarding/payment"
+        }
+      });
+    }
   });
 
   return {

@@ -331,7 +331,8 @@ function toAlert(item: NotificationApiItem): Alert {
 
 export async function fetchAlerts(): Promise<Alert[]> {
   const response = await apiRequest<{ notifications: NotificationApiItem[] }>("/notifications", { auth: true });
-  return response.notifications.map(toAlert);
+  const deduped = Array.from(new Map(response.notifications.map((item) => [item.id, item])).values());
+  return deduped.map(toAlert);
 }
 
 export type ProfileViewModel = {
@@ -374,7 +375,7 @@ export type ProfileViewModel = {
 
 const FALLBACK_PROFILE_IMAGE = "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&auto=format&fit=crop&q=80";
 type RawProfileResponse = {
-  viewModel?: {
+  viewModel: {
     name?: string;
     dateOfBirth?: string | null;
     age?: number | null;
@@ -403,28 +404,29 @@ type RawProfileResponse = {
 
 export async function fetchProfile(): Promise<ProfileViewModel> {
   const data = await apiRequest<RawProfileResponse>("/profile", { auth: true });
-  const image = data.photos?.[0]?.url ?? data.viewModel?.photos?.[0]?.url ?? FALLBACK_PROFILE_IMAGE;
+  const vm = data.viewModel;
+  const image = vm.photos?.[0]?.url ?? FALLBACK_PROFILE_IMAGE;
   return {
-    name: data.viewModel?.name ?? data.profile?.name ?? "",
-    age: data.viewModel?.age ?? data.profile?.age ?? null,
-    dateOfBirth: data.viewModel?.dateOfBirth ?? null,
-    gender: data.viewModel?.gender ?? null,
-    location: data.viewModel?.location ?? data.profile?.city ?? "",
-    place: data.viewModel?.place ?? data.profile?.city ?? "",
+    name: vm.name ?? "",
+    age: vm.age ?? null,
+    dateOfBirth: vm.dateOfBirth ?? null,
+    gender: vm.gender ?? null,
+    location: vm.location ?? "",
+    place: vm.place ?? "",
     image,
-    profession: data.viewModel?.profession ?? data.profile?.profession ?? "",
-    height: data.viewModel?.height ?? null,
-    heightCm: data.viewModel?.heightCm ?? null,
-    story: data.viewModel?.story ?? data.profile?.bioShort ?? "",
-    bio: data.viewModel?.bio ?? data.profile?.bioShort ?? "",
-    subscription: data.viewModel?.subscription ?? { tier: "FREE", status: "INACTIVE" },
-    assignedExecutive: data.viewModel?.assignedExecutive ?? null,
-    settings: data.viewModel?.settings ?? {
+    profession: vm.profession ?? "",
+    height: vm.height ?? null,
+    heightCm: vm.heightCm ?? null,
+    story: vm.story ?? "",
+    bio: vm.bio ?? "",
+    subscription: vm.subscription ?? { tier: "FREE", status: "INACTIVE" },
+    assignedExecutive: vm.assignedExecutive ?? null,
+    settings: vm.settings ?? {
       pushNotificationsEnabled: true,
       profileVisible: true,
       showOnlineStatus: true,
       discoverableByPremiumOnly: false
     },
-    photos: data.viewModel?.photos ?? data.photos ?? []
+    photos: vm.photos ?? []
   };
 }

@@ -4,12 +4,12 @@ const prisma = new PrismaClient();
 
 const seedPhones = [
   "9999999999",
-  ...Array.from({ length: 10 }, (_, i) => `55500000${i + 1}`.padEnd(10, "0"))
+  "8888888888"
 ];
 
 const seedEmails = [
   "admin@example.com",
-  ...Array.from({ length: 10 }, (_, i) => `user${i + 1}@example.com`)
+  "employee1@example.com"
 ];
 
 async function purgeUser(userId: string) {
@@ -27,7 +27,7 @@ async function purgeUser(userId: string) {
     await tx.consent.deleteMany({ where: { matchId: { in: matchIds } } });
     await tx.phoneExchangeEvent.deleteMany({ where: { matchId: { in: matchIds } } });
     await tx.match.deleteMany({ where: { id: { in: matchIds } } });
-    await tx.like.deleteMany({ where: { OR: [{ fromUserId: userId }, { toUserId: userId }] } });
+    await tx.like.deleteMany({ where: { OR: [{ actorUserId: userId }, { targetUserId: userId }] } });
     await tx.report.deleteMany({ where: { OR: [{ reporterId: userId }, { reportedUserId: userId }] } });
     await tx.refundRequest.deleteMany({ where: { userId } });
     await tx.payment.deleteMany({ where: { userId } });
@@ -40,7 +40,7 @@ async function purgeUser(userId: string) {
 
 async function main() {
   if (process.env.RUN_SEED_CLEANUP !== "true") {
-    console.log("Seed cleanup skipped. Set RUN_SEED_CLEANUP=true to purge demo users.");
+    console.log("Seed cleanup skipped. Set RUN_SEED_CLEANUP=true to purge bootstrap seed users.");
     return;
   }
 
