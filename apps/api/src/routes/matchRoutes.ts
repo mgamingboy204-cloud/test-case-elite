@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { ConsentSchema } from "@elite/shared";
+import { ConsentSchema, OfflineMeetSelectionSchema } from "@elite/shared";
 import {
   listMatchesHandler,
   offlineMeetUnlockHandler,
@@ -10,6 +10,7 @@ import {
   socialExchangeUnlockHandler,
   unmatchHandler
 } from "../controllers/matchController";
+import { getOfflineMeetCaseForUserHandler, submitOfflineMeetSelectionsHandler } from "../controllers/offlineMeetController";
 import { requireAuth, requireAuthHeader } from "../middlewares/auth";
 import { requireMatchingEligible } from "../middlewares/onboarding";
 import { validateBody, validateParams } from "../middlewares/validate";
@@ -54,6 +55,23 @@ router.get(
   validateParams(z.object({ matchId: z.string() })),
   asyncHandler(socialExchangeUnlockHandler)
 );
+
+router.get(
+  "/offline-meet-cases/:matchId",
+  requireAuth,
+  requireMatchingEligible,
+  validateParams(z.object({ matchId: z.string() })),
+  asyncHandler(getOfflineMeetCaseForUserHandler)
+);
+router.post(
+  "/offline-meet-cases/:matchId/selections",
+  requireAuth,
+  requireMatchingEligible,
+  validateParams(z.object({ matchId: z.string() })),
+  validateBody(OfflineMeetSelectionSchema),
+  asyncHandler(submitOfflineMeetSelectionsHandler)
+);
+
 router.delete(
   "/matches/:matchId",
   requireAuth,

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { OfflineMeetAdminCancelSchema, OfflineMeetFinalizeSchema, OfflineMeetNoResponseSchema, OfflineMeetOptionsSchema } from "@elite/shared";
 import {
   approveRefundHandler,
   assignVerificationRequestHandler,
@@ -22,6 +23,15 @@ import {
   shiftPaymentDateHandler,
   startVerificationRequestHandler
 } from "../controllers/adminController";
+import {
+  assignOfflineMeetCaseHandler,
+  finalizeOfflineMeetCaseHandler,
+  listOfflineMeetCasesHandler,
+  markOfflineMeetNoOverlapHandler,
+  markOfflineMeetTimeoutHandler,
+  sendOfflineMeetOptionsHandler,
+  updateOfflineMeetCancelOrRescheduleHandler
+} from "../controllers/offlineMeetController";
 import { requireAdmin, requireAuth } from "../middlewares/auth";
 import { validateBody, validateParams } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -153,6 +163,56 @@ router.post(
   requireAdmin,
   validateBody(z.object({ userId: z.string().uuid(), daysBack: z.coerce.number().int().min(1) })),
   asyncHandler(shiftPaymentDateHandler)
+);
+
+
+
+router.get("/admin/offline-meets", requireAuth, requireAdmin, asyncHandler(listOfflineMeetCasesHandler));
+router.post(
+  "/admin/offline-meets/:caseId/assign",
+  requireAuth,
+  requireAdmin,
+  validateParams(z.object({ caseId: z.string().uuid() })),
+  asyncHandler(assignOfflineMeetCaseHandler)
+);
+router.post(
+  "/admin/offline-meets/:caseId/options",
+  requireAuth,
+  requireAdmin,
+  validateParams(z.object({ caseId: z.string().uuid() })),
+  validateBody(OfflineMeetOptionsSchema),
+  asyncHandler(sendOfflineMeetOptionsHandler)
+);
+router.post(
+  "/admin/offline-meets/:caseId/finalize",
+  requireAuth,
+  requireAdmin,
+  validateParams(z.object({ caseId: z.string().uuid() })),
+  validateBody(OfflineMeetFinalizeSchema),
+  asyncHandler(finalizeOfflineMeetCaseHandler)
+);
+router.post(
+  "/admin/offline-meets/:caseId/timeout",
+  requireAuth,
+  requireAdmin,
+  validateParams(z.object({ caseId: z.string().uuid() })),
+  validateBody(OfflineMeetNoResponseSchema),
+  asyncHandler(markOfflineMeetTimeoutHandler)
+);
+router.post(
+  "/admin/offline-meets/:caseId/no-overlap",
+  requireAuth,
+  requireAdmin,
+  validateParams(z.object({ caseId: z.string().uuid() })),
+  asyncHandler(markOfflineMeetNoOverlapHandler)
+);
+router.post(
+  "/admin/offline-meets/:caseId/case-update",
+  requireAuth,
+  requireAdmin,
+  validateParams(z.object({ caseId: z.string().uuid() })),
+  validateBody(OfflineMeetAdminCancelSchema),
+  asyncHandler(updateOfflineMeetCancelOrRescheduleHandler)
 );
 
 export default router;
