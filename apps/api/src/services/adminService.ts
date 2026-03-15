@@ -211,9 +211,11 @@ export async function startVerificationRequest(requestId: string, meetUrl: strin
     where: { id: requestId },
     data: {
       status: "IN_PROGRESS",
+      assignedEmployeeId: actorUserId,
+      assignedAt: now,
       verificationLink: meetUrl,
       meetUrl,
-      linkExpiresAt: new Date(now.getTime() + 10 * 60 * 1000)
+      linkExpiresAt: new Date(now.getTime() + 5 * 60 * 1000)
     }
   });
   await prisma.user.update({
@@ -249,6 +251,32 @@ export async function startVerificationRequest(requestId: string, meetUrl: strin
       actorUserId,
       type: "VIDEO_VERIFICATION_UPDATE",
       metadata: { meetUrl, cta: "Join verification call" }
+    }
+  });
+  return { request };
+}
+
+export async function assignVerificationRequest(requestId: string, actorUserId: string) {
+  const now = new Date();
+  const request = await prisma.verificationRequest.update({
+    where: { id: requestId },
+    data: {
+      status: "ASSIGNED",
+      assignedEmployeeId: actorUserId,
+      assignedAt: now
+    }
+  });
+  await prisma.user.update({
+    where: { id: request.userId },
+    data: { videoVerificationStatus: "IN_PROGRESS", onboardingStep: "VIDEO_VERIFICATION_PENDING" }
+  });
+  await prisma.auditLog.create({
+    data: {
+      actorUserId,
+      action: "verification_assigned",
+      targetType: "VerificationRequest",
+      targetId: request.id,
+      metadata: {}
     }
   });
   return { request };
@@ -291,6 +319,8 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
 }
 
 export async function rejectVerificationRequest(requestId: string, actorUserId: string, reason: string) {
+  const normalizedReason = reason.trim();
+  const marksFraud = /(fake|fraud|impersonat|scam)/i.test(normalizedReason);
   const now = new Date();
   const request = await prisma.verificationRequest.update({
     where: { id: requestId },
@@ -302,14 +332,14 @@ export async function rejectVerificationRequest(requestId: string, actorUserId: 
       linkExpiresAt: undefined,
       decidedAt: now,
       decidedBy: actorUserId,
-      reason: reason.trim()
+      reason: normalizedReason
     }
 
   });
   await prisma.user.update({
     where: { id: request.userId },
     data: {
-      status: "REJECTED",
+      status: marksFraud ? "BANNED" : "REJECTED",
       videoVerificationStatus: "REJECTED",
       onboardingStep: "VIDEO_VERIFICATION_PENDING"
     }
@@ -320,7 +350,7 @@ export async function rejectVerificationRequest(requestId: string, actorUserId: 
       action: "verification_rejected",
       targetType: "VerificationRequest",
       targetId: request.id,
-      metadata: { reason: reason.trim() }
+      metadata: { reason: normalizedReason, markedFraud: marksFraud }
     }
   });
   return { request };
@@ -344,9 +374,11 @@ export async function setVerificationMeetLink(userId: string, meetUrl: string, a
     where: { id: request.id },
     data: {
       status: "IN_PROGRESS",
+      assignedEmployeeId: actorUserId,
+      assignedAt: now,
       meetUrl,
       verificationLink: meetUrl,
-      linkExpiresAt: new Date(now.getTime() + 10 * 60 * 1000)
+      linkExpiresAt: new Date(now.getTime() + 5 * 60 * 1000)
     }
   });
   await prisma.user.update({
@@ -428,6 +460,8 @@ export async function approveVerificationForUser(userId: string, actorUserId: st
 
 export async function rejectVerificationForUser(userId: string, actorUserId: string, reason: string) {
   const request = await findOrCreateVerificationRequest(userId);
+  const normalizedReason = reason.trim();
+  const marksFraud = /(fake|fraud|impersonat|scam)/i.test(normalizedReason);
   const now = new Date();
   const updated = await prisma.verificationRequest.update({
     where: { id: request.id },
@@ -439,14 +473,14 @@ export async function rejectVerificationForUser(userId: string, actorUserId: str
       linkExpiresAt: undefined,
       decidedAt: now,
       decidedBy: actorUserId,
-      reason: reason.trim()
+      reason: normalizedReason
     }
 
   });
   await prisma.user.update({
     where: { id: userId },
     data: {
-      status: "REJECTED",
+      status: marksFraud ? "BANNED" : "REJECTED",
       videoVerificationStatus: "REJECTED",
       onboardingStep: "VIDEO_VERIFICATION_PENDING"
     }
@@ -457,7 +491,7 @@ export async function rejectVerificationForUser(userId: string, actorUserId: str
       action: "verification_rejected",
       targetType: "VerificationRequest",
       targetId: updated.id,
-      metadata: { reason: reason.trim() }
+      metadata: { reason: normalizedReason, markedFraud: marksFraud }
     }
   });
   return { request: updated };

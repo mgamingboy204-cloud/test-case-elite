@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import {
   createVerificationRequest,
   getLatestVerificationRequest,
+  getVerificationStatusPayload,
+  requestWhatsAppVerificationHelp,
   submitVerificationVideo
 } from "../services/verificationService";
 
@@ -22,24 +24,16 @@ export async function getMyVerificationRequestHandler(req: Request, res: Respons
 }
 
 export async function getVerificationStatusHandler(req: Request, res: Response) {
-  const result = await getLatestVerificationRequest(res.locals.user.id);
-  if (result.request?.status === "IN_PROGRESS" && result.request.linkExpiresAt) {
-    const isExpired = result.request.linkExpiresAt.getTime() < Date.now();
-    if (isExpired) {
-      return res.json({ request: { ...result.request, meetUrl: null, verificationLink: null, linkExpiresAt: null } });
-    }
-  }
+  const result = await getVerificationStatusPayload(res.locals.user.id);
   return res.json(result);
 }
 
 export async function getMyVerificationStatusHandler(req: Request, res: Response) {
-  const result = await getLatestVerificationRequest(res.locals.user.id);
-  if (!result.request) {
-    return res.json({ status: "NOT_REQUESTED", meetUrl: null });
-  }
-  const meetUrl =
-    result.request.status === "IN_PROGRESS" && result.request.linkExpiresAt && result.request.linkExpiresAt.getTime() < Date.now()
-      ? null
-      : result.request.meetUrl ?? result.request.verificationLink ?? null;
-  return res.json({ status: result.request.status, meetUrl });
+  const result = await getVerificationStatusPayload(res.locals.user.id);
+  return res.json({ status: result.displayStatus, meetUrl: result.meetUrl, canRetry: result.canRetry });
+}
+
+export async function requestVerificationWhatsAppHelpHandler(req: Request, res: Response) {
+  const result = await requestWhatsAppVerificationHelp(res.locals.user.id);
+  return res.json(result);
 }

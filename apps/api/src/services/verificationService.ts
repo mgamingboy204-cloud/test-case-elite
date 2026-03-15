@@ -1,12 +1,15 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { VerificationRequestStatus } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { env } from "../config/env";
 import { HttpError } from "../utils/httpErrors";
 
-const ACTIVE_VERIFICATION_STATUSES = ["REQUESTED", "IN_PROGRESS"] as const;
+const ACTIVE_VERIFICATION_STATUSES = ["REQUESTED", "ASSIGNED", "IN_PROGRESS"] as const;
+const USER_RETRYABLE_STATUSES = ["REJECTED", "TIMED_OUT"] as const;
 const MAX_VIDEO_SIZE_BYTES = 25 * 1024 * 1024;
+const RESPONSE_TIMEOUT_MS = 5 * 60 * 1000;
 const allowedVideoMimeTypes = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
 function calculateBase64Size(base64: string) {
@@ -24,6 +27,37 @@ function ensureVerificationUploadsDir() {
   if (env.STORAGE_PROVIDER !== "local") return;
   const dir = path.join(process.cwd(), "uploads", "verification");
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+function isRequestExpired(request: { status: VerificationRequestStatus; createdAt: Date }) {
+  if (request.status !== "REQUESTED" && request.status !== "ASSIGNED") return false;
+  return request.createdAt.getTime() + RESPONSE_TIMEOUT_MS <= Date.now();
+}
+
+type VerificationRequestRecord = Awaited<ReturnType<typeof prisma.verificationRequest.findFirst>>;
+
+async function markTimedOutIfNeeded(request: NonNullable<VerificationRequestRecord>) {
+  if (!isRequestExpired(request)) return request;
+  return prisma.verificationRequest.update({
+    where: { id: request.id },
+    data: {
+      status: "TIMED_OUT",
+      reason: "Timed out without employee response",
+      verificationLink: null,
+      meetUrl: null,
+      linkExpiresAt: null,
+      decidedAt: new Date()
+    }
+  });
+}
+
+function mapUserStatus(requestStatus: VerificationRequestStatus) {
+  if (requestStatus === "REQUESTED") return "PENDING" as const;
+  if (requestStatus === "ASSIGNED") return "ASSIGNED" as const;
+  if (requestStatus === "IN_PROGRESS") return "ASSIGNED" as const;
+  if (requestStatus === "COMPLETED") return "APPROVED" as const;
+  if (requestStatus === "REJECTED") return "REJECTED" as const;
+  return "TIMED_OUT" as const;
 }
 
 export async function submitVerificationVideo(options: { userId: string; dataUrl: string }) {
@@ -83,8 +117,17 @@ export async function createVerificationRequest(options: { userId: string }) {
     orderBy: { createdAt: "desc" }
   });
   if (existing) {
-    return existing;
+    return markTimedOutIfNeeded(existing);
   }
+
+  const latest = await prisma.verificationRequest.findFirst({
+    where: { userId: options.userId },
+    orderBy: { createdAt: "desc" }
+  });
+  if (latest && !USER_RETRYABLE_STATUSES.includes(latest.status as (typeof USER_RETRYABLE_STATUSES)[number])) {
+    return latest;
+  }
+
   const request = await prisma.verificationRequest.create({
     data: { userId: options.userId, status: "REQUESTED" }
   });
@@ -107,12 +150,71 @@ export async function getLatestVerificationRequest(userId: string) {
   if (!request) {
     return { request: null };
   }
-  if (request.status === "IN_PROGRESS" && request.linkExpiresAt && request.linkExpiresAt < new Date()) {
-    const updated = await prisma.verificationRequest.update({
-      where: { id: request.id },
-      data: { status: "REQUESTED", verificationLink: null, meetUrl: null, linkExpiresAt: null }
-    });
-    return { request: updated };
+
+  const refreshed = await markTimedOutIfNeeded(request);
+  return { request: refreshed };
+}
+
+export async function getVerificationStatusPayload(userId: string) {
+  const { request } = await getLatestVerificationRequest(userId);
+
+  if (!request) {
+    return {
+      request: null,
+      status: "NOT_REQUESTED" as const,
+      displayStatus: "PENDING" as const,
+      meetUrl: null,
+      canRetry: true,
+      remainingSeconds: RESPONSE_TIMEOUT_MS / 1000,
+      whatsappHelpRequestedAt: null
+    };
   }
-  return { request };
+
+  const remainingMs = Math.max(0, request.createdAt.getTime() + RESPONSE_TIMEOUT_MS - Date.now());
+
+  return {
+    request,
+    status: request.status,
+    displayStatus: mapUserStatus(request.status),
+    meetUrl: request.meetUrl ?? request.verificationLink ?? null,
+    canRetry: request.status === "TIMED_OUT",
+    remainingSeconds: Math.floor(remainingMs / 1000),
+    whatsappHelpRequestedAt: request.reason?.startsWith("WHATSAPP_HELP_REQUESTED:")
+      ? request.reason.replace("WHATSAPP_HELP_REQUESTED:", "")
+      : null
+  };
+}
+
+export async function requestWhatsAppVerificationHelp(userId: string) {
+  const latest = await prisma.verificationRequest.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" }
+  });
+
+  if (!latest) {
+    throw new HttpError(400, { message: "Please request verification first." });
+  }
+
+  const timestamp = new Date().toISOString();
+  await prisma.verificationRequest.update({
+    where: { id: latest.id },
+    data: {
+      reason: `WHATSAPP_HELP_REQUESTED:${timestamp}`
+    }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      actorUserId: userId,
+      action: "verification_whatsapp_help_requested",
+      targetType: "VerificationRequest",
+      targetId: latest.id,
+      metadata: {
+        note: "Manual employee follow-up required. Do not automate responses.",
+        requestedAt: timestamp
+      }
+    }
+  });
+
+  return { ok: true, requestedAt: timestamp };
 }
