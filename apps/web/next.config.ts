@@ -4,11 +4,20 @@ import path from "path";
 const nextConfig: NextConfig = {
   transpilePackages: ["@elite/shared"],
   experimental: {
-    // This allows Vercel to bundle files that live outside the apps/web directory
+    // Allows Vercel to bundle files outside the apps/web directory
     outputFileTracingRoot: path.join(__dirname, "../../"),
+    
+    // THIS IS THE NEW FIX: Tells Turbopack where to find your shared package
+    turbopack: {
+      resolveAlias: {
+        "@elite/shared": path.join(__dirname, "../../packages/shared"),
+        "@elite/shared/*": path.join(__dirname, "../../packages/shared/*"),
+      },
+    },
   },
+  
+  // We keep this as a fallback just in case Vercel decides to use Webpack
   webpack: (config) => {
-    // This forces Webpack to look in the actual folder instead of node_modules
     config.resolve.alias = {
       ...config.resolve.alias,
       "@elite/shared": path.resolve(__dirname, "../../packages/shared"),
