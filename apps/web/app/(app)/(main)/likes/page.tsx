@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { routeForOnboardingStep, useAuth } from "@/contexts/AuthContext";
 import { X, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -27,7 +27,7 @@ export default function LikesPage() {
 
   useEffect(() => {
     if (!isAuthenticated) router.replace('/signin');
-    else if (onboardingStep !== 'COMPLETED') router.replace('/onboarding/verification'); 
+    else if (onboardingStep !== 'COMPLETED') router.replace(routeForOnboardingStep(onboardingStep)); 
   }, [isAuthenticated, onboardingStep, router]);
 
   if (!isAuthenticated || onboardingStep !== 'COMPLETED') return null;

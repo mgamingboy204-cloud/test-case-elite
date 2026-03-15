@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { routeForOnboardingStep, useAuth } from "@/contexts/AuthContext";
 import { Briefcase, Ruler, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -44,7 +44,7 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     if (!isAuthenticated) router.replace("/signin");
-    else if (onboardingStep !== "COMPLETED") router.replace("/onboarding/verification");
+    else if (onboardingStep !== "COMPLETED") router.replace(routeForOnboardingStep(onboardingStep));
   }, [isAuthenticated, onboardingStep, router]);
 
   const persistState = (nextCards: DiscoverState["cards"], cursor?: string) => {

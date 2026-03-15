@@ -225,7 +225,7 @@ describe("Refund eligibility logic", () => {
     await prisma.payment.create({
       data: {
         userId: user.id,
-        plan: "YEARLY",
+        plan: "TWELVE_MONTHS",
         amount: 100000,
         status: "PAID",
         paidAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10)

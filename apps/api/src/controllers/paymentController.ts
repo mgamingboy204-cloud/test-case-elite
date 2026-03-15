@@ -1,10 +1,14 @@
 import { Request, Response } from "express";
 import { getLatestPayment, initiateOnboardingPayment, verifyOnboardingPayment } from "../services/paymentService";
-import { confirmMockPayment, startMockPayment } from "../services/paymentMockService";
 
 export async function getMyPaymentHandler(req: Request, res: Response) {
   const result = await getLatestPayment(res.locals.user.id);
-  return res.json({ payment: result.payment, paymentStatus: res.locals.user.paymentStatus });
+  return res.json({
+    payment: result.payment,
+    paymentStatus: res.locals.user.paymentStatus,
+    renewalPolicy: "MANUAL_ONLY",
+    autoRenew: false
+  });
 }
 
 function normalizeCouponCode(value: unknown) {
@@ -44,20 +48,5 @@ export async function initiateOnboardingPaymentHandler(req: Request, res: Respon
 export async function verifyOnboardingPaymentHandler(req: Request, res: Response) {
   const { paymentRef } = req.body as { paymentRef: string };
   const result = await verifyOnboardingPayment({ user: res.locals.user, paymentRef });
-  return res.json(result);
-}
-
-export async function mockPaymentUnsupported(req: Request, res: Response) {
-  return res.status(404).json({ message: "Use /payments/initiate or /payments/verify." });
-}
-
-export async function startMockPaymentHandler(req: Request, res: Response) {
-  const couponCode = typeof req.body?.couponCode === "string" ? req.body.couponCode : null;
-  const result = await startMockPayment(res.locals.user, couponCode);
-  return res.json(result);
-}
-
-export async function confirmMockPaymentHandler(req: Request, res: Response) {
-  const result = await confirmMockPayment(res.locals.user);
   return res.json(result);
 }

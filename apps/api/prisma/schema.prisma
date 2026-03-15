@@ -61,7 +61,9 @@ enum OnboardingPaymentStatus {
 }
 
 enum PaymentPlan {
-  YEARLY
+  ONE_MONTH
+  FIVE_MONTHS
+  TWELVE_MONTHS
 }
 
 enum PaymentStatus {
@@ -149,6 +151,8 @@ model User {
   onboardingToken String? @unique
   onboardingTokenExpiresAt DateTime?
   onboardingPaymentRef String?
+  onboardingPaymentPlan PaymentPlan?
+  onboardingPaymentAmount Int?
   onboardingPaymentVerifiedAt DateTime?
   createdAt    DateTime @default(now())
   lastActiveAt DateTime @default(now())
