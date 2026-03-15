@@ -103,8 +103,10 @@ export default function AgentWorkspace() {
             <p className="text-sm text-foreground/60">Select a case to manage concierge coordination.</p>
           ) : mode === "OFFLINE" ? (
             <div className="space-y-5">
-              <p className="text-xs uppercase tracking-[0.2em] text-primary">{selectedOnline!.status.replaceAll("_", " ")}</p>
-              <h2 className="text-xl">{selectedOnline!.users[0]?.name} × {selectedOnline!.users[1]?.name}</h2>
+              <p className="text-xs uppercase tracking-[0.2em] text-primary">{selectedOffline!.status.replaceAll("_", " ")}</p>
+              <h2 className="text-xl">{selectedOffline!.users[0]?.name} × {selectedOffline!.users[1]?.name}</h2>
+
+              <div className="rounded-xl border border-border/40 p-3 text-xs text-foreground/70">Manual follow-up required when members need personal WhatsApp or concierge intervention. Log all sensitive updates through case actions only.</div>
               <div className="flex gap-2 flex-wrap">
                 <button disabled={busy === "assign"} onClick={() => void withAction("assign", async () => { await assignOfflineMeetCase(selectedOffline!.id); setFeedback("Case assigned to you."); })} className="rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.15em]">{busy === "assign" ? <Loader2 size={12} className="animate-spin inline" /> : "Assign"}</button>
                 <button onClick={() => void withAction("no-overlap", async () => { await markOfflineMeetNoOverlap(selectedOffline!.id); setFeedback("No-overlap recorded with 1-day cooldown."); })} className="rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.15em]">Mark No Overlap</button>

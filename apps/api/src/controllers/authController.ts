@@ -22,6 +22,7 @@ import {
   verifyOtpCodeOnly,
   verifyOtpAndGetUser
 } from "../services/authService";
+import { ensureUserExecutiveAssignmentAfterOnboarding, validateEmployeeLogin } from "../services/employeeService";
 import { HttpError } from "../utils/httpErrors";
 import { signAccessToken, signRefreshToken, signSignupToken, verifyRefreshToken, verifySignupToken } from "../utils/jwt";
 
@@ -237,6 +238,34 @@ export async function login(req: Request, res: Response) {
   });
 }
 
+export async function employeeLogin(req: Request, res: Response) {
+  const { employeeId, password, rememberMe } = req.body as {
+    employeeId: string;
+    password: string;
+    rememberMe?: boolean;
+  };
+
+  const user = await validateEmployeeLogin({ employeeId, password });
+  const resolvedRememberMe = rememberMe ?? true;
+  const accessToken = signAccessToken(user.id, { rememberMe: resolvedRememberMe });
+  const refreshToken = signRefreshToken(user.id, { rememberMe: resolvedRememberMe });
+  const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
+  res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
+
+  return res.json({
+    ok: true,
+    accessToken,
+    user: {
+      id: user.id,
+      employeeId: user.employeeId,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      displayName: user.displayName
+    }
+  });
+}
+
 export async function logout(req: Request, res: Response) {
   // Clear refresh cookie
   res.clearCookie(refreshCookieName, buildRefreshCookieOptions(env.REFRESH_TOKEN_TTL_DAYS));
@@ -345,6 +374,10 @@ export async function whoAmI(req: Request, res: Response) {
 
   if (resolvedOnboardingStep !== user.onboardingStep) {
     await prisma.user.update({ where: { id: user.id }, data: { onboardingStep: resolvedOnboardingStep } });
+  }
+
+  if (resolvedOnboardingStep === "ACTIVE") {
+    await ensureUserExecutiveAssignmentAfterOnboarding(user.id);
   }
 
   return res.json({

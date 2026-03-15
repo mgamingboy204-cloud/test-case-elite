@@ -10,6 +10,7 @@ datasource db {
 
 enum Role {
   USER
+  EMPLOYEE
   ADMIN
 }
 
@@ -234,6 +235,7 @@ model User {
   displayName  String?
   gender       Gender?
   role         Role     @default(USER)
+  employeeId   String?  @unique
   isAdmin      Boolean  @default(false)
   status       UserStatus @default(PENDING)
   onboardingStep OnboardingStep @default(PHONE_VERIFIED)
@@ -259,6 +261,9 @@ model User {
   profileCompletedAt DateTime?
   deactivatedAt DateTime?
   deletedAt DateTime?
+  assignedEmployeeId String?
+  assignedAt DateTime?
+  verifiedByEmployeeId String?
 
   profile       Profile?
   preferences   UserPreference?
@@ -288,6 +293,10 @@ model User {
   socialExchangeRequestsReceived SocialExchangeCase[] @relation("socialExchangeReceiver")
   phoneExchangeRequestsSent PhoneExchangeCase[] @relation("phoneExchangeRequester")
   phoneExchangeRequestsReceived PhoneExchangeCase[] @relation("phoneExchangeReceiver")
+  assignedEmployee User? @relation("MemberExecutive", fields: [assignedEmployeeId], references: [id])
+  managedMembers User[] @relation("MemberExecutive")
+  verifiedByEmployee User? @relation("VerifiedByEmployee", fields: [verifiedByEmployeeId], references: [id])
+  verifiedMembers User[] @relation("VerifiedByEmployee")
 }
 
 model Profile {

@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
+import { listEmployeeWorkloads } from "./employeeService";
 
 type VerificationRequestListItem = Prisma.VerificationRequestGetPayload<{
   include: { user: { select: { id: true; phone: true; email: true } } };
@@ -233,16 +234,43 @@ async function pushVerificationAlert(options: {
     }
   });
 }
-export async function listVerificationRequests(statusFilter?: string): Promise<{ requests: VerificationRequestListItem[] }> {
+export async function listVerificationRequestsForActor(options: {
+  statusFilter?: string;
+  actorUserId: string;
+  actorRole: "USER" | "EMPLOYEE" | "ADMIN";
+  isAdmin: boolean;
+}): Promise<{ requests: VerificationRequestListItem[] }> {
+  if (options.actorRole === "USER") {
+    throw new HttpError(403, { message: "Employee access required" });
+  }
+
+  const isPrivileged = options.isAdmin || options.actorRole === "ADMIN";
   const requests: VerificationRequestListItem[] = await prisma.verificationRequest.findMany({
-    where: statusFilter && statusFilter !== "ALL" ? { status: statusFilter as any } : {},
+    where: {
+      ...(options.statusFilter && options.statusFilter !== "ALL" ? { status: options.statusFilter as any } : {}),
+      ...(!isPrivileged
+        ? {
+            OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: options.actorUserId }]
+          }
+        : {})
+    },
     include: { user: { select: { id: true, phone: true, email: true } } },
     orderBy: { createdAt: "desc" }
   });
   return { requests };
 }
 
-export async function startVerificationRequest(requestId: string, meetUrl: string, actorUserId: string) {
+function ensureAssignableToActor(caseItem: { assignedEmployeeId: string | null }, actorUserId: string, isPrivileged: boolean) {
+  if (isPrivileged) return;
+  if (caseItem.assignedEmployeeId && caseItem.assignedEmployeeId !== actorUserId) {
+    throw new HttpError(403, { message: "This request is assigned to another employee." });
+  }
+}
+
+export async function startVerificationRequest(requestId: string, meetUrl: string, actorUserId: string, isPrivileged: boolean) {
+  const existing = await prisma.verificationRequest.findUnique({ where: { id: requestId }, select: { assignedEmployeeId: true } });
+  if (!existing) throw new HttpError(404, { message: "Verification request not found" });
+  ensureAssignableToActor(existing, actorUserId, isPrivileged);
   const now = new Date();
   const request = await prisma.verificationRequest.update({
     where: { id: requestId },
@@ -311,7 +339,10 @@ export async function assignVerificationRequest(requestId: string, actorUserId: 
   return { request };
 }
 
-export async function approveVerificationRequest(requestId: string, actorUserId: string) {
+export async function approveVerificationRequest(requestId: string, actorUserId: string, isPrivileged: boolean) {
+  const existing = await prisma.verificationRequest.findUnique({ where: { id: requestId }, select: { assignedEmployeeId: true, userId: true } });
+  if (!existing) throw new HttpError(404, { message: "Verification request not found" });
+  ensureAssignableToActor(existing, actorUserId, isPrivileged);
   const now = new Date();
   const request = await prisma.verificationRequest.update({
     where: { id: requestId },
@@ -332,7 +363,10 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
       status: "APPROVED",
       verifiedAt: now,
       videoVerificationStatus: "APPROVED",
-      onboardingStep: "VIDEO_VERIFIED"
+      onboardingStep: "VIDEO_VERIFIED",
+      verifiedByEmployeeId: actorUserId,
+      assignedEmployeeId: actorUserId,
+      assignedAt: now
     }
   });
   await prisma.auditLog.create({
@@ -354,7 +388,10 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
   return { request };
 }
 
-export async function rejectVerificationRequest(requestId: string, actorUserId: string, reason: string) {
+export async function rejectVerificationRequest(requestId: string, actorUserId: string, reason: string, isPrivileged: boolean) {
+  const existing = await prisma.verificationRequest.findUnique({ where: { id: requestId }, select: { assignedEmployeeId: true } });
+  if (!existing) throw new HttpError(404, { message: "Verification request not found" });
+  ensureAssignableToActor(existing, actorUserId, isPrivileged);
   const normalizedReason = reason.trim();
   const marksFraud = /(fake|fraud|impersonat|scam)/i.test(normalizedReason);
   const now = new Date();
@@ -470,7 +507,10 @@ export async function approveVerificationForUser(userId: string, actorUserId: st
       status: "APPROVED",
       verifiedAt: now,
       videoVerificationStatus: "APPROVED",
-      onboardingStep: "VIDEO_VERIFIED"
+      onboardingStep: "VIDEO_VERIFIED",
+      verifiedByEmployeeId: actorUserId,
+      assignedEmployeeId: actorUserId,
+      assignedAt: now
     }
   });
   await prisma.auditLog.create({
@@ -553,4 +593,9 @@ export async function shiftPaymentDate(options: { userId: string; daysBack: numb
     data: { paidAt: shifted }
   });
   return updated;
+}
+
+export async function getEmployeeWorkloads() {
+  const employees = await listEmployeeWorkloads();
+  return { employees, capacity: { softLimit: 30, hardLimit: 40 } };
 }

@@ -9,10 +9,11 @@ import {
   deleteUser,
   denyRefund,
   getDashboard,
+  getEmployeeWorkloads,
   listRefunds,
   listReports,
   listUsers,
-  listVerificationRequests,
+  listVerificationRequestsForActor,
   approveVerificationRequest,
   rejectVerificationRequest,
   rejectUser,
@@ -49,6 +50,11 @@ export async function dashboardHandler(req: Request, res: Response) {
   return res.json(result);
 }
 
+export async function employeeWorkloadsHandler(req: Request, res: Response) {
+  const result = await getEmployeeWorkloads();
+  return res.json(result);
+}
+
 export async function deactivateUserHandler(req: Request, res: Response) {
   const result = await deactivateUser(req.params.id);
   return res.json(result);
@@ -81,13 +87,18 @@ export async function denyRefundHandler(req: Request, res: Response) {
 
 export async function listVerificationRequestsHandler(req: Request, res: Response) {
   const statusFilter = typeof req.query.status === "string" ? req.query.status : undefined;
-  const result = await listVerificationRequests(statusFilter);
+  const result = await listVerificationRequestsForActor({
+    statusFilter,
+    actorUserId: res.locals.user.id,
+    actorRole: res.locals.user.role,
+    isAdmin: Boolean(res.locals.user.isAdmin)
+  });
   return res.json(result);
 }
 
 export async function startVerificationRequestHandler(req: Request, res: Response) {
   const { meetUrl } = req.body as { meetUrl: string };
-  const result = await startVerificationRequest(req.params.id, meetUrl, res.locals.user.id);
+  const result = await startVerificationRequest(req.params.id, meetUrl, res.locals.user.id, Boolean(res.locals.user.isAdmin || res.locals.user.role === "ADMIN"));
   return res.json(result);
 }
 
@@ -97,13 +108,13 @@ export async function assignVerificationRequestHandler(req: Request, res: Respon
 }
 
 export async function approveVerificationRequestHandler(req: Request, res: Response) {
-  const result = await approveVerificationRequest(req.params.id, res.locals.user.id);
+  const result = await approveVerificationRequest(req.params.id, res.locals.user.id, Boolean(res.locals.user.isAdmin || res.locals.user.role === "ADMIN"));
   return res.json(result);
 }
 
 export async function rejectVerificationRequestHandler(req: Request, res: Response) {
   const { reason } = req.body as { reason: string };
-  const result = await rejectVerificationRequest(req.params.id, res.locals.user.id, reason);
+  const result = await rejectVerificationRequest(req.params.id, res.locals.user.id, reason, Boolean(res.locals.user.isAdmin || res.locals.user.role === "ADMIN"));
   return res.json(result);
 }
 

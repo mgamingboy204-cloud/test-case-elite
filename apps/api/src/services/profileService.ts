@@ -54,9 +54,11 @@ export async function getProfile(userId: string) {
         subscriptionStartedAt: true,
         subscriptionEndsAt: true,
         manualRenewalRequired: true,
-        onboardingPaymentPlan: true,
-        onboardingPaymentAmount: true,
-        onboardingPaymentVerifiedAt: true
+      onboardingPaymentPlan: true,
+      onboardingPaymentAmount: true,
+      onboardingPaymentVerifiedAt: true,
+      assignedEmployeeId: true,
+      assignedAt: true
       }
     }),
     prisma.userPreference.upsert({ where: { userId }, update: {}, create: { userId } }),
@@ -72,9 +74,9 @@ export async function getProfile(userId: string) {
     })
   ]);
 
-  const assignedExecutive = latestVerificationRequest?.assignedEmployeeId
+  const assignedExecutive = user?.assignedEmployeeId
     ? await prisma.user.findUnique({
-        where: { id: latestVerificationRequest.assignedEmployeeId },
+        where: { id: user.assignedEmployeeId },
         select: {
           id: true,
           firstName: true,
@@ -115,12 +117,12 @@ export async function getProfile(userId: string) {
         paidAt: user?.onboardingPaymentVerifiedAt ?? null,
         renewalMode: user?.manualRenewalRequired ? "MANUAL" : "AUTO"
       },
-      assignedExecutive: latestVerificationRequest?.assignedEmployeeId
+      assignedExecutive: user?.assignedEmployeeId
         ? {
-            id: latestVerificationRequest.assignedEmployeeId,
+            id: user.assignedEmployeeId,
             name: executiveName || "Elite Executive",
-            assignedAt: latestVerificationRequest.assignedAt,
-            verificationStatus: latestVerificationRequest.status
+            assignedAt: user.assignedAt ?? latestVerificationRequest?.assignedAt,
+            verificationStatus: latestVerificationRequest?.status ?? null
           }
         : null,
       settings: preferences,

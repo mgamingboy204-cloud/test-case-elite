@@ -45,6 +45,39 @@ async function main() {
     }
   });
 
+  await prisma.user.upsert({
+    where: { employeeId: "EMP-001" },
+    update: {
+      phone: process.env.SEED_EMPLOYEE_PHONE ?? "8888888888",
+      email: process.env.SEED_EMPLOYEE_EMAIL ?? "employee1@example.com",
+      passwordHash,
+      role: Role.EMPLOYEE,
+      isAdmin: false,
+      status: UserStatus.APPROVED,
+      verifiedAt: new Date(),
+      phoneVerifiedAt: new Date(),
+      onboardingStep: OnboardingStep.ACTIVE,
+      videoVerificationStatus: VideoVerificationStatus.APPROVED,
+      paymentStatus: OnboardingPaymentStatus.PAID,
+      profileCompletedAt: new Date()
+    },
+    create: {
+      employeeId: "EMP-001",
+      phone: process.env.SEED_EMPLOYEE_PHONE ?? "8888888888",
+      email: process.env.SEED_EMPLOYEE_EMAIL ?? "employee1@example.com",
+      passwordHash,
+      role: Role.EMPLOYEE,
+      isAdmin: false,
+      status: UserStatus.APPROVED,
+      verifiedAt: new Date(),
+      phoneVerifiedAt: new Date(),
+      onboardingStep: OnboardingStep.ACTIVE,
+      videoVerificationStatus: VideoVerificationStatus.APPROVED,
+      paymentStatus: OnboardingPaymentStatus.PAID,
+      profileCompletedAt: new Date()
+    }
+  });
+
   await prisma.profile.upsert({
     where: { userId: admin.id },
     update: {

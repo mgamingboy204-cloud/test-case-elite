@@ -18,6 +18,18 @@ const AWAITING_SELECTION_STATUSES: OnlineMeetCoordinationStatus[] = [
   "USER_TWO_RESPONDED"
 ];
 
+const ACTIVE_COORDINATION_STATUSES: OnlineMeetCoordinationStatus[] = [
+  "REQUESTED",
+  "ACCEPTED",
+  "EMPLOYEE_PREPARING_OPTIONS",
+  "OPTIONS_SENT",
+  "AWAITING_USER_SELECTIONS",
+  "USER_ONE_RESPONDED",
+  "USER_TWO_RESPONDED",
+  "READY_FOR_FINALIZATION",
+  "RESCHEDULE_REQUESTED"
+];
+
 const TERMINAL_OR_COOLDOWN_STATUSES: OnlineMeetCoordinationStatus[] = [
   "FINALIZED",
   "NO_RESPONSE_TIMEOUT",
@@ -325,7 +337,8 @@ export async function submitOnlineMeetSelections(params: {
 export async function listOnlineMeetCasesForEmployee(userId: string) {
   const cases = await prisma.onlineMeetCase.findMany({
     where: {
-      OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: userId }, { status: { in: ["REQUESTED", "ACCEPTED", "EMPLOYEE_PREPARING_OPTIONS", "OPTIONS_SENT", "AWAITING_USER_SELECTIONS", "USER_ONE_RESPONDED", "USER_TWO_RESPONDED", "READY_FOR_FINALIZATION", "RESCHEDULE_REQUESTED"] } }]
+      status: { in: ACTIVE_COORDINATION_STATUSES },
+      OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: userId }]
     },
     include: {
       match: {
@@ -343,6 +356,10 @@ export async function listOnlineMeetCasesForEmployee(userId: string) {
   }
 
   const refreshed = await prisma.onlineMeetCase.findMany({
+    where: {
+      status: { in: ACTIVE_COORDINATION_STATUSES },
+      OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: userId }]
+    },
     include: {
       match: {
         include: {

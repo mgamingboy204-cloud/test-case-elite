@@ -362,7 +362,8 @@ export async function submitOfflineMeetSelections(params: { matchId: string; use
 export async function listOfflineMeetCasesForEmployee(userId: string) {
   const cases = await prisma.offlineMeetCase.findMany({
     where: {
-      OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: userId }, { status: { in: ACTIVE_COORDINATION_STATUSES } }]
+      status: { in: ACTIVE_COORDINATION_STATUSES },
+      OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: userId }]
     },
     include: {
       match: {
@@ -380,6 +381,10 @@ export async function listOfflineMeetCasesForEmployee(userId: string) {
   }
 
   const refreshed = await prisma.offlineMeetCase.findMany({
+    where: {
+      status: { in: ACTIVE_COORDINATION_STATUSES },
+      OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: userId }]
+    },
     include: {
       match: {
         include: {

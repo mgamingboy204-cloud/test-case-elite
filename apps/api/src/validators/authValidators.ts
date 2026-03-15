@@ -3,6 +3,11 @@ import { LoginSchema, RegisterSchema } from "@elite/shared";
 
 export const RegisterBodySchema = RegisterSchema;
 export const LoginBodySchema = LoginSchema;
+export const EmployeeLoginSchema = z.object({
+  employeeId: z.string().trim().min(2),
+  password: z.string().min(8),
+  rememberMe: z.boolean().optional()
+});
 
 export const OtpSendSchema = z.object({
   phone: z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits.")
