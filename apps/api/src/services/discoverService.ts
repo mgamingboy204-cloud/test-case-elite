@@ -1,4 +1,5 @@
 import { prisma } from "../db/prisma";
+import type { Gender, Prisma } from "@prisma/client";
 
 type DiscoverFilterOptions = {
   userId: string;
@@ -9,17 +10,17 @@ type DiscoverFilterOptions = {
 
 const imageExtensionPattern = /\.(png|jpe?g|webp|gif|avif)(\?.*)?$/i;
 
-function resolveIntentGender(intent: string | undefined, viewerGender: string | null | undefined) {
+function resolveIntentGender(intent: string | undefined, viewerGender: string | null | undefined): Gender | undefined {
   const normalizedIntent = intent?.toLowerCase() ?? "dating";
   const normalizedGender = viewerGender?.toUpperCase();
   if (normalizedIntent === "all") return undefined;
   if (!normalizedGender) return undefined;
   if (normalizedIntent === "friends") {
-    return normalizedGender;
+    return normalizedGender as Gender;
   }
   if (normalizedIntent === "dating") {
-    if (normalizedGender === "MALE") return "FEMALE";
-    if (normalizedGender === "FEMALE") return "MALE";
+    if (normalizedGender === "MALE") return "FEMALE" as Gender;
+    if (normalizedGender === "FEMALE") return "MALE" as Gender;
     return undefined;
   }
   return undefined;
@@ -36,12 +37,18 @@ function normalizePhotoUrl(url: string | null | undefined, baseUrl?: string) {
 function buildDiscoverWhere(options: DiscoverFilterOptions) {
   const resolvedGender = resolveIntentGender(options.intent, options.viewerGender);
 
-  const where: any = {
+  const where: Prisma.ProfileWhereInput = {
     userId: { not: options.userId },
     user: {
       deletedAt: null,
       deactivatedAt: null,
-      onboardingStep: "ACTIVE"
+      onboardingStep: "ACTIVE",
+      status: "APPROVED",
+      videoVerificationStatus: "APPROVED",
+      paymentStatus: "PAID",
+      photos: {
+        some: {}
+      }
     }
   };
 
@@ -157,7 +164,7 @@ export async function getDiscoverFeed(options: {
     viewerGender: profile?.gender
   });
 
-  const feedWhere: any = {
+  const feedWhere: Prisma.ProfileWhereInput = {
     ...where,
     ...(options.cursor
       ? {
@@ -176,6 +183,10 @@ export async function getDiscoverFeed(options: {
       age: true,
       city: true,
       bioShort: true,
+      locationLabel: true,
+      profession: true,
+      heightCm: true,
+      dateOfBirth: true,
       intent: true,
       user: {
         select: {
@@ -200,6 +211,10 @@ export async function getDiscoverFeed(options: {
     age: profile.age,
     city: profile.city,
     bioShort: profile.bioShort,
+    locationLabel: profile.locationLabel,
+    profession: profile.profession,
+    heightCm: profile.heightCm,
+    dateOfBirth: profile.dateOfBirth,
     intent: profile.intent,
     videoVerificationStatus: profile.user?.videoVerificationStatus ?? null,
     primaryPhotoUrl: normalizePhotoUrl(profile.user?.photos?.[0]?.url ?? null, options.baseUrl)
