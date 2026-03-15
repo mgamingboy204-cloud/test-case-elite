@@ -8,19 +8,26 @@ import { ShieldCheck, Check } from "lucide-react";
 
 const TIERS = [
   {
-    id: "standard",
-    label: "Standard",
-    price: "$49",
-    period: "/ month",
-    perks: ["Global Network Access", "Curated Introductions", "Profile Visibility"],
+    id: "ONE_MONTH",
+    label: "1 Month",
+    price: "INR 30,000",
+    period: "one-time",
+    perks: ["Private Club Access", "Curated Discovery", "Premium Member Support"],
   },
   {
-    id: "elite",
-    label: "Elite",
-    price: "$99",
-    period: "/ month",
-    perks: ["Concierge Matching", "Private Protocol", "Priority Verification"],
+    id: "FIVE_MONTHS",
+    label: "5 Months",
+    price: "INR 70,000",
+    period: "one-time",
+    perks: ["Private Club Access", "Curated Discovery", "Premium Member Support"],
     featured: true,
+  },
+  {
+    id: "TWELVE_MONTHS",
+    label: "12 Months",
+    price: "INR 100,000",
+    period: "one-time",
+    perks: ["Private Club Access", "Curated Discovery", "Premium Member Support"],
   },
 ];
 
@@ -70,12 +77,12 @@ export default function PaymentStep() {
           Elite <span className="text-primary">Membership</span>
         </h1>
         <p className="text-foreground/40 font-light uppercase tracking-widest text-[10px]">
-          Select your tier and secure your position in the network.
+          Select your membership plan. Manual renewal only — auto-renew is disabled.
         </p>
       </div>
 
       {/* Tier Selector */}
-      <div className="flex-none grid grid-cols-2 gap-4 mb-8">
+      <div className="flex-none grid grid-cols-1 gap-4 mb-8">
         {TIERS.map((tier) => {
           const active = selectedTier === tier.id;
           return (

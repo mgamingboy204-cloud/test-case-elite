@@ -11,7 +11,7 @@ export async function startMockPayment(
       message: "Verification required",
       currentStep: user.onboardingStep,
       requiredStep: "VIDEO_VERIFIED",
-      redirectTo: "/onboarding/video-verification"
+      redirectTo: "/onboarding/verification"
     });
   }
   await prisma.user.update({
@@ -30,13 +30,13 @@ export async function confirmMockPayment(user: { id: string; videoVerificationSt
       message: "Verification required",
       currentStep: user.onboardingStep,
       requiredStep: "VIDEO_VERIFIED",
-      redirectTo: "/onboarding/video-verification"
+      redirectTo: "/onboarding/verification"
     });
   }
   const payment = await prisma.payment.create({
     data: {
       userId: user.id,
-      plan: "YEARLY",
+      plan: "TWELVE_MONTHS",
       amount: 100000,
       status: "PAID",
       paidAt: new Date()

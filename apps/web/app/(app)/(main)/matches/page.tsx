@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { routeForOnboardingStep, useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,7 +23,7 @@ export default function MatchesPage() {
 
   useEffect(() => {
     if (!isAuthenticated) router.replace('/signin');
-    else if (onboardingStep !== 'COMPLETED') router.replace('/onboarding/verification'); 
+    else if (onboardingStep !== 'COMPLETED') router.replace(routeForOnboardingStep(onboardingStep)); 
   }, [isAuthenticated, onboardingStep, router]);
 
   const [selectedMatch, setSelectedMatch] = useState<MatchCard | null>(null);

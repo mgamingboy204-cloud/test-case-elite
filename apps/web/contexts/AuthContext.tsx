@@ -15,6 +15,21 @@ type BackendOnboardingStep =
 
 export type OnboardingStep = "PHONE" | "OTP" | "PASSWORD" | "VERIFICATION" | "PAYMENT" | "PROFILE" | "PHOTOS" | "COMPLETED";
 
+
+export function routeForOnboardingStep(step: OnboardingStep) {
+  const routeMap: Record<OnboardingStep, string> = {
+    PHONE: "/signup/phone",
+    OTP: "/signup/otp",
+    PASSWORD: "/signup/password",
+    VERIFICATION: "/onboarding/verification",
+    PAYMENT: "/onboarding/payment",
+    PROFILE: "/onboarding/profile",
+    PHOTOS: "/onboarding/photos",
+    COMPLETED: "/discover"
+  };
+  return routeMap[step];
+}
+
 interface User {
   id: string;
   phone: string;
@@ -51,7 +66,7 @@ function mapOnboardingStep(user: User | null): OnboardingStep {
 
   if (user.onboardingStep === "ACTIVE") return "COMPLETED";
   if (user.onboardingStep === "PAID" || user.onboardingStep === "PROFILE_PENDING") return "PROFILE";
-  if (user.onboardingStep === "PAYMENT_PENDING") return "PAYMENT";
+  if (user.onboardingStep === "PAYMENT_PENDING" || user.onboardingStep === "VIDEO_VERIFIED") return "PAYMENT";
   return "VERIFICATION";
 }
 
@@ -152,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthToken(response.accessToken);
       setOnboardingToken(response.onboardingToken ?? response.user.onboardingToken ?? null);
       setUser(response.user);
-      router.push(mapOnboardingStep(response.user) === "COMPLETED" ? "/discover" : "/onboarding/verification");
+      router.push(routeForOnboardingStep(mapOnboardingStep(response.user)));
     }
 
     return { otpRequired: false };
@@ -169,7 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthToken(response.accessToken);
     setOnboardingToken(response.onboardingToken);
     setUser(response.user);
-    router.push(mapOnboardingStep(response.user) === "COMPLETED" ? "/discover" : "/onboarding/verification");
+    router.push(routeForOnboardingStep(mapOnboardingStep(response.user)));
   };
 
   const resendSigninOtp = async () => {
@@ -191,20 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const completeOnboardingStep = (nextStep: OnboardingStep) => {
-    if (nextStep === "COMPLETED") {
-      router.push("/discover");
-      return;
-    }
-
-    const routeMap: Partial<Record<OnboardingStep, string>> = {
-      VERIFICATION: "/onboarding/verification",
-      PAYMENT: "/onboarding/payment",
-      PROFILE: "/onboarding/profile",
-      PHOTOS: "/onboarding/photos"
-    };
-
-    const route = routeMap[nextStep];
-    if (route) router.push(route);
+    router.push(routeForOnboardingStep(nextStep));
   };
 
   const logout = async () => {

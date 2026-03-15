@@ -1,11 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import {
-  confirmMockPaymentHandler,
   getMyPaymentHandler,
   initiateOnboardingPaymentHandler,
-  mockPaymentUnsupported,
-  startMockPaymentHandler,
   validateCouponHandler,
   verifyOnboardingPaymentHandler
 } from "../controllers/paymentController";
@@ -14,6 +11,8 @@ import { validateBody } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 
 const router = Router();
+
+const PaymentPlanSchema = z.enum(["ONE_MONTH", "FIVE_MONTHS", "TWELVE_MONTHS"]);
 
 router.get("/payments/me", requireAuth, asyncHandler(getMyPaymentHandler));
 router.post("/payments/coupon/validate", requireAuth, requireAuthHeader, requireOnboardingTokenMatch, asyncHandler(validateCouponHandler));
@@ -24,7 +23,7 @@ router.post(
   requireOnboardingTokenMatch,
   validateBody(
     z.object({
-      tier: z.string().min(1),
+      tier: PaymentPlanSchema,
       cardLast4: z.string().regex(/^\d{4}$/)
     })
   ),
@@ -42,9 +41,5 @@ router.post(
   ),
   asyncHandler(verifyOnboardingPaymentHandler)
 );
-
-router.post("/payments/mock", requireAuth, requireAuthHeader, requireOnboardingTokenMatch, asyncHandler(mockPaymentUnsupported));
-router.post("/payments/mock/start", requireAuth, requireAuthHeader, requireOnboardingTokenMatch, asyncHandler(startMockPaymentHandler));
-router.post("/payments/mock/confirm", requireAuth, requireAuthHeader, requireOnboardingTokenMatch, asyncHandler(confirmMockPaymentHandler));
 
 export default router;

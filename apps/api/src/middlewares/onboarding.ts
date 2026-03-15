@@ -4,17 +4,17 @@ function onboardingRedirectForStep(step: string) {
   switch (step) {
     case "PHONE_VERIFIED":
     case "VIDEO_VERIFICATION_PENDING":
+      return "/onboarding/verification";
     case "VIDEO_VERIFIED":
-      return "/onboarding/video-verification";
     case "PAYMENT_PENDING":
-    case "PAID":
       return "/onboarding/payment";
+    case "PAID":
     case "PROFILE_PENDING":
       return "/onboarding/profile";
     case "ACTIVE":
-      return "/pwa_app/discover";
+      return "/discover";
     default:
-      return "/onboarding/video-verification";
+      return "/onboarding/verification";
   }
 }
 

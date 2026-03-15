@@ -12,6 +12,7 @@ const STEP_ROUTE_MAP: Record<string, string> = {
   PAYMENT:      '/onboarding/payment',
   PROFILE:      '/onboarding/profile',
   PHOTOS:       '/onboarding/photos',
+  COMPLETED:    '/discover',
 };
 
 const ORDERED_ROUTES = [
