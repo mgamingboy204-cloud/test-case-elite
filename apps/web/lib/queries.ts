@@ -126,6 +126,20 @@ export type MatchCard = {
     unopenedExpiresAt: string | null;
     cooldownUntil: string | null;
   } | null;
+  phoneExchangeCase: {
+    id: string;
+    requesterUserId: string;
+    receiverUserId: string;
+    status: string;
+    requestedAt: string;
+    acceptedAt: string | null;
+    rejectedAt: string | null;
+    mutuallyConfirmedAt: string | null;
+    revealedAt: string | null;
+    canRequest: boolean;
+    canRespond: boolean;
+    canReveal: boolean;
+  } | null;
 };
 
 type ApiMatch = {
@@ -142,6 +156,7 @@ type ApiMatch = {
   offlineMeetCase?: MatchCard["offlineMeetCase"];
   onlineMeetCase?: MatchCard["onlineMeetCase"];
   socialExchangeCase?: MatchCard["socialExchangeCase"];
+  phoneExchangeCase?: MatchCard["phoneExchangeCase"];
 };
 
 export async function fetchMatches(): Promise<MatchCard[]> {
@@ -164,6 +179,7 @@ export async function fetchMatches(): Promise<MatchCard[]> {
       offlineMeetCase: match.offlineMeetCase ?? null,
       onlineMeetCase: match.onlineMeetCase ?? null,
       socialExchangeCase: match.socialExchangeCase ?? null,
+      phoneExchangeCase: match.phoneExchangeCase ?? null,
       interactions: {
         OFFLINE_MEET: match.interactionRequests?.OFFLINE_MEET ?? {
           type: "OFFLINE_MEET",
@@ -230,7 +246,12 @@ export interface NotificationApiItem {
     | "SOCIAL_EXCHANGE_HANDLE_READY"
     | "SOCIAL_EXCHANGE_VIEWED"
     | "SOCIAL_EXCHANGE_EXPIRED"
-    | "SOCIAL_EXCHANGE_RESEND_AVAILABLE";
+    | "SOCIAL_EXCHANGE_RESEND_AVAILABLE"
+    | "PHONE_EXCHANGE_REQUEST"
+    | "PHONE_EXCHANGE_ACCEPTED"
+    | "PHONE_EXCHANGE_REJECTED"
+    | "PHONE_EXCHANGE_MUTUAL_CONSENT_CONFIRMED"
+    | "PHONE_EXCHANGE_REVEALED";
   isRead: boolean;
   createdAt: string;
   title?: string | null;
@@ -255,7 +276,7 @@ const FALLBACK_ALERT_IMAGE =
   "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&auto=format&fit=crop&q=80";
 
 function toAlert(item: NotificationApiItem): Alert {
-  const conciergeTypes = new Set(["SYSTEM_PROMO", "OFFLINE_MEET_REQUEST", "OFFLINE_MEET_ACCEPTED", "OFFLINE_MEET_OPTIONS_SENT", "OFFLINE_MEET_TIMEOUT", "OFFLINE_MEET_NO_OVERLAP", "OFFLINE_MEET_FINALIZED", "OFFLINE_MEET_RESCHEDULE_UPDATE", "ONLINE_MEET_REQUEST", "ONLINE_MEET_ACCEPTED", "ONLINE_MEET_OPTIONS_SENT", "ONLINE_MEET_TIMEOUT", "ONLINE_MEET_NO_OVERLAP", "ONLINE_MEET_FINALIZED", "ONLINE_MEET_RESCHEDULE_UPDATE", "SOCIAL_EXCHANGE_REQUEST", "SOCIAL_EXCHANGE_ACCEPTED", "SOCIAL_EXCHANGE_REJECTED", "SOCIAL_EXCHANGE_HANDLE_READY", "SOCIAL_EXCHANGE_VIEWED", "SOCIAL_EXCHANGE_EXPIRED", "SOCIAL_EXCHANGE_RESEND_AVAILABLE"]);
+  const conciergeTypes = new Set(["SYSTEM_PROMO", "OFFLINE_MEET_REQUEST", "OFFLINE_MEET_ACCEPTED", "OFFLINE_MEET_OPTIONS_SENT", "OFFLINE_MEET_TIMEOUT", "OFFLINE_MEET_NO_OVERLAP", "OFFLINE_MEET_FINALIZED", "OFFLINE_MEET_RESCHEDULE_UPDATE", "ONLINE_MEET_REQUEST", "ONLINE_MEET_ACCEPTED", "ONLINE_MEET_OPTIONS_SENT", "ONLINE_MEET_TIMEOUT", "ONLINE_MEET_NO_OVERLAP", "ONLINE_MEET_FINALIZED", "ONLINE_MEET_RESCHEDULE_UPDATE", "SOCIAL_EXCHANGE_REQUEST", "SOCIAL_EXCHANGE_ACCEPTED", "SOCIAL_EXCHANGE_REJECTED", "SOCIAL_EXCHANGE_HANDLE_READY", "SOCIAL_EXCHANGE_VIEWED", "SOCIAL_EXCHANGE_EXPIRED", "SOCIAL_EXCHANGE_RESEND_AVAILABLE", "PHONE_EXCHANGE_REQUEST", "PHONE_EXCHANGE_ACCEPTED", "PHONE_EXCHANGE_REJECTED", "PHONE_EXCHANGE_MUTUAL_CONSENT_CONFIRMED", "PHONE_EXCHANGE_REVEALED"]);
   const normalizedType = item.type === "NEW_MATCH" ? "CONNECTION" : conciergeTypes.has(item.type) ? "CONCIERGE" : "INTEREST";
   const title =
     item.title ??
