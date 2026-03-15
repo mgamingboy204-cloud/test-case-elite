@@ -1,181 +1,236 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { X, Check } from "lucide-react";
-import { useState } from "react";
+import { ApiError } from "@/lib/api";
+import { fetchIncomingLikes, respondToIncomingLike, type LikesIncomingProfile } from "@/lib/likes";
+import { primeCache, readCache } from "@/lib/cache";
+import { X, Check, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, PanInfo } from "framer-motion";
-import { respondToIncomingLike, type LikesIncomingProfile } from "@/lib/likes";
-import { fetchLikesIncoming } from "@/lib/queries";
-import { useStaleWhileRevalidate } from "@/lib/cache";
 
-type LikeProfile = LikesIncomingProfile;
+type PageStatus = "loading" | "success" | "empty" | "error";
+const LIKES_CACHE_KEY = "likes-incoming";
 
 export default function LikesPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
-  const [profiles, setProfiles] = useState<LikeProfile[]>([]);
+  const cached = readCache<LikesIncomingProfile[]>(LIKES_CACHE_KEY)?.value ?? [];
 
-  const incomingQuery = useStaleWhileRevalidate({
-    key: "likes-incoming",
-    fetcher: fetchLikesIncoming,
-    enabled: isAuthenticated && onboardingStep === "COMPLETED",
-    staleTimeMs: 60_000
-  });
+  const [profiles, setProfiles] = useState<LikesIncomingProfile[]>(cached);
+  const [status, setStatus] = useState<PageStatus>(cached.length > 0 ? "success" : "loading");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pendingProfileId, setPendingProfileId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const resolvedProfiles = profiles.length > 0 ? profiles : incomingQuery.data ?? [];
+  const persist = useCallback((items: LikesIncomingProfile[]) => {
+    primeCache(LIKES_CACHE_KEY, items);
+    setProfiles(items);
+    setStatus(items.length > 0 ? "success" : "empty");
+  }, []);
 
-  if (!isAuthenticated || onboardingStep !== 'COMPLETED') return null;
+  const refresh = useCallback(async () => {
+    if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
+
+    setIsRefreshing(true);
+    setActionError(null);
+    try {
+      const incoming = await fetchIncomingLikes();
+      persist(incoming);
+    } catch {
+      if (profiles.length === 0) {
+        setStatus("error");
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isAuthenticated, onboardingStep, persist, profiles.length]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (pendingProfileId) return;
+
     const swipeThreshold = 50;
     if (info.offset.x < -swipeThreshold) {
-      // Swipe Left
-      setProfiles(prev => {
+      setProfiles((prev) => {
         if (prev.length <= 1) return prev;
         const [first, ...rest] = prev;
-        return [...rest, first];
+        const next = [...rest, first];
+        primeCache(LIKES_CACHE_KEY, next);
+        return next;
       });
     } else if (info.offset.x > swipeThreshold) {
-      // Swipe Right
-      setProfiles(prev => {
+      setProfiles((prev) => {
         if (prev.length <= 1) return prev;
         const last = prev[prev.length - 1];
         const rest = prev.slice(0, prev.length - 1);
-        return [last, ...rest];
+        const next = [last, ...rest];
+        primeCache(LIKES_CACHE_KEY, next);
+        return next;
       });
     }
   };
 
   const handleAction = async (action: "LIKE" | "PASS") => {
-    const current = resolvedProfiles[0];
-    setProfiles((prev) => {
-      const source = prev.length > 0 ? prev : resolvedProfiles;
-      if (source.length === 0) return source;
-      const [, ...rest] = source;
-      return rest;
-    });
-    if (!current) return;
+    const current = profiles[0];
+    if (!current || pendingProfileId) return;
+
+    const previous = profiles;
+    const optimistic = previous.slice(1);
+
+    setPendingProfileId(current.profileId);
+    setActionError(null);
+    setProfiles(optimistic);
+    primeCache(LIKES_CACHE_KEY, optimistic);
+    if (optimistic.length === 0) setStatus("empty");
 
     try {
-      await respondToIncomingLike({
-        targetUserId: current.profileId,
-        action
-      });
-    } catch {
-      // keep optimistic UX
+      await respondToIncomingLike({ targetUserId: current.profileId, action });
+      if (optimistic.length > 0) setStatus("success");
+    } catch (error) {
+      setProfiles(previous);
+      primeCache(LIKES_CACHE_KEY, previous);
+      setStatus("success");
+      if (error instanceof ApiError && error.status === 403) {
+        setActionError("Please complete your required onboarding before responding to interests.");
+      } else {
+        setActionError("We could not save your response. Please try again.");
+      }
+    } finally {
+      setPendingProfileId(null);
     }
   };
 
+  const countLabel = useMemo(() => {
+    if (status === "loading") return "Preparing your incoming interests";
+    if (status === "error") return "Unable to load incoming interests";
+    return `${profiles.length} Selective Interests`;
+  }, [profiles.length, status]);
+
+  if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
+
   return (
     <div className="w-full h-full flex flex-col relative">
-      
-      {/* Page Header */}
       <div className="flex-none w-full pt-8 pb-4 flex flex-col items-center justify-center z-50">
-        <h1 className="text-xl tracking-[0.4em] font-medium text-primary drop-shadow-sm mb-1 uppercase">
-          Likes
-        </h1>
-        <p className="text-[10px] text-foreground/30 font-bold tracking-widest uppercase">
-          {resolvedProfiles.length} Selective Interests
-        </p>
+        <h1 className="text-xl tracking-[0.4em] font-medium text-primary drop-shadow-sm mb-1 uppercase">Likes</h1>
+        <p className="text-[10px] text-foreground/30 font-bold tracking-widest uppercase">{countLabel}</p>
       </div>
 
-      {/* 3D Carousel Container — fixed height so absolute children render */}
-      <div
-        className="flex-1 w-full relative flex items-center justify-center overflow-hidden"
-        style={{ overscrollBehavior: 'contain' }}
-      >
-         {resolvedProfiles.length === 0 ? (
-            <div className="text-foreground/40 text-sm font-light">No new likes.</div>
-         ) : resolvedProfiles.map((profile, index) => {
+      <div className="flex-1 w-full relative flex items-center justify-center overflow-hidden" style={{ overscrollBehavior: "contain" }}>
+        {status === "loading" && <LoadingCard />}
+
+        {status === "error" && (
+          <div className="flex flex-col items-center gap-3 text-center px-8">
+            <p className="text-sm text-foreground/70">We couldn’t load your likes right now.</p>
+            <button
+              onClick={() => void refresh()}
+              className="rounded-full border border-primary/50 px-6 py-2 text-[11px] uppercase tracking-[0.2em] text-primary hover:bg-primary/10 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {status === "empty" && (
+          <p className="text-foreground/50 text-sm font-light text-center px-10">
+            No new interests yet. We will discreetly surface incoming likes here.
+          </p>
+        )}
+
+        {status === "success" &&
+          profiles.map((profile, index) => {
             let offset = index;
-            if (offset > Math.floor(resolvedProfiles.length / 2)) {
-                offset -= resolvedProfiles.length;
-            }
+            if (offset > Math.floor(profiles.length / 2)) offset -= profiles.length;
+
             const distance = Math.abs(offset);
-            
             const isCenter = offset === 0;
             const isLeft = offset < 0;
             const isRight = offset > 0;
-            
-            // Layout calculations for Coverflow Effect
-            let xPos = 0;
-            if (isLeft) xPos = -90 - (distance * 10);
-            if (isRight) xPos = 90 + (distance * 10);
 
-            const scale = isCenter ? 1 : 0.9 - (distance * 0.05);
-            let opacity = isCenter ? 1 : 0.4 - (distance * 0.1);
-            if (opacity < 0) opacity = 0;
-            
-            // Center card wins the highest z-index; background cards step down
-            const zIndex = isCenter ? resolvedProfiles.length + 10 : resolvedProfiles.length - distance;
+            let xPos = 0;
+            if (isLeft) xPos = -90 - distance * 10;
+            if (isRight) xPos = 90 + distance * 10;
+
+            const scale = isCenter ? 1 : 0.9 - distance * 0.05;
+            const opacity = Math.max(isCenter ? 1 : 0.4 - distance * 0.1, 0);
+            const zIndex = isCenter ? profiles.length + 10 : profiles.length - distance;
+            const isPending = pendingProfileId === profile.profileId;
 
             return (
               <motion.div
                 key={profile.likeId}
                 initial={false}
-                animate={{
-                  x: xPos,
-                  scale: scale,
-                  opacity: opacity,
-                  zIndex: zIndex,
-                }}
-                transition={{
-                  type: "spring",
-                  stiffness: 260,
-                  damping: 25
-                }}
-                drag={isCenter ? "x" : false}
+                animate={{ x: xPos, scale, opacity, zIndex }}
+                transition={{ type: "spring", stiffness: 260, damping: 25 }}
+                drag={isCenter && !pendingProfileId ? "x" : false}
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={0.8}
                 onDragEnd={handleDragEnd}
                 className="absolute w-[320px] sm:w-[340px] h-[60vh] min-h-[460px] max-h-[580px] bg-background rounded-[2.5rem] border border-primary/20 shadow-2xl flex flex-col p-6 will-change-transform touch-none"
               >
-                {/* TOP: Text Header */}
                 <div className="flex flex-col mb-4 px-1 shrink-0">
                   <div className="flex items-center gap-2">
                     <h2 className="text-3xl font-serif text-white tracking-wide">
-                      {profile.name}, <span className="font-light">{profile.age}</span>
+                      {profile.name}, <span className="font-light">{profile.age || "—"}</span>
                     </h2>
                     <CheckVerifiedIcon />
                   </div>
-                  <p className="text-[10px] uppercase tracking-[0.2em] font-medium text-white/50 mt-1">
-                    {profile.location}
-                  </p>
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-medium text-white/50 mt-1">{profile.location || "PRIVATE LOCATION"}</p>
                 </div>
 
-                {/* MIDDLE: Framed Photo */}
                 <div className="flex-1 w-full relative rounded-2xl overflow-hidden mb-5 border border-white/5 bg-slate-800 pointer-events-none select-none">
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent z-10" />
-                  <img 
-                    src={profile.image} 
-                    alt={profile.name}
-                    className="absolute inset-0 w-full h-full object-cover object-top"
-                    draggable={false}
-                  />
+                  <img src={profile.image} alt={profile.name} className="absolute inset-0 w-full h-full object-cover object-top" draggable={false} />
                 </div>
 
-                {/* BOTTOM: Embedded Actions */}
                 <div className="flex justify-center gap-8 items-center w-full shrink-0">
-                  {/* Pass Button */}
-                  <button 
+                  <button
                     onClick={isCenter ? () => void handleAction("PASS") : undefined}
-                    className="w-[64px] h-[64px] rounded-full bg-background/50 backdrop-blur-xl border border-primary/30 shadow-lg flex items-center justify-center hover:bg-primary/10 transition-colors pointer-events-auto"
+                    disabled={!isCenter || Boolean(pendingProfileId)}
+                    className="w-[64px] h-[64px] rounded-full bg-background/50 backdrop-blur-xl border border-primary/30 shadow-lg flex items-center justify-center hover:bg-primary/10 transition-colors pointer-events-auto disabled:opacity-50"
                   >
-                    <X size={28} strokeWidth={1} className="text-primary" />
+                    {isPending ? <Loader2 size={24} className="text-primary animate-spin" /> : <X size={28} strokeWidth={1} className="text-primary" />}
                   </button>
-                  
-                  {/* Like Button */}
-                  <button 
+
+                  <button
                     onClick={isCenter ? () => void handleAction("LIKE") : undefined}
-                    className="w-[72px] h-[72px] rounded-full bg-background/50 backdrop-blur-xl border border-primary/50 shadow-2xl flex items-center justify-center hover:bg-primary/10 transition-colors pointer-events-auto"
+                    disabled={!isCenter || Boolean(pendingProfileId)}
+                    className="w-[72px] h-[72px] rounded-full bg-background/50 backdrop-blur-xl border border-primary/50 shadow-2xl flex items-center justify-center hover:bg-primary/10 transition-colors pointer-events-auto disabled:opacity-50"
                   >
-                    <HeartEliteIconSmall />
+                    {isPending ? <Loader2 size={26} className="text-primary animate-spin" /> : <HeartEliteIconSmall />}
                   </button>
                 </div>
               </motion.div>
             );
-         })}
+          })}
       </div>
 
+      {actionError && (
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-10 text-xs tracking-wide text-foreground bg-background/80 border border-border/30 rounded-full px-4 py-2 backdrop-blur-lg z-50">
+          {actionError}
+        </div>
+      )}
+
+      {isRefreshing && status === "success" && (
+        <div className="absolute right-6 top-7 text-foreground/40">
+          <Loader2 size={16} className="animate-spin" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LoadingCard() {
+  return (
+    <div className="w-[320px] sm:w-[340px] h-[60vh] min-h-[460px] max-h-[580px] rounded-[2.5rem] border border-primary/20 bg-background p-6 animate-pulse">
+      <div className="h-7 w-2/3 rounded bg-foreground/10 mb-4" />
+      <div className="h-4 w-1/3 rounded bg-foreground/10 mb-6" />
+      <div className="h-[65%] rounded-2xl bg-foreground/10" />
+      <div className="mt-6 flex justify-center gap-8">
+        <div className="w-16 h-16 rounded-full bg-foreground/10" />
+        <div className="w-20 h-20 rounded-full bg-foreground/10" />
+      </div>
     </div>
   );
 }
@@ -185,15 +240,15 @@ function CheckVerifiedIcon() {
     <div className="w-[20px] h-[20px] rounded-full bg-primary flex items-center justify-center shadow-lg ml-1">
       <Check size={12} strokeWidth={3} className="text-background" />
     </div>
-  )
+  );
 }
 
 function HeartEliteIconSmall() {
   return (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="drop-shadow-lg">
-      <path 
-        d="M12 21C12 21 4.5 14.5 4.5 8.5C4.5 5.5 6.5 3.5 9 3.5C10.5 3.5 11.5 4 12 5C12.5 4 13.5 3.5 15 3.5C17.5 3.5 19.5 5.5 19.5 8.5C19.5 14.5 12 21 12 21Z" 
-        stroke="currentColor" 
+      <path
+        d="M12 21C12 21 4.5 14.5 4.5 8.5C4.5 5.5 6.5 3.5 9 3.5C10.5 3.5 11.5 4 12 5C12.5 4 13.5 3.5 15 3.5C17.5 3.5 19.5 5.5 19.5 8.5C19.5 14.5 12 21 12 21Z"
+        stroke="currentColor"
         strokeWidth="1.2"
         className="text-primary"
       />

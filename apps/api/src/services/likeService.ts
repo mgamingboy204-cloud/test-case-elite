@@ -68,6 +68,11 @@ export async function getIncomingLikes(userId: string) {
     where: {
       targetUserId: userId,
       action: "LIKE",
+      actorUser: {
+        status: "APPROVED",
+        deletedAt: null,
+        deactivatedAt: null
+      },
       NOT: {
         OR: [
           { actorUser: { matchesA: { some: { userBId: userId } } } },
@@ -92,27 +97,39 @@ export async function getIncomingLikes(userId: string) {
     orderBy: { createdAt: "desc" }
   });
 
+  const passedActorRows = await prisma.like.findMany({
+    where: {
+      actorUserId: userId,
+      action: "PASS"
+    },
+    select: { targetUserId: true }
+  });
+
+  const passedActorIds = new Set(passedActorRows.map((item) => item.targetUserId));
+
   return {
-    incoming: incoming.map((item) => ({
-      id: item.id,
-      createdAt: item.createdAt,
-      likedAt: item.createdAt,
-      action: item.action,
-      fromUserId: item.actorUserId ?? item.actorUser.id,
-      actorUserId: item.actorUserId ?? item.actorUser.id,
-      actorUser: item.actorUser,
-      fromUser: item.actorUser,
-      liker: {
-        id: item.actorUser.id,
-        name: item.actorUser.profile?.name ?? null,
-        age: item.actorUser.profile?.age ?? null,
-        city: item.actorUser.profile?.city ?? null,
-        primaryPhotoUrl: item.actorUser.photos[0]?.url ?? null,
-        isPremium: false,
-        isBlurred: false,
-        matchPercentage: null
-      }
-    }))
+    incoming: incoming
+      .filter((item) => item.actorUser && !passedActorIds.has(item.actorUser.id))
+      .map((item) => ({
+        id: item.id,
+        createdAt: item.createdAt,
+        likedAt: item.createdAt,
+        action: item.action,
+        fromUserId: item.actorUserId ?? item.actorUser.id,
+        actorUserId: item.actorUserId ?? item.actorUser.id,
+        actorUser: item.actorUser,
+        fromUser: item.actorUser,
+        liker: {
+          id: item.actorUser.id,
+          name: item.actorUser.profile?.name ?? null,
+          age: item.actorUser.profile?.age ?? null,
+          city: item.actorUser.profile?.city ?? null,
+          primaryPhotoUrl: item.actorUser.photos[0]?.url ?? null,
+          isPremium: false,
+          isBlurred: false,
+          matchPercentage: null
+        }
+      }))
   };
 }
 
