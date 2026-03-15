@@ -3,6 +3,14 @@ import { HttpError } from "../utils/httpErrors";
 
 type ConsentType = "PHONE_NUMBER" | "OFFLINE_MEET" | "ONLINE_MEET" | "SOCIAL_EXCHANGE";
 type ConsentResponse = "YES" | "NO";
+type InteractionRequestStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "CANCELED";
+
+function toInteractionStatus(myConsent: ConsentResponse | null, otherConsent: ConsentResponse | null, ready: boolean): InteractionRequestStatus {
+  if (ready || (myConsent === "YES" && otherConsent === "YES")) return "ACCEPTED";
+  if (myConsent === "NO") return "CANCELED";
+  if (otherConsent === "NO") return "REJECTED";
+  return "PENDING";
+}
 
 function getConsentStatus(myConsent: ConsentResponse | null, otherConsent: ConsentResponse | null, ready: boolean) {
   if (ready) return "READY";
@@ -98,12 +106,45 @@ export async function listMatches(userId: string) {
         }
       },
       consentPayloads: getConsentPayloadMap(match.consents as any, userId, otherUser.id),
+      interactionRequests: {
+        PHONE_EXCHANGE: {
+          type: "PHONE_EXCHANGE",
+          status: toInteractionStatus(phonePair.mine, phonePair.other, Boolean(match.phoneExchange)),
+          isInitiatedByMe: phonePair.mine !== null,
+          canInitiate: phonePair.mine !== "YES" && !match.phoneExchange,
+          requestedAt: match.consents.find((consent) => consent.userId === userId && consent.type === "PHONE_NUMBER")?.respondedAt ?? null
+        },
+        OFFLINE_MEET: {
+          type: "OFFLINE_MEET",
+          status: toInteractionStatus(offlinePair.mine, offlinePair.other, Boolean(match.offlineMeet)),
+          isInitiatedByMe: offlinePair.mine !== null,
+          canInitiate: offlinePair.mine !== "YES" && !match.offlineMeet,
+          requestedAt: match.consents.find((consent) => consent.userId === userId && consent.type === "OFFLINE_MEET")?.respondedAt ?? null
+        },
+        ONLINE_MEET: {
+          type: "ONLINE_MEET",
+          status: toInteractionStatus(onlinePair.mine, onlinePair.other, Boolean(match.onlineMeet)),
+          isInitiatedByMe: onlinePair.mine !== null,
+          canInitiate: onlinePair.mine !== "YES" && !match.onlineMeet,
+          requestedAt: match.consents.find((consent) => consent.userId === userId && consent.type === "ONLINE_MEET")?.respondedAt ?? null
+        },
+        SOCIAL_EXCHANGE: {
+          type: "SOCIAL_EXCHANGE",
+          status: toInteractionStatus(socialPair.mine, socialPair.other, Boolean(match.socialExchange)),
+          isInitiatedByMe: socialPair.mine !== null,
+          canInitiate: socialPair.mine !== "YES" && !match.socialExchange,
+          requestedAt: match.consents.find((consent) => consent.userId === userId && consent.type === "SOCIAL_EXCHANGE")?.respondedAt ?? null
+        }
+      },
       consents: match.consents,
       user: {
         id: otherUser.id,
         name: otherUser.profile?.name ?? "Member",
+        age: otherUser.profile?.age ?? null,
         city: otherUser.profile?.city ?? null,
+        locationLabel: otherUser.profile?.locationLabel ?? null,
         profession: otherUser.profile?.profession ?? null,
+        bioShort: otherUser.profile?.bioShort ?? null,
         primaryPhotoUrl: otherUser.photos?.[0]?.url ?? null,
         photos: otherUser.photos?.map((photo) => photo.url) ?? []
       }
@@ -165,11 +206,15 @@ export async function respondConsent(options: {
     }
   }
 
+  const mine = consents.find((consent) => consent.userId === options.userId)?.response ?? null;
+  const other = consents.find((consent) => consent.userId !== options.userId)?.response ?? null;
+
   return {
     ok: true,
     matchId: options.matchId,
     type,
     ready,
+    status: toInteractionStatus(mine, other, ready),
     message: ready ? "Consent confirmed." : "Consent recorded."
   };
 }

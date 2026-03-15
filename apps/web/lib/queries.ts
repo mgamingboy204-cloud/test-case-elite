@@ -80,24 +80,88 @@ export async function fetchDiscoverFeedPage(cursor?: string, limit = 10): Promis
 
 const FALLBACK_MATCH_IMAGE = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&auto=format&fit=crop&q=80";
 
+type MatchRequestStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "CANCELED";
+export type MatchRequestType = "OFFLINE_MEET" | "ONLINE_MEET" | "SOCIAL_EXCHANGE" | "PHONE_EXCHANGE";
+
+export type MatchInteraction = {
+  type: MatchRequestType;
+  status: MatchRequestStatus;
+  canInitiate: boolean;
+  isInitiatedByMe: boolean;
+  requestedAt: string | null;
+};
+
 export type MatchCard = {
   id: string;
   name: string;
-  age: number;
+  age: number | null;
   location: string;
   image: string;
+  bio: string | null;
+  interactions: Record<MatchRequestType, MatchInteraction>;
+};
+
+type ApiMatch = {
+  id: string;
+  user: {
+    name: string;
+    age: number | null;
+    city: string | null;
+    locationLabel: string | null;
+    bioShort: string | null;
+    primaryPhotoUrl: string | null;
+  };
+  interactionRequests?: Partial<Record<MatchRequestType, MatchInteraction>>;
 };
 
 export async function fetchMatches(): Promise<MatchCard[]> {
-  const response = await apiRequest<{ matches: Array<{ id: string; user: { name: string; city: string | null; primaryPhotoUrl: string | null } }> }>("/matches", { auth: true });
+  const response = await apiRequest<{ matches: ApiMatch[] }>("/matches", { auth: true });
+  const seen = new Set<string>();
 
-  return response.matches.map((match) => ({
-    id: match.id,
-    name: match.user.name,
-    age: 0,
-    location: (match.user.city ?? "Unknown").toUpperCase(),
-    image: match.user.primaryPhotoUrl ?? FALLBACK_MATCH_IMAGE
-  }));
+  return response.matches
+    .filter((match) => {
+      if (seen.has(match.id)) return false;
+      seen.add(match.id);
+      return true;
+    })
+    .map((match) => ({
+      id: match.id,
+      name: match.user.name,
+      age: match.user.age,
+      location: (match.user.locationLabel ?? match.user.city ?? "Private Location").toUpperCase(),
+      image: match.user.primaryPhotoUrl ?? FALLBACK_MATCH_IMAGE,
+      bio: match.user.bioShort,
+      interactions: {
+        OFFLINE_MEET: match.interactionRequests?.OFFLINE_MEET ?? {
+          type: "OFFLINE_MEET",
+          status: "PENDING",
+          canInitiate: true,
+          isInitiatedByMe: false,
+          requestedAt: null
+        },
+        ONLINE_MEET: match.interactionRequests?.ONLINE_MEET ?? {
+          type: "ONLINE_MEET",
+          status: "PENDING",
+          canInitiate: true,
+          isInitiatedByMe: false,
+          requestedAt: null
+        },
+        SOCIAL_EXCHANGE: match.interactionRequests?.SOCIAL_EXCHANGE ?? {
+          type: "SOCIAL_EXCHANGE",
+          status: "PENDING",
+          canInitiate: true,
+          isInitiatedByMe: false,
+          requestedAt: null
+        },
+        PHONE_EXCHANGE: match.interactionRequests?.PHONE_EXCHANGE ?? {
+          type: "PHONE_EXCHANGE",
+          status: "PENDING",
+          canInitiate: true,
+          isInitiatedByMe: false,
+          requestedAt: null
+        }
+      }
+    }));
 }
 
 export async function fetchLikesIncoming(): Promise<LikesIncomingProfile[]> {
