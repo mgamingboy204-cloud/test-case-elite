@@ -196,6 +196,43 @@ export async function denyRefund(refundId: string, actorUserId: string) {
   return { refund };
 }
 
+
+async function pushVerificationAlert(options: {
+  userId: string;
+  actorUserId: string;
+  title: string;
+  message: string;
+  metadata?: Prisma.InputJsonValue;
+}) {
+  await prisma.notification.upsert({
+    where: {
+      userId_type_actorUserId_matchId: {
+        userId: options.userId,
+        type: "VIDEO_VERIFICATION_UPDATE",
+        actorUserId: options.actorUserId,
+        matchId: undefined as any
+      }
+    },
+    update: {
+      title: options.title,
+      message: options.message,
+      metadata: options.metadata ?? {},
+      createdAt: new Date(),
+      isRead: false,
+      readAt: null,
+      deepLinkUrl: "/onboarding/verification"
+    },
+    create: {
+      userId: options.userId,
+      actorUserId: options.actorUserId,
+      type: "VIDEO_VERIFICATION_UPDATE",
+      title: options.title,
+      message: options.message,
+      metadata: options.metadata ?? {},
+      deepLinkUrl: "/onboarding/verification"
+    }
+  });
+}
 export async function listVerificationRequests(statusFilter?: string): Promise<{ requests: VerificationRequestListItem[] }> {
   const requests: VerificationRequestListItem[] = await prisma.verificationRequest.findMany({
     where: statusFilter && statusFilter !== "ALL" ? { status: statusFilter as any } : {},
@@ -231,27 +268,12 @@ export async function startVerificationRequest(requestId: string, meetUrl: strin
       metadata: { meetUrl }
     }
   });
-  await prisma.notification.upsert({
-    where: {
-      userId_type_actorUserId_matchId: {
-        userId: request.userId,
-        type: "VIDEO_VERIFICATION_UPDATE",
-        actorUserId,
-        matchId: undefined as any
-
-      }
-    },
-    update: {
-      metadata: { meetUrl, cta: "Join verification call" },
-      createdAt: now,
-      isRead: false
-    },
-    create: {
-      userId: request.userId,
-      actorUserId,
-      type: "VIDEO_VERIFICATION_UPDATE",
-      metadata: { meetUrl, cta: "Join verification call" }
-    }
+  await pushVerificationAlert({
+    userId: request.userId,
+    actorUserId,
+    title: "Verification Session Assigned",
+    message: "Your video verification session has been scheduled. Please join using the secure link.",
+    metadata: { eventType: "VERIFICATION_ASSIGNED", meetUrl, cta: "Join verification call" }
   });
   return { request };
 }
@@ -278,6 +300,13 @@ export async function assignVerificationRequest(requestId: string, actorUserId: 
       targetId: request.id,
       metadata: {}
     }
+  });
+  await pushVerificationAlert({
+    userId: request.userId,
+    actorUserId,
+    title: "Verification Assigned",
+    message: "Our team has assigned your verification case and will guide the next step shortly.",
+    metadata: { eventType: "VERIFICATION_ASSIGNED" }
   });
   return { request };
 }
@@ -314,6 +343,13 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
       targetId: request.id,
       metadata: {}
     }
+  });
+  await pushVerificationAlert({
+    userId: request.userId,
+    actorUserId,
+    title: "Verification Approved",
+    message: "Your video verification is complete. Please proceed with membership payment.",
+    metadata: { eventType: "VERIFICATION_APPROVED" }
   });
   return { request };
 }
@@ -352,6 +388,13 @@ export async function rejectVerificationRequest(requestId: string, actorUserId: 
       targetId: request.id,
       metadata: { reason: normalizedReason, markedFraud: marksFraud }
     }
+  });
+  await pushVerificationAlert({
+    userId: request.userId,
+    actorUserId,
+    title: "Verification Needs Attention",
+    message: "Your verification could not be approved yet. Please review the update and reconnect with support.",
+    metadata: { eventType: "VERIFICATION_REJECTED", reason: normalizedReason }
   });
   return { request };
 }
@@ -394,27 +437,12 @@ export async function setVerificationMeetLink(userId: string, meetUrl: string, a
       metadata: { meetUrl }
     }
   });
-  await prisma.notification.upsert({
-    where: {
-      userId_type_actorUserId_matchId: {
-        userId,
-        type: "VIDEO_VERIFICATION_UPDATE",
-        actorUserId,
-        matchId: undefined as any
-
-      }
-    },
-    update: {
-      metadata: { meetUrl, cta: "Join verification call" },
-      createdAt: now,
-      isRead: false
-    },
-    create: {
-      userId,
-      actorUserId,
-      type: "VIDEO_VERIFICATION_UPDATE",
-      metadata: { meetUrl, cta: "Join verification call" }
-    }
+  await pushVerificationAlert({
+    userId,
+    actorUserId,
+    title: "Verification Session Assigned",
+    message: "Your video verification session has been scheduled. Please join using the secure link.",
+    metadata: { eventType: "VERIFICATION_ASSIGNED", meetUrl, cta: "Join verification call" }
   });
   return { request: updated };
 }
@@ -455,6 +483,13 @@ export async function approveVerificationForUser(userId: string, actorUserId: st
 
     }
   });
+  await pushVerificationAlert({
+    userId,
+    actorUserId,
+    title: "Verification Approved",
+    message: "Your video verification is complete. Please proceed with membership payment.",
+    metadata: { eventType: "VERIFICATION_APPROVED" }
+  });
   return { request: updated };
 }
 
@@ -493,6 +528,13 @@ export async function rejectVerificationForUser(userId: string, actorUserId: str
       targetId: updated.id,
       metadata: { reason: normalizedReason, markedFraud: marksFraud }
     }
+  });
+  await pushVerificationAlert({
+    userId,
+    actorUserId,
+    title: "Verification Needs Attention",
+    message: "Your verification could not be approved yet. Please review the update and reconnect with support.",
+    metadata: { eventType: "VERIFICATION_REJECTED", reason: normalizedReason }
   });
   return { request: updated };
 }

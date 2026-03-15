@@ -264,6 +264,34 @@ export async function markOnboardingPaymentFailed(options: {
         onboardingStep: "PAYMENT_PENDING"
       }
     });
+
+    await tx.notification.upsert({
+      where: {
+        userId_type_actorUserId_matchId: {
+          userId: options.user.id,
+          type: "SYSTEM_PROMO",
+          actorUserId: undefined as any,
+          matchId: undefined as any
+        }
+      },
+      update: {
+        title: "Payment Action Required",
+        message: "Your membership payment did not complete. Please retry or contact premium support.",
+        metadata: { eventType: "PAYMENT_ISSUE" },
+        deepLinkUrl: "/onboarding/payment",
+        isRead: false,
+        readAt: null,
+        createdAt: new Date()
+      },
+      create: {
+        userId: options.user.id,
+        type: "SYSTEM_PROMO",
+        title: "Payment Action Required",
+        message: "Your membership payment did not complete. Please retry or contact premium support.",
+        metadata: { eventType: "PAYMENT_ISSUE" },
+        deepLinkUrl: "/onboarding/payment"
+      }
+    });
   });
 
   return {

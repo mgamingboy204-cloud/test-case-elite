@@ -1,105 +1,148 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { apiRequest } from "@/lib/api";
+import { ApiError, apiRequest } from "@/lib/api";
 import { fetchAlerts, type Alert } from "@/lib/queries";
 import { useStaleWhileRevalidate } from "@/lib/cache";
 
 export default function AlertsPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
   const router = useRouter();
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [markAllPending, setMarkAllPending] = useState(false);
 
   const alertsQuery = useStaleWhileRevalidate({
     key: "alerts",
     fetcher: fetchAlerts,
     enabled: isAuthenticated && onboardingStep === "COMPLETED",
-    staleTimeMs: 60_000
+    staleTimeMs: 30_000
   });
 
-  const visibleAlerts = alerts.length > 0 ? alerts : alertsQuery.data ?? [];
+  const alerts = alertsQuery.data ?? [];
+  const unreadCount = useMemo(() => alerts.filter((item) => item.isUnread).length, [alerts]);
 
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
-  const handleAlertClick = async (alert: Alert) => {
-    if (alert.isUnread) {
-      setAlerts((current) => current.map((entry) => (entry.id === alert.id ? { ...entry, isUnread: false } : entry)));
-      void apiRequest("/notifications/read", {
+  const markSingleRead = async (alertId: string) => {
+    if (pendingIds.has(alertId)) return;
+    const previous = alertsQuery.data;
+
+    setPendingIds((current) => new Set(current).add(alertId));
+    alertsQuery.mutate((current) => (current ?? []).map((entry) => (entry.id === alertId ? { ...entry, isUnread: false } : entry)));
+
+    try {
+      await apiRequest("/notifications/read", {
         method: "PATCH",
         auth: true,
-        body: JSON.stringify({ ids: [alert.id] })
+        body: JSON.stringify({ ids: [alertId] })
       });
-    }
-
-    if (alert.type === "INTEREST") {
-      router.push("/likes");
-    } else if (alert.type === "CONNECTION") {
-      router.push("/matches");
-    } else if (alert.type === "CONCIERGE") {
-      router.push("/matches");
+    } catch (error) {
+      alertsQuery.mutate(previous ?? []);
+    } finally {
+      setPendingIds((current) => {
+        const next = new Set(current);
+        next.delete(alertId);
+        return next;
+      });
     }
   };
 
+  const markAllRead = async () => {
+    if (markAllPending || unreadCount === 0) return;
+    const previous = alertsQuery.data;
+    setMarkAllPending(true);
+    alertsQuery.mutate((current) => (current ?? []).map((entry) => ({ ...entry, isUnread: false })));
+    try {
+      await apiRequest("/notifications/read", { method: "PATCH", auth: true, body: JSON.stringify({}) });
+    } catch (_error) {
+      alertsQuery.mutate(previous ?? []);
+    } finally {
+      setMarkAllPending(false);
+    }
+  };
+
+  const handleAlertClick = async (alert: Alert) => {
+    if (alert.isUnread) {
+      await markSingleRead(alert.id);
+    }
+
+    if (typeof alert.deepLinkUrl === "string" && alert.deepLinkUrl.startsWith("/")) {
+      router.push(alert.deepLinkUrl);
+      return;
+    }
+
+    if (alert.type === "INTEREST") router.push("/likes");
+    else router.push("/matches");
+  };
+
+  const isInitialLoading = alertsQuery.isLoading && alerts.length === 0;
+  const errorMessage = alertsQuery.error instanceof ApiError ? alertsQuery.error.message : "We couldn’t load your alerts.";
+
   return (
     <div className="w-full h-full relative">
-      <div className="w-full pt-8 pb-4 flex flex-col items-center justify-center px-6">
+      <div className="w-full pt-8 pb-4 flex flex-col items-center justify-center px-6 gap-2">
         <h1 className="text-xl tracking-[0.4em] font-medium text-primary drop-shadow-sm uppercase">Alerts</h1>
+        {unreadCount > 0 ? (
+          <button
+            onClick={markAllRead}
+            disabled={markAllPending}
+            className="text-xs text-primary/80 hover:text-primary transition disabled:opacity-50"
+          >
+            {markAllPending ? "Updating…" : `Mark all as read (${unreadCount})`}
+          </button>
+        ) : null}
       </div>
 
       <div className="w-full px-4 pt-4 pb-20 flex flex-col gap-3">
-        {visibleAlerts.map((alert, index) => (
+        {isInitialLoading && (
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <div key={idx} className="w-full p-5 rounded-[2rem] border border-white/10 bg-white/[0.02] animate-pulse h-[92px]" />
+            ))}
+          </div>
+        )}
+
+        {alertsQuery.error && !isInitialLoading && (
+          <div className="rounded-3xl border border-red-200/20 bg-red-950/10 p-6 text-center">
+            <p className="text-sm text-foreground/80">{errorMessage}</p>
+            <button onClick={() => alertsQuery.revalidate()} className="mt-4 text-xs text-primary hover:text-primary/80 transition">
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!alertsQuery.error && !isInitialLoading && alerts.length === 0 && (
+          <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-8 text-center">
+            <p className="text-sm text-foreground/70">No alerts yet. Important membership and coordination updates will appear here.</p>
+          </div>
+        )}
+
+        {!alertsQuery.error && alerts.map((alert, index) => (
           <motion.button
             key={alert.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05, duration: 0.4 }}
+            transition={{ delay: index * 0.03, duration: 0.3 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => handleAlertClick(alert)}
             className={`w-full text-left p-5 rounded-[2rem] border transition-all flex items-center gap-4 ${
               alert.isUnread ? "bg-primary/5 border-primary/20 shadow-md" : "bg-transparent border-transparent hover:bg-primary/5"
             }`}
           >
-            <div className="shrink-0 relative">
-              {alert.type === "INTEREST" && (
-                <img src={alert.image} alt="Blurred profile" className="w-14 h-14 rounded-full object-cover blur-sm border border-white/10 opacity-80" />
-              )}
-              {alert.type === "CONNECTION" && (
-                <img src={alert.image} alt={alert.title} className="w-14 h-14 rounded-[1rem] object-cover border border-white/10 shadow-sm" />
-              )}
-              {alert.type === "CONCIERGE" && (
-                <div className="relative">
-                  <div className="absolute inset-[-4px] rounded-full bg-gradient-to-tr from-highlight to-primary opacity-50 blur-sm animate-pulse" />
-                  <img
-                    src={alert.image}
-                    alt={alert.title}
-                    className="w-14 h-14 rounded-full object-cover border-2 border-[#E0BFB8] relative z-10 shadow-[0_0_15px_rgba(224,191,184,0.4)]"
-                  />
-                </div>
-              )}
-
-              {alert.isUnread && alert.type !== "CONCIERGE" && (
-                <div className="absolute top-0 right-0 w-3 h-3 bg-[#E0BFB8] rounded-full border-2 border-slate-900" />
-              )}
-            </div>
+            <img src={alert.image} alt="Alert" className="w-14 h-14 rounded-[1rem] object-cover border border-white/10 shadow-sm" />
 
             <div className="flex-1 flex flex-col gap-1 overflow-hidden">
-              <div className="flex justify-between items-center w-full">
+              <div className="flex justify-between items-center w-full gap-2">
                 <h3 className="font-serif text-foreground text-[16px] truncate">{alert.title}</h3>
-                <span className="text-[10px] text-foreground/30 tracking-widest font-bold shrink-0 ml-2 uppercase">{alert.timestamp}</span>
+                <span className="text-[10px] text-foreground/30 tracking-widest font-bold shrink-0 uppercase">{alert.timestamp}</span>
               </div>
-              <p className={`text-[13px] leading-relaxed truncate ${alert.isUnread ? "text-primary" : "text-foreground/60 font-light"}`}>
-                {alert.message}
-              </p>
+              <p className={`text-[13px] leading-relaxed truncate ${alert.isUnread ? "text-primary" : "text-foreground/60 font-light"}`}>{alert.message}</p>
             </div>
           </motion.button>
         ))}
-
-        <div className="w-full flex justify-center py-6 pb-20">
-          <div className="w-1 h-1 rounded-full bg-foreground/20" />
-        </div>
       </div>
     </div>
   );
