@@ -105,14 +105,14 @@ export default function AlertsPage() {
           </div>
         )}
 
-        {alertsQuery.error && !isInitialLoading && (
-          <div className="rounded-3xl border border-red-200/20 bg-red-950/10 p-6 text-center">
-            <p className="text-sm text-foreground/80">{errorMessage}</p>
-            <button onClick={() => alertsQuery.revalidate()} className="mt-4 text-xs text-primary hover:text-primary/80 transition">
-              Retry
-            </button>
-          </div>
-        )}
+        {!!alertsQuery.error && !isInitialLoading && (
+  <div className="rounded-3xl border border-red-200/20 bg-red-950/10 p-6 text-center">
+    <p className="text-sm text-foreground/80">{errorMessage}</p>
+    <button onClick={() => alertsQuery.revalidate()} className="mt-4 text-xs text-primary hover:text-primary/80 transition">
+      Retry
+    </button>
+  </div>
+)}
 
         {!alertsQuery.error && !isInitialLoading && alerts.length === 0 && (
           <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-8 text-center">
