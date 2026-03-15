@@ -69,7 +69,11 @@ async function refreshAccessToken(): Promise<string | null> {
 
       setAuthToken(payload.accessToken);
       return payload.accessToken;
-    } catch {
+    } catch (error) {
+      console.error("[auth] Refresh token request failed", {
+        url: `${API_BASE_URL}/auth/token/refresh`,
+        error
+      });
       setAuthToken(null);
       return null;
     } finally {
@@ -81,6 +85,8 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 export async function apiRequest<T>(path: string, options?: RequestInit & { auth?: boolean }) {
+  const method = options?.method ?? "GET";
+
   const runRequest = async () => {
     const headers = new Headers(options?.headers);
     headers.set("Content-Type", "application/json");
@@ -96,11 +102,24 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
       }
     }
 
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      ...options,
-      headers,
-      credentials: "include"
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        headers,
+        credentials: "include"
+      });
+    } catch (error) {
+      console.error("[api] Network request failed", {
+        method,
+        path,
+        auth: options?.auth ?? false,
+        error
+      });
+      throw new ApiError(`Network error while calling ${method} ${path}`, 0, {
+        cause: error instanceof Error ? error.message : String(error)
+      });
+    }
 
     const contentType = response.headers.get("content-type") ?? "";
     const body = contentType.includes("application/json") ? await response.json() : await response.text();
@@ -111,11 +130,15 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
   let { response, body } = await runRequest();
 
   if (options?.auth && response.status === 401 && !path.startsWith("/auth/")) {
+    console.warn("[api] Received 401 on authenticated request. Attempting token refresh", { method, path });
     const nextToken = await refreshAccessToken();
     if (nextToken) {
+      console.info("[api] Refresh succeeded. Retrying request", { method, path });
       const retry = await runRequest();
       response = retry.response;
       body = retry.body;
+    } else {
+      console.warn("[api] Refresh failed. Request remains unauthorized", { method, path });
     }
   }
 
@@ -123,6 +146,7 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
     const message = typeof body === "object" && body !== null && "message" in body
       ? String((body as { message?: string }).message)
       : `Request failed: ${response.status}`;
+    console.error("[api] Request failed", { method, path, status: response.status, body });
     throw new ApiError(message, response.status, body);
   }
 
