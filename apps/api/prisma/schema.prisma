@@ -58,6 +58,7 @@ enum OnboardingPaymentStatus {
   PENDING
   PAID
   FAILED
+  CANCELED
 }
 
 enum PaymentPlan {
@@ -67,7 +68,10 @@ enum PaymentPlan {
 }
 
 enum PaymentStatus {
+  PENDING
   PAID
+  FAILED
+  CANCELED
   REFUNDED
   MOCK
 }
@@ -148,6 +152,9 @@ model User {
   paymentStatus OnboardingPaymentStatus @default(NOT_STARTED)
   subscriptionTier SubscriptionTier @default(FREE)
   subscriptionStatus SubscriptionStatus @default(INACTIVE)
+  subscriptionStartedAt DateTime?
+  subscriptionEndsAt DateTime?
+  manualRenewalRequired Boolean @default(true)
   isVideoVerified Boolean @default(false)
   videoUrl String?
   onboardingToken String? @unique

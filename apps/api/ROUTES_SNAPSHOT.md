@@ -69,7 +69,10 @@ This snapshot captures the production-ready auth response shapes and core routes
 - `GET /verification/status` → `{ request }`
 
 ## Payments
-- `GET /payments/me` → `{ payment, paymentStatus }`
+- `GET /payments/me` → `{ payment, paymentStatus, onboardingStep, plans, subscription, pendingPayment, taxIncluded, renewalPolicy, autoRenew }`
+- `POST /payments/initiate` → `{ ok, paymentRef, plan, amountInr, durationMonths, taxIncluded, renewalPolicy, autoRenew, ... }`
+- `POST /payments/verify` → `{ ok, payment, paymentStatus, onboardingStep, subscriptionStartedAt, subscriptionEndsAt, ... }`
+- `POST /payments/fail` → `402 { ok: false, paymentStatus: "FAILED", message }`
 - `POST /payments/mock` → `{ error: "Use /payments/mock/start or /payments/mock/confirm." }`
 - `POST /payments/mock/start` → `{ ok: true, paymentStatus: "PENDING" }` or `{ error: string }`
 - `POST /payments/mock/confirm` → `{ payment, paymentStatus, onboardingStep }` or `{ error: string }`

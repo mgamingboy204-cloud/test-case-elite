@@ -8,7 +8,7 @@ export type BackendOnboardingStep =
   | "ACTIVE";
 
 export type VideoVerificationStatus = "NOT_REQUESTED" | "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED";
-export type PaymentStatus = "NOT_STARTED" | "PENDING" | "PAID" | "FAILED";
+export type PaymentStatus = "NOT_STARTED" | "PENDING" | "PAID" | "FAILED" | "CANCELED";
 
 export type FrontendOnboardingStep =
   | "PHONE"
@@ -39,14 +39,19 @@ export function resolveBackendOnboardingStep(input: {
   videoVerificationStatus?: VideoVerificationStatus | string | null;
   paymentStatus?: PaymentStatus | string | null;
   profileCompletedAt?: Date | string | null;
+  subscriptionEndsAt?: Date | string | null;
   photoCount?: number;
 }): BackendOnboardingStep {
   const photoCount = input.photoCount ?? 0;
+  const hasActiveSubscription =
+    input.paymentStatus === "PAID" &&
+    (!input.subscriptionEndsAt || new Date(input.subscriptionEndsAt).getTime() > Date.now());
 
-  if (input.onboardingStep === "ACTIVE" && photoCount > 0) return "ACTIVE";
-  if (input.profileCompletedAt && photoCount > 0) return "ACTIVE";
-  if (input.paymentStatus === "PAID") return "PROFILE_PENDING";
+  if (input.onboardingStep === "ACTIVE" && photoCount > 0 && hasActiveSubscription) return "ACTIVE";
+  if (input.profileCompletedAt && photoCount > 0 && hasActiveSubscription) return "ACTIVE";
+  if (hasActiveSubscription) return "PROFILE_PENDING";
   if (input.paymentStatus === "PENDING") return "PAYMENT_PENDING";
+  if (input.paymentStatus === "FAILED" || input.paymentStatus === "CANCELED") return "PAYMENT_PENDING";
   if (input.videoVerificationStatus === "APPROVED") return "VIDEO_VERIFIED";
   if (input.videoVerificationStatus === "IN_PROGRESS" || input.videoVerificationStatus === "PENDING") {
     return "VIDEO_VERIFICATION_PENDING";

@@ -1,42 +1,81 @@
 "use client";
 
-import { useState } from "react";
-import { apiRequest } from "@/lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { apiRequest, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import { ShieldCheck, Check } from "lucide-react";
 
-const TIERS = [
-  {
-    id: "ONE_MONTH",
-    label: "1 Month",
-    price: "INR 30,000",
-    period: "one-time",
-    perks: ["Private Club Access", "Curated Discovery", "Premium Member Support"],
-  },
-  {
-    id: "FIVE_MONTHS",
-    label: "5 Months",
-    price: "INR 70,000",
-    period: "one-time",
-    perks: ["Private Club Access", "Curated Discovery", "Premium Member Support"],
-    featured: true,
-  },
-  {
-    id: "TWELVE_MONTHS",
-    label: "12 Months",
-    price: "INR 100,000",
-    period: "one-time",
-    perks: ["Private Club Access", "Curated Discovery", "Premium Member Support"],
-  },
-];
+type PlanId = "ONE_MONTH" | "FIVE_MONTHS" | "TWELVE_MONTHS";
+
+type PaymentStatus = "NOT_STARTED" | "PENDING" | "PAID" | "FAILED" | "CANCELED";
+
+interface PaymentOverview {
+  paymentStatus: PaymentStatus;
+  onboardingStep: string;
+  plans: Array<{
+    plan: PlanId;
+    amountInr: number;
+    durationMonths: number;
+    taxIncluded: boolean;
+    autoRenew: boolean;
+    renewalPolicy: "MANUAL_ONLY";
+  }>;
+  subscription: {
+    status: string;
+    startedAt: string | null;
+    endsAt: string | null;
+    manualRenewalRequired: boolean;
+  };
+}
+
+const PLAN_COPY: Record<PlanId, { label: string; price: string }> = {
+  ONE_MONTH: { label: "1 Month", price: "INR 30,000" },
+  FIVE_MONTHS: { label: "5 Months", price: "INR 70,000" },
+  TWELVE_MONTHS: { label: "12 Months", price: "INR 100,000" }
+};
+
+const FAILURE_MESSAGE =
+  "Payment could not be completed. Please contact premium support on WhatsApp — our team responds within 1 to 2 hours.";
 
 export default function PaymentStep() {
   const { completeOnboardingStep, refreshCurrentUser } = useAuth();
   const [error, setError] = useState("");
-  const [selectedTier, setSelectedTier] = useState<string>("");
+  const [selectedTier, setSelectedTier] = useState<PlanId | "">("");
   const [cardNumber, setCardNumber] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [overview, setOverview] = useState<PaymentOverview | null>(null);
+
+  const formattedPlans = useMemo(() => {
+    return overview?.plans.map((plan) => ({
+      ...plan,
+      label: PLAN_COPY[plan.plan].label,
+      price: PLAN_COPY[plan.plan].price,
+      perks: ["Private Club Access", "Curated Discovery", "Premium Member Support"]
+    })) ?? [];
+  }, [overview]);
+
+  useEffect(() => {
+    const loadOverview = async () => {
+      try {
+        const data = await apiRequest<PaymentOverview>("/payments/me", { auth: true });
+        setOverview(data);
+
+        if (data.paymentStatus === "PAID") {
+          await refreshCurrentUser();
+          completeOnboardingStep("PROFILE");
+          return;
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not load membership plans.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadOverview();
+  }, [completeOnboardingStep, refreshCurrentUser]);
 
   const isValid = selectedTier !== "" && cardNumber.replace(/\s/g, "").length >= 15;
 
@@ -63,52 +102,65 @@ export default function PaymentStep() {
       await refreshCurrentUser();
       completeOnboardingStep("PROFILE");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment failed");
+      if (err instanceof ApiError) {
+        try {
+          await apiRequest("/payments/fail", {
+            method: "POST",
+            auth: true,
+            body: JSON.stringify({ reason: FAILURE_MESSAGE })
+          });
+        } catch {
+          // fallback on frontend messaging only
+        }
+        setError(err.body && typeof err.body === "object" && "message" in (err.body as Record<string, unknown>)
+          ? String((err.body as Record<string, unknown>).message)
+          : FAILURE_MESSAGE);
+      } else {
+        setError(FAILURE_MESSAGE);
+      }
       setProcessing(false);
     }
   };
 
+  if (loading) {
+    return <div className="flex h-full items-center justify-center text-sm text-foreground/50">Loading membership plans…</div>;
+  }
+
+  if (!overview) {
+    return <div className="flex h-full items-center justify-center text-sm text-red-400">{error || "Unable to load payment."}</div>;
+  }
+
   return (
     <div className="flex flex-col h-full px-8 pb-[calc(env(safe-area-inset-bottom,0px)+32px)]">
-
-      {/* Header */}
       <div className="flex-none pt-6 mb-8">
         <h1 className="text-4xl font-serif text-foreground tracking-wide mb-2">
           Elite <span className="text-primary">Membership</span>
         </h1>
         <p className="text-foreground/40 font-light uppercase tracking-widest text-[10px]">
-          Select your membership plan. Manual renewal only — auto-renew is disabled.
+          Tax included. Manual renewal only — auto-renew is disabled for all members.
         </p>
       </div>
 
-      {/* Tier Selector */}
       <div className="flex-none grid grid-cols-1 gap-4 mb-8">
-        {TIERS.map((tier) => {
-          const active = selectedTier === tier.id;
+        {formattedPlans.map((tier) => {
+          const active = selectedTier === tier.plan;
           return (
             <motion.button
-              key={tier.id}
+              key={tier.plan}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setSelectedTier(tier.id)}
+              onClick={() => setSelectedTier(tier.plan)}
               className={`relative p-5 rounded-2xl border text-left transition-all duration-400 flex flex-col gap-3 overflow-hidden ${
                 active
-                  ? 'bg-primary/10 border-primary shadow-[0_0_20px_rgba(200,155,144,0.12)]'
-                  : 'bg-foreground/[0.02] border-foreground/8 hover:border-primary/30'
+                  ? "bg-primary/10 border-primary shadow-[0_0_20px_rgba(200,155,144,0.12)]"
+                  : "bg-foreground/[0.02] border-foreground/8 hover:border-primary/30"
               }`}
             >
-              {tier.featured && (
-                <div className="absolute top-2 right-2 text-[7px] uppercase tracking-[0.25em] text-primary font-semibold bg-primary/10 px-2 py-0.5 rounded-full">
-                  Preferred
-                </div>
-              )}
               <div>
                 <p className="text-[9px] uppercase tracking-[0.3em] text-foreground/40 font-medium mb-1">{tier.label}</p>
-                <p className="text-2xl font-light text-primary">
-                  {tier.price} <span className="text-xs text-foreground/30">{tier.period}</span>
-                </p>
+                <p className="text-2xl font-light text-primary">{tier.price}</p>
               </div>
               <ul className="space-y-1.5">
-                {tier.perks.map(p => (
+                {tier.perks.map((p) => (
                   <li key={p} className="flex items-start gap-2 text-[9px] text-foreground/50 tracking-wide">
                     <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
                     {p}
@@ -125,7 +177,6 @@ export default function PaymentStep() {
         })}
       </div>
 
-      {/* Card Input */}
       <form onSubmit={handlePayment} className="flex flex-col flex-1 gap-6">
         <div className="space-y-6">
           <div className="relative">
@@ -141,15 +192,18 @@ export default function PaymentStep() {
         </div>
 
         <div className="mt-auto space-y-3">
-          {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+          {error && <p className="text-sm text-red-400 text-center">{error || FAILURE_MESSAGE}</p>}
           <motion.button
             whileTap={{ scale: 0.97 }}
             type="submit"
             disabled={!isValid || processing}
-            className={`btn-elite-primary ${(!isValid || processing) ? 'opacity-20 grayscale cursor-not-allowed' : ''}`}
+            className={`btn-elite-primary ${!isValid || processing ? "opacity-20 grayscale cursor-not-allowed" : ""}`}
           >
-            {processing ? 'Processing Cipher...' : `Lock In Access — ${TIERS.find(t => t.id === selectedTier)?.price ?? '$—'}/mo`}
+            {processing ? "Processing…" : `Complete Payment — ${selectedTier ? PLAN_COPY[selectedTier].price : "INR —"}`}
           </motion.button>
+          <p className="text-center text-[11px] text-foreground/50">
+            Payment issues? Contact premium WhatsApp support. Response time: 1 to 2 hours.
+          </p>
           <div className="flex justify-center items-center gap-2 text-[8px] uppercase tracking-[0.3em] text-foreground/20">
             <ShieldCheck size={11} className="text-primary/40" />
             End-to-End Encrypted Session
