@@ -72,8 +72,10 @@ export type OnlineMeetEmployeeCase = {
   };
 };
 
-export async function listOnlineMeetCasesForEmployee() {
-  return apiRequest<{ cases: OnlineMeetEmployeeCase[] }>("/admin/online-meets", { auth: true });
+export type OnlineMeetStatusView = "ACTIVE" | "FINALIZED" | "CONFLICT" | "TIMEOUT" | "CANCELED" | "ALL";
+
+export async function listOnlineMeetCasesForEmployee(statusView: OnlineMeetStatusView = "ACTIVE") {
+  return apiRequest<{ statusView: OnlineMeetStatusView; cases: OnlineMeetEmployeeCase[] }>(`/admin/online-meets?statusView=${statusView}`, { auth: true });
 }
 
 export async function assignOnlineMeetCase(caseId: string) {

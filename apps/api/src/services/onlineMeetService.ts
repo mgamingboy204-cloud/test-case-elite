@@ -38,6 +38,26 @@ const TERMINAL_OR_COOLDOWN_STATUSES: OnlineMeetCoordinationStatus[] = [
   "CANCELED"
 ];
 
+type OnlineMeetCaseStatusView = "ACTIVE" | "FINALIZED" | "CONFLICT" | "TIMEOUT" | "CANCELED" | "ALL";
+
+const ONLINE_STATUS_VIEW_MAP: Record<Exclude<OnlineMeetCaseStatusView, "ALL">, OnlineMeetCoordinationStatus[]> = {
+  ACTIVE: ACTIVE_COORDINATION_STATUSES,
+  FINALIZED: ["FINALIZED"],
+  CONFLICT: ["NO_COMPATIBLE_OVERLAP", "RESCHEDULE_REQUESTED"],
+  TIMEOUT: ["NO_RESPONSE_TIMEOUT", "COOLDOWN"],
+  CANCELED: ["CANCELED"]
+};
+
+function parseOnlineStatusView(value?: string): OnlineMeetCaseStatusView {
+  if (!value) return "ACTIVE";
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "ALL") return "ALL";
+  if (normalized in ONLINE_STATUS_VIEW_MAP) {
+    return normalized as keyof typeof ONLINE_STATUS_VIEW_MAP;
+  }
+  throw new HttpError(400, { message: "Invalid online meet status view." });
+}
+
 function asStringArray(value: Prisma.JsonValue | null | undefined): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((entry): entry is string => typeof entry === "string");
@@ -334,10 +354,14 @@ export async function submitOnlineMeetSelections(params: {
   return { ok: true, status: "READY_FOR_FINALIZATION" as const };
 }
 
-export async function listOnlineMeetCasesForEmployee(userId: string) {
+export async function listOnlineMeetCasesForEmployee(userId: string, requestedView?: string) {
+  const statusView = parseOnlineStatusView(requestedView);
+  const statusFilter = statusView === "ALL"
+    ? [...ACTIVE_COORDINATION_STATUSES, ...TERMINAL_OR_COOLDOWN_STATUSES]
+    : ONLINE_STATUS_VIEW_MAP[statusView];
   const cases = await prisma.onlineMeetCase.findMany({
     where: {
-      status: { in: ACTIVE_COORDINATION_STATUSES },
+      status: { in: statusFilter },
       OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: userId }]
     },
     include: {
@@ -357,7 +381,7 @@ export async function listOnlineMeetCasesForEmployee(userId: string) {
 
   const refreshed = await prisma.onlineMeetCase.findMany({
     where: {
-      status: { in: ACTIVE_COORDINATION_STATUSES },
+      status: { in: statusFilter },
       OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: userId }]
     },
     include: {
@@ -372,6 +396,7 @@ export async function listOnlineMeetCasesForEmployee(userId: string) {
   });
 
   return {
+    statusView,
     cases: refreshed.map((entry) => ({
       id: entry.id,
       matchId: entry.matchId,
@@ -405,17 +430,26 @@ export async function listOnlineMeetCasesForEmployee(userId: string) {
 export async function assignOnlineMeetCase(caseId: string, employeeUserId: string) {
   const caseItem = await prisma.onlineMeetCase.findUnique({ where: { id: caseId } });
   if (!caseItem) throw new HttpError(404, { message: "Case not found." });
-  if (caseItem.assignedEmployeeId && caseItem.assignedEmployeeId !== employeeUserId) {
-    throw new HttpError(409, { message: "Case already assigned." });
+  if (TERMINAL_OR_COOLDOWN_STATUSES.includes(caseItem.status)) {
+    throw new HttpError(409, { message: "Completed or cooldown cases cannot be reassigned." });
   }
-
-  return prisma.onlineMeetCase.update({
-    where: { id: caseId },
+  const nextStatus = caseItem.status === "ACCEPTED" || caseItem.status === "REQUESTED" ? "EMPLOYEE_PREPARING_OPTIONS" : caseItem.status;
+  const claimResult = await prisma.onlineMeetCase.updateMany({
+    where: {
+      id: caseId,
+      OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: employeeUserId }]
+    },
     data: {
       assignedEmployeeId: employeeUserId,
-      status: caseItem.status === "ACCEPTED" || caseItem.status === "REQUESTED" ? "EMPLOYEE_PREPARING_OPTIONS" : caseItem.status
+      status: nextStatus
     }
   });
+  if (claimResult.count === 0) {
+    throw new HttpError(409, { message: "Case already assigned to another employee." });
+  }
+  const updated = await prisma.onlineMeetCase.findUnique({ where: { id: caseId } });
+  if (!updated) throw new HttpError(404, { message: "Case not found." });
+  return updated;
 }
 
 export async function sendOnlineMeetOptions(params: {

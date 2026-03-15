@@ -25,7 +25,8 @@ export async function submitOfflineMeetSelectionsHandler(req: Request, res: Resp
 }
 
 export async function listOfflineMeetCasesHandler(req: Request, res: Response) {
-  const result = await listOfflineMeetCasesForEmployee(res.locals.user.id);
+  const statusView = typeof req.query.statusView === "string" ? req.query.statusView : undefined;
+  const result = await listOfflineMeetCasesForEmployee(res.locals.user.id, statusView);
   return res.json(result);
 }
 
