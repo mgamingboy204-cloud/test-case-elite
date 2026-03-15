@@ -16,6 +16,10 @@ export type LegacyDiscoverFeedItem = {
   city: string;
   bioShort: string;
   primaryPhotoUrl: string | null;
+  dateOfBirth?: string | null;
+  locationLabel?: string | null;
+  profession?: string | null;
+  heightCm?: number | null;
 };
 
 export type LegacyDiscoverFeedResponse = {
@@ -30,16 +34,42 @@ export type DiscoverCard = {
   locationLabel: string;
   bio: string;
   imageUrl: string | null;
+  profession: string | null;
+  heightLabel: string | null;
 };
 
+function toAgeFromDateOfBirth(dateOfBirth: string | null | undefined) {
+  if (!dateOfBirth) return null;
+  const dob = new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) return null;
+
+  const now = new Date();
+  let age = now.getUTCFullYear() - dob.getUTCFullYear();
+  const monthDiff = now.getUTCMonth() - dob.getUTCMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getUTCDate() < dob.getUTCDate())) age -= 1;
+  return age >= 18 ? age : null;
+}
+
+function toHeightLabel(heightCm: number | null | undefined) {
+  if (!heightCm || heightCm < 120 || heightCm > 240) return null;
+  const inches = Math.round(heightCm / 2.54);
+  const feet = Math.floor(inches / 12);
+  const rest = inches % 12;
+  return `${feet}'${rest}" (${heightCm}cm)`;
+}
+
 export function mapLegacyFeedItemToCard(item: LegacyDiscoverFeedItem): DiscoverCard {
+  const derivedAge = toAgeFromDateOfBirth(item.dateOfBirth);
+
   return {
     id: item.userId,
     displayName: item.name,
-    age: item.age,
-    locationLabel: item.city,
+    age: derivedAge ?? item.age,
+    locationLabel: item.locationLabel ?? item.city,
     bio: item.bioShort,
-    imageUrl: item.primaryPhotoUrl
+    imageUrl: item.primaryPhotoUrl,
+    profession: item.profession ?? null,
+    heightLabel: toHeightLabel(item.heightCm)
   };
 }
 
