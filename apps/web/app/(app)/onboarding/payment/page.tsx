@@ -29,12 +29,6 @@ const PLAN_COPY: Record<PlanId, { label: string; price: string }> = {
 
 const FAILURE_MESSAGE = "Payment could not be completed. Please contact premium support on WhatsApp — our team responds within 1 to 2 hours.";
 
-declare global {
-  interface Window {
-    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
-  }
-}
-
 async function ensureRazorpayCheckoutLoaded() {
   if (typeof window === "undefined") return false;
   if (window.Razorpay) return true;
@@ -92,6 +86,11 @@ export default function PaymentStep() {
       if (!loaded || !window.Razorpay) throw new Error("Payment gateway unavailable.");
 
       await new Promise<void>((resolve, reject) => {
+        if (!window.Razorpay) {
+          reject(new Error("Razorpay checkout failed to load. Please check your network connection and try again."));
+          return;
+        }
+
         const paymentObject = new window.Razorpay({
           key: init.razorpay.keyId,
           amount: init.razorpay.amountPaise,
