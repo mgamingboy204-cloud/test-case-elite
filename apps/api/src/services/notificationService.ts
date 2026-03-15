@@ -28,7 +28,12 @@ const ALERT_DEEP_LINKS: Record<NotificationType, string> = {
   SOCIAL_EXCHANGE_HANDLE_READY: "/matches",
   SOCIAL_EXCHANGE_VIEWED: "/matches",
   SOCIAL_EXCHANGE_EXPIRED: "/matches",
-  SOCIAL_EXCHANGE_RESEND_AVAILABLE: "/matches"
+  SOCIAL_EXCHANGE_RESEND_AVAILABLE: "/matches",
+  PHONE_EXCHANGE_REQUEST: "/matches",
+  PHONE_EXCHANGE_ACCEPTED: "/matches",
+  PHONE_EXCHANGE_REJECTED: "/matches",
+  PHONE_EXCHANGE_MUTUAL_CONSENT_CONFIRMED: "/matches",
+  PHONE_EXCHANGE_REVEALED: "/matches"
 };
 
 const ALERT_TITLES: Record<NotificationType, string> = {
@@ -58,7 +63,12 @@ const ALERT_TITLES: Record<NotificationType, string> = {
   SOCIAL_EXCHANGE_HANDLE_READY: "Handle Ready to Reveal",
   SOCIAL_EXCHANGE_VIEWED: "Handle Revealed",
   SOCIAL_EXCHANGE_EXPIRED: "Handle Expired",
-  SOCIAL_EXCHANGE_RESEND_AVAILABLE: "Social Exchange Available"
+  SOCIAL_EXCHANGE_RESEND_AVAILABLE: "Social Exchange Available",
+  PHONE_EXCHANGE_REQUEST: "Phone Exchange Request",
+  PHONE_EXCHANGE_ACCEPTED: "Phone Exchange Accepted",
+  PHONE_EXCHANGE_REJECTED: "Phone Exchange Declined",
+  PHONE_EXCHANGE_MUTUAL_CONSENT_CONFIRMED: "Phone Exchange Confirmed",
+  PHONE_EXCHANGE_REVEALED: "Phone Numbers Viewed"
 };
 
 const ALERT_MESSAGES: Record<NotificationType, string> = {
@@ -88,7 +98,12 @@ const ALERT_MESSAGES: Record<NotificationType, string> = {
   SOCIAL_EXCHANGE_HANDLE_READY: "A temporary social handle is ready to view.",
   SOCIAL_EXCHANGE_VIEWED: "Your social handle was viewed.",
   SOCIAL_EXCHANGE_EXPIRED: "This social exchange has expired.",
-  SOCIAL_EXCHANGE_RESEND_AVAILABLE: "You can send another social exchange request now."
+  SOCIAL_EXCHANGE_RESEND_AVAILABLE: "You can send another social exchange request now.",
+  PHONE_EXCHANGE_REQUEST: "Your match requested private phone number exchange.",
+  PHONE_EXCHANGE_ACCEPTED: "Your match accepted the phone exchange request.",
+  PHONE_EXCHANGE_REJECTED: "Your match declined phone number exchange.",
+  PHONE_EXCHANGE_MUTUAL_CONSENT_CONFIRMED: "Both members consented. Phone numbers are now available.",
+  PHONE_EXCHANGE_REVEALED: "Your match opened the phone number exchange panel."
 };
 
 export async function listNotifications(userId: string, options?: { cursor?: string; limit?: number }) {

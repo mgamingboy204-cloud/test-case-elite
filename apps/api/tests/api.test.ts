@@ -12,6 +12,7 @@ async function resetDb() {
   await prisma.verificationRequest.deleteMany();
   await prisma.deviceToken.deleteMany();
   await prisma.consent.deleteMany();
+  await prisma.phoneExchangeCase.deleteMany();
   await prisma.phoneExchangeEvent.deleteMany();
   await prisma.match.deleteMany();
   await prisma.like.deleteMany();
