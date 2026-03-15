@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Compass, Heart, Bell, User, Sparkles, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchAlerts, fetchLikesIncoming, fetchMatches, fetchProfile } from "@/lib/queries";
 import { primeCache } from "@/lib/cache";
 import { motion } from "framer-motion";
@@ -23,7 +23,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isAuthResolved, onboardingStep, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const [mounted] = useState(() => typeof window !== "undefined");
+  const prefetchedRef = useRef(false);
 
   const prefetchRouteBundle = useCallback((href: string) => {
     router.prefetch(href);
@@ -33,9 +34,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (href === "/profile" || href === "/settings") void fetchProfile().then((data) => primeCache("profile", data));
   }, [router]);
 
-  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
+    if (prefetchedRef.current) return;
+    prefetchedRef.current = true;
     NAV_ITEMS.forEach((item) => prefetchRouteBundle(item.href));
   }, [prefetchRouteBundle]);
 

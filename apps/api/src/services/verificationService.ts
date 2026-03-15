@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import { VerificationRequestStatus } from "@prisma/client";
+import { Prisma, VerificationRequestStatus } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { env } from "../config/env";
 import { HttpError } from "../utils/httpErrors";
@@ -91,12 +91,31 @@ export async function submitVerificationVideo(options: { userId: string; dataUrl
     throw new HttpError(501, { message: "Remote video storage provider is not configured." });
   }
 
-  const request = await prisma.verificationRequest.create({
-    data: {
-      userId: options.userId,
-      status: "REQUESTED"
-    }
+  const existingActive = await prisma.verificationRequest.findFirst({
+    where: { userId: options.userId, status: { in: [...ACTIVE_VERIFICATION_STATUSES] } },
+    orderBy: { createdAt: "desc" }
   });
+
+  const request = existingActive
+    ? await prisma.verificationRequest.update({
+        where: { id: existingActive.id },
+        data: {
+          status: "REQUESTED",
+          reason: null,
+          decidedAt: null,
+          assignedEmployeeId: null,
+          assignedAt: null,
+          verificationLink: null,
+          meetUrl: null,
+          linkExpiresAt: null
+        }
+      })
+    : await prisma.verificationRequest.create({
+        data: {
+          userId: options.userId,
+          status: "REQUESTED"
+        }
+      });
 
   await prisma.user.update({
     where: { id: options.userId },
@@ -128,9 +147,21 @@ export async function createVerificationRequest(options: { userId: string }) {
     return latest;
   }
 
-  const request = await prisma.verificationRequest.create({
-    data: { userId: options.userId, status: "REQUESTED" }
-  });
+  let request;
+  try {
+    request = await prisma.verificationRequest.create({
+      data: { userId: options.userId, status: "REQUESTED" }
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const existingActive = await prisma.verificationRequest.findFirst({
+        where: { userId: options.userId, status: { in: [...ACTIVE_VERIFICATION_STATUSES] } },
+        orderBy: { createdAt: "desc" }
+      });
+      if (existingActive) return markTimedOutIfNeeded(existingActive);
+    }
+    throw error;
+  }
   await prisma.user.update({
     where: { id: options.userId },
     data: {

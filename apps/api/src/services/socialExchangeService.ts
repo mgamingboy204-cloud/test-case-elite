@@ -1,4 +1,4 @@
-import { NotificationType, SocialExchangeStatus, SocialPlatform } from "@prisma/client";
+import { NotificationType, Prisma, SocialExchangeStatus, SocialPlatform } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 

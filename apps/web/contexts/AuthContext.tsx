@@ -68,15 +68,6 @@ function isSessionPayload(value: unknown): value is { accessToken: string; user:
   return typeof candidate.accessToken === "string" && typeof candidate.user === "object" && candidate.user !== null;
 }
 
-function extractAccessToken(value: unknown) {
-  if (!value || typeof value !== "object") return null;
-  const candidate = value as { accessToken?: unknown; token?: unknown; access_token?: unknown };
-  if (typeof candidate.accessToken === "string") return candidate.accessToken;
-  if (typeof candidate.token === "string") return candidate.token;
-  if (typeof candidate.access_token === "string") return candidate.access_token;
-  return null;
-}
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const allowTestBypass = process.env.NEXT_PUBLIC_ALLOW_TEST_BYPASS === "true";
 
@@ -110,6 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     const hydrate = async () => {
       const storedPendingPhone = localStorage.getItem("elite_pending_phone");
       const storedSignupToken = localStorage.getItem("elite_signup_token");
@@ -127,11 +120,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setUser(null);
       } finally {
-        setIsInitialized(true);
+        if (!cancelled) setIsInitialized(true);
       }
     };
 
     void hydrate();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const startSignup = async (phone: string) => {
@@ -182,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     console.info("[signup] complete response", response);
 
-    const accessToken = extractAccessToken(response);
+    const accessToken = response.accessToken;
     if (!accessToken) {
       console.error("[signup] Missing access token in signup complete response", response);
       throw new Error("Signup completed, but no access token was returned.");

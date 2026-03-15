@@ -56,6 +56,16 @@ function isPayloadTooLargeError(err: unknown): boolean {
   return typeof err === "object" && err !== null && "type" in err && err.type === "entity.too.large";
 }
 
+
+function isPrismaKnownRequestError(err: unknown): err is Prisma.PrismaClientKnownRequestError {
+  const ctor = (Prisma as unknown as { PrismaClientKnownRequestError?: unknown }).PrismaClientKnownRequestError;
+  return typeof ctor === "function" && err instanceof (ctor as new (...args: never[]) => Error);
+}
+
+function isPrismaValidationError(err: unknown): err is Prisma.PrismaClientValidationError {
+  const ctor = (Prisma as unknown as { PrismaClientValidationError?: unknown }).PrismaClientValidationError;
+  return typeof ctor === "function" && err instanceof (ctor as new (...args: never[]) => Error);
+}
 export function errorHandler(err: unknown, req: Request, res: Response, next: NextFunction) {
   if (res.headersSent) return next(err);
 
@@ -72,7 +82,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
   }
 
   // 2. Handle Prisma Client Errors (Database)
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+  if (isPrismaKnownRequestError(err)) {
     const mapped = PRISMA_ERROR_MAP[err.code];
     if (mapped) {
       return res.status(mapped.status).json({
@@ -89,7 +99,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
   }
 
   // 3. Handle Prisma Validation Errors
-  if (err instanceof Prisma.PrismaClientValidationError) {
+  if (isPrismaValidationError(err)) {
     logger.error("Prisma Validation Error:", err.message);
     return res.status(400).json({
       message: "The provided information does not meet our elite quality standards.",
