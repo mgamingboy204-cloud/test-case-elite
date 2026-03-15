@@ -164,6 +164,15 @@ export const ReportSchema = z.object({
   details: z.string().optional().nullable()
 });
 
+export const SocialExchangeRespondSchema = z.object({
+  response: z.enum(["ACCEPT", "REJECT"])
+});
+
+export const SocialExchangeHandleSchema = z.object({
+  platform: z.enum(["Snapchat", "Instagram", "LinkedIn", "SNAPCHAT", "INSTAGRAM", "LINKEDIN"]),
+  handle: z.string().min(2).max(60)
+});
+
 export const RefundRequestSchema = z.object({
   reason: z.string().optional().nullable()
 });

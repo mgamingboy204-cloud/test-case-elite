@@ -134,6 +134,32 @@ enum NotificationType {
   ONLINE_MEET_NO_OVERLAP
   ONLINE_MEET_FINALIZED
   ONLINE_MEET_RESCHEDULE_UPDATE
+  SOCIAL_EXCHANGE_REQUEST
+  SOCIAL_EXCHANGE_ACCEPTED
+  SOCIAL_EXCHANGE_REJECTED
+  SOCIAL_EXCHANGE_HANDLE_READY
+  SOCIAL_EXCHANGE_VIEWED
+  SOCIAL_EXCHANGE_EXPIRED
+  SOCIAL_EXCHANGE_RESEND_AVAILABLE
+}
+
+enum SocialExchangeStatus {
+  REQUESTED
+  ACCEPTED
+  REJECTED
+  AWAITING_HANDLE_SUBMISSION
+  HANDLE_SUBMITTED
+  READY_TO_REVEAL
+  REVEALED
+  EXPIRED
+  COOLDOWN
+  CANCELED
+}
+
+enum SocialPlatform {
+  SNAPCHAT
+  INSTAGRAM
+  LINKEDIN
 }
 
 enum OfflineMeetCoordinationStatus {
@@ -244,6 +270,8 @@ model User {
   onlineMeetRequestsSent OnlineMeetCase[] @relation("onlineMeetRequester")
   onlineMeetRequestsReceived OnlineMeetCase[] @relation("onlineMeetReceiver")
   onlineMeetAssignments OnlineMeetCase[] @relation("onlineMeetAssignee")
+  socialExchangeRequestsSent SocialExchangeCase[] @relation("socialExchangeRequester")
+  socialExchangeRequestsReceived SocialExchangeCase[] @relation("socialExchangeReceiver")
 }
 
 model Profile {
@@ -365,6 +393,7 @@ model Match {
   onlineMeet OnlineMeetEvent?
   onlineMeetCase OnlineMeetCase?
   socialExchange SocialExchangeEvent?
+  socialExchangeCases SocialExchangeCase[]
   notifications Notification[]
 
   @@unique([userAId, userBId])
@@ -500,6 +529,37 @@ model SocialExchangeEvent {
   details   Json?
 
   match Match @relation(fields: [matchId], references: [id])
+}
+
+model SocialExchangeCase {
+  id        String @id @default(uuid())
+  matchId   String
+  requesterUserId String
+  receiverUserId String
+  status    SocialExchangeStatus @default(REQUESTED)
+  platform  SocialPlatform?
+  handleValue String?
+  requestedAt DateTime @default(now())
+  acceptedAt DateTime?
+  rejectedAt DateTime?
+  submittedAt DateTime?
+  revealOpenedAt DateTime?
+  revealExpiresAt DateTime?
+  unopenedExpiresAt DateTime?
+  expiredAt DateTime?
+  cooldownUntil DateTime?
+  canceledAt DateTime?
+  canceledByUserId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  match Match @relation(fields: [matchId], references: [id])
+  requester User @relation("socialExchangeRequester", fields: [requesterUserId], references: [id])
+  receiver User @relation("socialExchangeReceiver", fields: [receiverUserId], references: [id])
+
+  @@index([matchId, createdAt(sort: Desc)])
+  @@index([requesterUserId, status])
+  @@index([receiverUserId, status])
 }
 
 model Report {

@@ -368,12 +368,22 @@ describe("Phone unlock authorization", () => {
     expect(online.status).toBe(200);
     expect(online.body.type).toBe("ONLINE_MEET");
 
-    await withAuth(agentA.post("/consent/respond"), tokenA).send({ matchId: match.id, type: "SOCIAL_EXCHANGE", response: "YES", payload: { platform: "Instagram", handle: "@a" } });
-    await withAuth(agentB.post("/consent/respond"), tokenB).send({ matchId: match.id, type: "SOCIAL_EXCHANGE", response: "YES", payload: { platform: "Instagram", handle: "@b" } });
+    const socialRequested = await withAuth(agentA.post(`/social-exchange-cases/${match.id}/request`), tokenA).send({});
+    expect(socialRequested.status).toBe(200);
+    const caseId = socialRequested.body.socialExchange.id as string;
 
-    const social = await withAuth(agentA.get(`/social-exchange/${match.id}`), tokenA);
-    expect(social.status).toBe(200);
-    expect(social.body.type).toBe("SOCIAL_EXCHANGE");
+    const socialAccepted = await withAuth(agentB.post(`/social-exchange-cases/${caseId}/respond`), tokenB).send({ response: "ACCEPT" });
+    expect(socialAccepted.status).toBe(200);
+
+    const handleSubmitted = await withAuth(agentA.post(`/social-exchange-cases/${caseId}/handle`), tokenA).send({
+      platform: "Instagram",
+      handle: "@elite_a"
+    });
+    expect(handleSubmitted.status).toBe(200);
+
+    const socialReveal = await withAuth(agentB.post(`/social-exchange-cases/${caseId}/reveal`), tokenB).send({});
+    expect(socialReveal.status).toBe(200);
+    expect(socialReveal.body.handle).toBe("@elite_a");
   });
 
 });

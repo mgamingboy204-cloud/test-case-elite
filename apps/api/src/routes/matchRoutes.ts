@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { ConsentSchema, OfflineMeetSelectionSchema, OnlineMeetSelectionSchema } from "@elite/shared";
+import { ConsentSchema, OfflineMeetSelectionSchema, OnlineMeetSelectionSchema, SocialExchangeHandleSchema, SocialExchangeRespondSchema } from "@elite/shared";
 import {
   listMatchesHandler,
   offlineMeetUnlockHandler,
@@ -12,6 +12,13 @@ import {
 } from "../controllers/matchController";
 import { getOfflineMeetCaseForUserHandler, submitOfflineMeetSelectionsHandler } from "../controllers/offlineMeetController";
 import { getOnlineMeetCaseForUserHandler, submitOnlineMeetSelectionsHandler } from "../controllers/onlineMeetController";
+import {
+  createSocialExchangeRequestHandler,
+  listSocialExchangeCasesHandler,
+  openSocialRevealHandler,
+  respondToSocialExchangeRequestHandler,
+  submitSocialHandleHandler
+} from "../controllers/socialExchangeController";
 import { requireAuth, requireAuthHeader } from "../middlewares/auth";
 import { requireMatchingEligible } from "../middlewares/onboarding";
 import { validateBody, validateParams } from "../middlewares/validate";
@@ -55,6 +62,52 @@ router.get(
   requireMatchingEligible,
   validateParams(z.object({ matchId: z.string() })),
   asyncHandler(socialExchangeUnlockHandler)
+);
+
+router.get(
+  "/social-exchange-cases/:matchId",
+  requireAuth,
+  requireMatchingEligible,
+  validateParams(z.object({ matchId: z.string() })),
+  asyncHandler(listSocialExchangeCasesHandler)
+);
+
+router.post(
+  "/social-exchange-cases/:matchId/request",
+  requireAuth,
+  requireAuthHeader,
+  requireMatchingEligible,
+  validateParams(z.object({ matchId: z.string() })),
+  asyncHandler(createSocialExchangeRequestHandler)
+);
+
+router.post(
+  "/social-exchange-cases/:caseId/respond",
+  requireAuth,
+  requireAuthHeader,
+  requireMatchingEligible,
+  validateParams(z.object({ caseId: z.string().uuid() })),
+  validateBody(SocialExchangeRespondSchema),
+  asyncHandler(respondToSocialExchangeRequestHandler)
+);
+
+router.post(
+  "/social-exchange-cases/:caseId/handle",
+  requireAuth,
+  requireAuthHeader,
+  requireMatchingEligible,
+  validateParams(z.object({ caseId: z.string().uuid() })),
+  validateBody(SocialExchangeHandleSchema),
+  asyncHandler(submitSocialHandleHandler)
+);
+
+router.post(
+  "/social-exchange-cases/:caseId/reveal",
+  requireAuth,
+  requireAuthHeader,
+  requireMatchingEligible,
+  validateParams(z.object({ caseId: z.string().uuid() })),
+  asyncHandler(openSocialRevealHandler)
 );
 
 router.get(
