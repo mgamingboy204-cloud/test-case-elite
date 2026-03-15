@@ -1,9 +1,8 @@
 "use client";
 
-import { routeForOnboardingStep, useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Briefcase, Ruler, X, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { apiRequest } from "@/lib/api";
 import { fetchDiscoverFeedPage, mapLegacyFeedItemToCard } from "@/lib/queries";
@@ -32,7 +31,6 @@ function preloadImage(url: string | null | undefined) {
 
 export default function DiscoverPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
-  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const cached = readCache<DiscoverState>(DISCOVER_CACHE_KEY)?.value;
@@ -41,11 +39,6 @@ export default function DiscoverPage() {
   const [nextCursor, setNextCursor] = useState<string | undefined>(cached?.nextCursor);
   const [isFetching, setIsFetching] = useState(false);
   const [isActing, setIsActing] = useState(false);
-
-  useEffect(() => {
-    if (!isAuthenticated) router.replace("/signin");
-    else if (onboardingStep !== "COMPLETED") router.replace(routeForOnboardingStep(onboardingStep));
-  }, [isAuthenticated, onboardingStep, router]);
 
   const persistState = (nextCards: DiscoverState["cards"], cursor?: string) => {
     primeCache(DISCOVER_CACHE_KEY, { cards: nextCards, nextCursor: cursor });

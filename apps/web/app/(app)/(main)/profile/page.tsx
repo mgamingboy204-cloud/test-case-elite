@@ -1,8 +1,7 @@
 "use client";
 
-import { routeForOnboardingStep, useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Settings, X, BadgeCheck, Briefcase, Ruler, LogOut, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -38,7 +37,6 @@ function toHeightCm(height: string) {
 
 export default function ProfilePage() {
   const { isAuthenticated, onboardingStep, logout } = useAuth();
-  const router = useRouter();
 
   const [view, setView] = useState<"portfolio" | "settings" | "edit">("portfolio");
   const [model, setModel] = useState<ProfileViewModel | null>(null);
@@ -49,12 +47,6 @@ export default function ProfilePage() {
     enabled: isAuthenticated && onboardingStep === "COMPLETED",
     staleTimeMs: 60_000
   });
-
-  useEffect(() => {
-    if (!isAuthenticated) router.replace("/signin");
-    else if (onboardingStep !== "COMPLETED") router.replace(routeForOnboardingStep(onboardingStep));
-  }, [isAuthenticated, onboardingStep, router]);
-
 
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
 

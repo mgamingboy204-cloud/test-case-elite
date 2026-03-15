@@ -1,8 +1,7 @@
 "use client";
 
-import { routeForOnboardingStep, useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { getOfflineMeet, getOnlineMeet, getPhoneUnlock, getSocialExchange, respondMatchConsent } from "@/lib/matches";
@@ -19,12 +18,6 @@ const PLATFORMS = ["FaceTime", "G-Meet", "Zoom"];
 
 export default function MatchesPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isAuthenticated) router.replace('/signin');
-    else if (onboardingStep !== 'COMPLETED') router.replace(routeForOnboardingStep(onboardingStep)); 
-  }, [isAuthenticated, onboardingStep, router]);
 
   const [selectedMatch, setSelectedMatch] = useState<MatchCard | null>(null);
 

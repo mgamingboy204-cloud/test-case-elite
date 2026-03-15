@@ -2,32 +2,19 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { apiRequest, setAuthToken, setOnboardingToken } from "@/lib/api";
+import { ApiError, apiRequest, setAuthToken, setOnboardingToken } from "@/lib/api";
+import {
+  type BackendOnboardingStep,
+  type FrontendOnboardingStep,
+  resolveFrontendOnboardingStep,
+  routeForFrontendOnboardingStep
+} from "@elite/shared";
 
-type BackendOnboardingStep =
-  | "PHONE_VERIFIED"
-  | "VIDEO_VERIFICATION_PENDING"
-  | "VIDEO_VERIFIED"
-  | "PAYMENT_PENDING"
-  | "PAID"
-  | "PROFILE_PENDING"
-  | "ACTIVE";
-
-export type OnboardingStep = "PHONE" | "OTP" | "PASSWORD" | "VERIFICATION" | "PAYMENT" | "PROFILE" | "PHOTOS" | "COMPLETED";
+export type OnboardingStep = FrontendOnboardingStep;
 
 
 export function routeForOnboardingStep(step: OnboardingStep) {
-  const routeMap: Record<OnboardingStep, string> = {
-    PHONE: "/signup/phone",
-    OTP: "/signup/otp",
-    PASSWORD: "/signup/password",
-    VERIFICATION: "/onboarding/verification",
-    PAYMENT: "/onboarding/payment",
-    PROFILE: "/onboarding/profile",
-    PHOTOS: "/onboarding/photos",
-    COMPLETED: "/discover"
-  };
-  return routeMap[step];
+  return routeForFrontendOnboardingStep(step);
 }
 
 interface User {
@@ -38,11 +25,14 @@ interface User {
   lastName?: string | null;
   displayName?: string | null;
   onboardingStep: BackendOnboardingStep;
+  profileCompletedAt?: string | null;
+  photoCount?: number;
   onboardingToken?: string | null;
 }
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  isAuthResolved: boolean;
   user: User | null;
   onboardingStep: OnboardingStep;
   pendingPhone: string | null;
@@ -61,15 +51,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function mapOnboardingStep(user: User | null): OnboardingStep {
-  if (!user) return "PHONE";
-
-  if (user.onboardingStep === "ACTIVE") return "COMPLETED";
-  if (user.onboardingStep === "PAID" || user.onboardingStep === "PROFILE_PENDING") return "PROFILE";
-  if (user.onboardingStep === "PAYMENT_PENDING" || user.onboardingStep === "VIDEO_VERIFIED") return "PAYMENT";
-  return "VERIFICATION";
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [pendingPhone, setPendingPhone] = useState<string | null>(null);
@@ -78,7 +59,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const isAuthenticated = Boolean(user);
-  const onboardingStep = useMemo(() => mapOnboardingStep(user), [user]);
+  const onboardingStep = useMemo(
+    () =>
+      resolveFrontendOnboardingStep({
+        isAuthenticated,
+        pendingPhone,
+        signupToken,
+        backendStep: user?.onboardingStep,
+        profileCompletedAt: user?.profileCompletedAt,
+        photoCount: user?.photoCount
+      }),
+    [isAuthenticated, pendingPhone, signupToken, user]
+  );
 
   const refreshCurrentUser = async () => {
     const me = await apiRequest<User>("/me", { auth: true });
@@ -99,7 +91,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         await refreshCurrentUser();
-      } catch {
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          setAuthToken(null);
+          setOnboardingToken(null);
+        }
         setUser(null);
       } finally {
         setIsInitialized(true);
@@ -145,6 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOnboardingToken(response.onboardingToken);
     await refreshCurrentUser();
 
+    setPendingPhone(null);
+    localStorage.removeItem("elite_pending_phone");
     setSignupToken(null);
     localStorage.removeItem("elite_signup_token");
     router.push("/onboarding/verification");
@@ -167,7 +165,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthToken(response.accessToken);
       setOnboardingToken(response.onboardingToken ?? response.user.onboardingToken ?? null);
       setUser(response.user);
-      router.push(routeForOnboardingStep(mapOnboardingStep(response.user)));
+      setPendingPhone(null);
+      localStorage.removeItem("elite_pending_phone");
+      router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
+        isAuthenticated: true,
+        backendStep: response.user.onboardingStep,
+        profileCompletedAt: response.user.profileCompletedAt,
+        photoCount: response.user.photoCount
+      })));
     }
 
     return { otpRequired: false };
@@ -184,7 +189,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthToken(response.accessToken);
     setOnboardingToken(response.onboardingToken);
     setUser(response.user);
-    router.push(routeForOnboardingStep(mapOnboardingStep(response.user)));
+    setPendingPhone(null);
+    localStorage.removeItem("elite_pending_phone");
+    router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
+      isAuthenticated: true,
+      backendStep: response.user.onboardingStep,
+      profileCompletedAt: response.user.profileCompletedAt,
+      photoCount: response.user.photoCount
+    })));
   };
 
   const resendSigninOtp = async () => {
@@ -232,6 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         isAuthenticated,
+        isAuthResolved: isInitialized,
         user,
         onboardingStep,
         pendingPhone,
