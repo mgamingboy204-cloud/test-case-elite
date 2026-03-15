@@ -2,6 +2,8 @@ import crypto from "crypto";
 import { PaymentPlan } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
+import { createRazorpayOrder, verifyRazorpaySignature } from "./razorpayService";
+import { env } from "../config/env";
 
 const PLAN_DETAILS: Record<PaymentPlan, { amountInr: number; durationMonths: number; label: string }> = {
   ONE_MONTH: { amountInr: 30000, durationMonths: 1, label: "1 month" },
@@ -75,7 +77,6 @@ export async function initiateOnboardingPayment(options: {
     paymentStatus: string;
   };
   tier: string;
-  cardLast4: string;
 }) {
   if (options.user.videoVerificationStatus !== "APPROVED") {
     throw new HttpError(403, {
@@ -94,7 +95,9 @@ export async function initiateOnboardingPayment(options: {
 
   const plan = parsePaymentPlan(options.tier);
   const planDetails = PLAN_DETAILS[plan];
-  const paymentRef = `pay_${crypto.randomBytes(8).toString("hex")}`;
+  const receipt = `rcpt_${options.user.id.slice(0, 8)}_${Date.now()}`;
+  const razorpayOrder = await createRazorpayOrder({ amountInr: planDetails.amountInr, receipt });
+  const paymentRef = razorpayOrder.orderId;
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
@@ -121,15 +124,20 @@ export async function initiateOnboardingPayment(options: {
   return {
     ok: true,
     paymentRef,
-    gateway: "manual_confirmation",
-    nextAction: "VERIFY",
+    gateway: "razorpay",
+    nextAction: "OPEN_CHECKOUT",
+    razorpay: {
+      keyId: razorpayOrder.keyId,
+      orderId: razorpayOrder.orderId,
+      amountPaise: razorpayOrder.amountPaise,
+      currency: razorpayOrder.currency
+    },
     plan,
     amountInr: planDetails.amountInr,
     durationMonths: planDetails.durationMonths,
     taxIncluded: true,
     renewalPolicy: "MANUAL_ONLY",
-    autoRenew: false,
-    cardLast4: options.cardLast4
+    autoRenew: false
   };
 }
 
@@ -142,7 +150,9 @@ export async function verifyOnboardingPayment(options: {
     onboardingPaymentAmount: number | null;
     onboardingStep: string;
   };
-  paymentRef: string;
+  orderId: string;
+  paymentId: string;
+  signature: string;
 }) {
   if (options.user.videoVerificationStatus !== "APPROVED") {
     throw new HttpError(403, {
@@ -152,12 +162,18 @@ export async function verifyOnboardingPayment(options: {
       redirectTo: "/onboarding/verification"
     });
   }
-  if (!options.user.onboardingPaymentRef || options.user.onboardingPaymentRef !== options.paymentRef) {
+  if (!options.user.onboardingPaymentRef || options.user.onboardingPaymentRef !== options.orderId) {
     throw new HttpError(400, { message: "Invalid payment reference." });
   }
   if (!options.user.onboardingPaymentPlan || !options.user.onboardingPaymentAmount) {
     throw new HttpError(400, { message: "Missing payment plan details. Please initiate payment again." });
   }
+
+  verifyRazorpaySignature({
+    orderId: options.orderId,
+    paymentId: options.paymentId,
+    signature: options.signature
+  });
 
   const selectedPlan = options.user.onboardingPaymentPlan;
   const selectedAmount = options.user.onboardingPaymentAmount;
@@ -227,6 +243,50 @@ export async function verifyOnboardingPayment(options: {
     subscriptionStartedAt: startedAt,
     subscriptionEndsAt: endsAt
   };
+}
+
+export async function completeMockOnboardingPayment(options: {
+  user: {
+    id: string;
+    videoVerificationStatus: string;
+    onboardingPaymentPlan: PaymentPlan | null;
+    onboardingPaymentAmount: number | null;
+    onboardingStep: string;
+  };
+}) {
+  if (!env.ALLOW_TEST_BYPASS) {
+    throw new HttpError(404, { message: "Not found" });
+  }
+  if (!options.user.onboardingPaymentPlan || !options.user.onboardingPaymentAmount) {
+    throw new HttpError(400, { message: "Missing payment plan details. Please initiate payment again." });
+  }
+  const selectedPlan = options.user.onboardingPaymentPlan;
+  const selectedAmount = options.user.onboardingPaymentAmount;
+  const startedAt = new Date();
+  const planDetails = PLAN_DETAILS[selectedPlan];
+  const endsAt = addMonths(startedAt, planDetails.durationMonths);
+
+  const payment = await prisma.$transaction(async (tx) => {
+    await tx.payment.updateMany({
+      where: { userId: options.user.id, status: "PENDING", plan: selectedPlan, amount: selectedAmount },
+      data: { status: "MOCK", paidAt: startedAt }
+    });
+    await tx.user.update({
+      where: { id: options.user.id },
+      data: {
+        paymentStatus: "PAID",
+        onboardingStep: "PAID",
+        onboardingPaymentVerifiedAt: startedAt,
+        subscriptionTier: "PREMIUM",
+        subscriptionStatus: "ACTIVE",
+        subscriptionStartedAt: startedAt,
+        subscriptionEndsAt: endsAt,
+        manualRenewalRequired: true
+      }
+    });
+    return tx.payment.findFirst({ where: { userId: options.user.id }, orderBy: { paidAt: "desc" } });
+  });
+  return { ok: true, mocked: true, payment, paymentStatus: "PAID", onboardingStep: "PAID" };
 }
 
 export async function markOnboardingPaymentFailed(options: {

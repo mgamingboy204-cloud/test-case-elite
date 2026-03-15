@@ -20,6 +20,7 @@ import {
   resolveOnboardingStep,
   validateLogin,
   verifyOtpCodeOnly,
+  verifyOtpBypassAndGetUser,
   verifyOtpAndGetUser
 } from "../services/authService";
 import { ensureUserExecutiveAssignmentAfterOnboarding, validateEmployeeLogin } from "../services/employeeService";
@@ -125,6 +126,47 @@ export async function verifyOtp(req: Request, res: Response) {
   }
 }
 
+export async function verifyOtpMock(req: Request, res: Response) {
+  if (!env.ALLOW_TEST_BYPASS) {
+    throw new HttpError(404, { message: "Not found" });
+  }
+  const { phone, rememberMe } = req.body as { phone: string; rememberMe?: boolean };
+  const user = await verifyOtpBypassAndGetUser(phone);
+  const photoCount = await prisma.photo.count({ where: { userId: user.id } });
+  const resolvedRememberMe = rememberMe ?? false;
+  const accessToken = signAccessToken(user.id, { rememberMe: resolvedRememberMe });
+  const refreshToken = signRefreshToken(user.id, { rememberMe: resolvedRememberMe });
+  const { onboardingToken } = await issueOnboardingToken(user.id);
+  const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
+  res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
+
+  return res.json({
+    ok: true,
+    mocked: true,
+    accessToken,
+    onboardingToken,
+    user: {
+      id: user.id,
+      phone: user.phone,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      displayName: user.displayName,
+      gender: user.gender,
+      role: user.role,
+      isAdmin: user.isAdmin,
+      status: user.status,
+      verifiedAt: user.verifiedAt,
+      phoneVerifiedAt: user.phoneVerifiedAt,
+      onboardingStep: user.onboardingStep,
+      videoVerificationStatus: user.videoVerificationStatus,
+      paymentStatus: user.paymentStatus,
+      profileCompletedAt: user.profileCompletedAt,
+      photoCount
+    }
+  });
+}
+
 export async function register(req: Request, res: Response) {
   const { phone, email, password } = req.body as {
     phone: string;
@@ -148,6 +190,19 @@ export async function signupVerify(req: Request, res: Response) {
   await verifyOtpCodeOnly(phone, code);
   const signupToken = signSignupToken(phone);
   return res.json({ ok: true, signupToken });
+}
+
+export async function signupVerifyMock(req: Request, res: Response) {
+  if (!env.ALLOW_TEST_BYPASS) {
+    throw new HttpError(404, { message: "Not found" });
+  }
+  const { phone } = req.body as { phone: string };
+  const pending = await prisma.pendingUser.findUnique({ where: { phone } });
+  if (!pending) {
+    throw new HttpError(400, { message: "No signup in progress for this phone." });
+  }
+  const signupToken = signSignupToken(phone);
+  return res.json({ ok: true, mocked: true, signupToken });
 }
 
 export async function signupComplete(req: Request, res: Response) {

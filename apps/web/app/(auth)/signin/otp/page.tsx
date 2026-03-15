@@ -3,14 +3,14 @@
 import { useState, useEffect } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { OTPInput } from "@/components/auth/otp-input";
-import { useAuth } from "@/contexts/AuthContext";
+import { allowTestBypass, useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
 export default function SignInOTP() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(30);
-  const { pendingPhone, verifySigninOtp, resendSigninOtp } = useAuth();
+  const { pendingPhone, verifySigninOtp, verifySigninOtpMock, resendSigninOtp } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -77,6 +77,15 @@ export default function SignInOTP() {
               </button>
             )}
           </p>
+
+          {allowTestBypass && (
+            <button
+              onClick={() => void verifySigninOtpMock().catch((err) => setError(err instanceof Error ? err.message : "Mock OTP failed"))}
+              className="text-xs uppercase tracking-[0.2em] text-amber-300 hover:text-amber-200"
+            >
+              Proceed with Mock OTP
+            </button>
+          )}
           
           <button 
             onClick={() => router.back()}

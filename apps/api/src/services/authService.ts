@@ -6,6 +6,7 @@ import { env } from "../config/env";
 import { HttpError } from "../utils/httpErrors";
 import { logger } from "../utils/logger";
 import { resolveBackendOnboardingStep } from "@elite/shared";
+import { sendTwilioOtp, verifyTwilioOtp } from "./twilioVerifyService";
 
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -45,8 +46,8 @@ export async function issueOnboardingToken(userId: string) {
 }
 
 export async function upsertOtpCode(phone: string) {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const codeHash = await bcrypt.hash(otp, 10);
+  const marker = crypto.randomBytes(16).toString("hex");
+  const codeHash = await bcrypt.hash(marker, 10);
   const expiresAt = new Date(Date.now() + 1000 * 60 * 5);
 
   await prisma.otpCode.upsert({
@@ -55,9 +56,8 @@ export async function upsertOtpCode(phone: string) {
     create: { phone, codeHash, expiresAt, attempts: 0 }
   });
 
-  if (env.DEV_OTP_LOG === "true") {
-    logger.info(`[DEV OTP] ${phone}: ${otp}`);
-  }
+  await sendTwilioOtp(phone);
+  if (env.DEV_OTP_LOG === "true") logger.info(`[OTP SENT] ${phone}`);
 }
 
 export async function verifyOtpAndGetUser(phone: string, code: string) {
@@ -71,12 +71,12 @@ export async function verifyOtpAndGetUser(phone: string, code: string) {
   if (record.attempts >= 5) {
     throw new HttpError(401, { message: "Too many attempts. Request a new OTP." });
   }
-  if (!record.codeHash) {
-    throw new HttpError(401, { message: "Invalid OTP. Please request a new code." });
-  }
-
-  const valid = await bcrypt.compare(code, record.codeHash);
-  if (!valid) {
+  try {
+    await verifyTwilioOtp(phone, code);
+  } catch (error) {
+    if (error instanceof HttpError && error.status >= 500) {
+      throw error;
+    }
     await prisma.otpCode.update({
       where: { phone },
       data: { attempts: record.attempts + 1 }
@@ -118,6 +118,41 @@ export async function verifyOtpAndGetUser(phone: string, code: string) {
         }
       });
     }
+  } else {
+    throw new HttpError(401, { message: "No account found for this phone. Please sign up first." });
+  }
+
+  return user;
+}
+
+export async function verifyOtpBypassAndGetUser(phone: string) {
+  const pending = await prisma.pendingUser.findUnique({ where: { phone } });
+  let user = await prisma.user.findUnique({ where: { phone } });
+
+  if (!user && pending) {
+    user = await prisma.user.create({
+      data: {
+        phone: pending.phone,
+        email: pending.email ?? null,
+        passwordHash: pending.passwordHash,
+        phoneVerifiedAt: new Date(),
+        verifiedAt: new Date(),
+        onboardingStep: "PHONE_VERIFIED",
+        videoVerificationStatus: "NOT_REQUESTED",
+        paymentStatus: "NOT_STARTED"
+      }
+    });
+    await prisma.pendingUser.delete({ where: { phone } });
+  } else if (user) {
+    const onboardingStep = await resolveUserOnboardingStep(user);
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        phoneVerifiedAt: user.phoneVerifiedAt ?? new Date(),
+        verifiedAt: user.verifiedAt ?? new Date(),
+        onboardingStep
+      }
+    });
   } else {
     throw new HttpError(401, { message: "No account found for this phone. Please sign up first." });
   }
@@ -207,8 +242,12 @@ export async function verifyOtpCodeOnly(phone: string, code: string) {
     throw new HttpError(401, { message: "Too many attempts. Request a new OTP." });
   }
 
-  const valid = await bcrypt.compare(code, record.codeHash);
-  if (!valid) {
+  try {
+    await verifyTwilioOtp(phone, code);
+  } catch (error) {
+    if (error instanceof HttpError && error.status >= 500) {
+      throw error;
+    }
     await prisma.otpCode.update({
       where: { phone },
       data: { attempts: record.attempts + 1 }

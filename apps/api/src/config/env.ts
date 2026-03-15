@@ -6,6 +6,7 @@ const EnvSchema = z
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     PORT: z.coerce.number().default(4000),
     DEV_OTP_LOG: z.enum(["true", "false"]).optional().default("false"),
+    ALLOW_TEST_BYPASS: z.enum(["true", "false"]).optional().default("false"),
     DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
     SESSION_SECRET: z.string().min(1, "SESSION_SECRET is required"),
     JWT_ACCESS_SECRET: z.string().min(1, "JWT_ACCESS_SECRET is required"),
@@ -27,6 +28,12 @@ const EnvSchema = z
     AUTH_OTP_SEND_LIMIT: z.coerce.number().default(5),
     AUTH_OTP_VERIFY_LIMIT: z.coerce.number().default(10),
     MIN_LIKES_FOR_REFUND: z.coerce.number().default(5)
+    ,TWILIO_ACCOUNT_SID: z.string().optional()
+    ,TWILIO_AUTH_TOKEN: z.string().optional()
+    ,TWILIO_VERIFY_SERVICE_SID: z.string().optional()
+    ,OTP_COUNTRY_CODE: z.string().optional().default("+91")
+    ,RAZORPAY_KEY_ID: z.string().optional()
+    ,RAZORPAY_KEY_SECRET: z.string().optional()
   })
   .superRefine((value, ctx) => {
     const isLocal = (url: string) =>
@@ -102,6 +109,22 @@ const EnvSchema = z
         });
       }
     }
+    if (value.NODE_ENV === "production") {
+      if (!value.TWILIO_ACCOUNT_SID || !value.TWILIO_AUTH_TOKEN || !value.TWILIO_VERIFY_SERVICE_SID) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["TWILIO_ACCOUNT_SID"],
+          message: "Twilio credentials are required in production."
+        });
+      }
+      if (!value.RAZORPAY_KEY_ID || !value.RAZORPAY_KEY_SECRET) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["RAZORPAY_KEY_ID"],
+          message: "Razorpay credentials are required in production."
+        });
+      }
+    }
     return ctx;
   });
 
@@ -110,5 +133,6 @@ const parsed = EnvSchema.parse(process.env);
 export const env = {
   ...parsed,
   WEB_ORIGIN: parsed.WEB_ORIGIN,
-  STORAGE_PROVIDER: parsed.STORAGE_PROVIDER ?? (parsed.NODE_ENV === "production" ? "supabase" : "local")
+  STORAGE_PROVIDER: parsed.STORAGE_PROVIDER ?? (parsed.NODE_ENV === "production" ? "supabase" : "local"),
+  ALLOW_TEST_BYPASS: parsed.ALLOW_TEST_BYPASS === "true"
 };
