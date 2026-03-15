@@ -5,6 +5,16 @@ import { Gender } from "@prisma/client";
 
 type UpdateOptions = { userId: string; paymentStatus: string; onboardingStep: string; data: ProfileInput | ProfilePatchInput };
 
+function calculateAge(dateOfBirth: Date) {
+  const now = new Date();
+  let age = now.getUTCFullYear() - dateOfBirth.getUTCFullYear();
+  const monthDiff = now.getUTCMonth() - dateOfBirth.getUTCMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getUTCDate() < dateOfBirth.getUTCDate())) {
+    age -= 1;
+  }
+  return age;
+}
+
 function toHeightLabel(heightCm: number | null | undefined) {
   if (!heightCm) return null;
   const totalInches = Math.round(heightCm / 2.54);
@@ -28,22 +38,55 @@ function toHeightCm(heightValue: string | number | null | undefined) {
 }
 
 export async function getProfile(userId: string) {
-  const [profile, photos, user, preferences] = await Promise.all([
+  const [profile, photos, user, preferences, latestVerificationRequest] = await Promise.all([
     prisma.profile.findUnique({ where: { userId } }),
     prisma.photo.findMany({ where: { userId }, orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }] }),
     prisma.user.findUnique({
       where: { id: userId },
       select: {
+        id: true,
         firstName: true,
         lastName: true,
         displayName: true,
         gender: true,
         subscriptionTier: true,
-        subscriptionStatus: true
+        subscriptionStatus: true,
+        subscriptionStartedAt: true,
+        subscriptionEndsAt: true,
+        manualRenewalRequired: true,
+        onboardingPaymentPlan: true,
+        onboardingPaymentAmount: true,
+        onboardingPaymentVerifiedAt: true
       }
     }),
-    prisma.userPreference.upsert({ where: { userId }, update: {}, create: { userId } })
+    prisma.userPreference.upsert({ where: { userId }, update: {}, create: { userId } }),
+    prisma.verificationRequest.findFirst({
+      where: { userId },
+      orderBy: [{ assignedAt: "desc" }, { createdAt: "desc" }],
+      select: {
+        id: true,
+        assignedEmployeeId: true,
+        assignedAt: true,
+        status: true
+      }
+    })
   ]);
+
+  const assignedExecutive = latestVerificationRequest?.assignedEmployeeId
+    ? await prisma.user.findUnique({
+        where: { id: latestVerificationRequest.assignedEmployeeId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          displayName: true
+        }
+      })
+    : null;
+
+  const executiveName = assignedExecutive
+    ? [assignedExecutive.firstName, assignedExecutive.lastName].filter(Boolean).join(" ") || assignedExecutive.displayName || ""
+    : "";
 
   return {
     profile,
@@ -52,14 +95,34 @@ export async function getProfile(userId: string) {
     settings: preferences,
     viewModel: {
       name: user?.displayName ?? profile?.name ?? "",
+      dateOfBirth: profile?.dateOfBirth ?? null,
+      age: profile?.age ?? null,
+      gender: profile?.gender ?? user?.gender ?? null,
       profession: profile?.profession ?? "",
       story: profile?.story ?? profile?.bioShort ?? "",
+      bio: profile?.bioShort ?? "",
       location: profile?.locationLabel ?? profile?.city ?? "",
+      place: profile?.city ?? "",
       height: toHeightLabel(profile?.heightCm),
+      heightCm: profile?.heightCm ?? null,
       subscription: {
         tier: user?.subscriptionTier ?? "FREE",
-        status: user?.subscriptionStatus ?? "INACTIVE"
+        status: user?.subscriptionStatus ?? "INACTIVE",
+        paymentPlan: user?.onboardingPaymentPlan ?? null,
+        paymentAmount: user?.onboardingPaymentAmount ?? null,
+        startedAt: user?.subscriptionStartedAt ?? null,
+        endsAt: user?.subscriptionEndsAt ?? null,
+        paidAt: user?.onboardingPaymentVerifiedAt ?? null,
+        renewalMode: user?.manualRenewalRequired ? "MANUAL" : "AUTO"
       },
+      assignedExecutive: latestVerificationRequest?.assignedEmployeeId
+        ? {
+            id: latestVerificationRequest.assignedEmployeeId,
+            name: executiveName || "Elite Executive",
+            assignedAt: latestVerificationRequest.assignedAt,
+            verificationStatus: latestVerificationRequest.status
+          }
+        : null,
       settings: preferences,
       photos
     }
@@ -91,16 +154,25 @@ export async function updateProfile(options: UpdateOptions) {
     normalized.gender = normalized.gender.toUpperCase();
   }
 
-  assignIfDefined("name", normalized.name);
+  assignIfDefined("name", typeof normalized.name === "string" ? normalized.name.trim() : normalized.name);
   assignIfDefined("gender", normalized.gender);
-  assignIfDefined("age", normalized.age);
   assignIfDefined("dateOfBirth", normalized.dateOfBirth);
-  assignIfDefined("city", normalized.city);
-  assignIfDefined("profession", normalized.profession);
-  assignIfDefined("bioShort", normalized.bioShort ?? normalized.bio);
-  assignIfDefined("story", normalized.story);
-  assignIfDefined("locationLabel", normalized.locationLabel ?? normalized.place ?? normalized.city);
+  assignIfDefined("city", typeof normalized.city === "string" ? normalized.city.trim() : normalized.city);
+  assignIfDefined("profession", typeof normalized.profession === "string" ? normalized.profession.trim() : normalized.profession);
+  assignIfDefined("bioShort", typeof (normalized.bioShort ?? normalized.bio) === "string" ? String(normalized.bioShort ?? normalized.bio).trim() : normalized.bioShort ?? normalized.bio);
+  assignIfDefined("story", typeof normalized.story === "string" ? normalized.story.trim() : normalized.story);
+  assignIfDefined("locationLabel", typeof (normalized.locationLabel ?? normalized.place ?? normalized.city) === "string" ? String(normalized.locationLabel ?? normalized.place ?? normalized.city).trim() : normalized.locationLabel ?? normalized.place ?? normalized.city);
   assignIfDefined("intent", normalized.intent ?? "dating");
+
+  if (normalized.dateOfBirth) {
+    const dob = new Date(String(normalized.dateOfBirth));
+    if (!Number.isNaN(dob.getTime())) {
+      const derivedAge = calculateAge(dob);
+      assignIfDefined("age", derivedAge);
+    }
+  } else {
+    assignIfDefined("age", normalized.age);
+  }
 
   const parsedHeightCm = toHeightCm((normalized.heightCm ?? normalized.height) as string | number | null | undefined);
   if (parsedHeightCm !== undefined) assignIfDefined("heightCm", parsedHeightCm);
@@ -139,7 +211,7 @@ export async function updateProfile(options: UpdateOptions) {
       lastName,
       gender: normalized.gender ?? user.gender,
       profileCompletedAt: hasRequiredOnboardingProfile(profile) ? user.profileCompletedAt ?? new Date() : null,
-      onboardingStep: "PROFILE_PENDING",
+      onboardingStep: user.onboardingStep === "ACTIVE" ? "ACTIVE" : "PROFILE_PENDING",
       status: "APPROVED"
     }
   });
