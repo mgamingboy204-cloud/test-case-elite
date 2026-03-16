@@ -58,63 +58,57 @@ const meetUrlSchema = z
 
 // Offline meet schemas
 const OfflineMeetOptionsSchema = z.object({
-  cafeOptions: z.array(z.object({
-    name: z.string(),
-    address: z.string(),
-    area: z.string()
-  })),
-  timeSlotOptions: z.array(z.object({
-    date: z.string(),
-    times: z.array(z.string())
-  }))
+  cafes: z.array(z.object({
+    id: z.string().min(1),
+    name: z.string().trim().min(1),
+    address: z.string().trim().min(1)
+  })).min(3, "Provide exactly 3 curated cafe options").max(3, "Provide exactly 3 curated cafe options"),
+  timeSlots: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().trim().min(1),
+    startsAtIso: z.string().datetime().nullish()
+  })).min(3, "Provide at least 3 time-slot options")
 });
 
 const OfflineMeetFinalizeSchema = z.object({
-  finalCafe: z.object({
-    name: z.string(),
-    address: z.string(),
-    area: z.string()
-  }),
-  finalTimeSlot: z.object({
-    date: z.string(),
-    time: z.string()
-  })
+  finalCafeId: z.string().min(1),
+  finalTimeSlotId: z.string().min(1)
 });
 
 const OfflineMeetNoResponseSchema = z.object({
-  timeoutUserId: z.string()
+  nonResponderUserId: z.string().uuid()
 });
 
 const OfflineMeetAdminCancelSchema = z.object({
-  cancelReason: z.string(),
-  canceledByUserId: z.string()
+  action: z.enum(["CANCEL", "RESCHEDULE"]),
+  reason: z.string().trim().min(1),
+  requestedByUserId: z.string().uuid().nullish()
 });
 
 // Online meet schemas
 const OnlineMeetOptionsSchema = z.object({
-  platformOptions: z.array(z.enum(["ZOOM", "GOOGLE_MEET"])),
-  timeSlotOptions: z.array(z.object({
-    date: z.string(),
-    times: z.array(z.string())
-  }))
+  platforms: z.array(z.enum(["ZOOM", "GOOGLE_MEET"])).min(1),
+  timeSlots: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().trim().min(1),
+    startsAtIso: z.string().datetime().nullish()
+  })).min(3, "Provide at least 3 time-slot options")
 });
 
 const OnlineMeetFinalizeSchema = z.object({
   finalPlatform: z.enum(["ZOOM", "GOOGLE_MEET"]),
-  finalTimeSlot: z.object({
-    date: z.string(),
-    time: z.string()
-  }),
+  finalTimeSlotId: z.string().min(1),
   finalMeetingLink: z.string().url()
 });
 
 const OnlineMeetNoResponseSchema = z.object({
-  timeoutUserId: z.string()
+  nonResponderUserId: z.string().uuid()
 });
 
 const OnlineMeetAdminCancelSchema = z.object({
-  cancelReason: z.string(),
-  canceledByUserId: z.string()
+  action: z.enum(["CANCEL", "RESCHEDULE"]),
+  reason: z.string().trim().min(1),
+  requestedByUserId: z.string().uuid().nullish()
 });
 
 router.post(
