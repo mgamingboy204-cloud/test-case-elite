@@ -21,7 +21,7 @@
     "@tanstack/react-query-devtools": "^5.62.0"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "lightningcss": "^1.32.0"
   }
 }
-

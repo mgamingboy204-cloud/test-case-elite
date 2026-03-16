@@ -28,10 +28,10 @@ import { signAccessToken, signRefreshToken, signSignupToken, verifyRefreshToken,
 function buildAccessCookieOptions(ttlMinutes: number) {
   const maxAgeMs = ttlMinutes * 60 * 1000;
   const isProd = env.NODE_ENV === "production";
-  const isCrossOrigin = Boolean(env.API_ORIGIN && env.API_ORIGIN !== env.WEB_ORIGIN);
-  // Cross-site cookies (Vercel web -> Render API) require SameSite=None + Secure.
-  const sameSite = isCrossOrigin ? ("none" as const) : ("lax" as const);
-  const secure = sameSite === "none" ? true : isProd;
+  // In production we assume cross-site (Vercel web -> Render API) and use modern cookie requirements.
+  // If you later serve web+api from the same site, SameSite=None still works (HTTPS required).
+  const sameSite = isProd ? ("none" as const) : ("lax" as const);
+  const secure = isProd ? true : false;
   return {
     httpOnly: true,
     sameSite,

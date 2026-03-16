@@ -2,15 +2,18 @@ import { env } from "./env";
 
 const isProd = env.NODE_ENV === "production";
 
-const isCrossOrigin = Boolean(env.API_ORIGIN && env.API_ORIGIN !== env.WEB_ORIGIN);
-const refreshSameSite = isCrossOrigin ? ("none" as const) : ("lax" as const);
+type SameSite = "strict" | "lax" | "none";
+
+// Production deployments are typically cross-site (Vercel web -> Render API).
+// For httpOnly cookies to be accepted/sent by browsers, production must use SameSite=None + Secure.
+const refreshSameSite: SameSite = isProd ? "none" : "lax";
 
 export const deviceCookieName = "em_device";
 
 export const deviceCookieOptions = {
   httpOnly: true,
-  sameSite: "lax" as const,
-  secure: isProd,
+  sameSite: refreshSameSite,
+  secure: isProd ? true : false,
   path: "/",
   maxAge: 1000 * 60 * 60 * 24 * 30
 };
@@ -18,7 +21,7 @@ export const deviceCookieOptions = {
 export const refreshCookieName = "em_refresh";
 
 export function buildRefreshCookieOptions(ttlDays: number) {
-  const secure = refreshSameSite === "none" ? true : isProd;
+  const secure = isProd ? true : false;
   return {
     httpOnly: true,
     sameSite: refreshSameSite,

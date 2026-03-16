@@ -67,3 +67,7 @@ export function onboardingRedirectForBackendStep(step: BackendOnboardingStep) {
   if (step === "PAYMENT_PENDING" || step === "VIDEO_VERIFIED") return "/onboarding/payment";
   return "/onboarding/verification";
 }
+
+export function onboardingRedirectForFrontendStep(step: BackendOnboardingStep) {
+  return onboardingRedirectForBackendStep(step);
+}

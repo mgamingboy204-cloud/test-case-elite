@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { z } from "zod";
-import { OfflineMeetAdminCancelSchema, OfflineMeetFinalizeSchema, OfflineMeetNoResponseSchema, OfflineMeetOptionsSchema, OnlineMeetAdminCancelSchema, OnlineMeetFinalizeSchema, OnlineMeetNoResponseSchema, OnlineMeetOptionsSchema } from "@vael/shared";
 import {
   approveRefundHandler,
   assignVerificationRequestHandler,
@@ -47,6 +46,8 @@ import { validateBody, validateParams } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 
 const router = Router();
+
+// Meet validation schemas
 const meetUrlSchema = z
   .string()
   .trim()
@@ -54,6 +55,67 @@ const meetUrlSchema = z
   .refine((url) => /^https:\/\/meet\.google\.com\/.+/.test(url), {
     message: "Meet link must start with https://meet.google.com/ and include a meeting path."
   });
+
+// Offline meet schemas
+const OfflineMeetOptionsSchema = z.object({
+  cafeOptions: z.array(z.object({
+    name: z.string(),
+    address: z.string(),
+    area: z.string()
+  })),
+  timeSlotOptions: z.array(z.object({
+    date: z.string(),
+    times: z.array(z.string())
+  }))
+});
+
+const OfflineMeetFinalizeSchema = z.object({
+  finalCafe: z.object({
+    name: z.string(),
+    address: z.string(),
+    area: z.string()
+  }),
+  finalTimeSlot: z.object({
+    date: z.string(),
+    time: z.string()
+  })
+});
+
+const OfflineMeetNoResponseSchema = z.object({
+  timeoutUserId: z.string()
+});
+
+const OfflineMeetAdminCancelSchema = z.object({
+  cancelReason: z.string(),
+  canceledByUserId: z.string()
+});
+
+// Online meet schemas
+const OnlineMeetOptionsSchema = z.object({
+  platformOptions: z.array(z.enum(["ZOOM", "GOOGLE_MEET"])),
+  timeSlotOptions: z.array(z.object({
+    date: z.string(),
+    times: z.array(z.string())
+  }))
+});
+
+const OnlineMeetFinalizeSchema = z.object({
+  finalPlatform: z.enum(["ZOOM", "GOOGLE_MEET"]),
+  finalTimeSlot: z.object({
+    date: z.string(),
+    time: z.string()
+  }),
+  finalMeetingLink: z.string().url()
+});
+
+const OnlineMeetNoResponseSchema = z.object({
+  timeoutUserId: z.string()
+});
+
+const OnlineMeetAdminCancelSchema = z.object({
+  cancelReason: z.string(),
+  canceledByUserId: z.string()
+});
 
 router.post(
   "/admin/users/:id/approve",
@@ -113,32 +175,26 @@ router.post(
 
 router.get("/admin/verification-requests", requireAuth, requireEmployee, asyncHandler(listVerificationRequestsHandler));
 router.post(
-  "/admin/verification-requests/:id/assign",
+  "/admin/verification-requests/:requestId/assign",
   requireAuth,
   requireEmployee,
-  validateParams(z.object({ id: z.string() })),
+  validateParams(z.object({ requestId: z.string().uuid() })),
+  validateBody(z.object({ meetUrl: meetUrlSchema })),
   asyncHandler(assignVerificationRequestHandler)
 );
 router.post(
-  "/admin/verification-requests/:id/start",
+  "/admin/verification-requests/:requestId/approve",
   requireAuth,
   requireEmployee,
-  validateParams(z.object({ id: z.string() })),
-  validateBody(z.object({ meetUrl: meetUrlSchema })),
-  asyncHandler(startVerificationRequestHandler)
-);
-router.post(
-  "/admin/verification-requests/:id/approve",
-  requireAuth,
-  requireEmployee,
-  validateParams(z.object({ id: z.string() })),
+  validateParams(z.object({ requestId: z.string().uuid() })),
+  validateBody(z.object({ reason: z.string().min(1).nullish() })),
   asyncHandler(approveVerificationRequestHandler)
 );
 router.post(
-  "/admin/verification-requests/:id/reject",
+  "/admin/verification-requests/:requestId/reject",
   requireAuth,
   requireEmployee,
-  validateParams(z.object({ id: z.string() })),
+  validateParams(z.object({ requestId: z.string().uuid() })),
   validateBody(z.object({ reason: z.string().min(1) })),
   asyncHandler(rejectVerificationRequestHandler)
 );

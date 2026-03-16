@@ -30,7 +30,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
         }
         setName([me.firstName, me.lastName].filter(Boolean).join(" ") || me.displayName || "Employee");
       } catch {
-        router.replace("/employee/signin");
+        router.replace("/console/signin");
       } finally {
         setLoading(false);
       }
@@ -77,7 +77,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
           <button
             onClick={async () => {
               try { await apiRequest<{ ok: true }>("/auth/logout", { method: "POST" }); } catch {}
-              router.replace("/employee/signin");
+              router.replace("/console/signin");
             }}
             className="w-full inline-flex justify-center items-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-xs uppercase tracking-[0.16em] text-white/75"
           >
