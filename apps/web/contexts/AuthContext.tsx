@@ -17,6 +17,12 @@ export function routeForOnboardingStep(step: OnboardingStep) {
   return routeForFrontendOnboardingStep(step);
 }
 
+type AppState = {
+  code: "guest" | "onboarding_required" | "verification_required" | "payment_required" | "profile_incomplete" | "matching_ineligible" | "profile_data_missing" | "eligible";
+  redirectTo?: string | null;
+  reasons?: string[];
+};
+
 interface User {
   id: string;
   phone: string;
@@ -28,6 +34,7 @@ interface User {
   profileCompletedAt?: string | null;
   photoCount?: number;
   onboardingToken?: string | null;
+  appState?: AppState;
 }
 
 interface AuthContextType {
@@ -49,6 +56,8 @@ interface AuthContextType {
   refreshCurrentUser: () => Promise<void>;
   completeOnboardingStep: (nextStep: OnboardingStep) => void;
   logout: () => Promise<void>;
+  appStateCode: AppState["code"] | null;
+  appStateRedirectTo: string | null;
 }
 
 type LoginApiResponse =
@@ -90,6 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const isAuthenticated = Boolean(user);
+  const appStateCode = user?.appState?.code ?? null;
+  const appStateRedirectTo = user?.appState?.redirectTo ?? null;
   const onboardingStep = useMemo(
     () =>
       resolveFrontendOnboardingStep({
@@ -353,7 +364,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resendSignupOtp,
         refreshCurrentUser,
         completeOnboardingStep,
-        logout
+        logout,
+        appStateCode,
+        appStateRedirectTo
       }}
     >
       {children}

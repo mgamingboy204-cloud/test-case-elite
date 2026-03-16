@@ -79,7 +79,8 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return res.status(403).json({ message: "Banned" });
   }
 
-  res.locals.user = user;
+  const photoCount = await prisma.photo.count({ where: { userId: user.id } });
+  res.locals.user = { ...user, photoCount };
   logger.info("auth.resolve", { requestId, path: req.path, result: "success", userId });
 
   if (isLikesDebugRequest(req)) {

@@ -92,9 +92,10 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
     }
 
     logger.warn(`Unhandled Prisma Error [${err.code}]:`, err.message);
-    return res.status(400).json({
+    return res.status(500).json({
       message: "Our VAEL systems encountered a data processing issue. Please try again.",
-      code: `DB_ERROR_${err.code}`,
+      code: "GENERIC_DATA_PROCESSING_ERROR",
+      dbCode: `DB_ERROR_${err.code}`
     });
   }
 
@@ -103,7 +104,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
     logger.error("Prisma Validation Error:", err.message);
     return res.status(400).json({
       message: "The provided information does not meet our VAEL quality standards.",
-      code: "DATA_VALIDATION_ERROR",
+      code: "validation_error",
     });
   }
 

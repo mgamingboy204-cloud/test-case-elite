@@ -20,6 +20,8 @@ import {
 import { fetchOfflineMeetCase, submitOfflineMeetSelections } from "@/lib/offlineMeet";
 import { fetchOnlineMeetCase, submitOnlineMeetSelections, type MeetPlatform } from "@/lib/onlineMeet";
 import { ApiError } from "@/lib/api";
+import { normalizeApiError } from "@/lib/apiErrors";
+import { ProtectedState } from "@/components/ui/protected-state";
 
 type PendingAction = `${string}:${MatchRequestType}` | `unmatch:${string}` | `offline:${string}` | `online:${string}` | `social:${string}`;
 
@@ -114,6 +116,11 @@ export default function MatchesPage() {
   const matches = useMemo(() => matchesQuery.data ?? [], [matchesQuery.data]);
 
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
+
+  if (matchesQuery.error && !matchesQuery.data) {
+    const normalized = normalizeApiError(matchesQuery.error);
+    return <ProtectedState title="Matches unavailable" description={normalized.message} />;
+  }
 
   const runInteraction = async (matchId: string, type: MatchRequestType) => {
     const actionKey: PendingAction = `${matchId}:${type}`;

@@ -3,6 +3,8 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError, apiRequest } from "@/lib/api";
+import { normalizeApiError } from "@/lib/apiErrors";
+import { ProtectedState } from "@/components/ui/protected-state";
 import { fetchProfile, type ProfileViewModel } from "@/lib/queries";
 import { useStaleWhileRevalidate } from "@/lib/cache";
 import { Loader2, PencilLine, ShieldCheck, UserRoundCheck, ImagePlus, Trash2 } from "lucide-react";
@@ -87,20 +89,8 @@ export default function ProfilePage() {
   }
 
   if (profileQuery.error && !profileQuery.data) {
-    return (
-      <div className="px-6 py-10 space-y-4">
-        <h1 className="text-xl uppercase tracking-[0.35em] text-primary">Profile</h1>
-        <div className="rounded-3xl border border-red-300/20 bg-red-400/5 p-5">
-          <p className="text-sm text-red-200">We couldn’t load your profile right now.</p>
-          <button
-            onClick={() => void profileQuery.refresh(true)}
-            className="mt-4 rounded-xl border border-primary/30 px-4 py-2 text-xs uppercase tracking-[0.2em] text-primary"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
+    const normalized = normalizeApiError(profileQuery.error);
+    return <ProtectedState title="Profile unavailable" description={normalized.message} />;
   }
 
   const profile = profileQuery.data;
