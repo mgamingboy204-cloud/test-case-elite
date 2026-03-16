@@ -100,6 +100,15 @@ function toRequestPayload(type: MatchRequestType): Record<string, unknown> | und
   return undefined;
 }
 
+function toConsentType(type: MatchRequestType): "PHONE_NUMBER" | "OFFLINE_MEET" | "ONLINE_MEET" | "SOCIAL_EXCHANGE" {
+  return type === "PHONE_EXCHANGE" ? "PHONE_NUMBER" : type;
+}
+
+function toAwaitingResponse(interaction: MatchInteraction): boolean {
+  return interaction.status === "PENDING" && !interaction.isInitiatedByMe;
+}
+
+
 export default function MatchesPage() {
   const { isAuthenticated, onboardingStep, user } = useAuth();
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
@@ -139,6 +148,28 @@ export default function MatchesPage() {
       setFeedback(response.ready ? "Request accepted by both members. Your match handler will continue in Alerts." : "Request submitted privately. We will notify you once the other member responds.");
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Unable to send the request right now.";
+      setFeedback(message);
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const runDeclineInteraction = async (matchId: string, type: MatchRequestType) => {
+    const actionKey: PendingAction = `${matchId}:${type}`;
+    if (pendingAction === actionKey) return;
+
+    setPendingAction(actionKey);
+    setFeedback(null);
+    try {
+      const response = await respondMatchConsent({
+        matchId,
+        type: toConsentType(type),
+        response: "NO"
+      });
+      await matchesQuery.refresh(true);
+      setFeedback(response.ready ? "Interaction updated." : "Request declined. Your preference has been saved.");
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Unable to update this request right now.";
       setFeedback(message);
     } finally {
       setPendingAction(null);
@@ -289,8 +320,24 @@ export default function MatchesPage() {
                   const interaction = match.interactions[type];
                   const actionKey: PendingAction = `${match.id}:${type}`;
                   const busy = pendingAction === actionKey;
-                  const disabled = busy || !interaction.canInitiate;
-                  return <button key={type} onClick={() => void runInteraction(match.id, type)} disabled={disabled} className="flex items-center justify-between rounded-xl border border-border/40 bg-background/60 px-3 py-3 disabled:opacity-50"><span className="inline-flex items-center gap-2 text-sm text-foreground/85"><Icon size={16} className="text-primary" />{label}</span><span className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-foreground/55">{busy ? <Loader2 size={12} className="animate-spin" /> : null}{statusLabel(interaction)}</span></button>;
+                  const awaitingResponse = toAwaitingResponse(interaction);
+                  const disabled = busy || (!interaction.canInitiate && !awaitingResponse);
+                  return (
+                    <div key={type} className="rounded-xl border border-border/40 bg-background/60 px-3 py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-2 text-sm text-foreground/85"><Icon size={16} className="text-primary" />{label}</span>
+                        <span className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-foreground/55">{busy ? <Loader2 size={12} className="animate-spin" /> : null}{statusLabel(interaction)}</span>
+                      </div>
+                      {awaitingResponse ? (
+                        <div className="mt-2 flex gap-2">
+                          <button onClick={() => void runInteraction(match.id, type)} disabled={busy} className="rounded-full border border-primary/35 px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-primary disabled:opacity-50">Accept</button>
+                          <button onClick={() => void runDeclineInteraction(match.id, type)} disabled={busy} className="rounded-full border border-border/50 px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-foreground/70 disabled:opacity-50">Decline</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => void runInteraction(match.id, type)} disabled={disabled} className="mt-2 rounded-full border border-primary/35 px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-primary disabled:opacity-50">Request</button>
+                      )}
+                    </div>
+                  );
                 })}
               </div>
 
