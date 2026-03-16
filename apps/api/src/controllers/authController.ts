@@ -27,6 +27,35 @@ import { ensureUserExecutiveAssignmentAfterOnboarding, validateEmployeeLogin } f
 import { HttpError } from "../utils/httpErrors";
 import { signAccessToken, signRefreshToken, signSignupToken, verifyRefreshToken, verifySignupToken } from "../utils/jwt";
 
+function buildAccessCookieOptions(ttlMinutes: number) {
+  const maxAgeMs = ttlMinutes * 60 * 1000;
+  return {
+    httpOnly: true,
+    sameSite: env.NODE_ENV === "production" ? "lax" : "lax",
+    secure: env.NODE_ENV === "production",
+    path: "/",
+    maxAge: maxAgeMs
+  } as const;
+}
+
+function setAuthCookies(
+  res: Response,
+  options: {
+    accessToken: string;
+    refreshToken: string;
+    refreshTtlDays: number;
+  }
+) {
+  const accessTtlMinutes = env.ACCESS_TOKEN_TTL_MINUTES;
+  res.cookie("vael_access_token", options.accessToken, buildAccessCookieOptions(accessTtlMinutes));
+  const refreshOptions = buildRefreshCookieOptions(options.refreshTtlDays);
+  res.cookie(refreshCookieName, options.refreshToken, refreshOptions);
+  return {
+    accessCookie: buildAccessCookieOptions(accessTtlMinutes),
+    refreshCookie: describeCookieOptions(refreshOptions)
+  };
+}
+
 function logSessionEvent(event: string, details: Record<string, unknown>) {
   if (env.NODE_ENV !== "production" || env.DEV_OTP_LOG === "true" || process.env.AUTH_DEBUG === "1") {
     console.debug(`[auth] ${event}`, details);
@@ -92,13 +121,12 @@ export async function verifyOtp(req: Request, res: Response) {
       ? env.REFRESH_TOKEN_TTL_DAYS
       : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
 
-    res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
+    const cookies = setAuthCookies(res, { accessToken, refreshToken, refreshTtlDays });
 
     logSessionEvent("otp-verified", { userId: user.id });
 
     return res.json({
       ok: true,
-      accessToken,
       onboardingToken,
       user: {
         id: user.id,
@@ -118,7 +146,8 @@ export async function verifyOtp(req: Request, res: Response) {
         paymentStatus: user.paymentStatus,
         profileCompletedAt: user.profileCompletedAt,
         photoCount
-      }
+      },
+      cookies
     });
   } catch (error) {
     if (error instanceof HttpError) throw error;
@@ -138,12 +167,11 @@ export async function verifyOtpMock(req: Request, res: Response) {
   const refreshToken = signRefreshToken(user.id, { rememberMe: resolvedRememberMe });
   const { onboardingToken } = await issueOnboardingToken(user.id);
   const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
-  res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
+  const cookies = setAuthCookies(res, { accessToken, refreshToken, refreshTtlDays });
 
   return res.json({
     ok: true,
     mocked: true,
-    accessToken,
     onboardingToken,
     user: {
       id: user.id,
@@ -163,7 +191,8 @@ export async function verifyOtpMock(req: Request, res: Response) {
       paymentStatus: user.paymentStatus,
       profileCompletedAt: user.profileCompletedAt,
       photoCount
-    }
+    },
+    cookies
   });
 }
 
@@ -221,9 +250,9 @@ export async function signupComplete(req: Request, res: Response) {
   const refreshToken = signRefreshToken(user.id, { rememberMe: true });
   const { onboardingToken } = await issueOnboardingToken(user.id);
   const refreshCookieOptions = buildRefreshCookieOptions(env.REFRESH_TOKEN_TTL_DAYS);
-  res.cookie(refreshCookieName, refreshToken, refreshCookieOptions);
+  const cookies = setAuthCookies(res, { accessToken, refreshToken, refreshTtlDays: env.REFRESH_TOKEN_TTL_DAYS });
 
-  return res.json({ ok: true, accessToken, onboardingToken });
+  return res.json({ ok: true, onboardingToken, cookies });
 }
 
 export async function login(req: Request, res: Response) {
@@ -257,19 +286,17 @@ export async function login(req: Request, res: Response) {
     ? env.REFRESH_TOKEN_TTL_DAYS
     : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
 
-  const refreshCookieOptions = buildRefreshCookieOptions(refreshTtlDays);
-  res.cookie(refreshCookieName, refreshToken, refreshCookieOptions);
+  const cookies = setAuthCookies(res, { accessToken, refreshToken, refreshTtlDays });
 
   logSessionEvent("login", {
     userId: result.user.id,
     rememberMe: resolvedRememberMe,
     refreshTtlDays,
-    refreshCookie: describeCookieOptions(refreshCookieOptions)
+    refreshCookie: cookies.refreshCookie
   });
 
   return res.json({
     ok: true,
-    accessToken,
     onboardingToken,
     user: {
       id: result.user.id,
@@ -289,7 +316,8 @@ export async function login(req: Request, res: Response) {
       paymentStatus: result.user.paymentStatus,
       profileCompletedAt: result.user.profileCompletedAt,
       photoCount
-    }
+    },
+    cookies
   });
 }
 
@@ -305,11 +333,10 @@ export async function employeeLogin(req: Request, res: Response) {
   const accessToken = signAccessToken(user.id, { rememberMe: resolvedRememberMe });
   const refreshToken = signRefreshToken(user.id, { rememberMe: resolvedRememberMe });
   const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
-  res.cookie(refreshCookieName, refreshToken, buildRefreshCookieOptions(refreshTtlDays));
+  const cookies = setAuthCookies(res, { accessToken, refreshToken, refreshTtlDays });
 
   return res.json({
     ok: true,
-    accessToken,
     user: {
       id: user.id,
       employeeId: user.employeeId,
@@ -317,7 +344,8 @@ export async function employeeLogin(req: Request, res: Response) {
       firstName: user.firstName,
       lastName: user.lastName,
       displayName: user.displayName
-    }
+    },
+    cookies
   });
 }
 
@@ -376,18 +404,17 @@ export async function refreshAccessToken(req: Request, res: Response) {
   const nextRefreshToken = signRefreshToken(user.id, { rememberMe });
 
   const refreshTtlDays = rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
-  const refreshCookieOptions = buildRefreshCookieOptions(refreshTtlDays);
-  res.cookie(refreshCookieName, nextRefreshToken, refreshCookieOptions);
+  const cookieMeta = setAuthCookies(res, { accessToken, refreshToken: nextRefreshToken, refreshTtlDays });
 
   logSessionEvent("refresh.success", {
     requestId,
     userId: user.id,
     rememberMe,
     refreshTtlDays,
-    refreshCookie: describeCookieOptions(refreshCookieOptions)
+    refreshCookie: cookieMeta.refreshCookie
   });
 
-  return res.json({ ok: true, accessToken });
+  return res.json({ ok: true });
 }
 
 export async function debugCookies(req: Request, res: Response) {

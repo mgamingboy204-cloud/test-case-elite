@@ -83,15 +83,11 @@ export const requireAuthHeader = requireAuth;
 
 export function requireOnboardingTokenMatch(req: Request, res: Response, next: NextFunction) {
   const user = res.locals.user;
-  const onboardingToken = req.get("x-onboarding-token")?.trim();
   if (!user) {
     return res.status(401).json({ message: "Invalid token" });
   }
-  if (!onboardingToken) {
-    return res.status(401).json({ message: "Missing onboarding token" });
-  }
-  if (!user.onboardingToken || user.onboardingToken !== onboardingToken) {
-    return res.status(401).json({ message: "Invalid onboarding token" });
+  if (!user.onboardingToken) {
+    return res.status(401).json({ message: "Onboarding token missing" });
   }
   if (user.onboardingTokenExpiresAt && user.onboardingTokenExpiresAt.getTime() < Date.now()) {
     return res.status(401).json({ message: "Onboarding token expired" });

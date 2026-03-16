@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ApiError, apiRequest, setAuthToken, setOnboardingToken } from "@/lib/api";
+import { ApiError, apiRequest } from "@/lib/api";
 import {
   type BackendOnboardingStep,
   type FrontendOnboardingStep,
@@ -53,19 +53,18 @@ interface AuthContextType {
 
 type LoginApiResponse =
   | { ok: true; otpRequired: true }
-  | { ok: true; otpRequired?: false; accessToken: string; onboardingToken?: string | null; user: User };
+  | { ok: true; otpRequired?: false; onboardingToken?: string | null; user: User };
 
 type SignupCompleteResponse = {
   ok: true;
-  accessToken?: string;
   onboardingToken?: string | null;
   user?: User;
 };
 
-function isSessionPayload(value: unknown): value is { accessToken: string; user: User; onboardingToken?: string | null } {
+function isSessionPayload(value: unknown): value is { user: User; onboardingToken?: string | null } {
   if (!value || typeof value !== "object") return false;
-  const candidate = value as { accessToken?: unknown; user?: unknown };
-  return typeof candidate.accessToken === "string" && typeof candidate.user === "object" && candidate.user !== null;
+  const candidate = value as { user?: unknown };
+  return typeof candidate.user === "object" && candidate.user !== null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -106,9 +105,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshCurrentUser = async () => {
     const me = await apiRequest<User>("/me", { auth: true });
     setUser(me);
-    if (me.onboardingToken) {
-      setOnboardingToken(me.onboardingToken);
-    }
   };
 
   useEffect(() => {
@@ -117,17 +113,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const hydrate = async () => {
       const storedPendingPhone = localStorage.getItem("vael_pending_phone");
       const storedSignupToken = localStorage.getItem("vael_signup_token");
-      const storedOnboardingToken = localStorage.getItem("vael_onboarding_token");
       setPendingPhone(storedPendingPhone || null);
       setSignupToken(storedSignupToken || null);
-      setOnboardingToken(storedOnboardingToken || null);
 
       try {
         await refreshCurrentUser();
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
-          setAuthToken(null);
-          setOnboardingToken(null);
+          // Session missing/expired; treat as logged out.
         }
         setUser(null);
       } finally {
@@ -190,21 +183,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     debugLog("[signup] complete response", response);
 
-    const accessToken = response.accessToken;
-    if (!accessToken) {
-      debugError("[signup] Missing access token in signup complete response", response);
-      throw new Error("Signup completed, but no access token was returned.");
-    }
-
     const onboardingToken = response.onboardingToken ?? response.user?.onboardingToken ?? null;
 
     debugLog("[signup] storing tokens", {
-      hasAccessToken: Boolean(accessToken),
       hasOnboardingToken: Boolean(onboardingToken)
     });
-
-    setAuthToken(accessToken);
-    setOnboardingToken(onboardingToken);
 
     if (response.user) {
       setUser(response.user);
@@ -250,8 +233,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error("Unexpected login response. Please try again.");
     }
 
-    setAuthToken(response.accessToken);
-    setOnboardingToken(response.onboardingToken ?? response.user.onboardingToken ?? null);
     setUser(response.user);
     setPendingPhone(null);
     localStorage.removeItem("vael_pending_phone");
@@ -268,13 +249,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifySigninOtp = async (otp: string) => {
     if (!pendingPhone) throw new Error("Phone number is missing");
 
-    const response = await apiRequest<{ ok: true; accessToken: string; onboardingToken: string; user: User }>("/auth/otp/verify", {
+    const response = await apiRequest<{ ok: true; onboardingToken: string; user: User }>("/auth/otp/verify", {
       method: "POST",
       body: JSON.stringify({ phone: pendingPhone, code: otp, rememberMe: true })
     });
 
-    setAuthToken(response.accessToken);
-    setOnboardingToken(response.onboardingToken);
     setUser(response.user);
     setPendingPhone(null);
     localStorage.removeItem("vael_pending_phone");
@@ -299,13 +278,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!pendingPhone) throw new Error("Phone number is missing");
     if (!allowTestBypass) throw new Error("Mock OTP is disabled.");
 
-    const response = await apiRequest<{ ok: true; accessToken: string; onboardingToken: string; user: User }>("/auth/otp/mock-verify", {
+    const response = await apiRequest<{ ok: true; onboardingToken: string; user: User }>("/auth/otp/mock-verify", {
       method: "POST",
       body: JSON.stringify({ phone: pendingPhone, rememberMe: true })
     });
 
-    setAuthToken(response.accessToken);
-    setOnboardingToken(response.onboardingToken);
     setUser(response.user);
     setPendingPhone(null);
     localStorage.removeItem("vael_pending_phone");
@@ -336,14 +313,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore logout API errors
     }
-    setAuthToken(null);
     setUser(null);
     setPendingPhone(null);
     setSignupToken(null);
-    setOnboardingToken(null);
     localStorage.removeItem("vael_pending_phone");
     localStorage.removeItem("vael_signup_token");
-    localStorage.removeItem("vael_onboarding_token");
     router.push("/");
   };
 

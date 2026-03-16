@@ -23,38 +23,9 @@ export class ApiError extends Error {
   }
 }
 
-export function getAuthToken() {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("vael_access_token");
-}
+let refreshPromise: Promise<boolean> | null = null;
 
-
-export function getOnboardingToken() {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("vael_onboarding_token");
-}
-
-export function setOnboardingToken(token: string | null) {
-  if (typeof window === "undefined") return;
-  if (!token) {
-    localStorage.removeItem("vael_onboarding_token");
-    return;
-  }
-  localStorage.setItem("vael_onboarding_token", token);
-}
-
-export function setAuthToken(token: string | null) {
-  if (typeof window === "undefined") return;
-  if (!token) {
-    localStorage.removeItem("vael_access_token");
-    return;
-  }
-  localStorage.setItem("vael_access_token", token);
-}
-
-let refreshPromise: Promise<string | null> | null = null;
-
-async function refreshAccessToken(): Promise<string | null> {
+async function refreshAccessToken(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
@@ -69,25 +40,17 @@ async function refreshAccessToken(): Promise<string | null> {
       });
 
       if (!response.ok) {
-        setAuthToken(null);
-        return null;
+        return false;
       }
 
-      const payload = (await response.json()) as { accessToken?: string };
-      if (!payload.accessToken) {
-        setAuthToken(null);
-        return null;
-      }
-
-      setAuthToken(payload.accessToken);
-      return payload.accessToken;
+      // We don't need to read the body; cookies are already updated server-side.
+      return true;
     } catch (error) {
       console.error("[auth] Refresh token request failed", {
         url: `${API_BASE_URL}/auth/token/refresh`,
         error
       });
-      setAuthToken(null);
-      return null;
+      return false;
     } finally {
       refreshPromise = null;
     }
@@ -146,8 +109,8 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
 
   if (options?.auth && response.status === 401 && !path.startsWith("/auth/")) {
     console.warn("[api] Received 401 on authenticated request. Attempting token refresh", { method, path });
-    const nextToken = await refreshAccessToken();
-    if (nextToken) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
       console.info("[api] Refresh succeeded. Retrying request", { method, path });
       const retry = await runRequest();
       response = retry.response;
