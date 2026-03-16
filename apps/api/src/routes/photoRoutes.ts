@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { deletePhotoHandler, listPhotosHandler, uploadPhotoHandler } from "../controllers/photoController";
-import { requireAuth, requireAuthHeader, requireOnboardingTokenMatch } from "../middlewares/auth";
+import { requireAuth, requireOnboardingTokenMatch } from "../middlewares/auth";
 import { validateBody } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 
@@ -11,7 +11,6 @@ router.get("/photos/me", requireAuth, asyncHandler(listPhotosHandler));
 router.post(
   "/photos/upload",
   requireAuth,
-  requireAuthHeader,
   requireOnboardingTokenMatch,
   validateBody(
     z.object({
@@ -27,7 +26,6 @@ router.post(
 router.delete(
   "/photos/:photoId",
   requireAuth,
-  requireAuthHeader,
   requireOnboardingTokenMatch,
   asyncHandler(deletePhotoHandler)
 );

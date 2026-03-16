@@ -4,7 +4,8 @@ import bcrypt from "bcrypt";
 import { app } from "../src/app";
 import { prisma } from "../src/db/prisma";
 
-const withAuth = (req: request.Test, token: string) => req.set("Authorization", `Bearer ${token}`);
+// Auth is cookie-based (httpOnly JWT cookies). The supertest agent carries cookies automatically.
+const withAuth = (req: request.Test, _token: string) => req;
 
 async function resetDb() {
   await prisma.notification.deleteMany();
@@ -46,17 +47,16 @@ async function createOtp(phone: string, code = "123456") {
 async function registerAndLogin(agent: request.SuperAgentTest, phone: string, password: string) {
   await agent.post("/auth/register").send({ phone, password, email: `${phone}@example.com` });
   await createOtp(phone);
-  const response = await agent.post("/auth/otp/verify").send({ phone, code: "123456" });
-  return response.body.accessToken as string;
+  await agent.post("/auth/otp/verify").send({ phone, code: "123456" });
+  return "";
 }
 
 async function registerAndLoginSession(agent: request.SuperAgentTest, phone: string, password: string) {
   await agent.post("/auth/register").send({ phone, password, email: `${phone}@example.com` });
   await createOtp(phone);
-  const response = await agent.post("/auth/otp/verify").send({ phone, code: "123456" });
   return {
-    accessToken: response.body.accessToken as string,
-    onboardingToken: response.body.onboardingToken as string
+    accessToken: "",
+    onboardingToken: ""
   };
 }
 
@@ -457,7 +457,9 @@ describe("Login without OTP for verified phones", () => {
     const login = await agent.post("/auth/login").send({ phone, password, rememberDevice: true });
     expect(login.body.ok).toBe(true);
     expect(login.body.otpRequired).not.toBe(true);
-    expect(login.body.accessToken).toBeDefined();
+    const setCookie = login.headers["set-cookie"] as string[] | undefined;
+    expect(setCookie?.some((c) => c.startsWith("vael_access_token="))).toBe(true);
+    expect(setCookie?.some((c) => c.startsWith("em_refresh="))).toBe(true);
   });
 });
 

@@ -16,10 +16,10 @@ describe("Public auth access", () => {
     expect([200, 201]).toContain(response.status);
   });
 
-  it("rejects protected routes without Authorization header", async () => {
+  it("rejects protected routes without authentication", async () => {
     const response = await request(app).get("/profile");
     expect(response.status).toBe(401);
-    expect(response.body.error).toBe("Missing authorization header");
+    expect(response.body.message).toBeTruthy();
   });
 
   it("allows logout without Authorization header", async () => {

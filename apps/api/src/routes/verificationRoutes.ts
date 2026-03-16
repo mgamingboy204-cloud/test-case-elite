@@ -8,7 +8,7 @@ import {
   requestVerificationWhatsAppHelpHandler,
   uploadVerificationVideoHandler
 } from "../controllers/verificationController";
-import { requireAuth, requireAuthHeader, requireOnboardingTokenMatch } from "../middlewares/auth";
+import { requireAuth, requireOnboardingTokenMatch } from "../middlewares/auth";
 import { validateBody } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 
@@ -17,14 +17,12 @@ const router = Router();
 router.post(
   "/verification-requests",
   requireAuth,
-  requireAuthHeader,
   requireOnboardingTokenMatch,
   asyncHandler(createVerificationRequestHandler)
 );
 router.post(
   "/verification/video",
   requireAuth,
-  requireAuthHeader,
   requireOnboardingTokenMatch,
   validateBody(
     z.object({
@@ -36,7 +34,6 @@ router.post(
 router.post(
   "/verification/help/whatsapp",
   requireAuth,
-  requireAuthHeader,
   requireOnboardingTokenMatch,
   asyncHandler(requestVerificationWhatsAppHelpHandler)
 );

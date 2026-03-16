@@ -6,7 +6,7 @@ import {
   updateProfileHandler,
   updateProfileSettingsHandler
 } from "../controllers/profileController";
-import { requireAuth, requireAuthHeader, requireOnboardingTokenMatch } from "../middlewares/auth";
+import { requireAuth, requireOnboardingTokenMatch } from "../middlewares/auth";
 import { validateBody } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 
@@ -16,7 +16,6 @@ router.get("/profile", requireAuth, asyncHandler(getProfileHandler));
 router.put(
   "/profile",
   requireAuth,
-  requireAuthHeader,
   requireOnboardingTokenMatch,
   validateBody(ProfileSchema),
   asyncHandler(updateProfileHandler)
@@ -24,7 +23,6 @@ router.put(
 router.patch(
   "/profile",
   requireAuth,
-  requireAuthHeader,
   requireOnboardingTokenMatch,
   validateBody(ProfilePatchSchema),
   asyncHandler(updateProfileHandler)
@@ -32,10 +30,9 @@ router.patch(
 router.patch(
   "/profile/settings",
   requireAuth,
-  requireAuthHeader,
   requireOnboardingTokenMatch,
   asyncHandler(updateProfileSettingsHandler)
 );
-router.post("/profile/complete", requireAuth, requireAuthHeader, requireOnboardingTokenMatch, asyncHandler(completeProfileHandler));
+router.post("/profile/complete", requireAuth, requireOnboardingTokenMatch, asyncHandler(completeProfileHandler));
 
 export default router;

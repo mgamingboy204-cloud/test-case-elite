@@ -4,8 +4,6 @@ import {
   deviceCookieName,
   deviceCookieOptions,
   refreshCookieName,
-  sessionCookieName,
-  sessionCookieOptions
 } from "../config/auth";
 import { env } from "../config/env";
 import { parseCookies } from "../utils/cookies";

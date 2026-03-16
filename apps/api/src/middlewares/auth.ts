@@ -95,8 +95,6 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   return next();
 }
 
-export const requireAuthHeader = requireAuth;
-
 
 export function requireOnboardingTokenMatch(req: Request, res: Response, next: NextFunction) {
   const user = res.locals.user;

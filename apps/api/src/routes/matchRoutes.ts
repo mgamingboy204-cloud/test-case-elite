@@ -19,7 +19,7 @@ import {
   respondToSocialExchangeRequestHandler,
   submitSocialHandleHandler
 } from "../controllers/socialExchangeController";
-import { requireAuth, requireAuthHeader } from "../middlewares/auth";
+import { requireAuth } from "../middlewares/auth";
 import { requireMatchingEligible } from "../middlewares/onboarding";
 import { validateBody, validateParams } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -30,7 +30,6 @@ router.get("/matches", requireAuth, requireMatchingEligible, asyncHandler(listMa
 router.post(
   "/consent/respond",
   requireAuth,
-  requireAuthHeader,
   requireMatchingEligible,
   validateBody(ConsentSchema),
   asyncHandler(respondConsentHandler)
@@ -75,7 +74,6 @@ router.get(
 router.post(
   "/social-exchange-cases/:matchId/request",
   requireAuth,
-  requireAuthHeader,
   requireMatchingEligible,
   validateParams(z.object({ matchId: z.string() })),
   asyncHandler(createSocialExchangeRequestHandler)
@@ -84,7 +82,6 @@ router.post(
 router.post(
   "/social-exchange-cases/:caseId/respond",
   requireAuth,
-  requireAuthHeader,
   requireMatchingEligible,
   validateParams(z.object({ caseId: z.string().uuid() })),
   validateBody(SocialExchangeRespondSchema),
@@ -94,7 +91,6 @@ router.post(
 router.post(
   "/social-exchange-cases/:caseId/handle",
   requireAuth,
-  requireAuthHeader,
   requireMatchingEligible,
   validateParams(z.object({ caseId: z.string().uuid() })),
   validateBody(SocialExchangeHandleSchema),
@@ -104,7 +100,6 @@ router.post(
 router.post(
   "/social-exchange-cases/:caseId/reveal",
   requireAuth,
-  requireAuthHeader,
   requireMatchingEligible,
   validateParams(z.object({ caseId: z.string().uuid() })),
   asyncHandler(openSocialRevealHandler)
