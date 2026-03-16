@@ -93,14 +93,18 @@ function buildActionId() {
   return `likes-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
-export async function respondToIncomingLike(options: { targetUserId: string; action: "LIKE" | "PASS" }) {
+export async function sendLikeAction(options: { actionId?: string; targetUserId: string; action: "LIKE" | "PASS" }) {
   return apiRequest<{ ok: boolean; matchId: string | null; alreadyProcessed: boolean }>("/likes", {
     method: "POST",
     auth: true,
     body: JSON.stringify({
-      actionId: buildActionId(),
+      actionId: options.actionId ?? buildActionId(),
       targetUserId: options.targetUserId,
       action: options.action
     })
   });
+}
+
+export async function respondToIncomingLike(options: { targetUserId: string; action: "LIKE" | "PASS" }) {
+  return sendLikeAction({ targetUserId: options.targetUserId, action: options.action });
 }

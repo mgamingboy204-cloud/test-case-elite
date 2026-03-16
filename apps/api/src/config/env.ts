@@ -20,6 +20,7 @@ const EnvSchema = z
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
     WEB_ORIGIN: z.string().min(1, "WEB_ORIGIN is required"),
     CORS_ALLOWED_ORIGINS: z.string().optional(),
+    CORS_ALLOWED_ORIGIN_PATTERNS: z.string().optional(),
     API_ORIGIN: z.string().optional(),
     ADMIN_ORIGIN: z.string().optional(),
     AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().default(1000 * 60 * 15),
@@ -143,6 +144,7 @@ export const env = {
   ...parsed,
   WEB_ORIGIN: parsed.WEB_ORIGIN,
   CORS_ALLOWED_ORIGINS: parsed.CORS_ALLOWED_ORIGINS,
+  CORS_ALLOWED_ORIGIN_PATTERNS: parsed.CORS_ALLOWED_ORIGIN_PATTERNS,
   STORAGE_PROVIDER: parsed.STORAGE_PROVIDER ?? (parsed.NODE_ENV === "production" ? "supabase" : "local"),
   ALLOW_TEST_BYPASS: parsed.ALLOW_TEST_BYPASS === "true"
 };

@@ -70,6 +70,17 @@ function isSessionPayload(value: unknown): value is { accessToken: string; user:
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const allowTestBypass = process.env.NEXT_PUBLIC_ALLOW_TEST_BYPASS === "true";
+const authDebug = process.env.NODE_ENV !== "production";
+
+function debugLog(message: string, details?: unknown) {
+  if (!authDebug) return;
+  console.info(message, details);
+}
+
+function debugError(message: string, details?: unknown) {
+  if (!authDebug) return;
+  console.error(message, details);
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -177,17 +188,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ signupToken, password })
     });
 
-    console.info("[signup] complete response", response);
+    debugLog("[signup] complete response", response);
 
     const accessToken = response.accessToken;
     if (!accessToken) {
-      console.error("[signup] Missing access token in signup complete response", response);
+      debugError("[signup] Missing access token in signup complete response", response);
       throw new Error("Signup completed, but no access token was returned.");
     }
 
     const onboardingToken = response.onboardingToken ?? response.user?.onboardingToken ?? null;
 
-    console.info("[signup] storing tokens", {
+    debugLog("[signup] storing tokens", {
       hasAccessToken: Boolean(accessToken),
       hasOnboardingToken: Boolean(onboardingToken)
     });
@@ -201,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await refreshCurrentUser();
       } catch (error) {
-        console.error("[signup] failed to fetch /me immediately after signup complete", error);
+        debugError("[signup] failed to fetch /me immediately after signup complete", error);
         throw error;
       }
     }
@@ -218,7 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       photoCount: response.user?.photoCount ?? user?.photoCount
     }));
 
-    console.info("[signup] navigation target", { nextRoute });
+    debugLog("[signup] navigation target", { nextRoute });
     router.push(nextRoute);
   };
 

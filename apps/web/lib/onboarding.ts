@@ -43,17 +43,18 @@ export function resolveFrontendOnboardingStep(input: {
   if (!input.isAuthenticated) {
     if (input.signupToken) return "PASSWORD";
     if (input.pendingPhone) return "OTP";
-
     return "PHONE";
   }
 
   const backendStep = input.backendStep;
+  // Production gating: main app should only unlock when backend confirms ACTIVE.
   if (backendStep === "ACTIVE") return "COMPLETED";
 
   if (backendStep === "PAID" || backendStep === "PROFILE_PENDING") {
-    if (input.profileCompletedAt && (input.photoCount ?? 0) >= 1) return "COMPLETED";
+    // Even if profile/photos look done, keep the user in onboarding until backend marks ACTIVE.
+    // This prevents UI showing main app pages that will 403 under API `requireActive`.
+    if (input.profileCompletedAt && (input.photoCount ?? 0) >= 1) return "PHOTOS";
     if (input.profileCompletedAt && (input.photoCount ?? 0) < 1) return "PHOTOS";
-
     return "PROFILE";
   }
 

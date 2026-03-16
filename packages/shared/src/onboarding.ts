@@ -10,16 +10,6 @@ export type BackendOnboardingStep =
 export type VideoVerificationStatus = "NOT_REQUESTED" | "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED";
 export type PaymentStatus = "NOT_STARTED" | "PENDING" | "PAID" | "FAILED" | "CANCELED";
 
-export type FrontendOnboardingStep =
-  | "PHONE"
-  | "OTP"
-  | "PASSWORD"
-  | "VERIFICATION"
-  | "PAYMENT"
-  | "PROFILE"
-  | "PHOTOS"
-  | "COMPLETED";
-
 export type OnboardingProfileSnapshot = {
   name?: string | null;
   dateOfBirth?: Date | string | null;
@@ -44,20 +34,6 @@ export function hasRequiredOnboardingProfile(profile?: OnboardingProfileSnapshot
       profile.city?.trim() &&
       profile.bioShort?.trim()
   );
-}
-
-export function routeForFrontendOnboardingStep(step: FrontendOnboardingStep) {
-  const routeMap: Record<FrontendOnboardingStep, string> = {
-    PHONE: "/signup/phone",
-    OTP: "/signup/otp",
-    PASSWORD: "/signup/password",
-    VERIFICATION: "/onboarding/verification",
-    PAYMENT: "/onboarding/payment",
-    PROFILE: "/onboarding/profile",
-    PHOTOS: "/onboarding/photos",
-    COMPLETED: "/discover"
-  };
-  return routeMap[step];
 }
 
 export function resolveBackendOnboardingStep(input: {
@@ -85,37 +61,9 @@ export function resolveBackendOnboardingStep(input: {
   return "PHONE_VERIFIED";
 }
 
-export function resolveFrontendOnboardingStep(input: {
-  isAuthenticated: boolean;
-  pendingPhone?: string | null;
-  signupToken?: string | null;
-  backendStep?: BackendOnboardingStep | null;
-  profileCompletedAt?: Date | string | null;
-  photoCount?: number;
-}): FrontendOnboardingStep {
-  if (!input.isAuthenticated) {
-    if (input.signupToken) return "PASSWORD";
-    if (input.pendingPhone) return "OTP";
-    return "PHONE";
-  }
-
-  const backendStep = input.backendStep;
-  if (backendStep === "ACTIVE") return "COMPLETED";
-
-  if (backendStep === "PAID" || backendStep === "PROFILE_PENDING") {
-    if (input.profileCompletedAt && (input.photoCount ?? 0) >= 1) return "COMPLETED";
-    if (input.profileCompletedAt && (input.photoCount ?? 0) < 1) return "PHOTOS";
-    return "PROFILE";
-  }
-
-  if (backendStep === "PAYMENT_PENDING" || backendStep === "VIDEO_VERIFIED") return "PAYMENT";
-
-  return "VERIFICATION";
-}
-
 export function onboardingRedirectForBackendStep(step: BackendOnboardingStep) {
-  if (step === "ACTIVE") return routeForFrontendOnboardingStep("COMPLETED");
-  if (step === "PAID" || step === "PROFILE_PENDING") return routeForFrontendOnboardingStep("PROFILE");
-  if (step === "PAYMENT_PENDING" || step === "VIDEO_VERIFIED") return routeForFrontendOnboardingStep("PAYMENT");
-  return routeForFrontendOnboardingStep("VERIFICATION");
+  if (step === "ACTIVE") return "/discover";
+  if (step === "PAID" || step === "PROFILE_PENDING") return "/onboarding/profile";
+  if (step === "PAYMENT_PENDING" || step === "VIDEO_VERIFIED") return "/onboarding/payment";
+  return "/onboarding/verification";
 }

@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Briefcase, Ruler, X, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
-import { ApiError, apiRequest } from "@/lib/api";
+import { ApiError } from "@/lib/api";
+import { sendLikeAction } from "@/lib/likes";
 import { fetchAlerts, fetchDiscoverFeedPage, fetchMatches, mapLegacyFeedItemToCard, type DiscoverCard } from "@/lib/queries";
 import { primeCache, readCache } from "@/lib/cache";
 
@@ -54,9 +55,9 @@ export default function DiscoverPage() {
   const fetchPage = async (cursor?: string) => {
     const response = await fetchDiscoverFeedPage(cursor, BUFFER_TARGET);
     const mapped = response.items.map(mapLegacyFeedItemToCard);
-    const deduped = Array.from(new Map(mapped.map((item) => [item.id, item])).values());
     return {
-      items: deduped,
+      // De-dupe is handled when merging into the existing buffer.
+      items: mapped,
       nextCursor: response.nextCursor
     };
   };
@@ -135,11 +136,7 @@ export default function DiscoverPage() {
     }
 
     try {
-      const response = await apiRequest<{ ok: boolean; matchId: string | null }>("/likes", {
-        method: "POST",
-        auth: true,
-        body: JSON.stringify({ actionId, targetUserId: current.id, action })
-      });
+      const response = await sendLikeAction({ actionId, targetUserId: current.id, action });
       if (response.matchId) {
         void fetchMatches().then((data) => primeCache("matches", data));
         void fetchAlerts().then((data) => primeCache("alerts", data));

@@ -34,6 +34,12 @@ export default function VerifyConsolePage() {
 
   const selected = useMemo(() => requests.find((item) => item.id === selectedId) ?? null, [requests, selectedId]);
 
+  const isValidMeetUrl = useMemo(() => {
+    const value = meetUrl.trim();
+    if (!value) return false;
+    return /^https:\/\/meet\.google\.com\/.+/.test(value);
+  }, [meetUrl]);
+
   const refresh = async (targetView = view) => {
     const data = await listVerificationRequestsForWorker(targetView);
     setRequests(data.requests);
@@ -159,13 +165,19 @@ export default function VerifyConsolePage() {
                       className="flex-1 rounded-lg border border-[#2a2f3b] bg-black/30 px-3 py-2 text-sm"
                     />
                     <button
-                      disabled={busyAction === "start" || !meetUrl.trim()}
+                      disabled={busyAction === "start" || !isValidMeetUrl}
                       onClick={() => void runAction("start", async () => { await startVerificationRequest(selected.id, meetUrl.trim()); }, "Meet link sent and case moved to in-progress.")}
                       className="rounded-lg border border-primary/40 px-4 py-2 text-xs uppercase tracking-[0.15em] text-primary disabled:opacity-45"
                     >
                       <span className="inline-flex items-center gap-2"><LinkIcon size={14} /> Send link</span>
                     </button>
                   </div>
+
+                  {!isValidMeetUrl && meetUrl.trim() ? (
+                    <p className="mt-1 text-[11px] text-amber-300/80">
+                      Meet link must start with https://meet.google.com/ and include the meeting path.
+                    </p>
+                  ) : null}
 
                   <button
                     disabled={busyAction === "approve" || ["COMPLETED", "REJECTED", "TIMED_OUT"].includes(selected.status)}

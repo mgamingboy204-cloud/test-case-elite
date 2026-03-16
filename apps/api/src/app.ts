@@ -55,6 +55,18 @@ const configuredOrigins = [env.WEB_ORIGIN, env.ADMIN_ORIGIN, ...(env.CORS_ALLOWE
   .filter((value): value is string => value.length > 0);
 const allowedOrigins = Array.from(new Set(configuredOrigins));
 
+function parseOriginPatterns(): RegExp[] {
+  const raw = (env.CORS_ALLOWED_ORIGIN_PATTERNS ?? "").trim();
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+    .map((pattern) => new RegExp(pattern));
+}
+
+const allowedOriginPatterns = parseOriginPatterns();
+
 const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
     if (!origin) {
@@ -62,6 +74,10 @@ const corsOptions: CorsOptions = {
       return;
     }
     if (allowedOrigins.includes(origin)) {
+      callback(null, origin);
+      return;
+    }
+    if (allowedOriginPatterns.some((pattern) => pattern.test(origin))) {
       callback(null, origin);
       return;
     }

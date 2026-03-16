@@ -4,12 +4,11 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { Loader2, MapPin, Phone, UserMinus, Video, Link2, ShieldCheck, RefreshCcw, Clock3 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { primeCache, useStaleWhileRevalidate } from "@/lib/cache";
-import { fetchMatches, type MatchInteraction, type MatchRequestType } from "@/lib/queries";
+import { fetchMatches, type MatchInteraction, type MatchRequestType, type MatchCard } from "@/lib/queries";
 import {
   getOnlineMeet,
   getPhoneUnlock,
   initiateMatchInteractionRequest,
-  listSocialExchangeCases,
   requestSocialExchange,
   respondSocialExchange,
   revealSocialExchange,
@@ -23,6 +22,63 @@ import { fetchOnlineMeetCase, submitOnlineMeetSelections, type MeetPlatform } fr
 import { ApiError } from "@/lib/api";
 
 type PendingAction = `${string}:${MatchRequestType}` | `unmatch:${string}` | `offline:${string}` | `online:${string}` | `social:${string}`;
+
+type SocialCaseSnapshot = {
+  id: string;
+  requesterUserId: string;
+  receiverUserId: string;
+  status: string;
+  platform: string | null;
+  revealOpenedAt: string | null;
+  revealExpiresAt: string | null;
+  unopenedExpiresAt: string | null;
+  cooldownUntil: string | null;
+  canRespond: boolean;
+  canSubmitHandle: boolean;
+  canReveal: boolean;
+};
+
+function normalizeSocialCase(
+  input: SocialExchangeCase | MatchCard["socialExchangeCase"] | null,
+  currentUserId: string
+): SocialCaseSnapshot | null {
+  if (!input) return null;
+
+  const status = String(input.status);
+  const requesterUserId = input.requesterUserId;
+  const receiverUserId = input.receiverUserId;
+  const mineIsRequester = requesterUserId === currentUserId;
+
+  const canRespond =
+    typeof (input as SocialExchangeCase).canRespond === "boolean"
+      ? (input as SocialExchangeCase).canRespond!
+      : !mineIsRequester && status === "REQUESTED";
+
+  const canSubmitHandle =
+    typeof (input as SocialExchangeCase).canSubmitHandle === "boolean"
+      ? (input as SocialExchangeCase).canSubmitHandle!
+      : mineIsRequester && (status === "ACCEPTED" || status === "AWAITING_HANDLE_SUBMISSION");
+
+  const canReveal =
+    typeof (input as SocialExchangeCase).canReveal === "boolean"
+      ? (input as SocialExchangeCase).canReveal!
+      : !mineIsRequester && (status === "READY_TO_REVEAL" || status === "REVEALED");
+
+  return {
+    id: input.id,
+    requesterUserId,
+    receiverUserId,
+    status,
+    platform: input.platform ?? null,
+    revealOpenedAt: input.revealOpenedAt ?? null,
+    revealExpiresAt: input.revealExpiresAt ?? null,
+    unopenedExpiresAt: input.unopenedExpiresAt ?? null,
+    cooldownUntil: input.cooldownUntil ?? null,
+    canRespond,
+    canSubmitHandle,
+    canReveal
+  };
+}
 
 const interactionMeta: Array<{ type: MatchRequestType; label: string; icon: ComponentType<{ className?: string; size?: number }> }> = [
   { type: "OFFLINE_MEET", label: "Offline meet", icon: MapPin },
@@ -47,7 +103,6 @@ export default function MatchesPage() {
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [onlineDraftByMatch, setOnlineDraftByMatch] = useState<Record<string, { platform: MeetPlatform | null; timeSlots: string[] }>>({});
-  const [socialCases, setSocialCases] = useState<Record<string, SocialExchangeCase | null>>({});
 
   const matchesQuery = useStaleWhileRevalidate({
     key: "matches",
@@ -57,23 +112,6 @@ export default function MatchesPage() {
   });
 
   const matches = useMemo(() => matchesQuery.data ?? [], [matchesQuery.data]);
-
-  useEffect(() => {
-    if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
-    let active = true;
-    void Promise.all(
-      matches.map(async (match) => {
-        const response = await listSocialExchangeCases(match.id).catch(() => ({ cases: [] as SocialExchangeCase[] }));
-        return [match.id, response.cases[0] ?? null] as const;
-      })
-    ).then((entries) => {
-      if (!active) return;
-      setSocialCases(Object.fromEntries(entries));
-    });
-    return () => {
-      active = false;
-    };
-  }, [isAuthenticated, onboardingStep, matches]);
 
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
@@ -99,11 +137,6 @@ export default function MatchesPage() {
     }
   };
 
-  const refreshSocialCase = async (matchId: string) => {
-    const latest = await listSocialExchangeCases(matchId).catch(() => ({ cases: [] as SocialExchangeCase[] }));
-    setSocialCases((current) => ({ ...current, [matchId]: latest.cases[0] ?? null }));
-  };
-
   const runSocialRequest = async (matchId: string) => {
     const actionKey: PendingAction = `social:${matchId}`;
     if (pendingAction === actionKey) return;
@@ -111,7 +144,7 @@ export default function MatchesPage() {
     setFeedback(null);
     try {
       await requestSocialExchange(matchId);
-      await refreshSocialCase(matchId);
+      await matchesQuery.refresh(true);
       setFeedback("Private social exchange request sent. Waiting for member consent.");
     } catch (error) {
       setFeedback(error instanceof ApiError ? error.message : "Unable to create social exchange request.");
@@ -251,13 +284,12 @@ export default function MatchesPage() {
               <SocialExchangePanel
                 matchId={match.id}
                 currentUserId={user?.id ?? ""}
-                // Wrap the logic in parentheses and add 'as any'
-                socialCase={(socialCases[match.id] ?? match.socialExchangeCase ?? null) as any}
+                socialCase={normalizeSocialCase(match.socialExchangeCase ?? null, user?.id ?? "")}
                 pending={pendingAction === `social:${match.id}`}
                 onRequest={runSocialRequest}
                 onActionStart={() => setPendingAction(`social:${match.id}`)}
                 onActionEnd={() => setPendingAction(null)}
-                onRefresh={refreshSocialCase}
+                onRefresh={() => matchesQuery.refresh(true)}
                 onFeedback={setFeedback}
               />
               
@@ -362,12 +394,12 @@ function PhoneExchangePanel(props: {
 function SocialExchangePanel(props: {
   matchId: string;
   currentUserId: string;
-  socialCase: SocialExchangeCase | null;
+  socialCase: SocialCaseSnapshot | null;
   pending: boolean;
   onRequest: (matchId: string) => Promise<void>;
   onActionStart: () => void;
   onActionEnd: () => void;
-  onRefresh: (matchId: string) => Promise<void>;
+  onRefresh: () => Promise<void>;
   onFeedback: (value: string) => void;
 }) {
   const [platform, setPlatform] = useState<"Snapchat" | "Instagram" | "LinkedIn">("Instagram");
@@ -384,7 +416,7 @@ function SocialExchangePanel(props: {
     props.onActionStart();
     try {
       await respondSocialExchange(props.socialCase!.id, response);
-      await props.onRefresh(props.matchId);
+      await props.onRefresh();
       props.onFeedback(response === "ACCEPT" ? "Request accepted. Waiting for handle submission." : "Social exchange request declined.");
     } catch (error) {
       props.onFeedback(error instanceof ApiError ? error.message : "Unable to respond to social exchange.");
@@ -397,7 +429,7 @@ function SocialExchangePanel(props: {
     props.onActionStart();
     try {
       await submitSocialExchangeHandle(props.socialCase!.id, platform, handle);
-      await props.onRefresh(props.matchId);
+      await props.onRefresh();
       props.onFeedback("Handle submitted. Recipient can reveal it for 10 minutes.");
       setHandle("");
     } catch (error) {
@@ -416,7 +448,7 @@ function SocialExchangePanel(props: {
       } else {
         setRevealed({ platform: response.platform, handle: response.handle, revealExpiresAt: response.revealExpiresAt });
       }
-      await props.onRefresh(props.matchId);
+      await props.onRefresh();
     } catch (error) {
       props.onFeedback(error instanceof ApiError ? error.message : "Unable to open reveal.");
     } finally {

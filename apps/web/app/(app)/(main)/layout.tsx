@@ -1,22 +1,22 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { Compass, Heart, Bell, User, Sparkles, LogOut, Settings } from "lucide-react";
+import { Compass, Heart, Bell, User, Sparkles, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchAlerts, fetchLikesIncoming, fetchMatches, fetchProfile } from "@/lib/queries";
+import { fetchAlerts, fetchMatches, fetchProfile } from "@/lib/queries";
 import { primeCache } from "@/lib/cache";
 import { motion } from "framer-motion";
 import { resolveRouteRedirect } from "@/lib/navigationGuard";
+import { fetchIncomingLikes } from "@/lib/likes";
 
 const NAV_ITEMS = [
   { href: "/discover", icon: Compass, label: "Discover" },
   { href: "/likes", icon: Heart, label: "Likes" },
   { href: "/matches", icon: Sparkles, label: "Matches" },
   { href: "/alerts", icon: Bell, label: "Alerts" },
-  { href: "/profile", icon: User, label: "Profile" },
-  { href: "/settings", icon: Settings, label: "Settings" },
+  { href: "/profile", icon: User, label: "Profile" }
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -28,10 +28,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const prefetchRouteBundle = useCallback((href: string) => {
     router.prefetch(href);
-    if (href === "/likes") void fetchLikesIncoming().then((data) => primeCache("likes-incoming", data));
+    if (href === "/likes") void fetchIncomingLikes().then((data) => primeCache("likes-incoming", data));
     if (href === "/matches") void fetchMatches().then((data) => primeCache("matches", data));
     if (href === "/alerts") void fetchAlerts().then((data) => primeCache("alerts", data));
-    if (href === "/profile" || href === "/settings") void fetchProfile().then((data) => primeCache("profile", data));
+    if (href === "/profile") void fetchProfile().then((data) => primeCache("profile", data));
   }, [router]);
 
 

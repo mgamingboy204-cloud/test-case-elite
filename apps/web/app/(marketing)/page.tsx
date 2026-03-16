@@ -1,13 +1,14 @@
 "use client";
 
 import { SceneCanvas } from "@/components/scene/scene-canvas";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
+import { motion, useScroll } from "framer-motion";
 import Link from "next/link";
 
 export default function Home() {
   // No target/container needed — the marketing layout owns the scroll context.
   // useScroll() defaults to tracking window scroll, which is what we want here.
-  const { scrollYProgress } = useScroll();
+  useScroll();
 
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden bg-background">
@@ -164,9 +165,7 @@ export default function Home() {
               viewport={{ once: true }}
               transition={{ duration: 1, delay: 0.4 }}
             >
-              <button className="px-8 py-4 bg-foreground text-background font-medium rounded-full hover:bg-primary hover:text-background transition-colors hover:shadow-[0_0_20px_rgba(183,110,121,0.5)]">
-                Install Application
-              </button>
+              <PwaInstallButton className="px-8 py-4 bg-foreground text-background font-medium rounded-full hover:bg-primary hover:text-background transition-colors hover:shadow-[0_0_20px_rgba(183,110,121,0.5)] disabled:opacity-70 disabled:cursor-not-allowed" />
             </motion.div>
           </div>
         </section>

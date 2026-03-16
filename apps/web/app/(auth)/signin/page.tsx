@@ -17,12 +17,12 @@ export default function SignIn() {
   const router = useRouter();
   const [error, setError] = useState("");
 
-  const handleNext = (e: React.FormEvent) => {
+  const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 1 && phone.length === 10) {
       setStep(2);
     } else if (step === 2 && password.length >= 8) {
-      handleSignIn();
+      await handleSignIn();
     }
   };
 
@@ -32,8 +32,11 @@ export default function SignIn() {
     try {
       const result = await startLogin(phone, password);
       if (result.otpRequired) {
+        setLoading(false);
         router.push("/signin/otp");
+        return;
       }
+      // Non-OTP login navigates inside AuthContext. Keep loading until navigation.
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to sign in");
       setLoading(false);

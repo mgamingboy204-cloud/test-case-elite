@@ -2,10 +2,11 @@
 
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { ApiError, apiRequest } from "@/lib/api";
+import { ApiError, apiRequest, setAuthToken, setOnboardingToken } from "@/lib/api";
 import { fetchProfile, type ProfileViewModel } from "@/lib/queries";
 import { useStaleWhileRevalidate } from "@/lib/cache";
 import { Loader2, PencilLine, ShieldCheck, UserRoundCheck, ImagePlus, Trash2 } from "lucide-react";
+import { useTheme } from "next-themes";
 
 const MAX_PHOTOS = 3;
 const MIN_PHOTOS = 1;
@@ -13,6 +14,8 @@ const MIN_HEIGHT = 120;
 const MAX_HEIGHT = 240;
 
 type Gender = "MALE" | "FEMALE" | "NON_BINARY" | "OTHER";
+
+type SettingsField = "pushNotificationsEnabled" | "profileVisible" | "showOnlineStatus" | "discoverableByPremiumOnly";
 
 function calculateAgeFromDate(dateOfBirth: string | null) {
   if (!dateOfBirth) return null;
@@ -57,10 +60,18 @@ function fileToDataUrl(file: File) {
 }
 
 export default function ProfilePage() {
-  const { isAuthenticated, onboardingStep } = useAuth();
+  const { isAuthenticated, onboardingStep, logout, user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [editing, setEditing] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [photoMessage, setPhotoMessage] = useState("");
+  const [savingField, setSavingField] = useState<SettingsField | null>(null);
+  const [settingsMessage, setSettingsMessage] = useState("");
+  const [settingsError, setSettingsError] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [logoutPending, setLogoutPending] = useState(false);
 
   const profileQuery = useStaleWhileRevalidate({
     key: "profile",
@@ -101,6 +112,77 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  const settings = profile.settings ?? {
+    pushNotificationsEnabled: true,
+    profileVisible: true,
+    showOnlineStatus: true,
+    discoverableByPremiumOnly: false
+  };
+
+  const toggleSetting = async (key: SettingsField, value: boolean) => {
+    setSavingField(key);
+    setSettingsError("");
+    setSettingsMessage("");
+
+    try {
+      await apiRequest("/profile/settings", {
+        method: "PATCH",
+        auth: true,
+        body: JSON.stringify({ [key]: value })
+      });
+      setSettingsMessage("Settings saved.");
+      await profileQuery.refresh(true);
+    } catch (error) {
+      setSettingsError(error instanceof ApiError ? error.message : "Unable to save this setting right now.");
+    } finally {
+      setSavingField(null);
+    }
+  };
+
+  const onLogout = async () => {
+    setLogoutPending(true);
+    try {
+      await logout();
+    } finally {
+      setLogoutPending(false);
+    }
+  };
+
+  const canDelete = deleteConfirm.trim().toUpperCase() === "DELETE";
+
+  const onDeleteAccount = async () => {
+    if (!canDelete) {
+      setSettingsError("Type DELETE to confirm account deletion.");
+      return;
+    }
+
+    setDeleting(true);
+    setSettingsError("");
+    setSettingsMessage("");
+
+    try {
+      await apiRequest<{ ok: true }>("/account", {
+        method: "DELETE",
+        auth: true,
+        body: JSON.stringify({
+          confirmation: "DELETE_MY_ACCOUNT",
+          reason: deleteReason.trim() || undefined
+        })
+      });
+
+      setAuthToken(null);
+      setOnboardingToken(null);
+      localStorage.removeItem("vael_pending_phone");
+      localStorage.removeItem("vael_signup_token");
+      localStorage.removeItem("vael_onboarding_token");
+      await logout();
+    } catch (error) {
+      setSettingsError(error instanceof ApiError ? error.message : "We could not process account deletion right now.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="px-6 py-8 space-y-6 pb-24">
@@ -166,6 +248,124 @@ export default function ProfilePage() {
       {saveMessage ? <p className="text-xs text-emerald-300">{saveMessage}</p> : null}
 
       <MembershipSummary profile={profile} />
+
+      {/* Settings merged from former Settings page */}
+      <section className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-5 space-y-3">
+        <h2 className="text-sm uppercase tracking-[0.2em] text-primary">Subscription</h2>
+        <Field
+          label="Plan"
+          value={`${formatPaymentPlan(profile.subscription.paymentPlan)} • ${formatMoneyInr(profile.subscription.paymentAmount)}`}
+        />
+        <Field label="Status" value={profile.subscription.status} />
+        <Field label="Start date" value={formatDate(profile.subscription.startedAt ?? profile.subscription.paidAt ?? null)} />
+        <Field label="Valid until" value={formatDate(profile.subscription.endsAt ?? null)} />
+        <p className="text-xs text-foreground/55">Manual renewal only. Membership never auto-renews.</p>
+      </section>
+
+      <section className="rounded-3xl border border-border/40 bg-foreground/[0.03] p-5 space-y-3">
+        <h2 className="text-sm uppercase tracking-[0.2em] text-foreground/60">Notifications</h2>
+        <ToggleRow
+          label="App alerts"
+          description="Receive updates for likes, matches, concierge coordination, and account events."
+          checked={settings.pushNotificationsEnabled}
+          disabled={savingField === "pushNotificationsEnabled"}
+          onChange={() => void toggleSetting("pushNotificationsEnabled", !settings.pushNotificationsEnabled)}
+        />
+      </section>
+
+      <section className="rounded-3xl border border-border/40 bg-foreground/[0.03] p-5 space-y-3">
+        <h2 className="text-sm uppercase tracking-[0.2em] text-foreground/60">Appearance</h2>
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-primary/15 p-3">
+          <div>
+            <p className="text-sm text-foreground/85">Theme</p>
+            <p className="text-xs text-foreground/50">Choose the app appearance for your account.</p>
+          </div>
+          <div className="inline-flex rounded-xl border border-primary/20 p-1 bg-background/70">
+            <button
+              type="button"
+              onClick={() => setTheme("light")}
+              className={`rounded-lg px-3 py-1.5 text-xs uppercase tracking-widest transition ${
+                theme === "light" ? "bg-primary/20 text-primary" : "text-foreground/55"
+              }`}
+            >
+              Light
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme("dark")}
+              className={`rounded-lg px-3 py-1.5 text-xs uppercase tracking-widest transition ${
+                theme === "dark" ? "bg-primary/20 text-primary" : "text-foreground/55"
+              }`}
+            >
+              Dark
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-border/40 bg-foreground/[0.03] p-5 space-y-3">
+        <h2 className="text-sm uppercase tracking-[0.2em] text-foreground/60">Account</h2>
+        <Field label="Member ID" value={user?.id ?? "—"} />
+        <Field label="Phone" value={user?.phone ?? "—"} />
+        <ToggleRow
+          label="Profile visibility"
+          description="Allow your approved profile to appear in private discovery."
+          checked={settings.profileVisible}
+          disabled={savingField === "profileVisible"}
+          onChange={() => void toggleSetting("profileVisible", !settings.profileVisible)}
+        />
+        <ToggleRow
+          label="Show online status"
+          description="Let matches view whether you're active in the app."
+          checked={settings.showOnlineStatus}
+          disabled={savingField === "showOnlineStatus"}
+          onChange={() => void toggleSetting("showOnlineStatus", !settings.showOnlineStatus)}
+        />
+      </section>
+
+      {settingsMessage ? <p className="text-xs text-emerald-300">{settingsMessage}</p> : null}
+      {settingsError ? <p className="text-xs text-red-200">{settingsError}</p> : null}
+
+      <section className="rounded-3xl border border-red-400/20 bg-red-500/5 p-5 space-y-4">
+        <h2 className="text-sm uppercase tracking-[0.2em] text-red-200">Security</h2>
+
+        <button
+          type="button"
+          disabled={logoutPending}
+          onClick={() => void onLogout()}
+          className="w-full rounded-xl border border-primary/30 px-4 py-3 text-sm text-primary disabled:opacity-60"
+        >
+          {logoutPending ? "Signing out…" : "Logout"}
+        </button>
+
+        <div className="space-y-2 rounded-2xl border border-red-300/25 p-4">
+          <p className="text-sm text-red-100">Delete my account</p>
+          <p className="text-xs text-red-100/70">
+            This deactivates your membership, removes app access, and takes your profile out of discoverability.
+          </p>
+          <textarea
+            rows={2}
+            placeholder="Optional reason"
+            value={deleteReason}
+            onChange={(event) => setDeleteReason(event.target.value)}
+            className="w-full rounded-xl border border-red-300/20 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-foreground/35 focus:outline-none focus:border-red-300/40"
+          />
+          <input
+            value={deleteConfirm}
+            onChange={(event) => setDeleteConfirm(event.target.value)}
+            placeholder='Type "DELETE" to confirm'
+            className="w-full rounded-xl border border-red-300/20 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-foreground/35 focus:outline-none focus:border-red-300/40"
+          />
+          <button
+            type="button"
+            onClick={() => void onDeleteAccount()}
+            disabled={deleting || !canDelete}
+            className="w-full rounded-xl border border-red-300/40 px-4 py-3 text-sm text-red-100 disabled:opacity-40"
+          >
+            {deleting ? "Processing…" : "Delete account"}
+          </button>
+        </div>
+      </section>
     </div>
   );
 }
@@ -426,5 +626,40 @@ function Field({ label, value, multiline = false }: { label: string; value: stri
       <p className="text-[10px] uppercase tracking-[0.2em] text-foreground/45">{label}</p>
       <p className={`mt-1 text-sm text-foreground/90 ${multiline ? "leading-relaxed" : ""}`}>{value}</p>
     </div>
+  );
+}
+
+function ToggleRow({
+  label,
+  description,
+  checked,
+  onChange,
+  disabled
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onChange}
+      className="w-full rounded-2xl border border-primary/15 p-3 flex items-center justify-between text-left disabled:opacity-60"
+    >
+      <div>
+        <p className="text-sm text-foreground/85">{label}</p>
+        <p className="text-xs text-foreground/50 mt-1">{description}</p>
+      </div>
+      <span
+        className={`rounded-full px-3 py-1 text-[10px] tracking-[0.18em] uppercase ${
+          checked ? "bg-primary/20 text-primary" : "bg-foreground/10 text-foreground/50"
+        }`}
+      >
+        {checked ? "On" : "Off"}
+      </span>
+    </button>
   );
 }

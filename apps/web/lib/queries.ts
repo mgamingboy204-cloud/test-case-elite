@@ -1,5 +1,5 @@
 import { apiRequest } from "@/lib/api";
-import { fetchIncomingLikes, type LikesIncomingProfile } from "@/lib/likes";
+import { type LikesIncomingProfile } from "@/lib/likes";
 
 export const queryKeys = {
   discoverFeed: ["discover-feed"] as const,
@@ -211,10 +211,6 @@ export async function fetchMatches(): Promise<MatchCard[]> {
         }
       }
     }));
-}
-
-export async function fetchLikesIncoming(): Promise<LikesIncomingProfile[]> {
-  return fetchIncomingLikes();
 }
 
 export interface NotificationApiItem {

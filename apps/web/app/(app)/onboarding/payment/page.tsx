@@ -151,9 +151,19 @@ export default function PaymentStep() {
 
   const handleMockPayment = async () => {
     if (!allowTestBypass) return;
+    if (!selectedTier) {
+      setError("Select a membership plan first.");
+      return;
+    }
     setProcessing(true);
     setError("");
     try {
+      // Ensure onboardingPaymentPlan/onboardingPaymentAmount are set server-side.
+      await apiRequest<PaymentInitResponse>("/payments/initiate", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({ tier: selectedTier })
+      });
       await apiRequest("/payments/mock/complete", { method: "POST", auth: true });
       await refreshCurrentUser();
       completeOnboardingStep("PROFILE");
