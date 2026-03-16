@@ -79,7 +79,19 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return res.status(403).json({ message: "Banned" });
   }
 
-  const photoCount = await prisma.photo.count({ where: { userId: user.id } });
+  let photoCount = 0;
+  if (typeof prisma.photo?.count === "function") {
+    try {
+      photoCount = await prisma.photo.count({ where: { userId: user.id } });
+    } catch (error) {
+      logger.warn("auth.photo_count_failed", {
+        requestId,
+        path: req.path,
+        userId,
+        reason: error instanceof Error ? error.message : "unknown"
+      });
+    }
+  }
   res.locals.user = { ...user, photoCount };
   logger.info("auth.resolve", { requestId, path: req.path, result: "success", userId });
 
