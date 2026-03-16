@@ -104,6 +104,7 @@ export default function MatchesPage() {
   const { isAuthenticated, onboardingStep, user } = useAuth();
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [offlineDraftByMatch, setOfflineDraftByMatch] = useState<Record<string, { cafes: string[]; timeSlots: string[] }>>({});
   const [onlineDraftByMatch, setOnlineDraftByMatch] = useState<Record<string, { platform: MeetPlatform | null; timeSlots: string[] }>>({});
 
   const matchesQuery = useStaleWhileRevalidate({
@@ -160,21 +161,38 @@ export default function MatchesPage() {
     }
   };
 
-  const submitDefaultSelections = async (matchId: string) => {
+  const toggleOfflineCafe = (matchId: string, cafeId: string) => {
+    setOfflineDraftByMatch((current) => {
+      const draft = current[matchId] ?? { cafes: [], timeSlots: [] };
+      const exists = draft.cafes.includes(cafeId);
+      const nextCafes = exists ? draft.cafes.filter((entry) => entry !== cafeId) : [...draft.cafes, cafeId].slice(0, 2);
+      return { ...current, [matchId]: { ...draft, cafes: nextCafes } };
+    });
+  };
+
+  const toggleOfflineTimeSlot = (matchId: string, slotId: string) => {
+    setOfflineDraftByMatch((current) => {
+      const draft = current[matchId] ?? { cafes: [], timeSlots: [] };
+      const exists = draft.timeSlots.includes(slotId);
+      const nextSlots = exists ? draft.timeSlots.filter((entry) => entry !== slotId) : [...draft.timeSlots, slotId].slice(0, 4);
+      return { ...current, [matchId]: { ...draft, timeSlots: nextSlots } };
+    });
+  };
+
+  const submitOfflineSelections = async (matchId: string) => {
     const actionKey: PendingAction = `offline:${matchId}`;
     if (pendingAction === actionKey) return;
 
     setPendingAction(actionKey);
     setFeedback(null);
     try {
-      const caseData = await fetchOfflineMeetCase(matchId);
-      if (caseData.options.cafes.length < 3 || caseData.options.timeSlots.length < 3) {
-        setFeedback("Your concierge has not yet shared offline meet options.");
+      await fetchOfflineMeetCase(matchId);
+      const draft = offlineDraftByMatch[matchId] ?? { cafes: [], timeSlots: [] };
+      if (draft.cafes.length !== 2 || draft.timeSlots.length < 3 || draft.timeSlots.length > 4) {
+        setFeedback("Please choose exactly 2 cafes and 3 to 4 preferred time slots.");
         return;
       }
-      const selectedCafes = caseData.options.cafes.slice(0, 2).map((entry) => entry.id);
-      const selectedTimes = caseData.options.timeSlots.slice(0, 3).map((entry) => entry.id);
-      await submitOfflineMeetSelections(matchId, selectedCafes, selectedTimes);
+      await submitOfflineMeetSelections(matchId, draft.cafes, draft.timeSlots);
       await matchesQuery.refresh(true);
       setFeedback("Your offline meet preferences were submitted privately.");
     } catch (error) {
@@ -300,7 +318,7 @@ export default function MatchesPage() {
                 onFeedback={setFeedback}
               />
               
-              {match.offlineMeetCase ? <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/[0.04] p-3 text-xs text-foreground/75"><p className="font-medium tracking-[0.14em] uppercase text-primary/90">Offline meet status: {match.offlineMeetCase.status.replaceAll("_", " ")}</p>{match.offlineMeetCase.responseDeadlineAt ? <p className="mt-2 inline-flex items-center gap-1"><Clock3 size={12} /> Response deadline: {new Date(match.offlineMeetCase.responseDeadlineAt).toLocaleString()}</p> : null}{match.offlineMeetCase.cooldownUntil ? <p className="mt-2">Cooldown until: {new Date(match.offlineMeetCase.cooldownUntil).toLocaleString()}</p> : null}{match.offlineMeetCase.finalCafe && match.offlineMeetCase.finalTimeSlot ? <p className="mt-2">Finalized at {match.offlineMeetCase.finalCafe.name} — {match.offlineMeetCase.finalTimeSlot.label}</p> : null}{(match.offlineMeetCase.status === "AWAITING_USER_SELECTIONS" || match.offlineMeetCase.status === "OPTIONS_SENT" || match.offlineMeetCase.status === "USER_ONE_RESPONDED" || match.offlineMeetCase.status === "USER_TWO_RESPONDED") ? <button onClick={() => void submitDefaultSelections(match.id)} disabled={pendingAction === `offline:${match.id}`} className="mt-3 rounded-full border border-primary/30 px-3 py-1.5 uppercase tracking-[0.17em] text-[10px] text-primary disabled:opacity-50">{pendingAction === `offline:${match.id}` ? "Submitting…" : "Submit concierge preferences"}</button> : null}</div> : null}
+              {match.offlineMeetCase ? <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/[0.04] p-3 text-xs text-foreground/75"><p className="font-medium tracking-[0.14em] uppercase text-primary/90">Offline meet status: {match.offlineMeetCase.status.replaceAll("_", " ")}</p>{match.offlineMeetCase.responseDeadlineAt ? <p className="mt-2 inline-flex items-center gap-1"><Clock3 size={12} /> Response deadline: {new Date(match.offlineMeetCase.responseDeadlineAt).toLocaleString()}</p> : null}{match.offlineMeetCase.cooldownUntil ? <p className="mt-2">Cooldown until: {new Date(match.offlineMeetCase.cooldownUntil).toLocaleString()}</p> : null}{match.offlineMeetCase.finalCafe && match.offlineMeetCase.finalTimeSlot ? <p className="mt-2">Finalized at {match.offlineMeetCase.finalCafe.name} — {match.offlineMeetCase.finalTimeSlot.label}</p> : null}{(match.offlineMeetCase.status === "AWAITING_USER_SELECTIONS" || match.offlineMeetCase.status === "OPTIONS_SENT" || match.offlineMeetCase.status === "USER_ONE_RESPONDED" || match.offlineMeetCase.status === "USER_TWO_RESPONDED") ? <OfflineMeetSelectionPanel matchId={match.id} pending={pendingAction === `offline:${match.id}`} draft={offlineDraftByMatch[match.id] ?? { cafes: [], timeSlots: [] }} onToggleCafe={toggleOfflineCafe} onToggleSlot={toggleOfflineTimeSlot} onSubmit={submitOfflineSelections} /> : null}</div> : null}
 
               {match.onlineMeetCase ? <div className="mt-4 rounded-2xl border border-highlight/20 bg-highlight/[0.05] p-3 text-xs text-foreground/75"><p className="font-medium tracking-[0.14em] uppercase text-highlight">Online meet status: {match.onlineMeetCase.status.replaceAll("_", " ")}</p>{match.onlineMeetCase.responseDeadlineAt ? <p className="mt-2 inline-flex items-center gap-1"><Clock3 size={12} /> Response deadline: {new Date(match.onlineMeetCase.responseDeadlineAt).toLocaleString()}</p> : null}{match.onlineMeetCase.cooldownUntil ? <p className="mt-2">Cooldown until: {new Date(match.onlineMeetCase.cooldownUntil).toLocaleString()}</p> : null}{match.onlineMeetCase.finalPlatform && match.onlineMeetCase.finalTimeSlot ? <p className="mt-2">Finalized: {match.onlineMeetCase.finalPlatform.replaceAll("_", " ")} — {match.onlineMeetCase.finalTimeSlot.label}</p> : null}{(match.onlineMeetCase.status === "AWAITING_USER_SELECTIONS" || match.onlineMeetCase.status === "OPTIONS_SENT" || match.onlineMeetCase.status === "USER_ONE_RESPONDED" || match.onlineMeetCase.status === "USER_TWO_RESPONDED") ? <OnlineMeetSelectionPanel matchId={match.id} pending={pendingAction === `online:${match.id}`} draft={onlineDraftByMatch[match.id] ?? { platform: null, timeSlots: [] }} onToggleSlot={toggleOnlineTimeSlot} onPlatformSelect={setOnlinePlatform} onSubmit={submitOnlineSelections} /> : null}</div> : null}
 
@@ -491,6 +509,64 @@ function SocialExchangePanel(props: {
       {!mineIsRequester && props.socialCase.canReveal ? <button onClick={() => void onReveal()} disabled={props.pending} className="mt-3 rounded-full border border-primary/40 px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-primary disabled:opacity-50">Reveal temporary handle</button> : null}
 
       {revealed ? <div className="mt-3 rounded-xl border border-primary/20 bg-primary/[0.06] p-3"><p className="text-[10px] uppercase tracking-[0.16em]">{revealed.platform}</p><p className="mt-1 font-medium text-sm">{revealed.handle}</p>{revealed.revealExpiresAt ? <p className="mt-1 text-[11px] text-foreground/60">Visible until {new Date(revealed.revealExpiresAt).toLocaleTimeString()}</p> : null}</div> : null}
+    </div>
+  );
+}
+
+function OfflineMeetSelectionPanel(props: {
+  matchId: string;
+  pending: boolean;
+  draft: { cafes: string[]; timeSlots: string[] };
+  onToggleCafe: (matchId: string, cafeId: string) => void;
+  onToggleSlot: (matchId: string, slotId: string) => void;
+  onSubmit: (matchId: string) => Promise<void>;
+}) {
+  const [options, setOptions] = useState<{ cafes: Array<{ id: string; name: string; address: string }>; timeSlots: Array<{ id: string; label: string }> }>({ cafes: [], timeSlots: [] });
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void fetchOfflineMeetCase(props.matchId)
+      .then((value) => {
+        if (!active) return;
+        setOptions({
+          cafes: value.options.cafes,
+          timeSlots: value.options.timeSlots.map((entry) => ({ id: entry.id, label: entry.label }))
+        });
+      })
+      .catch(() => {
+        if (!active) return;
+        setError("Unable to load concierge options right now.");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [props.matchId]);
+
+  return (
+    <div className="mt-3 rounded-xl border border-primary/30 p-3">
+      <p className="uppercase tracking-[0.15em] text-[10px] text-primary">Choose exactly 2 cafe options</p>
+      <div className="mt-2 grid grid-cols-1 gap-2">
+        {options.cafes.map((cafe) => (
+          <button key={cafe.id} onClick={() => props.onToggleCafe(props.matchId, cafe.id)} className={`rounded-lg border px-3 py-2 text-left text-[10px] ${props.draft.cafes.includes(cafe.id) ? "border-primary bg-primary/10" : "border-border/40"}`}>
+            <p className="uppercase tracking-[0.12em]">{cafe.name}</p>
+            <p className="mt-1 text-foreground/60 normal-case tracking-normal">{cafe.address}</p>
+          </button>
+        ))}
+      </div>
+
+      <p className="mt-3 uppercase tracking-[0.15em] text-[10px] text-primary">Choose 3 to 4 time slots</p>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        {options.timeSlots.map((slot) => (
+          <button key={slot.id} onClick={() => props.onToggleSlot(props.matchId, slot.id)} className={`rounded-lg border px-2 py-2 text-left text-[10px] ${props.draft.timeSlots.includes(slot.id) ? "border-primary bg-primary/10" : "border-border/40"}`}>
+            {slot.label}
+          </button>
+        ))}
+      </div>
+
+      {error ? <p className="mt-2 text-[10px] text-red-400">{error}</p> : null}
+      <button onClick={() => void props.onSubmit(props.matchId)} disabled={props.pending || options.cafes.length === 0 || options.timeSlots.length === 0} className="mt-3 rounded-full border border-primary/40 px-3 py-1.5 uppercase tracking-[0.14em] text-[10px] text-primary disabled:opacity-50">{props.pending ? "Submitting…" : "Submit concierge preferences"}</button>
     </div>
   );
 }
