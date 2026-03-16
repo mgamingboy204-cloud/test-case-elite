@@ -69,17 +69,6 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
       headers.set("Content-Type", "application/json");
     }
 
-    if (options?.auth) {
-      const token = getAuthToken();
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-      const onboardingToken = getOnboardingToken();
-      if (onboardingToken) {
-        headers.set("x-onboarding-token", onboardingToken);
-      }
-    }
-
     let response: Response;
     try {
       response = await fetch(`${API_BASE_URL}${path}`, {
