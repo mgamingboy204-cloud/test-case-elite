@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { prisma } from "../db/prisma";
 import { verifyAccessToken } from "../utils/jwt";
 import { logger } from "../utils/logger";
+import { parseCookies } from "../utils/cookies";
 
 function getBearerToken(req: Request) {
   const header = req.get("authorization");
@@ -11,6 +12,15 @@ function getBearerToken(req: Request) {
   return match[1].trim();
 }
 
+function getAccessCookieToken(req: Request) {
+  const cookieHeader = req.headers.cookie ?? "";
+  if (!cookieHeader) return null;
+  const cookies = parseCookies(cookieHeader);
+  const token = cookies["vael_access_token"];
+  if (!token) return null;
+  return token.trim();
+}
+
 function isLikesDebugRequest(req: Request) {
   return process.env.LIKES_DEBUG_LOGS === "1" && req.path === "/likes" && req.method === "POST";
 }
@@ -18,8 +28,15 @@ function isLikesDebugRequest(req: Request) {
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const requestId = (res.locals.requestId as string | undefined) ?? req.get("x-request-id") ?? "unknown";
   const hasAuthorizationHeader = Boolean(req.get("authorization"));
+  const hasCookieHeader = Boolean(req.headers.cookie);
 
-  logger.info("auth.check", { requestId, path: req.path, method: req.method, hasAuthHeader: hasAuthorizationHeader });
+  logger.info("auth.check", {
+    requestId,
+    path: req.path,
+    method: req.method,
+    hasAuthHeader: hasAuthorizationHeader,
+    hasCookieHeader
+  });
 
   if (isLikesDebugRequest(req)) {
     console.info("likes.auth.entry", {
@@ -29,9 +46,9 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     });
   }
 
-  const token = getBearerToken(req);
+  const token = getBearerToken(req) ?? getAccessCookieToken(req);
   if (!token) {
-    logger.warn("auth.resolve", { requestId, path: req.path, result: "fail", reason: "missing_authorization_header" });
+    logger.warn("auth.resolve", { requestId, path: req.path, result: "fail", reason: "missing_auth" });
     return res.status(401).json({ message: "Missing or invalid authorization header" });
   }
 

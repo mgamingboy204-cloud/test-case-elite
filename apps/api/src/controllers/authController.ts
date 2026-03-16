@@ -29,10 +29,14 @@ import { signAccessToken, signRefreshToken, signSignupToken, verifyRefreshToken,
 
 function buildAccessCookieOptions(ttlMinutes: number) {
   const maxAgeMs = ttlMinutes * 60 * 1000;
+  const isProd = env.NODE_ENV === "production";
+  const isCrossOrigin = Boolean(env.API_ORIGIN && env.API_ORIGIN !== env.WEB_ORIGIN);
+  // Cross-site cookies (Vercel web -> Render API) require SameSite=None + Secure.
+  const sameSite = isProd && isCrossOrigin ? ("none" as const) : ("lax" as const);
   return {
     httpOnly: true,
-    sameSite: env.NODE_ENV === "production" ? "lax" : "lax",
-    secure: env.NODE_ENV === "production",
+    sameSite,
+    secure: isProd,
     path: "/",
     maxAge: maxAgeMs
   } as const;
@@ -350,8 +354,9 @@ export async function employeeLogin(req: Request, res: Response) {
 }
 
 export async function logout(req: Request, res: Response) {
-  // Clear refresh cookie
+  // Clear refresh + access cookies
   res.clearCookie(refreshCookieName, buildRefreshCookieOptions(env.REFRESH_TOKEN_TTL_DAYS));
+  res.clearCookie("vael_access_token", buildAccessCookieOptions(env.ACCESS_TOKEN_TTL_MINUTES));
 
   return res.json({ ok: true });
 }
