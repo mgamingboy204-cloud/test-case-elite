@@ -1,40 +1,64 @@
 import { NextFunction, Request, Response } from "express";
-import { onboardingRedirectForBackendStep } from "@vael/shared";
+import { resolveUserAppState } from "@vael/shared";
+
+function sendStateError(res: Response, status: number, state: ReturnType<typeof resolveUserAppState>, message: string) {
+  return res.status(status).json({
+    code: state.code,
+    message,
+    redirectTo: state.redirectTo,
+    onboardingStep: state.onboardingStep,
+    reasons: state.reasons,
+    matchingEligible: state.matchingEligible
+  });
+}
 
 export function requireActive(req: Request, res: Response, next: NextFunction) {
   const user = res.locals.user;
-  if (user.onboardingStep !== "ACTIVE") {
-    const redirectTo = onboardingRedirectForBackendStep(user.onboardingStep);
-    return res.status(403).json({
-      message: "Onboarding incomplete",
-      currentStep: user.onboardingStep,
-      requiredStep: "ACTIVE",
-      redirectTo
-    });
+
+  const state = resolveUserAppState({
+    isAuthenticated: Boolean(user),
+    onboardingStep: user?.onboardingStep,
+    videoVerificationStatus: user?.videoVerificationStatus,
+    paymentStatus: user?.paymentStatus,
+    profileCompletedAt: user?.profileCompletedAt,
+    subscriptionEndsAt: user?.subscriptionEndsAt,
+    userStatus: user?.status,
+    photoCount: user?.photoCount ?? 0,
+    hasProfileRecord: true
+  });
+
+  if (state.code === "guest") {
+    return sendStateError(res, 401, state, "Authentication required");
   }
+
+  if (state.onboardingStep !== "ACTIVE") {
+    return sendStateError(res, 403, state, "Onboarding incomplete");
+  }
+
   return next();
 }
 
 export function requireMatchingEligible(req: Request, res: Response, next: NextFunction) {
   const user = res.locals.user;
 
-  if (!user || user.onboardingStep !== "ACTIVE") {
-    const redirectTo = onboardingRedirectForBackendStep(user?.onboardingStep ?? "PHONE_VERIFIED");
-    return res.status(403).json({
-      message: "Onboarding incomplete",
-      currentStep: user?.onboardingStep ?? null,
-      requiredStep: "ACTIVE",
-      redirectTo
-    });
+  const state = resolveUserAppState({
+    isAuthenticated: Boolean(user),
+    onboardingStep: user?.onboardingStep,
+    videoVerificationStatus: user?.videoVerificationStatus,
+    paymentStatus: user?.paymentStatus,
+    profileCompletedAt: user?.profileCompletedAt,
+    subscriptionEndsAt: user?.subscriptionEndsAt,
+    userStatus: user?.status,
+    photoCount: user?.photoCount ?? 0,
+    hasProfileRecord: true
+  });
+
+  if (state.code === "guest") {
+    return sendStateError(res, 401, state, "Authentication required");
   }
 
-  if (user.status !== "APPROVED" || user.videoVerificationStatus !== "APPROVED" || user.paymentStatus !== "PAID") {
-    return res.status(403).json({
-      message: "Account not eligible for matching",
-      currentStatus: user.status,
-      videoVerificationStatus: user.videoVerificationStatus,
-      paymentStatus: user.paymentStatus
-    });
+  if (!state.matchingEligible) {
+    return sendStateError(res, 403, state, "Account not eligible for matching");
   }
 
   return next();

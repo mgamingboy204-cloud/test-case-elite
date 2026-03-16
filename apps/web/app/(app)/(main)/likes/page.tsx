@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { ApiError } from "@/lib/api";
+import { normalizeApiError } from "@/lib/apiErrors";
 import { fetchIncomingLikes, respondToIncomingLike, type LikesIncomingProfile } from "@/lib/likes";
 import { fetchAlerts, fetchMatches } from "@/lib/queries";
 import { primeCache, readCache } from "@/lib/cache";
@@ -36,10 +36,12 @@ export default function LikesPage() {
     try {
       const incoming = await fetchIncomingLikes();
       persist(incoming);
-    } catch {
+    } catch (error) {
       if (profiles.length === 0) {
         setStatus("error");
       }
+      const normalized = normalizeApiError(error);
+      setActionError(normalized.message);
     } finally {
       setIsRefreshing(false);
     }
@@ -97,11 +99,8 @@ export default function LikesPage() {
       setProfiles(previous);
       primeCache(LIKES_CACHE_KEY, previous);
       setStatus("success");
-      if (error instanceof ApiError && error.status === 403) {
-        setActionError("Please complete your required onboarding before responding to interests.");
-      } else {
-        setActionError("We could not save your response. Please try again.");
-      }
+      const normalized = normalizeApiError(error);
+      setActionError(normalized.message);
     } finally {
       setPendingProfileId(null);
     }

@@ -20,6 +20,7 @@ import {
 } from "../services/authService";
 import { ensureUserExecutiveAssignmentAfterOnboarding, validateEmployeeLogin } from "../services/employeeService";
 import { HttpError } from "../utils/httpErrors";
+import { resolveUserAppState } from "@vael/shared";
 import { signAccessToken, signRefreshToken, signSignupToken, verifyRefreshToken, verifySignupToken } from "../utils/jwt";
 
 function buildAccessCookieOptions(ttlMinutes: number) {
@@ -433,7 +434,10 @@ export async function whoAmI(req: Request, res: Response) {
 
   if (!user) return res.status(401).json({ message: "Invalid token" });
 
-  const photoCount = await prisma.photo.count({ where: { userId: user.id } });
+  const [photoCount, profileRecord] = await Promise.all([
+    prisma.photo.count({ where: { userId: user.id } }),
+    prisma.profile.findUnique({ where: { userId: user.id }, select: { userId: true } })
+  ]);
   const resolvedOnboardingStep = resolveOnboardingStep({
     onboardingStep: user.onboardingStep,
     videoVerificationStatus: user.videoVerificationStatus,
@@ -450,6 +454,18 @@ export async function whoAmI(req: Request, res: Response) {
   if (resolvedOnboardingStep === "ACTIVE") {
     await ensureUserExecutiveAssignmentAfterOnboarding(user.id);
   }
+
+  const appState = resolveUserAppState({
+    isAuthenticated: true,
+    onboardingStep: resolvedOnboardingStep,
+    videoVerificationStatus: user.videoVerificationStatus,
+    paymentStatus: user.paymentStatus,
+    profileCompletedAt: user.profileCompletedAt,
+    subscriptionEndsAt: user.subscriptionEndsAt,
+    userStatus: user.status,
+    photoCount,
+    hasProfileRecord: Boolean(profileRecord)
+  });
 
   return res.json({
     id: user.id,
@@ -472,6 +488,7 @@ export async function whoAmI(req: Request, res: Response) {
     onboardingToken: user.onboardingToken,
     onboardingTokenExpiresAt: user.onboardingTokenExpiresAt,
     subscriptionStartedAt: user.subscriptionStartedAt,
-    subscriptionEndsAt: user.subscriptionEndsAt
+    subscriptionEndsAt: user.subscriptionEndsAt,
+    appState
   });
 }

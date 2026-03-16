@@ -191,3 +191,5 @@ export type ProfileInput = z.infer<typeof ProfileSchema>;
 export type ProfilePatchInput = z.infer<typeof ProfilePatchSchema>;
 
 export * from "./onboarding";
+
+export * from "./userState";

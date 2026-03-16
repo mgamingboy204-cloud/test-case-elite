@@ -20,7 +20,7 @@ const NAV_ITEMS = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isAuthResolved, onboardingStep, logout } = useAuth();
+  const { isAuthenticated, isAuthResolved, onboardingStep, logout, appStateCode, appStateRedirectTo } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [mounted] = useState(() => typeof window !== "undefined");
@@ -28,10 +28,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const prefetchRouteBundle = useCallback((href: string) => {
     router.prefetch(href);
-    if (href === "/likes") void fetchIncomingLikes().then((data) => primeCache("likes-incoming", data));
-    if (href === "/matches") void fetchMatches().then((data) => primeCache("matches", data));
-    if (href === "/alerts") void fetchAlerts().then((data) => primeCache("alerts", data));
-    if (href === "/profile") void fetchProfile().then((data) => primeCache("profile", data));
+    if (href === "/likes") void fetchIncomingLikes().then((data) => primeCache("likes-incoming", data)).catch(() => null);
+    if (href === "/matches") void fetchMatches().then((data) => primeCache("matches", data)).catch(() => null);
+    if (href === "/alerts") void fetchAlerts().then((data) => primeCache("alerts", data)).catch(() => null);
+    if (href === "/profile") void fetchProfile().then((data) => primeCache("profile", data)).catch(() => null);
   }, [router]);
 
 
@@ -47,13 +47,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       isAuthenticated,
       isAuthResolved,
       onboardingStep,
-      scope: "main"
+      scope: "main",
+      appStateCode,
+      appStateRedirectTo
     });
 
     if (redirect && pathname !== redirect) {
       router.replace(redirect);
     }
-  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router]);
+  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router, appStateCode, appStateRedirectTo]);
 
   if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
 

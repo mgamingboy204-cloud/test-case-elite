@@ -11,6 +11,7 @@ function resolveApiBaseUrl() {
 }
 
 export const API_BASE_URL = resolveApiBaseUrl();
+const apiDebug = process.env.NODE_ENV !== "production";
 
 const ACCESS_TOKEN_STORAGE_KEY = "vael_access_token";
 
@@ -84,7 +85,7 @@ async function refreshAccessToken(): Promise<boolean> {
       return true;
     } catch (error) {
       clearAccessToken();
-      console.error("[auth] Refresh token request failed", {
+      if (apiDebug) console.error("[auth] Refresh token request failed", {
         url: `${API_BASE_URL}/auth/token/refresh`,
         error
       });
@@ -119,7 +120,7 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
         credentials: "include"
       });
     } catch (error) {
-      console.error("[api] Network request failed", {
+      if (apiDebug) console.error("[api] Network request failed", {
         method,
         path,
         auth: options?.auth ?? false,
@@ -139,16 +140,16 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
   let { response, body } = await runRequest();
 
   if (options?.auth && response.status === 401 && !path.startsWith("/auth/")) {
-    console.warn("[api] Received 401 on authenticated request. Attempting token refresh", { method, path });
+    if (apiDebug) console.warn("[api] Received 401 on authenticated request. Attempting token refresh", { method, path });
     const refreshed = await refreshAccessToken();
     if (refreshed) {
-      console.info("[api] Refresh succeeded. Retrying request", { method, path });
+      if (apiDebug) console.info("[api] Refresh succeeded. Retrying request", { method, path });
       const retry = await runRequest();
       response = retry.response;
       body = retry.body;
     } else {
       clearAccessToken();
-      console.warn("[api] Refresh failed. Request remains unauthorized", { method, path });
+      if (apiDebug) console.warn("[api] Refresh failed. Request remains unauthorized", { method, path });
     }
   }
 
@@ -156,7 +157,7 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
     const message = typeof body === "object" && body !== null && "message" in body
       ? String((body as { message?: string }).message)
       : `Request failed: ${response.status}`;
-    console.error("[api] Request failed", { method, path, status: response.status, body });
+    if (apiDebug) console.error("[api] Request failed", { method, path, status: response.status, body });
     throw new ApiError(message, response.status, body);
   }
 

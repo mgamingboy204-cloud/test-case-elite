@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Briefcase, Ruler, X, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
-import { ApiError } from "@/lib/api";
+import { normalizeApiError } from "@/lib/apiErrors";
 import { sendLikeAction } from "@/lib/likes";
 import { fetchAlerts, fetchDiscoverFeedPage, fetchMatches, mapLegacyFeedItemToCard, type DiscoverCard } from "@/lib/queries";
 import { primeCache, readCache } from "@/lib/cache";
@@ -148,11 +148,8 @@ export default function DiscoverPage() {
       setCards(previousCards);
       persistState(previousCards, nextCursor);
       setStatus("success");
-      if (error instanceof ApiError && error.status === 403) {
-        setActionError("Please complete all onboarding requirements before browsing.");
-      } else {
-        setActionError("We couldn’t save your action. Please try again.");
-      }
+      const normalized = normalizeApiError(error);
+      setActionError(normalized.message);
     } finally {
       setPendingAction(null);
     }

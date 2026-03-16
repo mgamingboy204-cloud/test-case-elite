@@ -39,7 +39,19 @@ function toHeightCm(heightValue: string | number | null | undefined) {
 
 export async function getProfile(userId: string) {
   const [profile, photos, user, preferences, latestVerificationRequest] = await Promise.all([
-    prisma.profile.findUnique({ where: { userId } }),
+    prisma.profile.upsert({
+      where: { userId },
+      update: {},
+      create: {
+        userId,
+        name: "",
+        gender: Gender.OTHER,
+        age: 18,
+        city: "",
+        profession: "",
+        bioShort: ""
+      }
+    }),
     prisma.photo.findMany({ where: { userId }, orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }] }),
     prisma.user.findUnique({
       where: { id: userId },
