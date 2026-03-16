@@ -30,11 +30,12 @@ function buildAccessCookieOptions(ttlMinutes: number) {
   const isProd = env.NODE_ENV === "production";
   const isCrossOrigin = Boolean(env.API_ORIGIN && env.API_ORIGIN !== env.WEB_ORIGIN);
   // Cross-site cookies (Vercel web -> Render API) require SameSite=None + Secure.
-  const sameSite = isProd && isCrossOrigin ? ("none" as const) : ("lax" as const);
+  const sameSite = isCrossOrigin ? ("none" as const) : ("lax" as const);
+  const secure = sameSite === "none" ? true : isProd;
   return {
     httpOnly: true,
     sameSite,
-    secure: isProd,
+    secure,
     path: "/",
     maxAge: maxAgeMs
   } as const;
@@ -420,21 +421,6 @@ export async function refreshAccessToken(req: Request, res: Response) {
   return res.json({ ok: true });
 }
 
-export async function debugCookies(req: Request, res: Response) {
-  if (env.NODE_ENV === "production") {
-    return res.status(404).json({ message: "Not found" });
-  }
-
-  const cookieHeader = req.headers.cookie ?? "";
-  const cookies = parseCookies(cookieHeader);
-  return res.json({
-    ok: true,
-    hasCookieHeader: Boolean(cookieHeader),
-    includesRefreshCookie: cookieHeader.includes(`${refreshCookieName}=`),
-    cookieNames: Object.keys(cookies)
-  });
-}
-
 export async function whoAmI(req: Request, res: Response) {
   const userId = req.user?.id;
   if (!userId) return res.status(401).json({ message: "Invalid token" });
@@ -487,15 +473,5 @@ export async function whoAmI(req: Request, res: Response) {
     onboardingTokenExpiresAt: user.onboardingTokenExpiresAt,
     subscriptionStartedAt: user.subscriptionStartedAt,
     subscriptionEndsAt: user.subscriptionEndsAt
-  });
-}
-
-export async function devWhoAmI(req: Request, res: Response) {
-  const user = res.locals.user as { id: string; phone?: string; role?: string } | undefined;
-  return res.json({
-    ok: true,
-    user: user
-      ? { id: user.id, phone: (user as any).phone ?? null, role: (user as any).role ?? null }
-      : null
   });
 }

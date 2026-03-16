@@ -4,14 +4,6 @@ import { verifyAccessToken } from "../utils/jwt";
 import { logger } from "../utils/logger";
 import { parseCookies } from "../utils/cookies";
 
-function getBearerToken(req: Request) {
-  const header = req.get("authorization");
-  if (!header) return null;
-  const match = header.match(/^Bearer\s+(.+)$/i);
-  if (!match || !match[1]) return "";
-  return match[1].trim();
-}
-
 function getAccessCookieToken(req: Request) {
   const cookieHeader = req.headers.cookie ?? "";
   if (!cookieHeader) return null;
@@ -27,14 +19,12 @@ function isLikesDebugRequest(req: Request) {
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const requestId = (res.locals.requestId as string | undefined) ?? req.get("x-request-id") ?? "unknown";
-  const hasAuthorizationHeader = Boolean(req.get("authorization"));
   const hasCookieHeader = Boolean(req.headers.cookie);
 
   logger.info("auth.check", {
     requestId,
     path: req.path,
     method: req.method,
-    hasAuthHeader: hasAuthorizationHeader,
     hasCookieHeader
   });
 
@@ -42,14 +32,14 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     console.info("likes.auth.entry", {
       marker: "likes_auth_v3",
       requestId,
-      hasAuthorizationHeader
+      hasCookieHeader
     });
   }
 
-  const token = getBearerToken(req) ?? getAccessCookieToken(req);
+  const token = getAccessCookieToken(req);
   if (!token) {
     logger.warn("auth.resolve", { requestId, path: req.path, result: "fail", reason: "missing_auth" });
-    return res.status(401).json({ message: "Missing or invalid authorization header" });
+    return res.status(401).json({ message: "Authentication required" });
   }
 
   let userId: string;

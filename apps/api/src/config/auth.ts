@@ -18,10 +18,11 @@ export const deviceCookieOptions = {
 export const refreshCookieName = "em_refresh";
 
 export function buildRefreshCookieOptions(ttlDays: number) {
+  const secure = refreshSameSite === "none" ? true : isProd;
   return {
     httpOnly: true,
     sameSite: refreshSameSite,
-    secure: isProd,
+    secure,
     path: "/",
     maxAge: 1000 * 60 * 60 * 24 * ttlDays
   };

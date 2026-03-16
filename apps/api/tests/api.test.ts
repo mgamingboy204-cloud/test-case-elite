@@ -268,9 +268,8 @@ describe("Refund eligibility logic", () => {
       }
     });
     const adminAgent = request.agent(app);
-    const adminLogin = await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@12345" });
-    const adminToken = adminLogin.body.accessToken as string;
-    await withAuth(adminAgent.post("/admin/dev/shift-payment-date"), adminToken).send({ userId: user.id, daysBack: 91 });
+    await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@12345" });
+    await adminAgent.post("/admin/dev/shift-payment-date").send({ userId: user.id, daysBack: 91 });
 
     const after = await withAuth(agent.post("/refunds/request"), token).send({});
     expect(after.body.eligibility.eligible).toBe(true);
@@ -549,27 +548,26 @@ describe("Verification concierge flow", () => {
     });
 
     const agent = request.agent(app);
-    const adminLogin = await agent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
-    const adminToken = adminLogin.body.accessToken as string;
+    await agent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
 
     const userAgent = request.agent(app);
-    const userLogin = await userAgent.post("/auth/login").send({ phone: userPhone, password: "Password@1" });
-    const userToken = userLogin.body.accessToken as string;
+    await userAgent.post("/auth/login").send({ phone: userPhone, password: "Password@1" });
 
-    const createRequest = await withAuth(userAgent.post("/verification-requests"), userToken);
+    const createRequest = await userAgent.post("/verification-requests");
     expect(createRequest.status).toBe(200);
     const requestId = createRequest.body.request.id;
 
-    const start = await withAuth(agent.post(`/admin/verification-requests/${requestId}/start`), adminToken)
+    const start = await agent
+      .post(`/admin/verification-requests/${requestId}/start`)
       .send({ meetUrl: "https://meet.google.com/abc-defg-hij" });
     expect(start.status).toBe(200);
 
-    const statusResponse = await withAuth(userAgent.get("/me/verification-status"), userToken);
+    const statusResponse = await userAgent.get("/me/verification-status");
     expect(statusResponse.status).toBe(200);
     expect(statusResponse.body.status).toBe("IN_PROGRESS");
     expect(statusResponse.body.meetUrl).toBe("https://meet.google.com/abc-defg-hij");
 
-    const approve = await withAuth(agent.post(`/admin/verification-requests/${requestId}/approve`), adminToken);
+    const approve = await agent.post(`/admin/verification-requests/${requestId}/approve`);
     expect(approve.status).toBe(200);
 
     const updatedUser = await prisma.user.findUnique({ where: { phone: userPhone } });
@@ -633,20 +631,17 @@ describe("Verification concierge flow", () => {
     });
 
     const adminAgent = request.agent(app);
-    const adminLogin = await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
-    const adminToken = adminLogin.body.accessToken as string;
+    await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
 
     const userAgent = request.agent(app);
-    const userLogin = await userAgent.post("/auth/login").send({ phone: userPhone, password: "Password@1" });
-    const userToken = userLogin.body.accessToken as string;
+    await userAgent.post("/auth/login").send({ phone: userPhone, password: "Password@1" });
 
-    const createRequest = await withAuth(userAgent.post("/verification-requests"), userToken);
+    const createRequest = await userAgent.post("/verification-requests");
     const requestId = createRequest.body.request.id;
 
-    await withAuth(adminAgent.post(`/admin/verification-requests/${requestId}/start`), adminToken)
-      .send({ meetUrl: "https://meet.google.com/reject-link" });
+    await adminAgent.post(`/admin/verification-requests/${requestId}/start`).send({ meetUrl: "https://meet.google.com/reject-link" });
 
-    const reject = await withAuth(adminAgent.post(`/admin/verification-requests/${requestId}/reject`), adminToken).send({
+    const reject = await adminAgent.post(`/admin/verification-requests/${requestId}/reject`).send({
       reason: "No-show"
     });
     expect(reject.status).toBe(200);
@@ -673,20 +668,19 @@ describe("Verification concierge flow", () => {
     });
 
     const userAgent = request.agent(app);
-    const userToken = await registerAndLogin(userAgent, "5559002223", "Password@1");
+    await registerAndLogin(userAgent, "5559002223", "Password@1");
     const user = await prisma.user.findUnique({ where: { phone: "5559002223" } });
     if (!user) throw new Error("User not found");
 
     const adminAgent = request.agent(app);
-    const adminLogin = await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
-    const adminToken = adminLogin.body.accessToken as string;
+    await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
 
-    const meetLink = await withAuth(adminAgent.post(`/admin/verifications/${user.id}/meet-link`), adminToken).send({
+    const meetLink = await adminAgent.post(`/admin/verifications/${user.id}/meet-link`).send({
       meetUrl: "https://meet.google.com/meet-link-123"
     });
     expect(meetLink.status).toBe(200);
 
-    const statusResponse = await withAuth(userAgent.get("/me/verification-status"), userToken);
+    const statusResponse = await userAgent.get("/me/verification-status");
     expect(statusResponse.status).toBe(200);
     expect(statusResponse.body.status).toBe("IN_PROGRESS");
     expect(statusResponse.body.meetUrl).toBe("https://meet.google.com/meet-link-123");
@@ -696,7 +690,7 @@ describe("Verification concierge flow", () => {
     });
     expect(notification).toBeTruthy();
 
-    const approve = await withAuth(adminAgent.post(`/admin/verifications/${user.id}/approve`), adminToken).send({
+    const approve = await adminAgent.post(`/admin/verifications/${user.id}/approve`).send({
       reason: "Verified"
     });
     expect(approve.status).toBe(200);
