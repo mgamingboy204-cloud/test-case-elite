@@ -12,6 +12,37 @@ function resolveApiBaseUrl() {
 
 export const API_BASE_URL = resolveApiBaseUrl();
 
+const ACCESS_TOKEN_STORAGE_KEY = "vael_access_token";
+
+let accessToken: string | null = null;
+
+function readStoredAccessToken() {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
+}
+
+function writeStoredAccessToken(token: string | null) {
+  if (typeof window === "undefined") return;
+  if (token) {
+    localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token);
+    return;
+  }
+  localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+}
+
+export function initializeAccessToken() {
+  accessToken = readStoredAccessToken();
+}
+
+export function setAccessToken(token: string | null) {
+  accessToken = token;
+  writeStoredAccessToken(token);
+}
+
+export function clearAccessToken() {
+  setAccessToken(null);
+}
+
 export class ApiError extends Error {
   status: number;
   body: unknown;
@@ -43,9 +74,16 @@ async function refreshAccessToken(): Promise<boolean> {
         return false;
       }
 
-      // We don't need to read the body; cookies are already updated server-side.
+      const body = (await response.json().catch(() => null)) as { accessToken?: string } | null;
+      if (!body?.accessToken) {
+        clearAccessToken();
+        return false;
+      }
+
+      setAccessToken(body.accessToken);
       return true;
     } catch (error) {
+      clearAccessToken();
       console.error("[auth] Refresh token request failed", {
         url: `${API_BASE_URL}/auth/token/refresh`,
         error
@@ -64,6 +102,10 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
 
   const runRequest = async () => {
     const headers = new Headers(options?.headers);
+    const resolvedAccessToken = accessToken ?? readStoredAccessToken();
+    if (options?.auth && resolvedAccessToken && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${resolvedAccessToken}`);
+    }
     const hasJsonBody = options?.body !== undefined && !(options.body instanceof FormData);
     if (hasJsonBody && !headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");
@@ -105,6 +147,7 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
       response = retry.response;
       body = retry.body;
     } else {
+      clearAccessToken();
       console.warn("[api] Refresh failed. Request remains unauthorized", { method, path });
     }
   }

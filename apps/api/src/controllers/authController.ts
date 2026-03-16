@@ -1,8 +1,6 @@
 import { Request, Response } from "express";
 import {
   buildRefreshCookieOptions,
-  deviceCookieName,
-  deviceCookieOptions,
   refreshCookieName,
 } from "../config/auth";
 import { env } from "../config/env";
@@ -10,7 +8,6 @@ import { parseCookies } from "../utils/cookies";
 import { prisma } from "../db/prisma";
 import {
   completeSignupWithPassword,
-  createDeviceToken,
   issueOnboardingToken,
   registerPendingUser,
   requestSignupOtp,
@@ -131,6 +128,7 @@ export async function verifyOtp(req: Request, res: Response) {
     return res.json({
       ok: true,
       onboardingToken,
+      accessToken,
       user: {
         id: user.id,
         phone: user.phone,
@@ -176,6 +174,7 @@ export async function verifyOtpMock(req: Request, res: Response) {
     ok: true,
     mocked: true,
     onboardingToken,
+    accessToken,
     user: {
       id: user.id,
       phone: user.phone,
@@ -252,10 +251,9 @@ export async function signupComplete(req: Request, res: Response) {
   const accessToken = signAccessToken(user.id, { rememberMe: true });
   const refreshToken = signRefreshToken(user.id, { rememberMe: true });
   const { onboardingToken } = await issueOnboardingToken(user.id);
-  const refreshCookieOptions = buildRefreshCookieOptions(env.REFRESH_TOKEN_TTL_DAYS);
   const cookies = setAuthCookies(res, { accessToken, refreshToken, refreshTtlDays: env.REFRESH_TOKEN_TTL_DAYS });
 
-  return res.json({ ok: true, onboardingToken, cookies });
+  return res.json({ ok: true, onboardingToken, accessToken, cookies });
 }
 
 export async function login(req: Request, res: Response) {
@@ -301,6 +299,7 @@ export async function login(req: Request, res: Response) {
   return res.json({
     ok: true,
     onboardingToken,
+    accessToken,
     user: {
       id: result.user.id,
       phone: result.user.phone,
@@ -340,6 +339,7 @@ export async function employeeLogin(req: Request, res: Response) {
 
   return res.json({
     ok: true,
+    accessToken,
     user: {
       id: user.id,
       employeeId: user.employeeId,
@@ -418,7 +418,7 @@ export async function refreshAccessToken(req: Request, res: Response) {
     refreshCookie: cookieMeta.refreshCookie
   });
 
-  return res.json({ ok: true });
+  return res.json({ ok: true, accessToken });
 }
 
 export async function whoAmI(req: Request, res: Response) {
