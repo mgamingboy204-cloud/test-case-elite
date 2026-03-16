@@ -2,7 +2,7 @@
 
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { ApiError, apiRequest, setAuthToken, setOnboardingToken } from "@/lib/api";
+import { ApiError, apiRequest } from "@/lib/api";
 import { fetchProfile, type ProfileViewModel } from "@/lib/queries";
 import { useStaleWhileRevalidate } from "@/lib/cache";
 import { Loader2, PencilLine, ShieldCheck, UserRoundCheck, ImagePlus, Trash2 } from "lucide-react";
@@ -171,11 +171,8 @@ export default function ProfilePage() {
         })
       });
 
-      setAuthToken(null);
-      setOnboardingToken(null);
       localStorage.removeItem("vael_pending_phone");
       localStorage.removeItem("vael_signup_token");
-      localStorage.removeItem("vael_onboarding_token");
       await logout();
     } catch (error) {
       setSettingsError(error instanceof ApiError ? error.message : "We could not process account deletion right now.");

@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiRequest, setAuthToken } from "@/lib/api";
+import { apiRequest } from "@/lib/api";
 
 export default function EmployeeSigninPage() {
   const router = useRouter();
@@ -16,11 +16,10 @@ export default function EmployeeSigninPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiRequest<{ accessToken: string }>("/employee/auth/login", {
+      await apiRequest<{ ok: true }>("/employee/auth/login", {
         method: "POST",
         body: JSON.stringify({ employeeId: employeeId.trim(), password, rememberMe: true })
       });
-      setAuthToken(response.accessToken);
       router.replace("/verify");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to sign in");

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Users, Video, LogOut, Shield } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { apiRequest, setAuthToken } from "@/lib/api";
+import { apiRequest } from "@/lib/api";
 
 type MePayload = { role: "USER" | "EMPLOYEE" | "ADMIN"; isAdmin?: boolean; firstName?: string | null; lastName?: string | null; displayName?: string | null };
 
@@ -30,7 +30,6 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
         }
         setName([me.firstName, me.lastName].filter(Boolean).join(" ") || me.displayName || "Employee");
       } catch {
-        setAuthToken(null);
         router.replace("/employee/signin");
       } finally {
         setLoading(false);
@@ -78,7 +77,6 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
           <button
             onClick={async () => {
               try { await apiRequest<{ ok: true }>("/auth/logout", { method: "POST" }); } catch {}
-              setAuthToken(null);
               router.replace("/employee/signin");
             }}
             className="w-full inline-flex justify-center items-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-xs uppercase tracking-[0.16em] text-white/75"
