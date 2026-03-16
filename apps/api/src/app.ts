@@ -85,8 +85,7 @@ const corsOptions: CorsOptions = {
   },
   credentials: true,
   methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  // Cookie-based auth: keep allowed headers minimal.
-  allowedHeaders: ["Content-Type", "X-Request-Id"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id"],
   optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
