@@ -491,27 +491,11 @@ export async function whoAmI(req: Request, res: Response) {
 }
 
 export async function devWhoAmI(req: Request, res: Response) {
-  const session = req.session;
-
-  if (!session.userId) {
-    return res.json({
-      session: {
-        userId: null,
-        otpVerifiedPhone: session.otpVerifiedPhone ?? null
-      }
-    });
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { id: true, phone: true, role: true }
-  });
-
+  const user = res.locals.user as { id: string; phone?: string; role?: string } | undefined;
   return res.json({
-    session: {
-      userId: session.userId,
-      otpVerifiedPhone: session.otpVerifiedPhone ?? null
-    },
-    user
+    ok: true,
+    user: user
+      ? { id: user.id, phone: (user as any).phone ?? null, role: (user as any).role ?? null }
+      : null
   });
 }
