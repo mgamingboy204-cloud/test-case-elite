@@ -28,54 +28,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mounted] = useState(() => typeof window !== "undefined");
   const prefetchedRef = useRef(false);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const root = document.documentElement;
-
-    const resolveSafeAreaInsetBottom = () => {
-      const probe = document.createElement("div");
-      probe.style.position = "absolute";
-      probe.style.visibility = "hidden";
-      probe.style.pointerEvents = "none";
-      probe.style.paddingBottom = "env(safe-area-inset-bottom, 0px)";
-      document.body.appendChild(probe);
-      const resolved = parseFloat(getComputedStyle(probe).paddingBottom) || 0;
-      document.body.removeChild(probe);
-      return resolved;
-    };
-
-    const applyViewportLayout = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      const isLandscape = width > height;
-      const safeInsetBottom = resolveSafeAreaInsetBottom();
-
-      root.style.setProperty("--app-height", `${height}px`);
-      root.style.setProperty("--app-bottom-nav-padding", `${isLandscape ? 0 : safeInsetBottom}px`);
-      root.dataset.orientation = isLandscape ? "landscape" : "portrait";
-    };
-
-    const scheduleViewportLayout = () => {
-      window.requestAnimationFrame(() => {
-        applyViewportLayout();
-        window.requestAnimationFrame(applyViewportLayout);
-      });
-    };
-
-    scheduleViewportLayout();
-
-    window.addEventListener("resize", scheduleViewportLayout);
-    window.addEventListener("orientationchange", scheduleViewportLayout);
-    window.addEventListener("pageshow", scheduleViewportLayout);
-
-    return () => {
-      window.removeEventListener("resize", scheduleViewportLayout);
-      window.removeEventListener("orientationchange", scheduleViewportLayout);
-      window.removeEventListener("pageshow", scheduleViewportLayout);
-    };
-  }, []);
-
   const prefetchRouteBundle = useCallback((href: string) => {
     router.prefetch(href);
     const queryClient = getQueryClient();
@@ -200,7 +152,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* ═══════════════════════════════════════════════════════════════════
           MAIN CONTENT COLUMN 
       ═══════════════════════════════════════════════════════════════════ */}
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+      <div className="relative flex flex-col flex-1 min-w-0 overflow-hidden">
         <OfflineIndicator />
 
         {/* Top bar */}
@@ -229,22 +181,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         <div
-          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar bg-background"
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar bg-background pb-[calc(var(--mobile-bottom-nav-height)+var(--safe-area-bottom))] min-[769px]:pb-0"
           style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
         >
-          <main className="w-full min-h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto flex flex-col">
-            <div className="flex-1">
-              {children}
-            </div>
+          <main className="w-full min-h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto">
+            {children}
+          </main>
+        </div>
 
-            {/* ═══════════════════════════════════════════════════════════════════
-                MOBILE BOTTOM NAV
-            ═══════════════════════════════════════════════════════════════════ */}
-            <nav
-              className="sticky bottom-0 min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-30 text-foreground"
-              style={{ paddingBottom: "var(--app-bottom-nav-padding, var(--safe-bottom))" }}
-            >
-              <div className="flex h-[50px] items-center justify-around px-2">
+        {/* ═══════════════════════════════════════════════════════════════════
+            MOBILE BOTTOM NAV
+        ═══════════════════════════════════════════════════════════════════ */}
+        <nav
+          className="fixed inset-x-0 bottom-0 min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-40 text-foreground"
+          style={{ paddingBottom: "var(--safe-area-bottom)" }}
+        >
+          <div className="mx-auto flex h-[var(--mobile-bottom-nav-height)] w-full max-w-[480px] items-center justify-around px-2">
                 {NAV_ITEMS.map(({ href, icon: Icon }) => {
                   const isActive = pathname === href;
                   return (
@@ -262,10 +214,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </Link>
                   );
                 })}
-              </div>
-            </nav>
-          </main>
-        </div>
+          </div>
+        </nav>
       </div>
     </div>
   );

@@ -50,7 +50,8 @@ html, body {
 
 :root {
   --safe-area-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --mobile-bottom-nav-height: 56px;
 }
 
 /* ─── Universal Helpers ────────────────────────────────────── */
@@ -74,11 +75,13 @@ html, body {
 }
 
 .app-height {
-  height: var(--app-height, 100dvh);
+  height: 100vh;
+  height: 100dvh;
 }
 
 .app-min-height {
-  min-height: var(--app-height, 100dvh);
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* ─── Adaptive PWA Interactions ───────────────────────────── */
