@@ -12,8 +12,8 @@ import { useTheme } from "next-themes";
 
 const MAX_PHOTOS = 3;
 const MIN_PHOTOS = 1;
-const MIN_HEIGHT = 120;
-const MAX_HEIGHT = 240;
+const MIN_HEIGHT = 100;
+const MAX_HEIGHT = 250;
 
 type Gender = "MALE" | "FEMALE" | "NON_BINARY" | "OTHER";
 
@@ -45,6 +45,14 @@ function formatPaymentPlan(plan?: string | null) {
   if (plan === "FIVE_MONTHS") return "5 Months";
   if (plan === "TWELVE_MONTHS") return "12 Months";
   return plan;
+}
+
+function daysRemaining(endDate?: string | null) {
+  if (!endDate) return null;
+  const end = new Date(endDate).getTime();
+  if (Number.isNaN(end)) return null;
+  const remaining = Math.ceil((end - Date.now()) / (1000 * 60 * 60 * 24));
+  return remaining < 0 ? 0 : remaining;
 }
 
 function formatMoneyInr(amount?: number | null) {
@@ -392,9 +400,9 @@ function ProfileEditForm({ profile, onCancel, onSaved }: { profile: ProfileViewM
     if (!Number.isFinite(parsedHeight) || parsedHeight < MIN_HEIGHT || parsedHeight > MAX_HEIGHT) {
       return `Height must be between ${MIN_HEIGHT} and ${MAX_HEIGHT} cm.`;
     }
-    if (profession.trim().length < 2) return "Profession must be at least 2 characters.";
-    if (place.trim().length < 2) return "Place must be at least 2 characters.";
-    if (bio.trim().length < 20) return "Bio must be at least 20 characters.";
+    if (profession.trim() && profession.trim().length < 2) return "Profession must be at least 2 characters when provided.";
+    if (place.trim().length < 1) return "City is required.";
+    if (bio.length > 300) return "Bio cannot exceed 300 characters.";
     return "";
   }, [bio, dateOfBirth, gender, heightCm, name, place, profession]);
 
@@ -414,13 +422,13 @@ function ProfileEditForm({ profile, onCancel, onSaved }: { profile: ProfileViewM
           dateOfBirth,
           gender,
           heightCm: Number(heightCm),
-          profession: profession.trim(),
+          profession: profession.trim() || null,
           city: place.trim(),
           place: place.trim(),
           locationLabel: place.trim(),
-          bioShort: bio.trim(),
-          bio: bio.trim(),
-          story: bio.trim(),
+          bioShort: bio.trim() || null,
+          bio: bio.trim() || null,
+          story: bio.trim() || null,
           intent: "dating"
         })
       });
@@ -497,16 +505,41 @@ function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpd
     setError("");
     try {
       const dataUrl = await fileToDataUrl(file);
-      await apiRequest("/photos/upload", {
+      const upload = await apiRequest<{ uploadToken: string }>("/profile/photos/presigned-url", {
         method: "POST",
         auth: true,
-        body: JSON.stringify({ filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
+        body: JSON.stringify({ filename: file.name, mimeType: file.type || "image/jpeg" })
+      });
+      await apiRequest("/profile/photos/confirm", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({ uploadToken: upload.uploadToken, filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
       });
       await onUpdated("Photo uploaded.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to upload photo.");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const movePhoto = async (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= photos.length) return;
+    const next = [...photos];
+    const temp = next[index];
+    next[index] = next[target];
+    next[target] = temp;
+    setError("");
+    try {
+      await apiRequest("/profile", {
+        method: "PATCH",
+        auth: true,
+        body: JSON.stringify({ photos: next.map((photo, photoIndex) => ({ id: photo.id, photoIndex })) })
+      });
+      await onUpdated("Photo order updated.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to reorder photo.");
     }
   };
 
@@ -537,13 +570,17 @@ function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpd
               {photo ? (
                 <>
                   <img src={photo.url} alt={`Profile ${index + 1}`} className="h-full w-full object-cover" />
-                  <button
-                    disabled={busyPhotoId === photo.id || photos.length <= MIN_PHOTOS}
-                    onClick={() => void removePhoto(photo.id)}
-                    className="absolute right-1 top-1 rounded-full bg-background/75 p-1.5 text-red-300 disabled:opacity-40"
-                  >
-                    {busyPhotoId === photo.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                  </button>
+                  <div className="absolute right-1 top-1 flex items-center gap-1">
+                    <button type="button" onClick={() => void movePhoto(index, -1)} disabled={index === 0} className="rounded bg-background/75 px-1 text-xs disabled:opacity-40">←</button>
+                    <button type="button" onClick={() => void movePhoto(index, 1)} disabled={index === photos.length - 1} className="rounded bg-background/75 px-1 text-xs disabled:opacity-40">→</button>
+                    <button
+                      disabled={busyPhotoId === photo.id || photos.length <= MIN_PHOTOS}
+                      onClick={() => void removePhoto(photo.id)}
+                      className="rounded-full bg-background/75 p-1.5 text-red-300 disabled:opacity-40"
+                    >
+                      {busyPhotoId === photo.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                    </button>
+                  </div>
                 </>
               ) : (
                 <div className="flex h-full items-center justify-center text-[10px] uppercase tracking-[0.2em] text-foreground/35">Empty</div>
@@ -568,8 +605,10 @@ function MembershipSummary({ profile }: { profile: ProfileViewModel }) {
       <h2 className="text-sm uppercase tracking-[0.2em] text-primary inline-flex items-center gap-2"><ShieldCheck size={14} /> Membership</h2>
       <Field label="Plan" value={formatPaymentPlan(profile.subscription.paymentPlan) || profile.subscription.tier} />
       <Field label="Status" value={profile.subscription.status} />
+      <Field label="Start date" value={formatDate(profile.subscription.startedAt)} />
+      <Field label="End date" value={formatDate(profile.subscription.endsAt)} />
+      <Field label="Days remaining" value={String(daysRemaining(profile.subscription.endsAt) ?? "—")} />
       <Field label="Amount" value={formatMoneyInr(profile.subscription.paymentAmount)} />
-      <Field label="Validity" value={profile.subscription.endsAt ? `Valid until ${formatDate(profile.subscription.endsAt)}` : "—"} />
       <Field label="Renewal" value={profile.subscription.renewalMode === "AUTO" ? "Auto" : "Manual renewal only"} />
     </section>
   );

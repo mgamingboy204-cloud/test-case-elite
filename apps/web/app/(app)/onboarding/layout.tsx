@@ -11,7 +11,7 @@ import { resolveRouteRedirect } from "@/lib/navigationGuard";
 const ORDERED_ROUTES = [
   '/onboarding/verification',
   '/onboarding/payment',
-  '/onboarding/profile',
+  '/onboarding/details',
   '/onboarding/photos',
 ];
 

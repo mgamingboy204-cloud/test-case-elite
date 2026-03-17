@@ -24,7 +24,7 @@ export function routeForFrontendOnboardingStep(step: FrontendOnboardingStep) {
     PASSWORD: "/signup/password",
     VERIFICATION: "/onboarding/verification",
     PAYMENT: "/onboarding/payment",
-    PROFILE: "/onboarding/profile",
+    PROFILE: "/onboarding/details",
     PHOTOS: "/onboarding/photos",
     COMPLETED: "/discover"
   };

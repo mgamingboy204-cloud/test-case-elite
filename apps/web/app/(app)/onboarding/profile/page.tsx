@@ -18,8 +18,8 @@ type ProfileResponse = {
   } | null;
 };
 
-const MIN_HEIGHT = 120;
-const MAX_HEIGHT = 240;
+const MIN_HEIGHT = 100;
+const MAX_HEIGHT = 250;
 
 function calculateAge(dateOfBirth: string) {
   const dob = new Date(dateOfBirth);
@@ -79,15 +79,16 @@ export default function OnboardingProfileDetailsPage() {
     if (!dateOfBirth) return "Please select your date of birth.";
     if ((age ?? 0) < 18) return "Members must be at least 18 years old.";
     if (!gender) return "Please select your gender.";
-    const parsedHeight = Number(heightCm);
-    if (!Number.isFinite(parsedHeight) || parsedHeight < MIN_HEIGHT || parsedHeight > MAX_HEIGHT) {
-      return `Height must be between ${MIN_HEIGHT} cm and ${MAX_HEIGHT} cm.`;
+    if (!place.trim()) return "Please enter your city.";
+    if (heightCm.trim()) {
+      const parsedHeight = Number(heightCm);
+      if (!Number.isFinite(parsedHeight) || parsedHeight < MIN_HEIGHT || parsedHeight > MAX_HEIGHT) {
+        return `Height must be between ${MIN_HEIGHT} cm and ${MAX_HEIGHT} cm.`;
+      }
     }
-    if (profession.trim().length < 2) return "Please enter your profession.";
-    if (place.trim().length < 2) return "Please enter your place.";
-    if (bio.trim().length < 20) return "Please write a short bio (minimum 20 characters).";
+    if (bio.length > 300) return "Bio cannot exceed 300 characters.";
     return "";
-  }, [age, bio, dateOfBirth, gender, heightCm, name, place, profession]);
+  }, [age, bio, dateOfBirth, gender, heightCm, name, place]);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -98,20 +99,20 @@ export default function OnboardingProfileDetailsPage() {
     setSuccess("");
 
     try {
-      await apiRequest("/profile", {
-        method: "PUT",
+      await apiRequest("/profile/details", {
+        method: "POST",
         auth: true,
         body: JSON.stringify({
           name: name.trim(),
           dateOfBirth,
           gender,
-          heightCm: Number(heightCm),
+          heightCm: heightCm.trim() ? Number(heightCm) : null,
           age,
-          profession: profession.trim(),
+          profession: profession.trim() || null,
           city: place.trim(),
           place: place.trim(),
-          bioShort: bio.trim(),
-          bio: bio.trim(),
+          bioShort: bio.trim() || null,
+          bio: bio.trim() || null,
           intent: "dating"
         })
       });
@@ -159,7 +160,7 @@ export default function OnboardingProfileDetailsPage() {
         </div>
         <Input label="Height (cm)" value={heightCm} onChange={setHeightCm} placeholder="e.g. 172" inputMode="numeric" />
         <Input label="Profession" value={profession} onChange={setProfession} placeholder="e.g. Founder" />
-        <Input label="Place" value={place} onChange={setPlace} placeholder="City, Country" />
+        <Input label="City" value={place} onChange={setPlace} placeholder="City" />
 
         <div>
           <label className="mb-2 block text-[10px] uppercase tracking-[0.3em] text-foreground/50">Bio</label>
@@ -181,7 +182,7 @@ export default function OnboardingProfileDetailsPage() {
             disabled={Boolean(validationError) || saving}
             className={`btn-vael-primary ${validationError || saving ? "cursor-not-allowed opacity-30 grayscale" : ""}`}
           >
-            {saving ? "Saving…" : "Continue to Photo Upload"}
+            {saving ? "Saving…" : "Continue"}
           </button>
         </div>
       </form>

@@ -102,7 +102,7 @@ export function resolveUserAppState(input: {
       isAuthenticated: true,
       onboardingStep: resolvedOnboardingStep,
       matchingEligible: false,
-      redirectTo: "/onboarding/profile",
+      redirectTo: "/onboarding/details",
       reasons: ["profile_incomplete"]
     };
   }

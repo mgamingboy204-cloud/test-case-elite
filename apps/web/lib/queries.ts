@@ -400,7 +400,7 @@ type RawProfileResponse = {
 
 export async function fetchProfile(): Promise<ProfileViewModel> {
   const data = await apiRequest<RawProfileResponse>("/profile", { auth: true });
-  const vm = data.viewModel;
+  const vm = data.viewModel ?? {};
   const image = vm.photos?.[0]?.url ?? FALLBACK_PROFILE_IMAGE;
   return {
     name: vm.name ?? "",
