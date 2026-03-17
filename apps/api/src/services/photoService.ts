@@ -153,4 +153,39 @@ export async function deletePhoto(options: { userId: string; photoId: string }) 
 
   await removePhotoAsset(photo.url);
   await prisma.photo.delete({ where: { id: photo.id } });
+
+  const remaining = await prisma.photo.findMany({
+    where: { userId: options.userId },
+    orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }],
+    select: { id: true }
+  });
+
+  await Promise.all(
+    remaining.map((item, index) =>
+      prisma.photo.update({
+        where: { id: item.id },
+        data: { photoIndex: index }
+      })
+    )
+  );
+}
+
+export async function reorderPhotos(options: { userId: string; photoIds: string[] }) {
+  const existing = await prisma.photo.findMany({ where: { userId: options.userId }, select: { id: true } });
+  if (existing.length !== options.photoIds.length) {
+    throw new HttpError(400, { message: "Photo reorder payload does not match existing photos." });
+  }
+
+  const existingIds = new Set(existing.map((photo) => photo.id));
+  if (options.photoIds.some((id) => !existingIds.has(id)) || new Set(options.photoIds).size !== options.photoIds.length) {
+    throw new HttpError(400, { message: "Photo reorder payload contains invalid photo ids." });
+  }
+
+  await Promise.all(
+    options.photoIds.map((photoId, index) =>
+      prisma.photo.update({ where: { id: photoId }, data: { photoIndex: index } })
+    )
+  );
+
+  return { updated: true };
 }
