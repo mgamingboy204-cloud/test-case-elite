@@ -88,7 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div
-      className="flex flex-row h-[100dvh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container"
+      className="flex flex-row app-height w-screen bg-background transition-colors duration-500 overflow-hidden desktop-container"
       style={{
         ["--bottom-nav-height" as string]: "50px",
         ["--bottom-nav-footprint" as string]: "calc(var(--bottom-nav-height) + var(--safe-bottom))"

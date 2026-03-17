@@ -138,7 +138,7 @@ export default function VideoVerificationPage() {
   }
 
   return (
-    <div className="flex h-full flex-col px-8 pb-[calc(env(safe-area-inset-bottom,0px)+28px)]">
+    <div className="flex h-full flex-col px-8 pb-7">
       <div className="flex-1 flex flex-col justify-center gap-6 text-center">
         <div className="mx-auto h-20 w-20 rounded-full border border-primary/40 bg-primary/10 flex items-center justify-center">
           {stage === "intro" || stage === "requesting" || stage === "waiting" ? <UserRoundCheck className="text-primary/80" /> : null}
