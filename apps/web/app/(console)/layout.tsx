@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Users, Video, LogOut, Shield } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { apiRequest } from "@/lib/api";
+import { apiRequestAuth } from "@/lib/api";
 
 type MePayload = { role: "USER" | "EMPLOYEE" | "ADMIN"; isAdmin?: boolean; firstName?: string | null; lastName?: string | null; displayName?: string | null };
 
@@ -18,7 +18,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
   useEffect(() => {
     const run = async () => {
       try {
-        const me = await apiRequest<MePayload>("/me", { auth: true });
+        const me = await apiRequestAuth<MePayload>("/me");
         if (me.role !== "EMPLOYEE" && me.role !== "ADMIN") {
           throw new Error("forbidden");
         }
@@ -76,7 +76,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
           <div className="text-xs text-white/70">{name}</div>
           <button
             onClick={async () => {
-              try { await apiRequest<{ ok: true }>("/auth/logout", { method: "POST" }); } catch {}
+              try { await apiRequestAuth<{ ok: true }>("/auth/logout", { method: "POST" }); } catch {}
               router.replace("/console/signin");
             }}
             className="w-full inline-flex justify-center items-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-xs uppercase tracking-[0.16em] text-white/75"

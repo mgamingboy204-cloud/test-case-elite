@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ApiError, apiRequest } from "@/lib/api";
+import { ApiError, apiRequestAuth } from "@/lib/api";
 import { fetchAlerts, type Alert } from "@/lib/queries";
 import { useStaleWhileRevalidate } from "@/lib/cache";
 
@@ -34,9 +34,8 @@ export default function AlertsPage() {
     alertsQuery.mutate((current) => (current ?? []).map((entry) => (entry.id === alertId ? { ...entry, isUnread: false } : entry)));
 
     try {
-      await apiRequest("/notifications/read", {
+      await apiRequestAuth("/notifications/read", {
         method: "PATCH",
-        auth: true,
         body: JSON.stringify({ ids: [alertId] })
       });
     } catch (error) {
@@ -56,7 +55,7 @@ export default function AlertsPage() {
     setMarkAllPending(true);
     alertsQuery.mutate((current) => (current ?? []).map((entry) => ({ ...entry, isUnread: false })));
     try {
-      await apiRequest("/notifications/read", { method: "PATCH", auth: true, body: JSON.stringify({}) });
+      await apiRequestAuth("/notifications/read", { method: "PATCH", body: JSON.stringify({}) });
     } catch (_error) {
       alertsQuery.mutate(previous ?? []);
     } finally {

@@ -2,7 +2,7 @@
 
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { ApiError, apiRequest } from "@/lib/api";
+import { ApiError, apiRequestAuth } from "@/lib/api";
 import { normalizeApiError } from "@/lib/apiErrors";
 import { ProtectedState } from "@/components/ui/protected-state";
 import { fetchProfile, type ProfileViewModel } from "@/lib/queries";
@@ -137,9 +137,8 @@ export default function ProfilePage() {
     setSettingsMessage("");
 
     try {
-      await apiRequest("/me/profile/settings", {
+      await apiRequestAuth("/me/profile/settings", {
         method: "PATCH",
-        auth: true,
         body: JSON.stringify({ [key]: value })
       });
       setSettingsMessage("Settings saved.");
@@ -173,9 +172,8 @@ export default function ProfilePage() {
     setSettingsMessage("");
 
     try {
-      await apiRequest<{ ok: true }>("/account", {
+      await apiRequestAuth<{ ok: true }>("/account", {
         method: "DELETE",
-        auth: true,
         body: JSON.stringify({
           confirmation: "DELETE_MY_ACCOUNT",
           reason: deleteReason.trim() || undefined
@@ -426,9 +424,8 @@ function ProfileEditForm({ profile, onCancel, onSaved }: { profile: ProfileViewM
     setError("");
 
     try {
-      await apiRequest("/me/profile", {
+      await apiRequestAuth("/me/profile", {
         method: "PATCH",
-        auth: true,
         body: JSON.stringify({
           name: name.trim(),
           displayName: name.trim(),
@@ -518,14 +515,12 @@ function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpd
     setError("");
     try {
       const dataUrl = await fileToDataUrl(file);
-      const upload = await apiRequest<{ uploadToken: string }>("/me/profile/photos/presigned-url", {
+      const upload = await apiRequestAuth<{ uploadToken: string }>("/me/profile/photos/presigned-url", {
         method: "POST",
-        auth: true,
         body: JSON.stringify({ filename: file.name, mimeType: file.type || "image/jpeg" })
       });
-      await apiRequest("/me/profile/photos/confirm", {
+      await apiRequestAuth("/me/profile/photos/confirm", {
         method: "POST",
-        auth: true,
         body: JSON.stringify({ uploadToken: upload.uploadToken, filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
       });
       await onUpdated("Photo uploaded.");
@@ -545,9 +540,8 @@ function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpd
     next[target] = temp;
     setError("");
     try {
-      await apiRequest("/me/profile", {
+      await apiRequestAuth("/me/profile", {
         method: "PATCH",
-        auth: true,
         body: JSON.stringify({ photos: next.map((photo, photoIndex) => ({ id: photo.id, photoIndex })) })
       });
       await onUpdated("Photo order updated.");
@@ -560,7 +554,7 @@ function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpd
     setBusyPhotoId(photoId);
     setError("");
     try {
-      await apiRequest(`/photos/${photoId}`, { method: "DELETE", auth: true });
+      await apiRequestAuth(`/photos/${photoId}`, { method: "DELETE" });
       await onUpdated("Photo removed.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to remove photo.");

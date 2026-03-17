@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api";
+import { apiRequestAuth } from "@/lib/api";
 
 export interface AdminDashboardPayload {
   generatedAt: string;
@@ -69,5 +69,5 @@ export interface AdminDashboardPayload {
 }
 
 export async function fetchAdminDashboard() {
-  return apiRequest<AdminDashboardPayload>("/admin/dashboard", { auth: true });
+  return apiRequestAuth<AdminDashboardPayload>("/admin/dashboard");
 }

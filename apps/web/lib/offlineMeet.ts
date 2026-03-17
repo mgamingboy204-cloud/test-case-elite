@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequestAuth } from "./api";
 
 export type OfflineMeetStatus =
   | "REQUESTED"
@@ -41,13 +41,12 @@ export type OfflineMeetCase = {
 };
 
 export async function fetchOfflineMeetCase(matchId: string) {
-  return apiRequest<OfflineMeetCase>(`/offline-meet-cases/${matchId}`, { auth: true });
+  return apiRequestAuth<OfflineMeetCase>(`/offline-meet-cases/${matchId}`);
 }
 
 export async function submitOfflineMeetSelections(matchId: string, cafes: string[], timeSlots: string[]) {
-  return apiRequest<{ ok: boolean; status: OfflineMeetStatus }>(`/offline-meet-cases/${matchId}/selections`, {
+  return apiRequestAuth<{ ok: boolean; status: OfflineMeetStatus }>(`/offline-meet-cases/${matchId}/selections`, {
     method: "POST",
-    auth: true,
     body: JSON.stringify({ cafes, timeSlots })
   });
 }
@@ -75,41 +74,38 @@ export type OfflineMeetEmployeeCase = {
 export type OfflineMeetStatusView = "ACTIVE" | "FINALIZED" | "CONFLICT" | "TIMEOUT" | "CANCELED" | "ALL";
 
 export async function listOfflineMeetCasesForEmployee(statusView: OfflineMeetStatusView = "ACTIVE") {
-  return apiRequest<{ statusView: OfflineMeetStatusView; cases: OfflineMeetEmployeeCase[] }>(`/admin/offline-meets?statusView=${statusView}`, { auth: true });
+  return apiRequestAuth<{ statusView: OfflineMeetStatusView; cases: OfflineMeetEmployeeCase[] }>(`/admin/offline-meets?statusView=${statusView}`);
 }
 
 export async function assignOfflineMeetCase(caseId: string) {
-  return apiRequest(`/admin/offline-meets/${caseId}/assign`, { method: "POST", auth: true });
+  return apiRequestAuth(`/admin/offline-meets/${caseId}/assign`, { method: "POST" });
 }
 
 export async function sendOfflineMeetOptions(caseId: string, payload: { cafes: Array<{ id: string; name: string; address: string }>; timeSlots: Array<{ id: string; label: string; startsAtIso?: string | null }> }) {
-  return apiRequest(`/admin/offline-meets/${caseId}/options`, { method: "POST", auth: true, body: JSON.stringify(payload) });
+  return apiRequestAuth(`/admin/offline-meets/${caseId}/options`, { method: "POST", body: JSON.stringify(payload) });
 }
 
 export async function finalizeOfflineMeet(caseId: string, finalCafeId: string, finalTimeSlotId: string) {
-  return apiRequest(`/admin/offline-meets/${caseId}/finalize`, {
+  return apiRequestAuth(`/admin/offline-meets/${caseId}/finalize`, {
     method: "POST",
-    auth: true,
     body: JSON.stringify({ finalCafeId, finalTimeSlotId })
   });
 }
 
 export async function markOfflineMeetTimeout(caseId: string, nonResponderUserId: string) {
-  return apiRequest(`/admin/offline-meets/${caseId}/timeout`, {
+  return apiRequestAuth(`/admin/offline-meets/${caseId}/timeout`, {
     method: "POST",
-    auth: true,
     body: JSON.stringify({ nonResponderUserId })
   });
 }
 
 export async function markOfflineMeetNoOverlap(caseId: string) {
-  return apiRequest(`/admin/offline-meets/${caseId}/no-overlap`, { method: "POST", auth: true });
+  return apiRequestAuth(`/admin/offline-meets/${caseId}/no-overlap`, { method: "POST" });
 }
 
 export async function updateOfflineMeetCase(caseId: string, payload: { action: "CANCEL" | "RESCHEDULE"; reason: string; requestedByUserId?: string | null }) {
-  return apiRequest(`/admin/offline-meets/${caseId}/case-update`, {
+  return apiRequestAuth(`/admin/offline-meets/${caseId}/case-update`, {
     method: "POST",
-    auth: true,
     body: JSON.stringify(payload)
   });
 }

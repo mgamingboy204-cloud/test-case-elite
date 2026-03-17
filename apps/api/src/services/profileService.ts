@@ -49,19 +49,27 @@ export async function getProfile(userId: string) {
       subscriptionTier: true,
       subscriptionStatus: true,
       subscriptionStartedAt: true,
-      subscriptionEndsAt: true,
-      manualRenewalRequired: true,
-      onboardingPaymentPlan: true,
-      onboardingPaymentAmount: true,
-      onboardingPaymentVerifiedAt: true,
-      assignedEmployeeId: true,
-      assignedAt: true
+      subscriptionEndsAt: true
     }
   });
 
   if (!user) {
     throw new HttpError(404, { message: "User not found" });
   }
+
+  const profileMetadata = await prisma.user
+    .findUnique({
+      where: { id: userId },
+      select: {
+        manualRenewalRequired: true,
+        onboardingPaymentPlan: true,
+        onboardingPaymentAmount: true,
+        onboardingPaymentVerifiedAt: true,
+        assignedEmployeeId: true,
+        assignedAt: true
+      }
+    })
+    .catch(() => null);
 
   const [profile, photos, preferences] = await Promise.all([
     prisma.profile.upsert({
@@ -94,9 +102,9 @@ export async function getProfile(userId: string) {
     })
     .catch(() => null);
 
-  const assignedExecutive = user?.assignedEmployeeId
+  const assignedExecutive = profileMetadata?.assignedEmployeeId
     ? await prisma.user.findUnique({
-        where: { id: user.assignedEmployeeId },
+        where: { id: profileMetadata.assignedEmployeeId },
         select: {
           id: true,
           firstName: true,
@@ -130,18 +138,18 @@ export async function getProfile(userId: string) {
       subscription: {
         tier: user?.subscriptionTier ?? "FREE",
         status: user?.subscriptionStatus ?? "INACTIVE",
-        paymentPlan: user?.onboardingPaymentPlan ?? null,
-        paymentAmount: user?.onboardingPaymentAmount ?? null,
+        paymentPlan: profileMetadata?.onboardingPaymentPlan ?? null,
+        paymentAmount: profileMetadata?.onboardingPaymentAmount ?? null,
         startedAt: user?.subscriptionStartedAt ?? null,
         endsAt: user?.subscriptionEndsAt ?? null,
-        paidAt: user?.onboardingPaymentVerifiedAt ?? null,
-        renewalMode: user?.manualRenewalRequired ? "MANUAL" : "AUTO"
+        paidAt: profileMetadata?.onboardingPaymentVerifiedAt ?? null,
+        renewalMode: profileMetadata?.manualRenewalRequired ? "MANUAL" : "AUTO"
       },
-      assignedExecutive: user?.assignedEmployeeId
+      assignedExecutive: profileMetadata?.assignedEmployeeId
         ? {
-            id: user.assignedEmployeeId,
+            id: profileMetadata.assignedEmployeeId,
             name: executiveName || "VAEL Executive",
-            assignedAt: user.assignedAt ?? latestVerificationRequest?.assignedAt,
+            assignedAt: profileMetadata?.assignedAt ?? latestVerificationRequest?.assignedAt,
             verificationStatus: latestVerificationRequest?.status ?? null
           }
         : null,

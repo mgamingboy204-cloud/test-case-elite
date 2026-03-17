@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequestAuth } from "./api";
 
 export type VerificationQueueView = "ACTIVE" | "COMPLETED" | "REJECTED" | "TIMEOUT" | "ALL";
 
@@ -32,39 +32,33 @@ export function isValidGoogleMeetUrl(rawValue: string) {
 }
 
 export async function listVerificationRequestsForWorker(statusView: VerificationQueueView = "ACTIVE") {
-  return apiRequest<{ statusView: VerificationQueueView; requests: WorkerVerificationRequest[] }>(`/admin/verification-requests?statusView=${statusView}`, {
-    auth: true
-  });
+  return apiRequestAuth<{ statusView: VerificationQueueView; requests: WorkerVerificationRequest[] }>(`/admin/verification-requests?statusView=${statusView}`);
 }
 
 export async function assignVerificationRequest(requestId: string) {
-  return apiRequest<{ request: WorkerVerificationRequest }>(`/admin/verification-requests/${requestId}/assign`, {
+  return apiRequestAuth<{ request: WorkerVerificationRequest }>(`/admin/verification-requests/${requestId}/assign`, {
     method: "POST",
-    auth: true,
     body: JSON.stringify({})
   });
 }
 
 export async function startVerificationRequest(requestId: string, meetUrl: string) {
-  return apiRequest<{ request: WorkerVerificationRequest }>(`/admin/verification-requests/${requestId}/start`, {
+  return apiRequestAuth<{ request: WorkerVerificationRequest }>(`/admin/verification-requests/${requestId}/start`, {
     method: "POST",
-    auth: true,
     body: JSON.stringify({ meetUrl })
   });
 }
 
 export async function approveVerificationRequest(requestId: string) {
-  return apiRequest<{ request: WorkerVerificationRequest }>(`/admin/verification-requests/${requestId}/approve`, {
+  return apiRequestAuth<{ request: WorkerVerificationRequest }>(`/admin/verification-requests/${requestId}/approve`, {
     method: "POST",
-    auth: true,
     body: JSON.stringify({})
   });
 }
 
 export async function rejectVerificationRequest(requestId: string, reason: string) {
-  return apiRequest<{ request: WorkerVerificationRequest }>(`/admin/verification-requests/${requestId}/reject`, {
+  return apiRequestAuth<{ request: WorkerVerificationRequest }>(`/admin/verification-requests/${requestId}/reject`, {
     method: "POST",
-    auth: true,
     body: JSON.stringify({ reason })
   });
 }

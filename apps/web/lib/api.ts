@@ -16,6 +16,7 @@ const apiDebug = process.env.NODE_ENV !== "production";
 const ACCESS_TOKEN_STORAGE_KEY = "vael_access_token";
 
 let accessToken: string | null = null;
+const authFailureListeners = new Set<() => void>();
 
 function readStoredAccessToken() {
   if (typeof window === "undefined") return null;
@@ -44,6 +45,23 @@ export function clearAccessToken() {
   setAccessToken(null);
 }
 
+export function subscribeToAuthFailure(listener: () => void) {
+  authFailureListeners.add(listener);
+  return () => {
+    authFailureListeners.delete(listener);
+  };
+}
+
+function notifyAuthFailure() {
+  for (const listener of authFailureListeners) {
+    try {
+      listener();
+    } catch (error) {
+      if (apiDebug) console.error("[auth] Auth failure listener crashed", error);
+    }
+  }
+}
+
 export class ApiError extends Error {
   status: number;
   body: unknown;
@@ -55,9 +73,9 @@ export class ApiError extends Error {
   }
 }
 
-let refreshPromise: Promise<boolean> | null = null;
+let refreshPromise: Promise<"success" | "unauthorized" | "forbidden"> | null = null;
 
-async function refreshAccessToken(): Promise<boolean> {
+async function refreshAccessToken(): Promise<"success" | "unauthorized" | "forbidden"> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
@@ -72,24 +90,25 @@ async function refreshAccessToken(): Promise<boolean> {
       });
 
       if (!response.ok) {
-        return false;
+        if (response.status === 403) return "forbidden";
+        return "unauthorized";
       }
 
       const body = (await response.json().catch(() => null)) as { accessToken?: string } | null;
       if (!body?.accessToken) {
         clearAccessToken();
-        return false;
+        return "unauthorized";
       }
 
       setAccessToken(body.accessToken);
-      return true;
+      return "success";
     } catch (error) {
       clearAccessToken();
       if (apiDebug) console.error("[auth] Refresh token request failed", {
         url: `${API_BASE_URL}/auth/token/refresh`,
         error
       });
-      return false;
+      return "unauthorized";
     } finally {
       refreshPromise = null;
     }
@@ -104,6 +123,7 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
   const runRequest = async () => {
     const headers = new Headers(options?.headers);
     const resolvedAccessToken = accessToken ?? readStoredAccessToken();
+    accessToken = resolvedAccessToken;
     if (options?.auth && resolvedAccessToken && !headers.has("Authorization")) {
       headers.set("Authorization", `Bearer ${resolvedAccessToken}`);
     }
@@ -141,15 +161,26 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
 
   if (options?.auth && response.status === 401 && !path.startsWith("/auth/")) {
     if (apiDebug) console.warn("[api] Received 401 on authenticated request. Attempting token refresh", { method, path });
-    const refreshed = await refreshAccessToken();
-    if (refreshed) {
+    const refreshStatus = await refreshAccessToken();
+    if (refreshStatus === "success") {
       if (apiDebug) console.info("[api] Refresh succeeded. Retrying request", { method, path });
       const retry = await runRequest();
       response = retry.response;
       body = retry.body;
     } else {
       clearAccessToken();
-      if (apiDebug) console.warn("[api] Refresh failed. Request remains unauthorized", { method, path });
+      notifyAuthFailure();
+      if (apiDebug) console.warn("[api] Refresh failed. Request remains unauthorized", { method, path, refreshStatus });
+    }
+  }
+
+  if (options?.auth && response.status === 403) {
+    const rawCode = typeof body === "object" && body !== null && "code" in body
+      ? String((body as { code?: string }).code ?? "").toLowerCase()
+      : "";
+    if (rawCode.includes("unauth") || rawCode.includes("token") || rawCode.includes("session")) {
+      clearAccessToken();
+      notifyAuthFailure();
     }
   }
 
@@ -162,4 +193,8 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
   }
 
   return body as T;
+}
+
+export async function apiRequestAuth<T>(path: string, options?: Omit<RequestInit, "headers"> & { headers?: HeadersInit }) {
+  return apiRequest<T>(path, { ...options, auth: true });
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Clock3, ExternalLink, MessageCircleWarning, ShieldCheck, UserRoundCheck, XCircle } from "lucide-react";
-import { apiRequest } from "@/lib/api";
+import { apiRequestAuth } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 type VerificationPayload = {
@@ -54,7 +54,7 @@ export default function VideoVerificationPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   const loadStatus = useCallback(async () => {
-    const response = await apiRequest<VerificationPayload>("/verification/status", { auth: true });
+    const response = await apiRequestAuth<VerificationPayload>("/verification/status");
     setPayload(response);
     return response;
   }, []);
@@ -93,9 +93,8 @@ export default function VideoVerificationPage() {
     setError(null);
     setMessage(null);
     try {
-      await apiRequest("/verification-requests", {
+      await apiRequestAuth("/verification-requests", {
         method: "POST",
-        auth: true,
         body: JSON.stringify({})
       });
       await loadStatus();
@@ -111,9 +110,8 @@ export default function VideoVerificationPage() {
     setError(null);
     setMessage(null);
     try {
-      await apiRequest("/verification/help/whatsapp", {
+      await apiRequestAuth("/verification/help/whatsapp", {
         method: "POST",
-        auth: true,
         body: JSON.stringify({})
       });
       const latest = await loadStatus();

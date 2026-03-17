@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, Loader2, RefreshCcw } from "lucide-react";
-import { ApiError, apiRequest } from "@/lib/api";
+import { ApiError, apiRequestAuth } from "@/lib/api";
 import { fetchAdminDashboard, type AdminDashboardPayload } from "@/lib/adminDashboard";
 
 type MePayload = { role: "USER" | "EMPLOYEE" | "ADMIN"; isAdmin?: boolean };
@@ -30,7 +30,7 @@ export default function AdminDashboardPage() {
     setError(null);
 
     try {
-      const me = await apiRequest<MePayload>("/me", { auth: true });
+      const me = await apiRequestAuth<MePayload>("/me");
       if (me.role !== "ADMIN" && !me.isAdmin) {
         setForbidden(true);
         setData(null);
