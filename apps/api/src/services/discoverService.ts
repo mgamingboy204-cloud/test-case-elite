@@ -95,7 +95,7 @@ export async function getDiscoverProfiles(options: {
 }) {
   const pageNum = options.page ? options.page : 1;
   const take = options.pageSize ? options.pageSize : 10;
-  const profile = await prisma.profile.findUnique({ where: { userId: options.userId } });
+  const profile = await prisma.profile.findUnique({ where: { userId: options.userId }, select: { gender: true } });
 
   const where = buildDiscoverWhere({
     userId: options.userId,
@@ -155,7 +155,7 @@ export async function getDiscoverFeed(options: {
   baseUrl?: string;
 }) {
   const take = Math.min(Math.max(options.limit ?? 20, 1), 50);
-  const profile = await prisma.profile.findUnique({ where: { userId: options.userId } });
+  const profile = await prisma.profile.findUnique({ where: { userId: options.userId }, select: { gender: true } });
 
   const where = buildDiscoverWhere({
     userId: options.userId,
