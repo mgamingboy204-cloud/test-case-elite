@@ -87,10 +87,6 @@ html, body {
 
 /* ─── Adaptive PWA Interactions ───────────────────────────── */
 @media (max-width: 768px) {
-  .main-bottom-reserve {
-    padding-bottom: var(--bottom-nav-footprint, 0px);
-  }
-
   html[data-device="mobile"],
   html[data-device="mobile"] body {
     user-select: none;
