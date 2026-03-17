@@ -52,7 +52,10 @@ const meetUrlSchema = z
   .string()
   .trim()
   .url()
-  .refine((url) => /^https:\/\/meet\.google\.com\/.+/.test(url), {
+  .refine((url) => {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && parsed.hostname === "meet.google.com" && parsed.pathname.length > 1;
+  }, {
     message: "Meet link must start with https://meet.google.com/ and include a meeting path."
   });
 

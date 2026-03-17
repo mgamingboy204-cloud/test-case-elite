@@ -19,6 +19,18 @@ export type WorkerVerificationRequest = {
   };
 };
 
+export function isValidGoogleMeetUrl(rawValue: string) {
+  const value = rawValue.trim();
+  if (!value) return false;
+
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" && parsed.hostname === "meet.google.com" && parsed.pathname.length > 1;
+  } catch {
+    return false;
+  }
+}
+
 export async function listVerificationRequestsForWorker(statusView: VerificationQueueView = "ACTIVE") {
   return apiRequest<{ statusView: VerificationQueueView; requests: WorkerVerificationRequest[] }>(`/admin/verification-requests?statusView=${statusView}`, {
     auth: true
