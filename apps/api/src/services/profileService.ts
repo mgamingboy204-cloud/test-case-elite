@@ -71,8 +71,8 @@ export async function getProfile(userId: string) {
     })
     .catch(() => null);
 
-  const [profile, photos, preferences] = await Promise.all([
-    prisma.profile.upsert({
+  const profile = await prisma.profile
+    .upsert({
       where: { userId },
       update: {},
       create: {
@@ -84,10 +84,40 @@ export async function getProfile(userId: string) {
         profession: "",
         bioShort: ""
       }
-    }),
-    prisma.photo.findMany({ where: { userId }, orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }] }),
-    prisma.userPreference.upsert({ where: { userId }, update: {}, create: { userId } })
-  ]);
+    })
+    .catch(() =>
+      prisma.profile.findUnique({ where: { userId } }).then((existing) =>
+        existing ?? {
+          userId,
+          name: "",
+          gender: Gender.OTHER,
+          age: 18,
+          dateOfBirth: null,
+          city: "",
+          profession: "",
+          bioShort: "",
+          story: null,
+          locationLabel: null,
+          heightCm: null,
+          intent: "dating"
+        }
+      )
+    );
+
+  const photos = await prisma.photo
+    .findMany({ where: { userId }, orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }] })
+    .catch(() => prisma.photo.findMany({ where: { userId }, orderBy: [{ createdAt: "asc" }] }));
+
+  const preferences = await prisma.userPreference
+    .upsert({ where: { userId }, update: {}, create: { userId } })
+    .catch(() => ({
+      userId,
+      pushNotificationsEnabled: true,
+      profileVisible: true,
+      showOnlineStatus: true,
+      discoverableByPremiumOnly: false,
+      updatedAt: new Date()
+    }));
 
   const latestVerificationRequest = await prisma.verificationRequest
     .findFirst({

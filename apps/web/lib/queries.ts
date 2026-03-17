@@ -358,7 +358,7 @@ export type ProfileViewModel = {
     id: string;
     name: string;
     assignedAt: string | null;
-    verificationStatus: string;
+    verificationStatus: string | null;
   } | null;
   settings: {
     pushNotificationsEnabled: boolean;
@@ -401,20 +401,22 @@ type RawProfileResponse = {
 export async function fetchProfile(): Promise<ProfileViewModel> {
   const data = await apiRequestAuth<RawProfileResponse>("/me/profile");
   const vm = data.viewModel ?? {};
-  const image = vm.photos?.[0]?.url ?? FALLBACK_PROFILE_IMAGE;
+  const profileFallback = data.profile ?? {};
+  const photos = vm.photos ?? data.photos ?? [];
+  const image = photos[0]?.url ?? FALLBACK_PROFILE_IMAGE;
   return {
-    name: vm.name ?? "",
-    age: vm.age ?? null,
+    name: vm.name ?? profileFallback.name ?? "",
+    age: vm.age ?? profileFallback.age ?? null,
     dateOfBirth: vm.dateOfBirth ?? null,
     gender: vm.gender ?? null,
-    location: vm.location ?? "",
-    place: vm.place ?? "",
+    location: vm.location ?? profileFallback.city ?? "",
+    place: vm.place ?? profileFallback.city ?? "",
     image,
-    profession: vm.profession ?? "",
+    profession: vm.profession ?? profileFallback.profession ?? "",
     height: vm.height ?? null,
     heightCm: vm.heightCm ?? null,
-    story: vm.story ?? "",
-    bio: vm.bio ?? "",
+    story: vm.story ?? profileFallback.bioShort ?? "",
+    bio: vm.bio ?? profileFallback.bioShort ?? "",
     subscription: vm.subscription ?? { tier: "FREE", status: "INACTIVE" },
     assignedExecutive: vm.assignedExecutive ?? null,
     settings: vm.settings ?? {
@@ -423,6 +425,6 @@ export async function fetchProfile(): Promise<ProfileViewModel> {
       showOnlineStatus: true,
       discoverableByPremiumOnly: false
     },
-    photos: vm.photos ?? []
+    photos
   };
 }
