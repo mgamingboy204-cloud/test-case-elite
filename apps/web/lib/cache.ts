@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
+import { getQueryClient } from "@/lib/queryClient";
 
 type CacheRecord<T> = {
   value: T;
@@ -8,6 +10,16 @@ type CacheRecord<T> = {
 };
 
 const memoryCache = new Map<string, CacheRecord<unknown>>();
+const PERSISTED_KEYS = new Set([
+  "discover-feed",
+  "likes-incoming",
+  "matches",
+  "alerts",
+  "profile",
+  "onboarding-draft",
+  "profile-draft",
+  "viewed-profiles"
+]);
 
 function getStorageKey(key: string) {
   return `vael-cache:${key}`;
@@ -25,7 +37,7 @@ function readPersisted<T>(key: string): CacheRecord<T> | null {
 }
 
 function writePersisted<T>(key: string, record: CacheRecord<T>) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !PERSISTED_KEYS.has(key)) return;
   localStorage.setItem(getStorageKey(key), JSON.stringify(record));
 }
 
@@ -33,13 +45,24 @@ export function primeCache<T>(key: string, value: T) {
   const record = { value, updatedAt: Date.now() };
   memoryCache.set(key, record);
   writePersisted(key, record);
+  getQueryClient().setQueryData([key], value);
 }
 
 export function readCache<T>(key: string): CacheRecord<T> | null {
+  const queryData = getQueryClient().getQueryData<T>([key]);
+  if (queryData !== undefined) {
+    const live = { value: queryData, updatedAt: Date.now() };
+    memoryCache.set(key, live);
+    return live;
+  }
+
   const memory = memoryCache.get(key) as CacheRecord<T> | undefined;
   if (memory) return memory;
   const persisted = readPersisted<T>(key);
-  if (persisted) memoryCache.set(key, persisted);
+  if (persisted) {
+    memoryCache.set(key, persisted);
+    getQueryClient().setQueryData([key], persisted.value);
+  }
   return persisted;
 }
 
@@ -50,51 +73,57 @@ export function useStaleWhileRevalidate<T>(options: {
   staleTimeMs?: number;
 }) {
   const { key, enabled, fetcher, staleTimeMs = 60_000 } = options;
-  const cached = readCache<T>(key);
-  const [data, setData] = useState<T | undefined>(cached?.value);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-  const [isLoading, setIsLoading] = useState(!cached?.value && enabled);
+  const cached = useMemo(() => readCache<T>(key), [key]);
 
-  const refresh = useCallback(async (force = false) => {
-    if (!enabled) return;
-    const current = readCache<T>(key);
-    const isStale = !current || Date.now() - current.updatedAt > staleTimeMs;
-    if (!force && !isStale) return;
+  const query = useQuery({
+    queryKey: [key],
+    queryFn: fetcher,
+    enabled,
+    staleTime: staleTimeMs,
+    gcTime: Math.max(staleTimeMs * 10, 30 * 60_000),
+    placeholderData: keepPreviousData,
+    initialData: cached?.value,
+    initialDataUpdatedAt: cached?.updatedAt
+  });
 
-    setIsRefreshing(true);
-    if (!readCache<T>(key)?.value) setIsLoading(true);
-    try {
-      const next = await fetcher();
-      primeCache(key, next);
-      setData(next);
-      setError(null);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setIsRefreshing(false);
-      setIsLoading(false);
-    }
-  }, [enabled, fetcher, key, staleTimeMs]);
+
 
   useEffect(() => {
-    if (enabled) {
-      const current = readCache<T>(key);
-      if (current) {
-        setData(current.value);
-        setIsLoading(false);
-      }
-      void refresh();
+    if (query.data !== undefined) {
+      primeCache(key, query.data);
     }
-  }, [enabled, key, refresh]);
+  }, [key, query.data]);
 
-  const mutate = (updater: T | ((current?: T) => T)) => {
-    setData((current) => {
-      const next = typeof updater === "function" ? (updater as (value?: T) => T)(current) : updater;
-      primeCache(key, next);
-      return next;
-    });
+  const updateAndPersist = (next: T) => {
+    primeCache(key, next);
   };
 
-  return { data, setData, refresh, revalidate: () => refresh(true), mutate, isRefreshing, isLoading, error };
+  const mutate = (updater: T | ((current?: T) => T)) => {
+    const current = query.data;
+    const next = typeof updater === "function" ? (updater as (value?: T) => T)(current) : updater;
+    updateAndPersist(next);
+  };
+
+  return {
+    data: query.data,
+    setData: (next: T) => updateAndPersist(next),
+    refresh: async (force = false) => {
+      if (!enabled) return;
+      if (force) {
+        const result = await query.refetch();
+        if (result.data !== undefined) updateAndPersist(result.data);
+        return;
+      }
+      const result = await query.refetch({ cancelRefetch: false });
+      if (result.data !== undefined) updateAndPersist(result.data);
+    },
+    revalidate: async () => {
+      const result = await query.refetch();
+      if (result.data !== undefined) updateAndPersist(result.data);
+    },
+    mutate,
+    isRefreshing: query.isFetching,
+    isLoading: query.isLoading,
+    error: query.error
+  };
 }

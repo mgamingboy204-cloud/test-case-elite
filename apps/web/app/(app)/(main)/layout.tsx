@@ -5,11 +5,13 @@ import { Compass, Heart, Bell, User, Sparkles, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchAlerts, fetchMatches, fetchProfile } from "@/lib/queries";
+import { fetchAlerts, fetchDiscoverFeedPage, fetchMatches, fetchProfile, mapLegacyFeedItemToCard } from "@/lib/queries";
 import { primeCache } from "@/lib/cache";
 import { motion } from "framer-motion";
 import { resolveRouteRedirect } from "@/lib/navigationGuard";
 import { fetchIncomingLikes } from "@/lib/likes";
+import { getQueryClient } from "@/lib/queryClient";
+import { OfflineIndicator } from "@/components/pwa/offline-indicator";
 
 const NAV_ITEMS = [
   { href: "/discover", icon: Compass, label: "Discover" },
@@ -28,10 +30,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const prefetchRouteBundle = useCallback((href: string) => {
     router.prefetch(href);
-    if (href === "/likes") void fetchIncomingLikes().then((data) => primeCache("likes-incoming", data)).catch(() => null);
-    if (href === "/matches") void fetchMatches().then((data) => primeCache("matches", data)).catch(() => null);
-    if (href === "/alerts") void fetchAlerts().then((data) => primeCache("alerts", data)).catch(() => null);
-    if (href === "/profile") void fetchProfile().then((data) => primeCache("profile", data)).catch(() => null);
+    const queryClient = getQueryClient();
+    if (href === "/likes") void queryClient.prefetchQuery({ queryKey: ["likes-incoming"], queryFn: fetchIncomingLikes }).then(() => {
+      const data = queryClient.getQueryData(["likes-incoming"]);
+      if (data) primeCache("likes-incoming", data);
+    }).catch(() => null);
+    if (href === "/matches") void queryClient.prefetchQuery({ queryKey: ["matches"], queryFn: fetchMatches }).then(() => {
+      const data = queryClient.getQueryData(["matches"]);
+      if (data) primeCache("matches", data);
+    }).catch(() => null);
+    if (href === "/alerts") void queryClient.prefetchQuery({ queryKey: ["alerts"], queryFn: fetchAlerts }).then(() => {
+      const data = queryClient.getQueryData(["alerts"]);
+      if (data) primeCache("alerts", data);
+    }).catch(() => null);
+    if (href === "/profile") void queryClient.prefetchQuery({ queryKey: ["profile"], queryFn: fetchProfile }).then(() => {
+      const data = queryClient.getQueryData(["profile"]);
+      if (data) primeCache("profile", data);
+    }).catch(() => null);
+    if (href === "/discover") {
+      void queryClient.prefetchQuery({ queryKey: ["discover-feed", "bootstrap"], queryFn: () => fetchDiscoverFeedPage(undefined, 10) }).then(() => {
+        const feed = queryClient.getQueryData<{ items: unknown[] }>(["discover-feed", "bootstrap"]);
+        const cards = feed?.items?.map((item) => mapLegacyFeedItemToCard(item as never)) ?? [];
+        cards.slice(0, 3).forEach((card) => {
+          const imageUrl = (card as { imageUrl?: string | null }).imageUrl;
+          if (!imageUrl || typeof window === "undefined") return;
+          const img = new Image();
+          img.src = imageUrl;
+        });
+      }).catch(() => null);
+    }
   }, [router]);
 
 
@@ -123,6 +150,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           MAIN CONTENT COLUMN 
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <OfflineIndicator />
 
         {/* Top bar */}
         <header

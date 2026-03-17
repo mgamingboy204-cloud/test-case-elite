@@ -297,6 +297,8 @@ model User {
   managedMembers User[] @relation("MemberExecutive")
   verifiedByEmployee User? @relation("VerifiedByEmployee", fields: [verifiedByEmployeeId], references: [id])
   verifiedMembers User[] @relation("VerifiedByEmployee")
+
+  @@index([onboardingStep, status, videoVerificationStatus, paymentStatus, profileCompletedAt])
 }
 
 model Profile {
@@ -314,6 +316,8 @@ model Profile {
   intent      String  @default("dating")
 
   user User @relation(fields: [userId], references: [id])
+
+  @@index([gender, city, intent])
 }
 
 model Photo {
