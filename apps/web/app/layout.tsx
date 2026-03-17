@@ -54,15 +54,24 @@ export default function RootLayout({
       >
         <Script id="device-mode" strategy="beforeInteractive">
           {`(function(){
-            var mobile=window.matchMedia('(max-width: 768px)').matches;
+            var mobile=window.matchMedia('(max-width:768px)').matches;
             document.documentElement.dataset.device=mobile?'mobile':'desktop';
             function setH(){
-              var h=(window.visualViewport?window.visualViewport.height:window.innerHeight);
+              var h=window.visualViewport?window.visualViewport.height:window.innerHeight;
               document.documentElement.style.setProperty('--app-height',h+'px');
             }
             setH();
-            if(window.visualViewport){window.visualViewport.addEventListener('resize',setH);}
-            window.addEventListener('orientationchange',function(){setTimeout(setH,50);setTimeout(setH,300);});
+            setTimeout(setH,50);
+            setTimeout(setH,200);
+            setTimeout(setH,500);
+            if(window.visualViewport){
+              window.visualViewport.addEventListener('resize',setH);
+            }
+            window.addEventListener('orientationchange',function(){
+              setTimeout(setH,50);
+              setTimeout(setH,200);
+              setTimeout(setH,500);
+            });
           })();`}
         </Script>
         <Providers>
