@@ -13,6 +13,7 @@
 
 /* ─── Color Tokens ─────────────────────────────────────────── */
 :root {
+  --app-height: 100dvh; /* fallback until JS sets it */
   /* Light Mode: Pearl White */
   --background: #fbfcf8;
   --foreground: #13181f;
@@ -40,6 +41,8 @@ html {
 html, body {
   margin: 0;
   padding: 0;
+  overscroll-behavior: none;
+  overflow: hidden;
   background-color: var(--background);
   color: var(--foreground);
   transition: background-color 400ms ease, color 400ms ease;
@@ -70,12 +73,16 @@ html, body {
   padding-top: var(--safe-top);
 }
 
+header {
+  padding-top: env(safe-area-inset-top);
+}
+
 .safe-bottom-padding {
   padding-bottom: var(--safe-bottom);
 }
 
 .mobile-bottom-nav-shell {
-  padding-bottom: var(--safe-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .mobile-main-with-bottom-nav {
