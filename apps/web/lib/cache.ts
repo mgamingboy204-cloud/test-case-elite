@@ -1,8 +1,10 @@
 "use client";
 
-import { keepPreviousData, useQuery, type RetryValue } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { getQueryClient } from "@/lib/queryClient";
+
+type RetryOption = boolean | number | ((failureCount: number, error: unknown) => boolean);
 
 type CacheRecord<T> = {
   value: T;
@@ -71,7 +73,7 @@ export function useStaleWhileRevalidate<T>(options: {
   enabled: boolean;
   fetcher: () => Promise<T>;
   staleTimeMs?: number;
-  retry?: RetryValue<Error>;
+  retry?: RetryOption;
 }) {
   const { key, enabled, fetcher, staleTimeMs = 60_000, retry } = options;
   const cached = useMemo(() => readCache<T>(key), [key]);
@@ -85,7 +87,9 @@ export function useStaleWhileRevalidate<T>(options: {
     placeholderData: keepPreviousData,
     initialData: cached?.value,
     initialDataUpdatedAt: cached?.updatedAt,
-    retry
+    retry: retry ?? ((failureCount, error) => {
+      return failureCount < 2;
+    })
   });
 
 
