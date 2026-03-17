@@ -40,7 +40,6 @@ html {
 html, body {
   margin: 0;
   padding: 0;
-  overscroll-behavior-y: none;
   background-color: var(--background);
   color: var(--foreground);
   transition: background-color 400ms ease, color 400ms ease;

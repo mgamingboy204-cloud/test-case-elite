@@ -179,6 +179,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Scrollable Content */}
         <main
+          id="app-main-scroll"
           className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-background mobile-main-with-bottom-nav min-[769px]:pb-0"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
