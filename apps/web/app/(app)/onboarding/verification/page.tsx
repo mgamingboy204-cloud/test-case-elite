@@ -25,14 +25,30 @@ function formatCountdown(value: number) {
   return `${minutes}:${seconds}`;
 }
 
+function buildWhatsAppSupportUrl(phoneNumber: string, memberPhone?: string) {
+  const sanitizedNumber = phoneNumber.replace(/\D/g, "");
+  if (!sanitizedNumber) return null;
+
+  const message = memberPhone
+    ? `Hi VAEL, I'm waiting for my verification. My phone is ${memberPhone}`
+    : "Hi VAEL, I'm waiting for my verification.";
+
+  return `https://wa.me/${sanitizedNumber}?text=${encodeURIComponent(message)}`;
+}
+
 export default function VideoVerificationPage() {
-  const { refreshCurrentUser } = useAuth();
+  const { refreshCurrentUser, user } = useAuth();
   const [payload, setPayload] = useState<VerificationPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const [helping, setHelping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const whatsappSupportNumber = process.env.NEXT_PUBLIC_VAEL_WHATSAPP_NUMBER ?? "";
+  const whatsappSupportUrl = useMemo(
+    () => buildWhatsAppSupportUrl(whatsappSupportNumber, user?.phone),
+    [user?.phone, whatsappSupportNumber]
+  );
 
   const loadStatus = useCallback(async () => {
     setError(null);
@@ -92,6 +108,9 @@ export default function VideoVerificationPage() {
         body: JSON.stringify({})
       });
       await loadStatus();
+      if (whatsappSupportUrl) {
+        window.open(whatsappSupportUrl, "_blank", "noopener,noreferrer");
+      }
       setMessage("A real team member has been notified and will follow up with you personally on WhatsApp.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to request WhatsApp support.");
@@ -166,13 +185,19 @@ export default function VideoVerificationPage() {
         {!loading && waiting ? (
           <motion.button
             whileTap={{ scale: 0.98 }}
-            disabled={helping || Boolean(payload?.whatsappHelpRequestedAt)}
+            disabled={helping || Boolean(payload?.whatsappHelpRequestedAt) || !whatsappSupportUrl}
             onClick={requestWhatsAppHelp}
             className="w-full rounded-xl border border-primary/25 px-4 py-3 text-xs uppercase tracking-[0.18em] text-primary disabled:opacity-45"
           >
             <span className="inline-flex items-center gap-2">
               <MessageCircleWarning size={14} />
-              {payload?.whatsappHelpRequestedAt ? "WhatsApp follow-up requested" : helping ? "Requesting…" : "Request WhatsApp help"}
+              {!whatsappSupportUrl
+                ? "WhatsApp support unavailable"
+                : payload?.whatsappHelpRequestedAt
+                  ? "WhatsApp follow-up requested"
+                  : helping
+                    ? "Requesting…"
+                    : "Request WhatsApp help"}
             </span>
           </motion.button>
         ) : null}
