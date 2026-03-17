@@ -52,7 +52,6 @@ html, body {
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --bottom-nav-height: 50px;
-  --app-height: 100dvh;
 }
 
 /* ─── Universal Helpers ────────────────────────────────────── */
@@ -103,10 +102,6 @@ html, body {
 
 /* ─── Adaptive PWA Interactions ───────────────────────────── */
 @media (max-width: 768px) {
-  .mobile-container {
-    height: var(--app-height);
-  }
-
   html[data-device="mobile"],
   html[data-device="mobile"] body {
     user-select: none;

@@ -87,7 +87,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
   return (
-    <div className="flex flex-row h-[var(--app-height)] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
+    <div className="flex flex-row min-h-dvh w-screen bg-background transition-colors duration-500 desktop-container">
 
       {/* ═══════════════════════════════════════════════════════════════════
           DESKTOP SIDEBAR 
@@ -149,7 +149,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* ═══════════════════════════════════════════════════════════════════
           MAIN CONTENT COLUMN 
       ═══════════════════════════════════════════════════════════════════ */}
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+      <div className="flex flex-col flex-1 min-w-0">
         <OfflineIndicator />
 
         {/* Top bar */}
@@ -180,7 +180,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Scrollable Content */}
         <main
           className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-background mobile-main-with-bottom-nav min-[769px]:pb-0"
-          style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
+          style={{ WebkitOverflowScrolling: "touch" }}
         >
           <div className="w-full h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto">
             {children}

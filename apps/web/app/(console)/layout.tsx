@@ -52,7 +52,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
   }
 
   return (
-    <div className="flex w-full h-[var(--app-height)] bg-[#0a0c10] text-[#f4f4f5] overflow-hidden">
+    <div className="flex w-full min-h-dvh bg-[#0a0c10] text-[#f4f4f5]">
       <aside className="w-64 shrink-0 border-r border-[#1f222b] bg-[#0a0c10]/70 backdrop-blur-md flex flex-col z-20">
         <div className="p-8 pb-12">
           <h1 className="font-serif text-2xl tracking-widest text-white uppercase">Employee Panel</h1>
@@ -86,7 +86,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
         </div>
       </aside>
 
-      <main className="flex-1 relative h-full overflow-hidden flex flex-col">
+      <main className="flex-1 relative h-full flex flex-col">
         <div className="relative z-10 flex-1 overflow-x-hidden overflow-y-auto">{children}</div>
       </main>
     </div>
