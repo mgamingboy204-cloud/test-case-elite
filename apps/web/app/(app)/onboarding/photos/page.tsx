@@ -135,7 +135,7 @@ export default function OnboardingPhotosPage() {
   if (loading) return <div className="flex h-full items-center justify-center text-sm text-foreground/50">Loading your gallery…</div>;
 
   return (
-    <div className="flex h-full flex-col px-8 pb-[calc(env(safe-area-inset-bottom,0px)+32px)]">
+    <div className="flex h-full flex-col px-8 mobile-onboarding-content">
       <div className="pt-6 pb-6">
         <h1 className="text-4xl font-serif text-foreground tracking-wide">Photo <span className="text-primary">Upload</span></h1>
         <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-foreground/40">1 to 3 portraits required</p>

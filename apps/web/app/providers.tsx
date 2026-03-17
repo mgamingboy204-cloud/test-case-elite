@@ -6,6 +6,7 @@ import { ReactNode } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { getQueryClient } from "@/lib/queryClient";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
+import { ViewportSync } from "@/components/pwa/viewport-sync";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -17,6 +18,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <QueryClientProvider client={getQueryClient()}>
         <AuthProvider>
           <ServiceWorkerRegistration />
+          <ViewportSync />
           {children}
         </AuthProvider>
       </QueryClientProvider>
