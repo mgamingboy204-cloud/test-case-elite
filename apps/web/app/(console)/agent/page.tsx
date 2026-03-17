@@ -212,7 +212,7 @@ export default function AgentWorkspace() {
     }
   };
 
-  const withAction = async (key: string, run: () => Promise<void>, successMessage: string) => {
+  const withAction = async (key: string, run: () => Promise<unknown>, successMessage: string) => {
     setBusyAction(key);
     setFeedback(null);
     setError(null);
@@ -290,11 +290,21 @@ export default function AgentWorkspace() {
               />
 
               <ActionBar disabled={!canAct}>
-                <button disabled={busyAction === "assign-offline"} onClick={() => void withAction("assign-offline", async () => assignOfflineMeetCase(selectedOffline.id), "Case assigned.")}>Assign to me</button>
-                <button disabled={busyAction === "timeout-offline" || !timeoutUserId} onClick={() => void withAction("timeout-offline", async () => markOfflineMeetTimeout(selectedOffline.id, timeoutUserId ?? ""), "Timeout recorded.")}>Mark timeout</button>
-                <button disabled={busyAction === "no-overlap-offline"} onClick={() => void withAction("no-overlap-offline", async () => markOfflineMeetNoOverlap(selectedOffline.id), "No-overlap recorded.")}>Mark no overlap</button>
-                <button disabled={busyAction === "reschedule-offline"} onClick={() => void withAction("reschedule-offline", async () => updateOfflineMeetCase(selectedOffline.id, { action: "RESCHEDULE", reason: "Serious-condition reschedule handled by concierge." }), "Reschedule recorded.")}>Reschedule</button>
-                <button disabled={busyAction === "cancel-offline"} onClick={() => void withAction("cancel-offline", async () => updateOfflineMeetCase(selectedOffline.id, { action: "CANCEL", reason: "Serious-condition cancellation handled by concierge." }), "Case canceled.")}>Cancel</button>
+                <button disabled={busyAction === "assign-offline"} onClick={() => void withAction("assign-offline", async () => {
+                  await assignOfflineMeetCase(selectedOffline.id);
+                }, "Case assigned.")}>Assign to me</button>
+                <button disabled={busyAction === "timeout-offline" || !timeoutUserId} onClick={() => void withAction("timeout-offline", async () => {
+                  await markOfflineMeetTimeout(selectedOffline.id, timeoutUserId ?? "");
+                }, "Timeout recorded.")}>Mark timeout</button>
+                <button disabled={busyAction === "no-overlap-offline"} onClick={() => void withAction("no-overlap-offline", async () => {
+                  await markOfflineMeetNoOverlap(selectedOffline.id);
+                }, "No-overlap recorded.")}>Mark no overlap</button>
+                <button disabled={busyAction === "reschedule-offline"} onClick={() => void withAction("reschedule-offline", async () => {
+                  await updateOfflineMeetCase(selectedOffline.id, { action: "RESCHEDULE", reason: "Serious-condition reschedule handled by concierge." });
+                }, "Reschedule recorded.")}>Reschedule</button>
+                <button disabled={busyAction === "cancel-offline"} onClick={() => void withAction("cancel-offline", async () => {
+                  await updateOfflineMeetCase(selectedOffline.id, { action: "CANCEL", reason: "Serious-condition cancellation handled by concierge." });
+                }, "Case canceled.")}>Cancel</button>
               </ActionBar>
 
               <MemberSelectionBlock users={selectedOffline.users} timeoutUserId={timeoutUserId} setTimeoutUserId={setTimeoutUserId} />
@@ -365,11 +375,21 @@ export default function AgentWorkspace() {
               />
 
               <ActionBar disabled={!canAct}>
-                <button disabled={busyAction === "assign-online"} onClick={() => void withAction("assign-online", async () => assignOnlineMeetCase(selectedOnline.id), "Case assigned.")}>Assign to me</button>
-                <button disabled={busyAction === "timeout-online" || !timeoutUserId} onClick={() => void withAction("timeout-online", async () => markOnlineMeetTimeout(selectedOnline.id, timeoutUserId ?? ""), "Timeout recorded.")}>Mark timeout</button>
-                <button disabled={busyAction === "no-overlap-online"} onClick={() => void withAction("no-overlap-online", async () => markOnlineMeetNoOverlap(selectedOnline.id), "No-overlap recorded.")}>Mark no overlap</button>
-                <button disabled={busyAction === "reschedule-online"} onClick={() => void withAction("reschedule-online", async () => updateOnlineMeetCase(selectedOnline.id, { action: "RESCHEDULE", reason: "Serious-condition reschedule handled by concierge." }), "Reschedule recorded.")}>Reschedule</button>
-                <button disabled={busyAction === "cancel-online"} onClick={() => void withAction("cancel-online", async () => updateOnlineMeetCase(selectedOnline.id, { action: "CANCEL", reason: "Serious-condition cancellation handled by concierge." }), "Case canceled.")}>Cancel</button>
+                <button disabled={busyAction === "assign-online"} onClick={() => void withAction("assign-online", async () => {
+                  await assignOnlineMeetCase(selectedOnline.id);
+                }, "Case assigned.")}>Assign to me</button>
+                <button disabled={busyAction === "timeout-online" || !timeoutUserId} onClick={() => void withAction("timeout-online", async () => {
+                  await markOnlineMeetTimeout(selectedOnline.id, timeoutUserId ?? "");
+                }, "Timeout recorded.")}>Mark timeout</button>
+                <button disabled={busyAction === "no-overlap-online"} onClick={() => void withAction("no-overlap-online", async () => {
+                  await markOnlineMeetNoOverlap(selectedOnline.id);
+                }, "No-overlap recorded.")}>Mark no overlap</button>
+                <button disabled={busyAction === "reschedule-online"} onClick={() => void withAction("reschedule-online", async () => {
+                  await updateOnlineMeetCase(selectedOnline.id, { action: "RESCHEDULE", reason: "Serious-condition reschedule handled by concierge." });
+                }, "Reschedule recorded.")}>Reschedule</button>
+                <button disabled={busyAction === "cancel-online"} onClick={() => void withAction("cancel-online", async () => {
+                  await updateOnlineMeetCase(selectedOnline.id, { action: "CANCEL", reason: "Serious-condition cancellation handled by concierge." });
+                }, "Case canceled.")}>Cancel</button>
               </ActionBar>
 
               <MemberSelectionBlock users={selectedOnline.users} timeoutUserId={timeoutUserId} setTimeoutUserId={setTimeoutUserId} />
