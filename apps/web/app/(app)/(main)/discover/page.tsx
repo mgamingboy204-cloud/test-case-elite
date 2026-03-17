@@ -182,7 +182,7 @@ export default function DiscoverPage() {
             <div className="relative z-10 w-full">
               <motion.div
                 style={{ opacity: photoOpacity, scale: photoScale, transformOrigin: "top center" }}
-                className="w-full h-[80vh] overflow-hidden relative shadow-2xl bg-slate-900"
+                className="w-full h-[min(72dvh,640px)] min-h-[380px] overflow-hidden relative shadow-2xl bg-slate-900"
               >
                 <div className="absolute bottom-0 left-0 right-0 h-[8%] bg-gradient-to-t from-black/[0.08] to-transparent z-10 pointer-events-none" />
                 <img
@@ -202,7 +202,7 @@ export default function DiscoverPage() {
                 </div>
               </motion.div>
 
-              <div className="w-full mt-10 flex flex-col gap-12 px-6 md:px-12 pb-40">
+              <div className="w-full mt-8 flex flex-col gap-10 px-6 md:px-12 pb-24">
                 <motion.div
                   initial={{ opacity: 0.2, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -223,7 +223,7 @@ export default function DiscoverPage() {
           )}
 
           {status !== "success" && (
-            <div className="h-[80vh] px-8 pt-24 pb-10 flex flex-col justify-center bg-gradient-to-b from-foreground/[0.04] to-transparent border-b border-border/20">
+            <div className="h-[min(72dvh,640px)] min-h-[380px] px-8 pt-20 pb-10 flex flex-col justify-center bg-gradient-to-b from-foreground/[0.04] to-transparent border-b border-border/20">
               <h2 className="text-3xl font-serif text-foreground">{headerLabel}</h2>
               <p className="text-foreground/70 mt-4 text-sm leading-relaxed">
                 {status === "loading" && "We are selecting eligible, verified members for your queue."}
@@ -261,7 +261,7 @@ export default function DiscoverPage() {
         )}
       </AnimatePresence>
 
-      <div className="absolute left-0 right-0 bottom-10 px-10 flex justify-between items-end z-40 w-full max-w-lg mx-auto pointer-events-none">
+      <div className="absolute left-0 right-0 bottom-[calc(var(--mobile-bottom-nav-height)+var(--safe-area-bottom)+0.75rem)] px-10 flex justify-between items-end z-40 w-full max-w-lg mx-auto pointer-events-none">
         <motion.button whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }} disabled={!card || Boolean(pendingAction) || status !== "success"} onClick={() => void handleInteraction("PASS")} className="w-[76px] h-[76px] rounded-full bg-background/40 backdrop-blur-2xl border border-primary/40 flex items-center justify-center pointer-events-auto relative overflow-hidden group shadow-xl disabled:opacity-40"><div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" /><X size={34} strokeWidth={1} className="text-primary drop-shadow-sm z-10" /></motion.button>
         <motion.button whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }} disabled={!card || Boolean(pendingAction) || status !== "success"} onClick={() => void handleInteraction("LIKE")} className="w-28 h-28 rounded-full bg-background/40 backdrop-blur-3xl shadow-[0_20px_50px_rgba(200,155,144,0.2)] border border-primary/60 flex items-center justify-center pointer-events-auto relative overflow-hidden group disabled:opacity-40"><div className="absolute inset-0 bg-primary/10 blur-2xl opacity-50 group-hover:opacity-100 transition-opacity" /><div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" /><HeartVaelIcon /></motion.button>
       </div>
