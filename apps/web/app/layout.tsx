@@ -53,7 +53,17 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         <Script id="device-mode" strategy="beforeInteractive">
-          {`(function(){var mobile=window.matchMedia('(max-width: 768px)').matches;document.documentElement.dataset.device=mobile?'mobile':'desktop';})();`}
+          {`(function(){
+            var mobile=window.matchMedia('(max-width: 768px)').matches;
+            document.documentElement.dataset.device=mobile?'mobile':'desktop';
+            function setH(){
+              var h=(window.visualViewport?window.visualViewport.height:window.innerHeight);
+              document.documentElement.style.setProperty('--app-height',h+'px');
+            }
+            setH();
+            if(window.visualViewport){window.visualViewport.addEventListener('resize',setH);}
+            window.addEventListener('orientationchange',function(){setTimeout(setH,50);setTimeout(setH,300);});
+          })();`}
         </Script>
         <Providers>
           {children}

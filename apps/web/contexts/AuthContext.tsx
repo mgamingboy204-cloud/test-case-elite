@@ -352,7 +352,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/");
   };
 
-  if (!isInitialized) return null;
+  if (!isInitialized) return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        height: "var(--app-height, 100dvh)",
+        width: "100vw",
+        background: "var(--background, #13181f)",
+        zIndex: 9999,
+      }}
+    />
+  );
 
   return (
     <AuthContext.Provider
