@@ -217,6 +217,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               );
             })}
           </div>
+          <div style={{ height: "env(safe-area-inset-bottom, 0px)" }} />
         </nav>
       </div>
     </div>
