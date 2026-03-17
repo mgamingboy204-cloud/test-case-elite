@@ -12,6 +12,7 @@ import { resolveRouteRedirect } from "@/lib/navigationGuard";
 import { fetchIncomingLikes } from "@/lib/likes";
 import { getQueryClient } from "@/lib/queryClient";
 import { OfflineIndicator } from "@/components/pwa/offline-indicator";
+import { useAppHeight } from "@/hooks/useAppHeight";
 
 const NAV_ITEMS = [
   { href: "/discover", icon: Compass, label: "Discover" },
@@ -84,10 +85,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router, appStateCode, appStateRedirectTo]);
 
+  useAppHeight();
+
   if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
   return (
-    <div className="flex flex-row h-[100dvh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
+    <div className="flex flex-row w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container" style={{ height: "var(--app-height, 100dvh)" }}>
 
       {/* ═══════════════════════════════════════════════════════════════════
           DESKTOP SIDEBAR 

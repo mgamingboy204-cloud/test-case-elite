@@ -49,6 +49,7 @@ html, body {
 :root {
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --app-height: 100dvh;
 }
 
 /* ─── Universal Helpers ────────────────────────────────────── */
@@ -74,7 +75,7 @@ html, body {
 /* ─── Adaptive PWA Interactions ───────────────────────────── */
 @media (max-width: 768px) {
   .mobile-container {
-    height: 100dvh;
+    height: var(--app-height, 100dvh);
   }
 
   html[data-device="mobile"],
