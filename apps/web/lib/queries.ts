@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api";
+import { apiRequestAuth } from "@/lib/api";
 import { type LikesIncomingProfile } from "@/lib/likes";
 
 export const queryKeys = {
@@ -75,7 +75,7 @@ export function mapLegacyFeedItemToCard(item: LegacyDiscoverFeedItem): DiscoverC
 
 export async function fetchDiscoverFeedPage(cursor?: string, limit = 10): Promise<LegacyDiscoverFeedResponse> {
   const cursorQuery = cursor ? `&cursor=${encodeURIComponent(cursor)}` : "";
-  return apiRequest<LegacyDiscoverFeedResponse>(`/discover/feed?limit=${limit}${cursorQuery}`, { auth: true });
+  return apiRequestAuth<LegacyDiscoverFeedResponse>(`/discover/feed?limit=${limit}${cursorQuery}`);
 }
 
 const FALLBACK_MATCH_IMAGE = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&auto=format&fit=crop&q=80";
@@ -160,7 +160,7 @@ type ApiMatch = {
 };
 
 export async function fetchMatches(): Promise<MatchCard[]> {
-  const response = await apiRequest<{ matches: ApiMatch[] }>("/matches", { auth: true });
+  const response = await apiRequestAuth<{ matches: ApiMatch[] }>("/matches");
   const seen = new Set<string>();
 
   return response.matches
@@ -326,7 +326,7 @@ function toAlert(item: NotificationApiItem): Alert {
 }
 
 export async function fetchAlerts(): Promise<Alert[]> {
-  const response = await apiRequest<{ notifications: NotificationApiItem[] }>("/notifications", { auth: true });
+  const response = await apiRequestAuth<{ notifications: NotificationApiItem[] }>("/notifications");
   const deduped = Array.from(new Map(response.notifications.map((item) => [item.id, item])).values());
   return deduped.map(toAlert);
 }
@@ -399,7 +399,7 @@ type RawProfileResponse = {
 };
 
 export async function fetchProfile(): Promise<ProfileViewModel> {
-  const data = await apiRequest<RawProfileResponse>("/me/profile", { auth: true });
+  const data = await apiRequestAuth<RawProfileResponse>("/me/profile");
   const vm = data.viewModel ?? {};
   const image = vm.photos?.[0]?.url ?? FALLBACK_PROFILE_IMAGE;
   return {

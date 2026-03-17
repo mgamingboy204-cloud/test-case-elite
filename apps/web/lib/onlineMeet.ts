@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequestAuth } from "./api";
 
 export type OnlineMeetStatus =
   | "REQUESTED"
@@ -40,13 +40,12 @@ export type OnlineMeetCase = {
 };
 
 export async function fetchOnlineMeetCase(matchId: string) {
-  return apiRequest<OnlineMeetCase>(`/online-meet-cases/${matchId}`, { auth: true });
+  return apiRequestAuth<OnlineMeetCase>(`/online-meet-cases/${matchId}`);
 }
 
 export async function submitOnlineMeetSelections(matchId: string, payload: { platform: MeetPlatform; timeSlots: string[] }) {
-  return apiRequest<{ ok: boolean; status: OnlineMeetStatus }>(`/online-meet-cases/${matchId}/selections`, {
+  return apiRequestAuth<{ ok: boolean; status: OnlineMeetStatus }>(`/online-meet-cases/${matchId}/selections`, {
     method: "POST",
-    auth: true,
     body: JSON.stringify(payload)
   });
 }
@@ -75,45 +74,41 @@ export type OnlineMeetEmployeeCase = {
 export type OnlineMeetStatusView = "ACTIVE" | "FINALIZED" | "CONFLICT" | "TIMEOUT" | "CANCELED" | "ALL";
 
 export async function listOnlineMeetCasesForEmployee(statusView: OnlineMeetStatusView = "ACTIVE") {
-  return apiRequest<{ statusView: OnlineMeetStatusView; cases: OnlineMeetEmployeeCase[] }>(`/admin/online-meets?statusView=${statusView}`, { auth: true });
+  return apiRequestAuth<{ statusView: OnlineMeetStatusView; cases: OnlineMeetEmployeeCase[] }>(`/admin/online-meets?statusView=${statusView}`);
 }
 
 export async function assignOnlineMeetCase(caseId: string) {
-  return apiRequest(`/admin/online-meets/${caseId}/assign`, { method: "POST", auth: true });
+  return apiRequestAuth(`/admin/online-meets/${caseId}/assign`, { method: "POST" });
 }
 
 export async function sendOnlineMeetOptions(caseId: string, payload: { platforms: MeetPlatform[]; timeSlots: Array<{ id: string; label: string; startsAtIso?: string | null }> }) {
-  return apiRequest(`/admin/online-meets/${caseId}/options`, {
+  return apiRequestAuth(`/admin/online-meets/${caseId}/options`, {
     method: "POST",
-    auth: true,
     body: JSON.stringify(payload)
   });
 }
 
 export async function finalizeOnlineMeet(caseId: string, payload: { finalPlatform: MeetPlatform; finalTimeSlotId: string; finalMeetingLink: string }) {
-  return apiRequest(`/admin/online-meets/${caseId}/finalize`, {
+  return apiRequestAuth(`/admin/online-meets/${caseId}/finalize`, {
     method: "POST",
-    auth: true,
     body: JSON.stringify(payload)
   });
 }
 
 export async function markOnlineMeetTimeout(caseId: string, nonResponderUserId: string) {
-  return apiRequest(`/admin/online-meets/${caseId}/timeout`, {
+  return apiRequestAuth(`/admin/online-meets/${caseId}/timeout`, {
     method: "POST",
-    auth: true,
     body: JSON.stringify({ nonResponderUserId })
   });
 }
 
 export async function markOnlineMeetNoOverlap(caseId: string) {
-  return apiRequest(`/admin/online-meets/${caseId}/no-overlap`, { method: "POST", auth: true });
+  return apiRequestAuth(`/admin/online-meets/${caseId}/no-overlap`, { method: "POST" });
 }
 
 export async function updateOnlineMeetCase(caseId: string, payload: { action: "CANCEL" | "RESCHEDULE"; reason: string; requestedByUserId?: string | null }) {
-  return apiRequest(`/admin/online-meets/${caseId}/case-update`, {
+  return apiRequestAuth(`/admin/online-meets/${caseId}/case-update`, {
     method: "POST",
-    auth: true,
     body: JSON.stringify(payload)
   });
 }

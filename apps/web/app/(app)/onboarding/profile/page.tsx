@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { ApiError, apiRequest } from "@/lib/api";
+import { ApiError, apiRequestAuth } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchProfile } from "@/lib/queries";
 
@@ -86,9 +86,8 @@ export default function OnboardingProfileDetailsPage() {
     setSuccess("");
 
     try {
-      await apiRequest("/me/profile/details", {
+      await apiRequestAuth("/me/profile/details", {
         method: "POST",
-        auth: true,
         body: JSON.stringify({
           name: name.trim(),
           dateOfBirth,

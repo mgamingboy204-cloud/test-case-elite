@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ApiError, apiRequest, clearAccessToken, initializeAccessToken, setAccessToken } from "@/lib/api";
+import { ApiError, apiRequestAuth, clearAccessToken, initializeAccessToken, setAccessToken, subscribeToAuthFailure } from "@/lib/api";
 import {
   type BackendOnboardingStep,
   type FrontendOnboardingStep,
@@ -115,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const refreshCurrentUser = async () => {
-    const me = await apiRequest<User>("/me", { auth: true });
+    const me = await apiRequestAuth<User>("/me");
     setUser(me);
   };
 
@@ -147,6 +147,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthFailure(() => {
+      setUser(null);
+    });
+
+    return () => {
+      unsubscribe();
     };
   }, []);
 

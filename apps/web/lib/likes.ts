@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api";
+import { apiRequestAuth } from "@/lib/api";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&auto=format&fit=crop&q=80";
 
@@ -79,7 +79,7 @@ function toIncomingProfile(item: LegacyIncomingLike): LikesIncomingProfile | nul
 }
 
 export async function fetchIncomingLikes(): Promise<LikesIncomingProfile[]> {
-  const response = await apiRequest<IncomingLikesResponse>("/likes/incoming", { auth: true });
+  const response = await apiRequestAuth<IncomingLikesResponse>("/likes/incoming");
   const incoming = response.incoming ?? [];
   const normalized = incoming
     .map(toIncomingProfile)
@@ -94,9 +94,8 @@ function buildActionId() {
 }
 
 export async function sendLikeAction(options: { actionId?: string; targetUserId: string; action: "LIKE" | "PASS" }) {
-  return apiRequest<{ ok: boolean; matchId: string | null; alreadyProcessed: boolean }>("/likes", {
+  return apiRequestAuth<{ ok: boolean; matchId: string | null; alreadyProcessed: boolean }>("/likes", {
     method: "POST",
-    auth: true,
     body: JSON.stringify({
       actionId: options.actionId ?? buildActionId(),
       targetUserId: options.targetUserId,

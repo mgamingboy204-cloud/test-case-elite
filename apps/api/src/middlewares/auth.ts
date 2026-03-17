@@ -112,6 +112,9 @@ export function requireOnboardingTokenMatch(req: Request, res: Response, next: N
   if (!user) {
     return res.status(401).json({ message: "Invalid token" });
   }
+  if (user.onboardingStep === "ACTIVE") {
+    return next();
+  }
   if (!user.onboardingToken) {
     return res.status(401).json({ message: "Onboarding token missing" });
   }

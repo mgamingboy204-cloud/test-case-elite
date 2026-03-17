@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { apiRequest } from "@/lib/api";
+import { apiRequestAuth } from "@/lib/api";
 import { allowTestBypass, useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import { ShieldCheck, Check } from "lucide-react";
@@ -67,7 +67,7 @@ export default function PaymentStep() {
   useEffect(() => {
     const loadOverview = async () => {
       try {
-        const data = await apiRequest<PaymentOverview>("/payments/me", { auth: true });
+        const data = await apiRequestAuth<PaymentOverview>("/payments/me");
         setOverview(data);
         if (data.paymentStatus === "PAID") {
           await refreshCurrentUser();
@@ -88,12 +88,11 @@ export default function PaymentStep() {
     setError("");
     setProcessing(true);
     try {
-      const init = await apiRequest<PaymentInitResponse>("/payments/initiate", { method: "POST", auth: true, body: JSON.stringify({ tier: selectedTier }) });
+      const init = await apiRequestAuth<PaymentInitResponse>("/payments/initiate", { method: "POST", body: JSON.stringify({ tier: selectedTier }) });
 
       if (init.gateway === "mock") {
-        await apiRequest("/payments/verify", {
+        await apiRequestAuth("/payments/verify", {
           method: "POST",
-          auth: true,
           body: JSON.stringify({
             orderId: init.mock.orderId,
             paymentId: init.mock.paymentId,
@@ -119,9 +118,8 @@ export default function PaymentStep() {
             description: `Membership ${selectedTier}`,
             handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
               try {
-                await apiRequest("/payments/verify", {
+                await apiRequestAuth("/payments/verify", {
                   method: "POST",
-                  auth: true,
                   body: JSON.stringify({ orderId: response.razorpay_order_id, paymentId: response.razorpay_payment_id, signature: response.razorpay_signature })
                 });
                 resolve();
@@ -131,7 +129,7 @@ export default function PaymentStep() {
             },
             modal: {
               ondismiss: async () => {
-                await apiRequest("/payments/fail", { method: "POST", auth: true, body: JSON.stringify({ reason: "Payment canceled by user." }) });
+                await apiRequestAuth("/payments/fail", { method: "POST", body: JSON.stringify({ reason: "Payment canceled by user." }) });
                 reject(new Error("Payment canceled."));
               }
             }
@@ -159,12 +157,11 @@ export default function PaymentStep() {
     setError("");
     try {
       // Ensure onboardingPaymentPlan/onboardingPaymentAmount are set server-side.
-      await apiRequest<PaymentInitResponse>("/payments/initiate", {
+      await apiRequestAuth<PaymentInitResponse>("/payments/initiate", {
         method: "POST",
-        auth: true,
         body: JSON.stringify({ tier: selectedTier })
       });
-      await apiRequest("/payments/mock/complete", { method: "POST", auth: true });
+      await apiRequestAuth("/payments/mock/complete", { method: "POST" });
       await refreshCurrentUser();
       completeOnboardingStep("PROFILE");
     } catch (err) {
