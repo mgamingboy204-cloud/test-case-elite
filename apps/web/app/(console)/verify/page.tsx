@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api";
 import {
   approveVerificationRequest,
   assignVerificationRequest,
+  isValidGoogleMeetUrl,
   listVerificationRequestsForWorker,
   rejectVerificationRequest,
   startVerificationRequest,
@@ -31,6 +32,7 @@ export default function VerifyConsolePage() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [meetUrl, setMeetUrl] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
+  const isBusy = busyAction !== null;
 
   const selected = useMemo(() => requests.find((item) => item.id === selectedId) ?? null, [requests, selectedId]);
   const selectedWhatsAppHelpAt = useMemo(() => {
@@ -39,9 +41,7 @@ export default function VerifyConsolePage() {
   }, [selected?.reason]);
 
   const isValidMeetUrl = useMemo(() => {
-    const value = meetUrl.trim();
-    if (!value) return false;
-    return /^https:\/\/meet\.google\.com\/.+/.test(value);
+    return isValidGoogleMeetUrl(meetUrl);
   }, [meetUrl]);
 
   const refresh = useCallback(async (targetView = view) => {
@@ -73,6 +73,7 @@ export default function VerifyConsolePage() {
   }, [refresh]);
 
   const runAction = async (key: string, action: () => Promise<void>, successMessage: string) => {
+    if (isBusy) return;
     setBusyAction(key);
     setError(null);
     setFeedback(null);
@@ -172,7 +173,7 @@ export default function VerifyConsolePage() {
 
                 <div className="space-y-3 pt-1">
                   <button
-                    disabled={busyAction === "assign" || !["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(selected.status)}
+                    disabled={isBusy || !["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(selected.status)}
                     onClick={() => void runAction("assign", async () => { await assignVerificationRequest(selected.id); }, "Request assigned to you.")}
                     className="w-full rounded-lg border border-[#C89B90]/40 px-3 py-2 text-xs uppercase tracking-[0.15em] text-[#f0c8be] disabled:opacity-45"
                   >
@@ -187,7 +188,7 @@ export default function VerifyConsolePage() {
                       className="flex-1 rounded-lg border border-[#2a2f3b] bg-black/30 px-3 py-2 text-sm"
                     />
                     <button
-                      disabled={busyAction === "start" || !isValidMeetUrl}
+                      disabled={isBusy || !isValidMeetUrl || !["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(selected.status)}
                       onClick={() => void runAction("start", async () => { await startVerificationRequest(selected.id, meetUrl.trim()); }, "Meet link sent and case moved to in-progress.")}
                       className="rounded-lg border border-primary/40 px-4 py-2 text-xs uppercase tracking-[0.15em] text-primary disabled:opacity-45"
                     >
@@ -202,7 +203,7 @@ export default function VerifyConsolePage() {
                   ) : null}
 
                   <button
-                    disabled={busyAction === "approve" || ["COMPLETED", "REJECTED", "TIMED_OUT"].includes(selected.status)}
+                    disabled={isBusy || ["COMPLETED", "REJECTED", "TIMED_OUT"].includes(selected.status)}
                     onClick={() => void runAction("approve", async () => { await approveVerificationRequest(selected.id); }, "Verification approved and member progression updated.")}
                     className="w-full rounded-lg border border-emerald-500/40 px-3 py-2 text-xs uppercase tracking-[0.15em] text-emerald-300 disabled:opacity-45"
                   >
@@ -217,7 +218,7 @@ export default function VerifyConsolePage() {
                       className="flex-1 rounded-lg border border-[#2a2f3b] bg-black/30 px-3 py-2 text-sm"
                     />
                     <button
-                      disabled={busyAction === "reject" || !rejectionReason.trim()}
+                      disabled={isBusy || !rejectionReason.trim() || ["COMPLETED", "REJECTED", "TIMED_OUT"].includes(selected.status)}
                       onClick={() => void runAction("reject", async () => { await rejectVerificationRequest(selected.id, rejectionReason.trim()); }, "Verification rejected and member notified.")}
                       className="rounded-lg border border-red-500/40 px-4 py-2 text-xs uppercase tracking-[0.15em] text-red-300 disabled:opacity-45"
                     >
