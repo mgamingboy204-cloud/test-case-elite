@@ -7,7 +7,7 @@ import { normalizeApiError } from "@/lib/apiErrors";
 import { ProtectedState } from "@/components/ui/protected-state";
 import { fetchProfile, type ProfileViewModel } from "@/lib/queries";
 import { useStaleWhileRevalidate } from "@/lib/cache";
-import { Loader2, PencilLine, ShieldCheck, UserRoundCheck, ImagePlus, Trash2 } from "lucide-react";
+import { Loader2, PencilLine, ShieldCheck, UserRoundCheck, ImagePlus, Trash2, RefreshCw, Crown, MapPin, AlertTriangle } from "lucide-react";
 import { useTheme } from "next-themes";
 
 const MAX_PHOTOS = 3;
@@ -18,6 +18,18 @@ const MAX_HEIGHT = 250;
 type Gender = "MALE" | "FEMALE" | "NON_BINARY" | "OTHER";
 
 type SettingsField = "pushNotificationsEnabled" | "profileVisible" | "showOnlineStatus" | "discoverableByPremiumOnly";
+
+
+function getMissingProfileItems(profile: ProfileViewModel) {
+  const missing: string[] = [];
+  if (!profile.name?.trim()) missing.push("name");
+  if (!profile.dateOfBirth) missing.push("date of birth");
+  if (!profile.gender) missing.push("gender");
+  if (!profile.place?.trim() && !profile.location?.trim()) missing.push("city");
+  if (!profile.bio?.trim() && !profile.story?.trim()) missing.push("bio");
+  if ((profile.photos ?? []).length < MIN_PHOTOS) missing.push("at least one photo");
+  return missing;
+}
 
 function calculateAgeFromDate(dateOfBirth: string | null) {
   if (!dateOfBirth) return null;
@@ -104,26 +116,28 @@ export default function ProfilePage() {
       return <ProtectedState title="Session expired" description="Please sign in again to view your profile." />;
     }
 
+    if (normalized.status === 403) {
+      return <ProtectedState title="Profile access restricted" description="Your membership does not currently allow profile access. Contact support if this seems incorrect." />;
+    }
+
     if (normalized.status === 404 || normalized.code === "profile_data_missing") {
-      return <ProtectedState title="Complete your profile" description="Your profile details are not available yet. Please complete onboarding." />;
+      return <ProfileIncompleteState missing={["profile details", "photos"]} onRetry={() => void profileQuery.refresh(true)} />;
     }
 
     if (normalized.status >= 500) {
-      return <ProtectedState title="Profile unavailable" description="We could not load your profile due to a server issue. Please try again shortly." />;
+      return <ProfileErrorState description={normalized.message} onRetry={() => void profileQuery.refresh(true)} />;
     }
 
-    return <ProtectedState title="Profile unavailable" description={normalized.message} />;
+    return <ProfileErrorState description={normalized.message} onRetry={() => void profileQuery.refresh(true)} />;
   }
 
   const profile = profileQuery.data;
   if (!profile) {
-    return (
-      <div className="px-6 py-10">
-        <h1 className="text-xl uppercase tracking-[0.35em] text-primary">Profile</h1>
-        <p className="mt-4 text-sm text-foreground/60">Your profile is currently unavailable. Please refresh.</p>
-      </div>
-    );
+    return <ProfileErrorState description="Your profile is currently unavailable. Please refresh." onRetry={() => void profileQuery.refresh(true)} />;
   }
+
+  const missingItems = getMissingProfileItems(profile);
+  const isIncomplete = missingItems.length > 0;
 
   const settings = profile.settings ?? {
     pushNotificationsEnabled: true,
@@ -198,11 +212,12 @@ export default function ProfilePage() {
         <p className="text-xs uppercase tracking-[0.2em] text-foreground/45">Private membership identity</p>
       </header>
 
-      <section className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-5">
+      <section className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-5 space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-2xl font-serif text-foreground">{profile.name || "Private Member"}</p>
-            <p className="mt-1 text-sm text-foreground/60">
+            <p className="mt-1 text-sm text-foreground/60 inline-flex items-center gap-2">
+              <MapPin size={14} className="text-primary/80" />
               {profile.age ? `${profile.age} years` : "Age private"} • {profile.place || profile.location || "Location private"}
             </p>
           </div>
@@ -217,8 +232,14 @@ export default function ProfilePage() {
           </button>
         </div>
 
+        <div className="flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.18em]">
+          <span className="rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-primary inline-flex items-center gap-1"><Crown size={12} />{formatPaymentPlan(profile.subscription.paymentPlan)}</span>
+          <span className="rounded-full border border-border/40 bg-foreground/[0.03] px-3 py-1 text-foreground/70">{profile.subscription.status}</span>
+          <span className="rounded-full border border-border/40 bg-foreground/[0.03] px-3 py-1 text-foreground/70">{(profile.photos ?? []).length} photos</span>
+        </div>
+
         {profile.assignedExecutive ? (
-          <div className="mt-4 rounded-2xl border border-primary/25 bg-background/60 p-4">
+          <div className="rounded-2xl border border-primary/25 bg-background/60 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-primary/80">Human-managed service</p>
             <p className="mt-2 text-sm text-foreground/85 inline-flex items-center gap-2">
               <UserRoundCheck size={16} className="text-primary" />
@@ -227,6 +248,8 @@ export default function ProfilePage() {
           </div>
         ) : null}
       </section>
+
+      {isIncomplete ? <ProfileIncompleteState missing={missingItems} onRetry={() => void profileQuery.refresh(true)} compact /> : null}
 
       <PhotoManager
         profile={profile}
@@ -618,6 +641,34 @@ function MembershipSummary({ profile }: { profile: ProfileViewModel }) {
       <Field label="Days remaining" value={String(daysRemaining(profile.subscription.endsAt) ?? "—")} />
       <Field label="Amount" value={formatMoneyInr(profile.subscription.paymentAmount)} />
       <Field label="Renewal" value={profile.subscription.renewalMode === "AUTO" ? "Auto" : "Manual renewal only"} />
+    </section>
+  );
+}
+
+function ProfileErrorState({ description, onRetry }: { description: string; onRetry: () => void }) {
+  return (
+    <div className="px-6 py-10">
+      <section className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-6 space-y-4">
+        <p className="inline-flex items-center gap-2 text-sm uppercase tracking-[0.22em] text-primary"><AlertTriangle size={14} /> Profile unavailable</p>
+        <p className="text-sm text-foreground/70">{description || "We could not load your profile due to a server issue. Please try again shortly."}</p>
+        <p className="text-xs text-foreground/55">If this persists, contact support and include the time of this attempt.</p>
+        <button type="button" onClick={onRetry} className="inline-flex items-center gap-2 rounded-xl border border-primary/30 px-3 py-2 text-xs uppercase tracking-[0.18em] text-primary">
+          <RefreshCw size={13} /> Retry
+        </button>
+      </section>
+    </div>
+  );
+}
+
+function ProfileIncompleteState({ missing, onRetry, compact = false }: { missing: string[]; onRetry: () => void; compact?: boolean }) {
+  return (
+    <section className={`rounded-3xl border border-primary/20 bg-primary/5 p-5 space-y-3 ${compact ? "" : "mx-6 my-8"}`}>
+      <h2 className="text-sm uppercase tracking-[0.2em] text-primary">Complete your profile</h2>
+      <p className="text-sm text-foreground/70">Your profile is saved, but some details are still missing for a full premium presence.</p>
+      <p className="text-xs text-foreground/60">Missing: {missing.join(", ")}</p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={onRetry} className="rounded-xl border border-primary/30 px-3 py-2 text-xs uppercase tracking-[0.18em] text-primary">Refresh status</button>
+      </div>
     </section>
   );
 }

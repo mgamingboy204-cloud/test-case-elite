@@ -21,7 +21,7 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  const isApi = /\/discover|\/matches|\/notifications|\/me\/profile|\/likes/.test(url.pathname);
+  const isApi = /\/discover|\/matches|\/notifications|\/likes/.test(url.pathname);
 
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, PAGE_CACHE));
