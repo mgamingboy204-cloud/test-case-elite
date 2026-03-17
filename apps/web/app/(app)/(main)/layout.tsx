@@ -113,7 +113,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (prefetchedRef.current) return;
     prefetchedRef.current = true;
-    NAV_ITEMS.forEach((item) => prefetchRouteBundle(item.href));
+    // Prime only discover on boot; profile and other API-heavy routes are prefetched on hover/focus.
+    prefetchRouteBundle("/discover");
   }, [prefetchRouteBundle]);
 
   useEffect(() => {
