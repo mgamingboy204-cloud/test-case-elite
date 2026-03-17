@@ -17,6 +17,7 @@ const ACCESS_TOKEN_STORAGE_KEY = "vael_access_token";
 
 let accessToken: string | null = null;
 const authFailureListeners = new Set<() => void>();
+let authFailureNotified = false;
 
 function readStoredAccessToken() {
   if (typeof window === "undefined") return null;
@@ -39,6 +40,7 @@ export function initializeAccessToken() {
 export function setAccessToken(token: string | null) {
   accessToken = token;
   writeStoredAccessToken(token);
+  if (token) authFailureNotified = false;
 }
 
 export function clearAccessToken() {
@@ -53,6 +55,8 @@ export function subscribeToAuthFailure(listener: () => void) {
 }
 
 function notifyAuthFailure() {
+  if (authFailureNotified) return;
+  authFailureNotified = true;
   for (const listener of authFailureListeners) {
     try {
       listener();
@@ -90,6 +94,13 @@ async function refreshAccessToken(): Promise<"success" | "unauthorized" | "forbi
       });
 
       if (!response.ok) {
+        if (apiDebug) {
+          const payload = await response.json().catch(() => null);
+          console.warn("[auth] Refresh token rejected", {
+            status: response.status,
+            payload
+          });
+        }
         if (response.status === 403) return "forbidden";
         return "unauthorized";
       }

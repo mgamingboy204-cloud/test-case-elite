@@ -152,13 +152,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = subscribeToAuthFailure(() => {
+      clearAccessToken();
       setUser(null);
+      setPendingPhone(null);
+      setSignupToken(null);
+      localStorage.removeItem("vael_pending_phone");
+      localStorage.removeItem("vael_signup_token");
+      router.replace("/signin");
     });
 
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   const startSignup = async (phone: string) => {
     await apiRequest<{ ok: boolean }>("/auth/signup/start", {

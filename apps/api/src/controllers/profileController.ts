@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { completeProfile, getProfile, updateProfile, updateProfileSettings } from "../services/profileService";
+import { logger } from "../utils/logger";
 
 const profileDetailsSchema = z
   .object({
@@ -37,8 +38,22 @@ const profileSettingsSchema = z
   });
 
 export async function getProfileHandler(req: Request, res: Response) {
-  const result = await getProfile(res.locals.user.id);
-  return res.json(result);
+  try {
+    const result = await getProfile(res.locals.user.id);
+    return res.json(result);
+  } catch (error) {
+    const requestId = (res.locals.requestId as string | undefined) ?? req.get("x-request-id") ?? "unknown";
+    logger.error("profile.get.failed", {
+      requestId,
+      userId: res.locals.user?.id ?? null,
+      message: error instanceof Error ? error.message : String(error)
+    });
+    return res.status(500).json({
+      message: "We could not load your profile due to a server issue. Please try again shortly.",
+      code: "profile_fetch_failed",
+      requestId
+    });
+  }
 }
 
 export async function updateProfileHandler(req: Request, res: Response) {
