@@ -87,7 +87,8 @@ export default function ProfilePage() {
     key: "profile",
     fetcher: fetchProfile,
     enabled: isAuthenticated && onboardingStep === "COMPLETED",
-    staleTimeMs: 60_000
+    staleTimeMs: 60_000,
+    retry: false
   });
 
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, type RetryValue } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { getQueryClient } from "@/lib/queryClient";
 
@@ -71,8 +71,9 @@ export function useStaleWhileRevalidate<T>(options: {
   enabled: boolean;
   fetcher: () => Promise<T>;
   staleTimeMs?: number;
+  retry?: RetryValue<Error>;
 }) {
-  const { key, enabled, fetcher, staleTimeMs = 60_000 } = options;
+  const { key, enabled, fetcher, staleTimeMs = 60_000, retry } = options;
   const cached = useMemo(() => readCache<T>(key), [key]);
 
   const query = useQuery({
@@ -83,7 +84,8 @@ export function useStaleWhileRevalidate<T>(options: {
     gcTime: Math.max(staleTimeMs * 10, 30 * 60_000),
     placeholderData: keepPreviousData,
     initialData: cached?.value,
-    initialDataUpdatedAt: cached?.updatedAt
+    initialDataUpdatedAt: cached?.updatedAt,
+    retry
   });
 
 
