@@ -87,7 +87,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
   return (
-    <div className="flex flex-row min-h-screen w-full bg-background transition-colors duration-500 min-[769px]:h-screen min-[769px]:overflow-hidden desktop-container">
+    <div className="flex flex-row h-[100dvh] w-full overflow-hidden bg-background transition-colors duration-500 min-[769px]:h-screen desktop-container">
 
       {/* ═══════════════════════════════════════════════════════════════════
           DESKTOP SIDEBAR 
@@ -179,6 +179,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Scrollable Content */}
         <main
+          id="app-main-scroll"
           className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-background mobile-main-with-bottom-nav min-[769px]:pb-0"
           style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
         >
