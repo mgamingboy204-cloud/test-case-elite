@@ -87,7 +87,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
   return (
-    <div className="flex flex-row h-[var(--app-height)] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
+    <div className="flex flex-row min-h-screen w-full bg-background transition-colors duration-500 min-[769px]:h-screen min-[769px]:overflow-hidden desktop-container">
 
       {/* ═══════════════════════════════════════════════════════════════════
           DESKTOP SIDEBAR 
