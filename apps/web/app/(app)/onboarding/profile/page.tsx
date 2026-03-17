@@ -3,20 +3,9 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ApiError, apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { fetchProfile } from "@/lib/queries";
 
 type Gender = "MALE" | "FEMALE" | "NON_BINARY" | "OTHER";
-
-type ProfileResponse = {
-  profile?: {
-    name?: string | null;
-    dateOfBirth?: string | null;
-    gender?: Gender | null;
-    heightCm?: number | null;
-    profession?: string | null;
-    city?: string | null;
-    bioShort?: string | null;
-  } | null;
-};
 
 const MIN_HEIGHT = 100;
 const MAX_HEIGHT = 250;
@@ -52,16 +41,14 @@ export default function OnboardingProfileDetailsPage() {
       setLoading(true);
       setError("");
       try {
-        const data = await apiRequest<ProfileResponse>("/profile", { auth: true });
-        const profile = data.profile;
-        if (!profile) return;
+        const profile = await fetchProfile();
         setName(profile.name ?? "");
         setDateOfBirth(profile.dateOfBirth ? profile.dateOfBirth.slice(0, 10) : "");
         setGender(profile.gender ?? "");
         setHeightCm(profile.heightCm ? String(profile.heightCm) : "");
         setProfession(profile.profession ?? "");
-        setPlace(profile.city ?? "");
-        setBio(profile.bioShort ?? "");
+        setPlace(profile.place ?? profile.location ?? "");
+        setBio(profile.bio ?? profile.story ?? "");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to load profile details.");
       } finally {
@@ -92,7 +79,7 @@ export default function OnboardingProfileDetailsPage() {
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (validationError || !age) return;
+    if (saving || validationError || !age) return;
 
     setSaving(true);
     setError("");
@@ -116,8 +103,13 @@ export default function OnboardingProfileDetailsPage() {
           intent: "dating"
         })
       });
-      await refreshCurrentUser();
+      setError("");
       setSuccess("Profile details saved.");
+      try {
+        await refreshCurrentUser();
+      } catch {
+        // Profile save succeeded; do not surface a false submit error due to follow-up session refresh.
+      }
       completeOnboardingStep("PHOTOS");
     } catch (err) {
       if (err instanceof ApiError) {

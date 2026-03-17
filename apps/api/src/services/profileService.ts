@@ -38,7 +38,32 @@ function toHeightCm(heightValue: string | number | null | undefined) {
 }
 
 export async function getProfile(userId: string) {
-  const [profile, photos, user, preferences, latestVerificationRequest] = await Promise.all([
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      displayName: true,
+      gender: true,
+      subscriptionTier: true,
+      subscriptionStatus: true,
+      subscriptionStartedAt: true,
+      subscriptionEndsAt: true,
+      manualRenewalRequired: true,
+      onboardingPaymentPlan: true,
+      onboardingPaymentAmount: true,
+      onboardingPaymentVerifiedAt: true,
+      assignedEmployeeId: true,
+      assignedAt: true
+    }
+  });
+
+  if (!user) {
+    throw new HttpError(404, { message: "User not found" });
+  }
+
+  const [profile, photos, preferences] = await Promise.all([
     prisma.profile.upsert({
       where: { userId },
       update: {},
@@ -53,28 +78,11 @@ export async function getProfile(userId: string) {
       }
     }),
     prisma.photo.findMany({ where: { userId }, orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }] }),
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        displayName: true,
-        gender: true,
-        subscriptionTier: true,
-        subscriptionStatus: true,
-        subscriptionStartedAt: true,
-        subscriptionEndsAt: true,
-        manualRenewalRequired: true,
-      onboardingPaymentPlan: true,
-      onboardingPaymentAmount: true,
-      onboardingPaymentVerifiedAt: true,
-      assignedEmployeeId: true,
-      assignedAt: true
-      }
-    }),
-    prisma.userPreference.upsert({ where: { userId }, update: {}, create: { userId } }),
-    prisma.verificationRequest.findFirst({
+    prisma.userPreference.upsert({ where: { userId }, update: {}, create: { userId } })
+  ]);
+
+  const latestVerificationRequest = await prisma.verificationRequest
+    .findFirst({
       where: { userId },
       orderBy: [{ assignedAt: "desc" }, { createdAt: "desc" }],
       select: {
@@ -84,7 +92,7 @@ export async function getProfile(userId: string) {
         status: true
       }
     })
-  ]);
+    .catch(() => null);
 
   const assignedExecutive = user?.assignedEmployeeId
     ? await prisma.user.findUnique({
