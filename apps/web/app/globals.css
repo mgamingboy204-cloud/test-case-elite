@@ -48,7 +48,7 @@ html, body {
 
 :root {
   --safe-area-top: env(safe-area-inset-top, 0px);
-  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ─── Universal Helpers ────────────────────────────────────── */
@@ -75,6 +75,10 @@ html, body {
 @media (max-width: 768px) {
   .mobile-container {
     height: 100dvh;
+  }
+
+  .main-bottom-reserve {
+    padding-bottom: var(--bottom-nav-footprint, 0px);
   }
 
   html[data-device="mobile"],

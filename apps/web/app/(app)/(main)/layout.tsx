@@ -87,7 +87,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
   return (
-    <div className="flex flex-row h-[100dvh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
+    <div
+      className="flex flex-row h-[100dvh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container"
+      style={{
+        ["--bottom-nav-height" as string]: "50px",
+        ["--bottom-nav-footprint" as string]: "calc(var(--bottom-nav-height) + var(--safe-bottom))"
+      }}
+    >
 
       {/* ═══════════════════════════════════════════════════════════════════
           DESKTOP SIDEBAR 
@@ -179,7 +185,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Scrollable Content */}
         <main
-          className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-background"
+          className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-background main-bottom-reserve"
           style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
         >
           <div className="w-full h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto">
@@ -191,7 +197,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             MOBILE BOTTOM NAV 
         ═══════════════════════════════════════════════════════════════════ */}
         {/* Absolutely zero padding here. Force pinned to the bottom. */}
-        <nav className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground">
+        <nav
+          className="fixed bottom-0 left-0 right-0 min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
+          style={{ paddingBottom: "var(--safe-bottom)" }}
+        >
           
           {/* Exactly 50px tall, icons perfectly centered inside */}
           <div className="flex h-[50px] items-center justify-around px-2">
