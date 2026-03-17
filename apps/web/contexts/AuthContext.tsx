@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ApiError, apiRequestAuth, clearAccessToken, initializeAccessToken, setAccessToken, subscribeToAuthFailure } from "@/lib/api";
+import { ApiError, apiRequest, apiRequestAuth, clearAccessToken, initializeAccessToken, setAccessToken, subscribeToAuthFailure } from "@/lib/api";
 import {
   type BackendOnboardingStep,
   type FrontendOnboardingStep,
@@ -339,7 +339,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await apiRequest<{ ok: true }>("/auth/logout", { method: "POST" });
+      await apiRequestAuth<{ ok: true }>("/auth/logout", { method: "POST" });
     } catch {
       // ignore logout API errors
     }
