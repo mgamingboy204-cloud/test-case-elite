@@ -89,10 +89,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="flex flex-row app-height w-screen bg-background transition-colors duration-500 overflow-hidden desktop-container"
-      style={{
-        ["--bottom-nav-height" as string]: "50px",
-        ["--bottom-nav-footprint" as string]: "calc(var(--bottom-nav-height) + var(--safe-bottom))"
-      }}
     >
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -183,47 +179,44 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Scrollable Content */}
-        <main
-          className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-background main-bottom-reserve"
+        <div
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar bg-background"
           style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
         >
-          <div className="w-full h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto">
-            {children}
-          </div>
-        </main>
+          <main className="w-full min-h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto flex flex-col">
+            <div className="flex-1">
+              {children}
+            </div>
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            MOBILE BOTTOM NAV 
-        ═══════════════════════════════════════════════════════════════════ */}
-        {/* Absolutely zero padding here. Force pinned to the bottom. */}
-        <nav
-          className="fixed bottom-0 left-0 right-0 min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground"
-          style={{ paddingBottom: "var(--safe-bottom)" }}
-        >
-          
-          {/* Exactly 50px tall, icons perfectly centered inside */}
-          <div className="flex h-[50px] items-center justify-around px-2">
-            {NAV_ITEMS.map(({ href, icon: Icon }) => {
-              const isActive = pathname === href;
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  prefetch
-                  onMouseEnter={() => prefetchRouteBundle(href)}
-                  onFocus={() => prefetchRouteBundle(href)}
-                  className={`flex items-center justify-center w-full h-full transition-colors ${
-                    isActive ? "text-primary" : "text-foreground/40 hover:text-foreground/70"
-                  }`}
-                >
-                  {/* Icon bumped up to size 26, text span completely deleted */}
-                  <Icon size={26} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "drop-shadow-[0_0_8px_rgba(200,155,144,0.4)]" : ""} />
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
+            {/* ═══════════════════════════════════════════════════════════════════
+                MOBILE BOTTOM NAV
+            ═══════════════════════════════════════════════════════════════════ */}
+            <nav
+              className="sticky bottom-0 min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-30 text-foreground"
+              style={{ paddingBottom: "var(--safe-bottom)" }}
+            >
+              <div className="flex h-[50px] items-center justify-around px-2">
+                {NAV_ITEMS.map(({ href, icon: Icon }) => {
+                  const isActive = pathname === href;
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      prefetch
+                      onMouseEnter={() => prefetchRouteBundle(href)}
+                      onFocus={() => prefetchRouteBundle(href)}
+                      className={`flex items-center justify-center w-full h-full transition-colors ${
+                        isActive ? "text-primary" : "text-foreground/40 hover:text-foreground/70"
+                      }`}
+                    >
+                      <Icon size={26} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "drop-shadow-[0_0_8px_rgba(200,155,144,0.4)]" : ""} />
+                    </Link>
+                  );
+                })}
+              </div>
+            </nav>
+          </main>
+        </div>
       </div>
     </div>
   );
