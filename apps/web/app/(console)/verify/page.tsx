@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Link as LinkIcon, Loader2, RefreshCcw, ShieldBan, UserCheck } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import {
@@ -33,6 +33,10 @@ export default function VerifyConsolePage() {
   const [rejectionReason, setRejectionReason] = useState("");
 
   const selected = useMemo(() => requests.find((item) => item.id === selectedId) ?? null, [requests, selectedId]);
+  const selectedWhatsAppHelpAt = useMemo(() => {
+    if (!selected?.reason?.startsWith("WHATSAPP_HELP_REQUESTED:")) return null;
+    return selected.reason.replace("WHATSAPP_HELP_REQUESTED:", "");
+  }, [selected?.reason]);
 
   const isValidMeetUrl = useMemo(() => {
     const value = meetUrl.trim();
@@ -40,11 +44,11 @@ export default function VerifyConsolePage() {
     return /^https:\/\/meet\.google\.com\/.+/.test(value);
   }, [meetUrl]);
 
-  const refresh = async (targetView = view) => {
+  const refresh = useCallback(async (targetView = view) => {
     const data = await listVerificationRequestsForWorker(targetView);
     setRequests(data.requests);
     setSelectedId((prev) => (prev && data.requests.some((item) => item.id === prev) ? prev : data.requests[0]?.id ?? null));
-  };
+  }, [view]);
 
   useEffect(() => {
     const load = async () => {
@@ -59,7 +63,14 @@ export default function VerifyConsolePage() {
       }
     };
     void load();
-  }, [view]);
+  }, [refresh, view]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void refresh().catch(() => undefined);
+    }, 10000);
+    return () => window.clearInterval(id);
+  }, [refresh]);
 
   const runAction = async (key: string, action: () => Promise<void>, successMessage: string) => {
     setBusyAction(key);
@@ -125,6 +136,9 @@ export default function VerifyConsolePage() {
               >
                 <p className="text-sm">{request.user.phone}</p>
                 <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-white/50">{request.status.replaceAll("_", " ")}</p>
+                {request.reason?.startsWith("WHATSAPP_HELP_REQUESTED:") ? (
+                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-300">WhatsApp Help Requested</p>
+                ) : null}
                 {request.assignedEmployeeId
                   ? <p className="mt-1 text-[10px] text-white/45">Assigned {request.assignedAt ? new Date(request.assignedAt).toLocaleString() : ""}</p>
                   : <p className="mt-1 text-[10px] text-white/45">Unassigned</p>}
@@ -143,6 +157,14 @@ export default function VerifyConsolePage() {
                   <div><p className="text-[10px] uppercase tracking-[0.14em] text-white/45">Status</p><p>{selected.status.replaceAll("_", " ")}</p></div>
                   <div><p className="text-[10px] uppercase tracking-[0.14em] text-white/45">Requested</p><p>{new Date(selected.createdAt).toLocaleString()}</p></div>
                 </div>
+
+                {selectedWhatsAppHelpAt ? (
+                  <div className="rounded-xl border border-amber-300/35 bg-amber-500/10 p-3 text-xs text-amber-100">
+                    <p className="font-semibold uppercase tracking-[0.14em]">WhatsApp Help Requested</p>
+                    <p className="mt-1">Member requested manual contact at {new Date(selectedWhatsAppHelpAt).toLocaleString()}.</p>
+                    <p className="mt-1">Phone: <span className="font-semibold">{selected.user.phone}</span></p>
+                  </div>
+                ) : null}
 
                 <div className="rounded-xl border border-[#2a2f3b] p-3 text-xs text-white/65">
                   Verification is always human-led. Share only approved Google Meet links and record every decision through queue actions.

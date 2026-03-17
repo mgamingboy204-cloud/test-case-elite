@@ -10,6 +10,7 @@ const ACTIVE_VERIFICATION_STATUSES = ["REQUESTED", "ASSIGNED", "IN_PROGRESS"] as
 const USER_RETRYABLE_STATUSES = ["REJECTED", "TIMED_OUT"] as const;
 const MAX_VIDEO_SIZE_BYTES = 25 * 1024 * 1024;
 const RESPONSE_TIMEOUT_MS = 5 * 60 * 1000;
+const WHATSAPP_HELP_PREFIX = "WHATSAPP_HELP_REQUESTED:";
 const allowedVideoMimeTypes = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
 function calculateBase64Size(base64: string) {
@@ -197,7 +198,8 @@ export async function getVerificationStatusPayload(userId: string) {
       meetUrl: null,
       canRetry: true,
       remainingSeconds: RESPONSE_TIMEOUT_MS / 1000,
-      whatsappHelpRequestedAt: null
+      whatsappHelpRequestedAt: null,
+      requestedAt: null
     };
   }
 
@@ -210,9 +212,10 @@ export async function getVerificationStatusPayload(userId: string) {
     meetUrl: request.meetUrl ?? request.verificationLink ?? null,
     canRetry: request.status === "TIMED_OUT",
     remainingSeconds: Math.floor(remainingMs / 1000),
-    whatsappHelpRequestedAt: request.reason?.startsWith("WHATSAPP_HELP_REQUESTED:")
-      ? request.reason.replace("WHATSAPP_HELP_REQUESTED:", "")
-      : null
+    whatsappHelpRequestedAt: request.reason?.startsWith(WHATSAPP_HELP_PREFIX)
+      ? request.reason.replace(WHATSAPP_HELP_PREFIX, "")
+      : null,
+    requestedAt: request.createdAt.toISOString()
   };
 }
 
@@ -230,8 +233,13 @@ export async function requestWhatsAppVerificationHelp(userId: string) {
   await prisma.verificationRequest.update({
     where: { id: latest.id },
     data: {
-      reason: `WHATSAPP_HELP_REQUESTED:${timestamp}`
+      reason: `${WHATSAPP_HELP_PREFIX}${timestamp}`
     }
+  });
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { phone: true }
   });
 
   await prisma.auditLog.create({
@@ -242,7 +250,9 @@ export async function requestWhatsAppVerificationHelp(userId: string) {
       targetId: latest.id,
       metadata: {
         note: "Manual employee follow-up required. Do not automate responses.",
-        requestedAt: timestamp
+        requestedAt: timestamp,
+        userPhone: user?.phone ?? null,
+        verificationStatus: latest.status
       }
     }
   });

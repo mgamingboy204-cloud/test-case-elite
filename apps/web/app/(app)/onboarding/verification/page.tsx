@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Clock3, ExternalLink, MessageCircleWarning, ShieldCheck, UserRoundCheck, XCircle } from "lucide-react";
 import { apiRequest } from "@/lib/api";
@@ -12,50 +13,51 @@ type VerificationPayload = {
   meetUrl: string | null;
   canRetry: boolean;
   remainingSeconds: number;
+  requestedAt: string | null;
   whatsappHelpRequestedAt: string | null;
 };
 
+type MemberVerificationStage = "intro" | "requesting" | "waiting" | "timed_out" | "in_progress" | "approved_redirect" | "rejected";
+
 function formatCountdown(value: number) {
-  const minutes = Math.floor(value / 60)
+  const safe = Math.max(0, value);
+  const minutes = Math.floor(safe / 60)
     .toString()
-    .padStart(2, "0");
-  const seconds = Math.max(0, value % 60)
+    .padStart(1, "0");
+  const seconds = Math.max(0, safe % 60)
     .toString()
     .padStart(2, "0");
   return `${minutes}:${seconds}`;
 }
 
-function buildWhatsAppSupportUrl(phoneNumber: string, memberPhone?: string) {
-  const sanitizedNumber = phoneNumber.replace(/\D/g, "");
-  if (!sanitizedNumber) return null;
-
-  const message = memberPhone
-    ? `Hi VAEL, I'm waiting for my verification. My phone is ${memberPhone}`
-    : "Hi VAEL, I'm waiting for my verification.";
-
-  return `https://wa.me/${sanitizedNumber}?text=${encodeURIComponent(message)}`;
+function deriveStage(payload: VerificationPayload | null, requesting: boolean): MemberVerificationStage {
+  if (requesting) return "requesting";
+  if (!payload || payload.status === "NOT_REQUESTED") return "intro";
+  if (payload.status === "REQUESTED" || payload.status === "ASSIGNED") {
+    return payload.remainingSeconds > 0 ? "waiting" : "timed_out";
+  }
+  if (payload.status === "TIMED_OUT") return "timed_out";
+  if (payload.status === "IN_PROGRESS") return "in_progress";
+  if (payload.status === "COMPLETED") return "approved_redirect";
+  if (payload.status === "REJECTED") return "rejected";
+  return "waiting";
 }
 
 export default function VideoVerificationPage() {
-  const { refreshCurrentUser, user } = useAuth();
+  const router = useRouter();
+  const { refreshCurrentUser } = useAuth();
   const [payload, setPayload] = useState<VerificationPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const [helping, setHelping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const whatsappSupportNumber = process.env.NEXT_PUBLIC_VAEL_WHATSAPP_NUMBER ?? "";
-  const whatsappSupportUrl = useMemo(
-    () => buildWhatsAppSupportUrl(whatsappSupportNumber, user?.phone),
-    [user?.phone, whatsappSupportNumber]
-  );
 
   const loadStatus = useCallback(async () => {
-    setError(null);
     const response = await apiRequest<VerificationPayload>("/verification/status", { auth: true });
     setPayload(response);
-    await refreshCurrentUser();
-  }, [refreshCurrentUser]);
+    return response;
+  }, []);
 
   useEffect(() => {
     const run = async () => {
@@ -72,11 +74,19 @@ export default function VideoVerificationPage() {
   }, [loadStatus]);
 
   useEffect(() => {
+    if (!payload || !["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(payload.status)) return;
     const id = window.setInterval(() => {
       void loadStatus().catch(() => undefined);
     }, 15000);
     return () => window.clearInterval(id);
-  }, [loadStatus]);
+  }, [loadStatus, payload]);
+
+  useEffect(() => {
+    if (payload?.displayStatus !== "APPROVED") return;
+    void refreshCurrentUser().finally(() => {
+      router.replace("/onboarding/payment");
+    });
+  }, [payload?.displayStatus, refreshCurrentUser, router]);
 
   const createRequest = async () => {
     setRequesting(true);
@@ -89,7 +99,6 @@ export default function VideoVerificationPage() {
         body: JSON.stringify({})
       });
       await loadStatus();
-      setMessage("Your private verification request has been queued for a live employee review.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to request video verification right now.");
     } finally {
@@ -107,105 +116,99 @@ export default function VideoVerificationPage() {
         auth: true,
         body: JSON.stringify({})
       });
-      await loadStatus();
-      if (whatsappSupportUrl) {
-        window.open(whatsappSupportUrl, "_blank", "noopener,noreferrer");
+      const latest = await loadStatus();
+      if (!latest.whatsappHelpRequestedAt) {
+        throw new Error("Request failed. Please try again.");
       }
-      setMessage("A real team member has been notified and will follow up with you personally on WhatsApp.");
+      setMessage("Your request has been received. Our agent will notify you when they are ready.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to request WhatsApp support.");
+      setError(err instanceof Error ? err.message : "Request failed. Please try again.");
     } finally {
       setHelping(false);
     }
   };
 
-  const waiting = payload?.displayStatus === "PENDING" || payload?.displayStatus === "ASSIGNED";
+  const stage = useMemo(() => deriveStage(payload, requesting), [payload, requesting]);
+  const showWhatsAppCta = stage === "waiting" || stage === "timed_out";
 
-  const heading = useMemo(() => {
-    if (!payload) return "Video verification";
-    if (payload.displayStatus === "APPROVED") return "Verification approved";
-    if (payload.displayStatus === "REJECTED") return "Verification not approved";
-    if (payload.displayStatus === "TIMED_OUT") return "Session timed out";
-    return "Awaiting live verification";
-  }, [payload]);
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center px-8">
+        <p className="text-sm text-foreground/60">Loading verification status…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col px-8 pb-[calc(env(safe-area-inset-bottom,0px)+28px)]">
       <div className="flex-1 flex flex-col justify-center gap-6 text-center">
         <div className="mx-auto h-20 w-20 rounded-full border border-primary/40 bg-primary/10 flex items-center justify-center">
-          {payload?.displayStatus === "APPROVED" ? <ShieldCheck className="text-primary" /> : null}
-          {payload?.displayStatus === "REJECTED" ? <XCircle className="text-red-400" /> : null}
-          {payload?.displayStatus === "TIMED_OUT" ? <Clock3 className="text-amber-300" /> : null}
-          {waiting ? <UserRoundCheck className="text-primary/80" /> : null}
-          {!payload ? <UserRoundCheck className="text-primary/80" /> : null}
+          {stage === "intro" || stage === "requesting" || stage === "waiting" ? <UserRoundCheck className="text-primary/80" /> : null}
+          {stage === "in_progress" ? <ShieldCheck className="text-primary" /> : null}
+          {stage === "approved_redirect" ? <ShieldCheck className="text-primary" /> : null}
+          {stage === "timed_out" ? <Clock3 className="text-amber-300" /> : null}
+          {stage === "rejected" ? <XCircle className="text-red-400" /> : null}
         </div>
 
         <div>
-          <h1 className="text-3xl font-serif text-foreground">{heading}</h1>
-          <p className="mt-2 text-xs uppercase tracking-[0.24em] text-foreground/55">
-            Human-managed video verification is mandatory before payment and member access.
+          <h1 className="text-3xl font-serif text-foreground">
+            {stage === "rejected" ? "Verification not approved" : "Identity Verification"}
+          </h1>
+          <p className="mt-2 text-sm text-foreground/70">
+            {stage === "rejected"
+              ? "We were unable to verify your identity. If you believe this is an error, contact support."
+              : "A VAEL executive will verify your identity via Google Meet. This ensures every member is genuine."}
           </p>
         </div>
 
-        {loading ? <p className="text-sm text-foreground/50">Loading verification status…</p> : null}
-
-        {!loading && payload ? (
-          <div className="rounded-2xl border border-primary/15 bg-primary/[0.03] p-5 text-left text-sm text-foreground/80">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-primary/70">Current status</p>
-            <p className="mt-2 font-medium">{payload.displayStatus}</p>
-            {waiting ? (
-              <p className="mt-3 flex items-center gap-2 text-foreground/70">
-                <Clock3 size={14} /> Employee response window: <strong>{formatCountdown(payload.remainingSeconds)}</strong>
-              </p>
-            ) : null}
-            {payload.meetUrl ? (
-              <a
-                href={payload.meetUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-primary/30 px-4 py-2 text-primary hover:bg-primary/10"
-              >
-                Join Google Meet <ExternalLink size={14} />
-              </a>
-            ) : null}
-          </div>
+        {stage === "waiting" && payload ? (
+          <p className="text-sm text-foreground/80">Waiting for an executive... {formatCountdown(payload.remainingSeconds)} remaining</p>
         ) : null}
+
+        {stage === "timed_out" ? (
+          <p className="text-sm text-foreground/80">No executive is available right now. We will notify you when one is ready.</p>
+        ) : null}
+
+        {stage === "in_progress" && payload?.meetUrl ? (
+          <a
+            href={payload.meetUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mx-auto inline-flex items-center gap-2 rounded-lg border border-primary/30 px-4 py-2 text-primary hover:bg-primary/10"
+          >
+            Join Google Meet <ExternalLink size={14} />
+          </a>
+        ) : null}
+
+        {stage === "approved_redirect" ? <p className="text-sm text-foreground/70">Verification approved. Redirecting to payment…</p> : null}
       </div>
 
       <div className="space-y-3">
         {error ? <p className="text-center text-sm text-red-400">{error}</p> : null}
         {message ? <p className="text-center text-sm text-primary">{message}</p> : null}
 
-        {!loading && (!payload || payload.status === "NOT_REQUESTED" || payload.canRetry) ? (
+        {(stage === "intro" || stage === "timed_out") ? (
           <motion.button whileTap={{ scale: 0.98 }} disabled={requesting} onClick={createRequest} className="btn-vael-primary">
-            {requesting ? "Requesting…" : payload?.canRetry ? "Request verification again" : "Request live verification"}
+            {requesting ? "Requesting…" : "Request Verification"}
           </motion.button>
         ) : null}
 
-        {!loading && waiting ? (
+        {showWhatsAppCta ? (
           <motion.button
             whileTap={{ scale: 0.98 }}
-            disabled={helping || Boolean(payload?.whatsappHelpRequestedAt) || !whatsappSupportUrl}
+            disabled={helping || Boolean(payload?.whatsappHelpRequestedAt)}
             onClick={requestWhatsAppHelp}
             className="w-full rounded-xl border border-primary/25 px-4 py-3 text-xs uppercase tracking-[0.18em] text-primary disabled:opacity-45"
           >
             <span className="inline-flex items-center gap-2">
               <MessageCircleWarning size={14} />
-              {!whatsappSupportUrl
-                ? "WhatsApp support unavailable"
-                : payload?.whatsappHelpRequestedAt
-                  ? "WhatsApp follow-up requested"
-                  : helping
-                    ? "Requesting…"
-                    : "Request WhatsApp help"}
+              {payload?.whatsappHelpRequestedAt
+                ? "Help request submitted"
+                : helping
+                  ? "Requesting…"
+                  : "Need help? Get notified via WhatsApp"}
             </span>
           </motion.button>
-        ) : null}
-
-        {!loading && payload?.displayStatus === "REJECTED" ? (
-          <p className="text-center text-xs text-red-300/80">
-            This account has been restricted from continuing the membership journey.
-          </p>
         ) : null}
       </div>
     </div>

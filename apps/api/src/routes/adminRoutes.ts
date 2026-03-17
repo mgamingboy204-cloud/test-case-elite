@@ -173,8 +173,16 @@ router.post(
   requireAuth,
   requireEmployee,
   validateParams(z.object({ requestId: z.string().uuid() })),
-  validateBody(z.object({ meetUrl: meetUrlSchema })),
+  validateBody(z.object({}).passthrough()),
   asyncHandler(assignVerificationRequestHandler)
+);
+router.post(
+  "/admin/verification-requests/:requestId/start",
+  requireAuth,
+  requireEmployee,
+  validateParams(z.object({ requestId: z.string().uuid() })),
+  validateBody(z.object({ meetUrl: meetUrlSchema })),
+  asyncHandler(startVerificationRequestHandler)
 );
 router.post(
   "/admin/verification-requests/:requestId/approve",
