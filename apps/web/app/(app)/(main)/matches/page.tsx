@@ -292,7 +292,7 @@ export default function MatchesPage() {
   };
 
   return (
-    <div className="w-full px-6 md:px-8 pt-8 pb-24">
+    <div className="w-full px-6 md:px-8 pt-8 pb-8">
       <div className="pb-8 text-center">
         <h1 className="text-xl tracking-[0.38em] font-medium text-primary uppercase">Matches</h1>
         <p className="mt-2 text-xs text-foreground/55">Private mutual connections managed with concierge-led interaction options.</p>

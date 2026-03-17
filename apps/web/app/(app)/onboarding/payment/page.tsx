@@ -174,7 +174,7 @@ export default function PaymentStep() {
   if (!overview) return <div className="flex h-full items-center justify-center text-sm text-red-400">{error || "Unable to load payment."}</div>;
 
   return (
-    <div className="flex flex-col h-full px-8 pb-[calc(env(safe-area-inset-bottom,0px)+32px)]">
+    <div className="flex flex-col h-full px-8 mobile-onboarding-content">
       <div className="flex-none pt-6 mb-8">
         <h1 className="text-4xl font-serif text-foreground tracking-wide mb-2">VAEL <span className="text-primary">Membership</span></h1>
       </div>

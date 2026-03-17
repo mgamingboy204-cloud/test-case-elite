@@ -126,7 +126,7 @@ export default function OnboardingProfileDetailsPage() {
   }
 
   return (
-    <div className="flex h-full flex-col px-8 pb-[calc(env(safe-area-inset-bottom,0px)+32px)]">
+    <div className="flex h-full flex-col px-8 mobile-onboarding-content">
       <div className="pt-6 pb-6">
         <h1 className="text-4xl font-serif text-foreground tracking-wide">Profile <span className="text-primary">Details</span></h1>
         <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-foreground/40">Mandatory before photo upload</p>

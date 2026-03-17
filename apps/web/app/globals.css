@@ -47,8 +47,12 @@ html, body {
 }
 
 :root {
-  --safe-area-top: env(safe-area-inset-top, 0px);
-  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --bottom-nav-height: 50px;
+  --app-height: 100dvh;
 }
 
 /* ─── Universal Helpers ────────────────────────────────────── */
@@ -58,8 +62,34 @@ html, body {
 
 /* ─── Safe Area Spacer (Notch) ─────────────────────────────── */
 .safe-area-top-spacer {
-  min-height: var(--safe-area-top);
+  min-height: var(--safe-top);
   width: 100%;
+}
+
+
+
+.safe-top-padding {
+  padding-top: var(--safe-top);
+}
+
+.safe-bottom-padding {
+  padding-bottom: var(--safe-bottom);
+}
+
+.mobile-bottom-nav-shell {
+  padding-bottom: var(--safe-bottom);
+}
+
+.mobile-main-with-bottom-nav {
+  padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom));
+}
+
+.mobile-onboarding-content {
+  padding-bottom: calc(var(--safe-bottom) + 32px);
+}
+
+.mobile-onboarding-content-tight {
+  padding-bottom: calc(var(--safe-bottom) + 28px);
 }
 
 /* .no-scrollbar — explicit class for targeted elements */
@@ -74,7 +104,7 @@ html, body {
 /* ─── Adaptive PWA Interactions ───────────────────────────── */
 @media (max-width: 768px) {
   .mobile-container {
-    height: 100dvh;
+    height: var(--app-height);
   }
 
   html[data-device="mobile"],
