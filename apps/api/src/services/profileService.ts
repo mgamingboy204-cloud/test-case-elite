@@ -114,7 +114,7 @@ export async function getProfile(userId: string) {
       gender: profile?.gender ?? user?.gender ?? null,
       profession: profile?.profession ?? "",
       story: profile?.story ?? profile?.bioShort ?? "",
-      bio: profile?.bioShort ?? "",
+      bio: profile?.bioShort ?? profile?.story ?? "",
       location: profile?.locationLabel ?? profile?.city ?? "",
       place: profile?.city ?? "",
       height: toHeightLabel(profile?.heightCm),
@@ -173,7 +173,7 @@ export async function updateProfile(options: UpdateOptions) {
   assignIfDefined("dateOfBirth", normalized.dateOfBirth);
   assignIfDefined("city", typeof normalized.city === "string" ? normalized.city.trim() : normalized.city);
   assignIfDefined("profession", typeof normalized.profession === "string" ? normalized.profession.trim() : normalized.profession);
-  assignIfDefined("bioShort", typeof (normalized.bioShort ?? normalized.bio) === "string" ? String(normalized.bioShort ?? normalized.bio).trim() : normalized.bioShort ?? normalized.bio);
+  assignIfDefined("bioShort", typeof (normalized.bioShort ?? normalized.bio) === "string" ? String(normalized.bioShort ?? normalized.bio).trim() : undefined);
   assignIfDefined("story", typeof normalized.story === "string" ? normalized.story.trim() : normalized.story);
   assignIfDefined("locationLabel", typeof (normalized.locationLabel ?? normalized.place ?? normalized.city) === "string" ? String(normalized.locationLabel ?? normalized.place ?? normalized.city).trim() : normalized.locationLabel ?? normalized.place ?? normalized.city);
   assignIfDefined("intent", normalized.intent ?? "dating");

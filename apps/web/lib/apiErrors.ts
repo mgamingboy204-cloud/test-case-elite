@@ -42,7 +42,7 @@ export function normalizeApiError(error: unknown): NormalizedApiError {
     return { code: "payment_required", message: body.message ?? error.message, redirectTo: body.redirectTo ?? "/onboarding/payment", status: error.status };
   }
   if (rawCode === "profile_incomplete") {
-    return { code: "profile_incomplete", message: body.message ?? error.message, redirectTo: body.redirectTo ?? "/onboarding/profile", status: error.status };
+    return { code: "profile_incomplete", message: body.message ?? error.message, redirectTo: body.redirectTo ?? "/onboarding/details", status: error.status };
   }
   if (rawCode === "profile_data_missing") {
     return { code: "profile_data_missing", message: body.message ?? error.message, redirectTo: body.redirectTo ?? "/profile", status: error.status };

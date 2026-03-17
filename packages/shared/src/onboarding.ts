@@ -23,16 +23,16 @@ export type OnboardingProfileSnapshot = {
 export function hasRequiredOnboardingProfile(profile?: OnboardingProfileSnapshot | null) {
   if (!profile) return false;
 
+  const hasValidHeight =
+    profile.heightCm == null ||
+    (typeof profile.heightCm === "number" && profile.heightCm >= 100 && profile.heightCm <= 250);
+
   return Boolean(
     profile.name?.trim() &&
       profile.dateOfBirth &&
       profile.gender &&
-      typeof profile.heightCm === "number" &&
-      profile.heightCm >= 120 &&
-      profile.heightCm <= 240 &&
-      profile.profession?.trim() &&
       profile.city?.trim() &&
-      profile.bioShort?.trim()
+      hasValidHeight
   );
 }
 
@@ -63,7 +63,7 @@ export function resolveBackendOnboardingStep(input: {
 
 export function onboardingRedirectForBackendStep(step: BackendOnboardingStep) {
   if (step === "ACTIVE") return "/discover";
-  if (step === "PAID" || step === "PROFILE_PENDING") return "/onboarding/profile";
+  if (step === "PAID" || step === "PROFILE_PENDING") return "/onboarding/details";
   if (step === "PAYMENT_PENDING" || step === "VIDEO_VERIFIED") return "/onboarding/payment";
   return "/onboarding/verification";
 }

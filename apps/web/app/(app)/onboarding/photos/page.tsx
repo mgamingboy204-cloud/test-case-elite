@@ -4,7 +4,7 @@ import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
-type UploadedPhoto = { id: string; url: string };
+type UploadedPhoto = { id: string; url: string; photoIndex?: number | null };
 
 const MAX_PHOTOS = 3;
 const MIN_PHOTOS = 1;
@@ -26,21 +26,25 @@ export default function OnboardingPhotosPage() {
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState("");
 
+  const loadPhotos = async () => {
+    const data = await apiRequest<{ photos: UploadedPhoto[] }>("/photos/me", { auth: true });
+    const ordered = [...data.photos].sort((a, b) => (a.photoIndex ?? 0) - (b.photoIndex ?? 0));
+    setPhotos(ordered.slice(0, MAX_PHOTOS));
+  };
+
   useEffect(() => {
-    const loadPhotos = async () => {
+    const run = async () => {
       setLoading(true);
       setError("");
       try {
-        const data = await apiRequest<{ photos: UploadedPhoto[] }>("/photos/me", { auth: true });
-        setPhotos(data.photos.slice(0, MAX_PHOTOS));
+        await loadPhotos();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to load photos.");
       } finally {
         setLoading(false);
       }
     };
-
-    void loadPhotos();
+    void run();
   }, []);
 
   const canUpload = photos.length < MAX_PHOTOS;
@@ -52,6 +56,14 @@ export default function OnboardingPhotosPage() {
     return "Maximum portraits uploaded.";
   }, [photos.length]);
 
+  const persistOrder = async (next: UploadedPhoto[]) => {
+    await apiRequest("/profile", {
+      method: "PATCH",
+      auth: true,
+      body: JSON.stringify({ photos: next.map((photo, index) => ({ id: photo.id, photoIndex: index })) })
+    });
+  };
+
   const handleFilePick = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -62,12 +74,17 @@ export default function OnboardingPhotosPage() {
 
     try {
       const dataUrl = await fileToDataUrl(file);
-      const response = await apiRequest<{ photo: UploadedPhoto }>("/photos/upload", {
+      const upload = await apiRequest<{ uploadToken: string }>("/profile/photos/presigned-url", {
         method: "POST",
         auth: true,
-        body: JSON.stringify({ filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
+        body: JSON.stringify({ filename: file.name, mimeType: file.type || "image/jpeg" })
       });
-      setPhotos((prev) => [...prev, response.photo].slice(0, MAX_PHOTOS));
+      await apiRequest<{ photo: UploadedPhoto }>("/profile/photos/confirm", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({ uploadToken: upload.uploadToken, filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
+      });
+      await loadPhotos();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to upload photo.");
     } finally {
@@ -76,12 +93,29 @@ export default function OnboardingPhotosPage() {
   };
 
   const removePhoto = async (photoId: string) => {
+    if (photos.length <= MIN_PHOTOS) return;
     setError("");
     try {
       await apiRequest(`/photos/${photoId}`, { method: "DELETE", auth: true });
-      setPhotos((prev) => prev.filter((photo) => photo.id !== photoId));
+      await loadPhotos();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to remove photo.");
+    }
+  };
+
+  const movePhoto = async (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= photos.length) return;
+    const next = [...photos];
+    const temp = next[index];
+    next[index] = next[target];
+    next[target] = temp;
+    setPhotos(next);
+    try {
+      await persistOrder(next);
+      await loadPhotos();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to reorder photos.");
     }
   };
 
@@ -101,9 +135,7 @@ export default function OnboardingPhotosPage() {
     }
   };
 
-  if (loading) {
-    return <div className="flex h-full items-center justify-center text-sm text-foreground/50">Loading your gallery…</div>;
-  }
+  if (loading) return <div className="flex h-full items-center justify-center text-sm text-foreground/50">Loading your gallery…</div>;
 
   return (
     <div className="flex h-full flex-col px-8 pb-[calc(env(safe-area-inset-bottom,0px)+32px)]">
@@ -120,16 +152,13 @@ export default function OnboardingPhotosPage() {
               {photo ? (
                 <>
                   <img src={photo.url} alt={`Portrait ${index + 1}`} className="h-full w-full object-cover" />
-                  <button
-                    onClick={() => void removePhoto(photo.id)}
-                    className="absolute right-2 top-2 rounded-full bg-background/70 px-2 py-1 text-[10px] uppercase tracking-wider text-foreground/70"
-                  >
-                    Remove
-                  </button>
+                  <div className="absolute right-2 top-2 flex gap-1">
+                    <button onClick={() => void movePhoto(index, -1)} disabled={index === 0} className="rounded bg-background/80 px-1 text-xs disabled:opacity-40">←</button>
+                    <button onClick={() => void movePhoto(index, 1)} disabled={index === photos.length - 1} className="rounded bg-background/80 px-1 text-xs disabled:opacity-40">→</button>
+                    <button onClick={() => void removePhoto(photo.id)} disabled={photos.length <= MIN_PHOTOS} className="rounded bg-background/80 px-2 py-1 text-[10px] uppercase disabled:opacity-40">Remove</button>
+                  </div>
                 </>
-              ) : (
-                <div className="flex h-full items-center justify-center text-[10px] uppercase tracking-[0.2em] text-foreground/35">Empty</div>
-              )}
+              ) : <div className="flex h-full items-center justify-center text-[10px] uppercase tracking-[0.2em] text-foreground/35">Empty</div>}
             </div>
           );
         })}
@@ -137,19 +166,12 @@ export default function OnboardingPhotosPage() {
 
       <div className="mt-6 space-y-3">
         <p className="text-xs text-foreground/60">{statusLabel}</p>
-
         <label className={`block rounded-xl border border-primary/30 px-4 py-3 text-center text-xs uppercase tracking-[0.2em] ${canUpload && !uploading ? "cursor-pointer text-primary" : "cursor-not-allowed text-foreground/40"}`}>
           <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => void handleFilePick(event)} disabled={!canUpload || uploading} />
           {uploading ? "Uploading…" : canUpload ? "Upload portrait" : "Maximum reached"}
         </label>
-
         {error ? <p className="text-xs text-red-400">{error}</p> : null}
-
-        <button
-          onClick={() => void finishOnboarding()}
-          disabled={!canComplete || finishing}
-          className={`btn-vael-primary ${!canComplete || finishing ? "cursor-not-allowed opacity-30 grayscale" : ""}`}
-        >
+        <button onClick={() => void finishOnboarding()} disabled={!canComplete || finishing} className={`btn-vael-primary ${!canComplete || finishing ? "cursor-not-allowed opacity-30 grayscale" : ""}`}>
           {finishing ? "Finalizing…" : "Complete Onboarding"}
         </button>
       </div>
