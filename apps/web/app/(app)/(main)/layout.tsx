@@ -28,6 +28,54 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mounted] = useState(() => typeof window !== "undefined");
   const prefetchedRef = useRef(false);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const root = document.documentElement;
+
+    const resolveSafeAreaInsetBottom = () => {
+      const probe = document.createElement("div");
+      probe.style.position = "absolute";
+      probe.style.visibility = "hidden";
+      probe.style.pointerEvents = "none";
+      probe.style.paddingBottom = "env(safe-area-inset-bottom, 0px)";
+      document.body.appendChild(probe);
+      const resolved = parseFloat(getComputedStyle(probe).paddingBottom) || 0;
+      document.body.removeChild(probe);
+      return resolved;
+    };
+
+    const applyViewportLayout = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const isLandscape = width > height;
+      const safeInsetBottom = resolveSafeAreaInsetBottom();
+
+      root.style.setProperty("--app-height", `${height}px`);
+      root.style.setProperty("--app-bottom-nav-padding", `${isLandscape ? 0 : safeInsetBottom}px`);
+      root.dataset.orientation = isLandscape ? "landscape" : "portrait";
+    };
+
+    const scheduleViewportLayout = () => {
+      window.requestAnimationFrame(() => {
+        applyViewportLayout();
+        window.requestAnimationFrame(applyViewportLayout);
+      });
+    };
+
+    scheduleViewportLayout();
+
+    window.addEventListener("resize", scheduleViewportLayout);
+    window.addEventListener("orientationchange", scheduleViewportLayout);
+    window.addEventListener("pageshow", scheduleViewportLayout);
+
+    return () => {
+      window.removeEventListener("resize", scheduleViewportLayout);
+      window.removeEventListener("orientationchange", scheduleViewportLayout);
+      window.removeEventListener("pageshow", scheduleViewportLayout);
+    };
+  }, []);
+
   const prefetchRouteBundle = useCallback((href: string) => {
     router.prefetch(href);
     const queryClient = getQueryClient();
@@ -193,7 +241,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             ═══════════════════════════════════════════════════════════════════ */}
             <nav
               className="sticky bottom-0 min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-30 text-foreground"
-              style={{ paddingBottom: "var(--safe-bottom)" }}
+              style={{ paddingBottom: "var(--app-bottom-nav-padding, var(--safe-bottom))" }}
             >
               <div className="flex h-[50px] items-center justify-around px-2">
                 {NAV_ITEMS.map(({ href, icon: Icon }) => {
