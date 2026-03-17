@@ -86,7 +86,7 @@ export default function OnboardingProfileDetailsPage() {
     setSuccess("");
 
     try {
-      await apiRequest("/profile/details", {
+      await apiRequest("/me/profile/details", {
         method: "POST",
         auth: true,
         body: JSON.stringify({

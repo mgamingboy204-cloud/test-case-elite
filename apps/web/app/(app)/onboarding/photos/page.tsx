@@ -57,7 +57,7 @@ export default function OnboardingPhotosPage() {
   }, [photos.length]);
 
   const persistOrder = async (next: UploadedPhoto[]) => {
-    await apiRequest("/profile", {
+    await apiRequest("/me/profile", {
       method: "PATCH",
       auth: true,
       body: JSON.stringify({ photos: next.map((photo, index) => ({ id: photo.id, photoIndex: index })) })
@@ -74,12 +74,12 @@ export default function OnboardingPhotosPage() {
 
     try {
       const dataUrl = await fileToDataUrl(file);
-      const upload = await apiRequest<{ uploadToken: string }>("/profile/photos/presigned-url", {
+      const upload = await apiRequest<{ uploadToken: string }>("/me/profile/photos/presigned-url", {
         method: "POST",
         auth: true,
         body: JSON.stringify({ filename: file.name, mimeType: file.type || "image/jpeg" })
       });
-      await apiRequest<{ photo: UploadedPhoto }>("/profile/photos/confirm", {
+      await apiRequest<{ photo: UploadedPhoto }>("/me/profile/photos/confirm", {
         method: "POST",
         auth: true,
         body: JSON.stringify({ uploadToken: upload.uploadToken, filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
@@ -125,7 +125,7 @@ export default function OnboardingPhotosPage() {
     setError("");
 
     try {
-      await apiRequest("/profile/complete", { method: "POST", auth: true, body: JSON.stringify({}) });
+      await apiRequest("/me/profile/complete", { method: "POST", auth: true, body: JSON.stringify({}) });
       await refreshCurrentUser();
       completeOnboardingStep("COMPLETED");
     } catch (err) {

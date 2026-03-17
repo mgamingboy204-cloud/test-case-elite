@@ -22,6 +22,13 @@ describe("Public auth access", () => {
     expect(response.body.message).toBeTruthy();
   });
 
+
+  it("rejects namespaced protected profile route without authentication", async () => {
+    const response = await request(app).get("/me/profile");
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBeTruthy();
+  });
+
   it("allows logout without Authorization header", async () => {
     const response = await request(app).post("/auth/logout");
     expect(response.status).toBe(200);
