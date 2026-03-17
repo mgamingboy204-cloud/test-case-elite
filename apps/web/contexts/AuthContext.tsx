@@ -355,7 +355,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSignupToken(null);
     localStorage.removeItem("vael_pending_phone");
     localStorage.removeItem("vael_signup_token");
-    router.push("/");
+    router.push("/login");
   };
 
   if (!isInitialized) return null;

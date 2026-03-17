@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import {
   LoginBodySchema,
   EmployeeLoginSchema,
@@ -23,11 +24,13 @@ import {
   signupVerify,
   signupVerifyMock,
   verifyOtpMock,
-  verifyOtp
+  verifyOtp,
+  changePasswordHandler
 } from "../controllers/authController";
 import { loginLimiter, otpLimiterByIp, otpLimiterByPhone, otpVerifyLimiter, registerLimiter } from "../middlewares/rateLimiters";
 import { validateBody } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
@@ -71,6 +74,29 @@ router.post(
   loginLimiter,
   validateBody(EmployeeLoginSchema),
   asyncHandler(employeeLogin)
+);
+
+router.post(
+  "/auth/change-password",
+  requireAuth,
+  validateBody(
+    z.object({
+      currentPassword: z.string().min(1),
+      newPassword: z.string().min(8)
+    })
+  ),
+  asyncHandler(changePasswordHandler)
+);
+router.post(
+  "/api/auth/change-password",
+  requireAuth,
+  validateBody(
+    z.object({
+      currentPassword: z.string().min(1),
+      newPassword: z.string().min(8)
+    })
+  ),
+  asyncHandler(changePasswordHandler)
 );
 
 router.post("/auth/token/refresh", validateBody(RefreshTokenSchema), asyncHandler(refreshAccessToken));

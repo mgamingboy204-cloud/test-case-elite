@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { deletePhoto, listPhotos, uploadPhoto } from "../services/photoService";
+import { deletePhoto, listPhotos, reorderPhotos, uploadPhoto } from "../services/photoService";
 
 export async function listPhotosHandler(req: Request, res: Response) {
   const photos = await listPhotos(res.locals.user.id);
@@ -23,9 +23,18 @@ export async function deletePhotoHandler(req: Request, res: Response) {
   if (!photoId) return res.status(400).json({ message: "photoId is required" });
 
   await deletePhoto({ userId: res.locals.user.id, photoId });
-  return res.json({ ok: true });
+  return res.json({ updated: true });
 }
 
+export async function reorderProfilePhotosHandler(req: Request, res: Response) {
+  const { photoIds } = req.body as { photoIds?: string[] };
+  if (!Array.isArray(photoIds) || photoIds.length < 1) {
+    return res.status(400).json({ message: "photoIds is required." });
+  }
+
+  const result = await reorderPhotos({ userId: res.locals.user.id, photoIds });
+  return res.json(result);
+}
 
 export async function requestPhotoUploadUrlHandler(req: Request, res: Response) {
   const { filename, mimeType } = req.body as { filename: string; mimeType: string };

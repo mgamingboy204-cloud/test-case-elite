@@ -11,11 +11,11 @@ import {
 import { requireAuth, requireOnboardingTokenMatch } from "../middlewares/auth";
 import { validateBody } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
-import { confirmPhotoUploadHandler, requestPhotoUploadUrlHandler } from "../controllers/photoController";
+import { confirmPhotoUploadHandler, deletePhotoHandler, reorderProfilePhotosHandler, requestPhotoUploadUrlHandler } from "../controllers/photoController";
 
 const router = Router();
 
-function registerProfileRoutes(basePath: "/profile" | "/me/profile") {
+function registerProfileRoutes(basePath: "/profile" | "/me/profile" | "/api/profile") {
   router.get(basePath, requireAuth, asyncHandler(getProfileHandler));
   router.post(`${basePath}/details`, requireAuth, requireOnboardingTokenMatch, asyncHandler(updateProfileDetailsHandler));
   router.put(
@@ -66,6 +66,23 @@ function registerProfileRoutes(basePath: "/profile" | "/me/profile") {
     ),
     asyncHandler(confirmPhotoUploadHandler)
   );
+  router.patch(
+    `${basePath}/photos/reorder`,
+    requireAuth,
+    requireOnboardingTokenMatch,
+    validateBody(
+      z.object({
+        photoIds: z.array(z.string().min(1)).min(1).max(3)
+      })
+    ),
+    asyncHandler(reorderProfilePhotosHandler)
+  );
+  router.delete(
+    `${basePath}/photos/:photoId`,
+    requireAuth,
+    requireOnboardingTokenMatch,
+    asyncHandler(deletePhotoHandler)
+  );
   router.post(`${basePath}/complete`, requireAuth, requireOnboardingTokenMatch, asyncHandler(completeProfileHandler));
 }
 
@@ -73,5 +90,6 @@ registerProfileRoutes("/me/profile");
 
 // Backwards-compatible aliases for older clients.
 registerProfileRoutes("/profile");
+registerProfileRoutes("/api/profile");
 
 export default router;

@@ -15,6 +15,7 @@ import {
   resolveOnboardingStep,
   validateLogin,
   verifyOtpCodeOnly,
+  changePassword,
   verifyOtpBypassAndGetUser,
   verifyOtpAndGetUser
 } from "../services/authService";
@@ -491,4 +492,11 @@ export async function whoAmI(req: Request, res: Response) {
     subscriptionEndsAt: user.subscriptionEndsAt,
     appState
   });
+}
+
+
+export async function changePasswordHandler(req: Request, res: Response) {
+  const { currentPassword, newPassword } = req.body as { currentPassword: string; newPassword: string };
+  const result = await changePassword({ userId: res.locals.user.id, currentPassword, newPassword });
+  return res.json(result);
 }

@@ -312,3 +312,18 @@ export async function validateLogin(options: {
 
   return { user, onboardingStep, otpRequired: !user.phoneVerifiedAt };
 }
+
+
+export async function changePassword(options: { userId: string; currentPassword: string; newPassword: string }) {
+  const user = await prisma.user.findUnique({ where: { id: options.userId } });
+  if (!user) throw new HttpError(404, { message: "User not found" });
+
+  const valid = await bcrypt.compare(options.currentPassword, user.passwordHash);
+  if (!valid) {
+    throw new HttpError(400, { message: "Current password is incorrect." });
+  }
+
+  const newPasswordHash = await bcrypt.hash(options.newPassword, 10);
+  await prisma.user.update({ where: { id: options.userId }, data: { passwordHash: newPasswordHash } });
+  return { updated: true };
+}

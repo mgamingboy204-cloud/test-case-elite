@@ -1,750 +1,233 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { Loader2, PencilLine, Trash2 } from "lucide-react";
 import { ApiError, apiRequestAuth } from "@/lib/api";
-import { normalizeApiError } from "@/lib/apiErrors";
-import { ProtectedState } from "@/components/ui/protected-state";
 import { fetchProfile, type ProfileViewModel } from "@/lib/queries";
 import { useStaleWhileRevalidate } from "@/lib/cache";
-import { Loader2, PencilLine, ShieldCheck, UserRoundCheck, ImagePlus, Trash2, RefreshCw, Crown, MapPin, AlertTriangle } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useAuth } from "@/contexts/AuthContext";
 
 const MAX_PHOTOS = 3;
 const MIN_PHOTOS = 1;
-const MIN_HEIGHT = 100;
-const MAX_HEIGHT = 250;
-
-type Gender = "MALE" | "FEMALE" | "NON_BINARY" | "OTHER";
-
-type SettingsField = "pushNotificationsEnabled" | "profileVisible" | "showOnlineStatus" | "discoverableByPremiumOnly";
-
-
-function getMissingProfileItems(profile: ProfileViewModel) {
-  const missing: string[] = [];
-  if (!profile.name?.trim()) missing.push("name");
-  if (!profile.dateOfBirth) missing.push("date of birth");
-  if (!profile.gender) missing.push("gender");
-  if (!profile.place?.trim() && !profile.location?.trim()) missing.push("city");
-  if (!profile.bio?.trim() && !profile.story?.trim()) missing.push("bio");
-  if ((profile.photos ?? []).length < MIN_PHOTOS) missing.push("at least one photo");
-  return missing;
-}
-
-function calculateAgeFromDate(dateOfBirth: string | null) {
-  if (!dateOfBirth) return null;
-  const dob = new Date(dateOfBirth);
-  if (Number.isNaN(dob.getTime())) return null;
-  const today = new Date();
-  let age = today.getUTCFullYear() - dob.getUTCFullYear();
-  const monthDiff = today.getUTCMonth() - dob.getUTCMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getUTCDate() < dob.getUTCDate())) {
-    age -= 1;
-  }
-  return age;
-}
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-function formatPaymentPlan(plan?: string | null) {
-  if (!plan) return "Premium";
-  if (plan === "ONE_MONTH") return "1 Month";
-  if (plan === "FIVE_MONTHS") return "5 Months";
-  if (plan === "TWELVE_MONTHS") return "12 Months";
-  return plan;
-}
-
-function daysRemaining(endDate?: string | null) {
-  if (!endDate) return null;
-  const end = new Date(endDate).getTime();
-  if (Number.isNaN(end)) return null;
-  const remaining = Math.ceil((end - Date.now()) / (1000 * 60 * 60 * 24));
-  return remaining < 0 ? 0 : remaining;
-}
-
-function formatMoneyInr(amount?: number | null) {
-  if (!amount || amount <= 0) return "Tax included";
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount);
-}
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Unable to read the selected image."));
+    reader.onerror = () => reject(new Error("Unable to read selected file."));
     reader.readAsDataURL(file);
   });
 }
 
 export default function ProfilePage() {
-  const { isAuthenticated, onboardingStep, logout, user } = useAuth();
-  const { theme, setTheme } = useTheme();
-  const [editing, setEditing] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
-  const [photoMessage, setPhotoMessage] = useState("");
-  const [savingField, setSavingField] = useState<SettingsField | null>(null);
-  const [settingsMessage, setSettingsMessage] = useState("");
-  const [settingsError, setSettingsError] = useState("");
-  const [deleteConfirm, setDeleteConfirm] = useState("");
-  const [deleteReason, setDeleteReason] = useState("");
-  const [deleting, setDeleting] = useState(false);
-  const [logoutPending, setLogoutPending] = useState(false);
-
-  const profileQuery = useStaleWhileRevalidate({
-    key: "profile",
-    fetcher: fetchProfile,
-    enabled: isAuthenticated && onboardingStep === "COMPLETED",
-    staleTimeMs: 60_000,
-    retry: false
-  });
+  const { isAuthenticated, onboardingStep } = useAuth();
+  const profileQuery = useStaleWhileRevalidate({ key: "profile", fetcher: fetchProfile, enabled: isAuthenticated && onboardingStep === "COMPLETED" });
+  const [message, setMessage] = useState("");
 
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
-
-  if (profileQuery.isLoading && !profileQuery.data) {
-    return <ProfileSkeleton />;
-  }
-
-  if (profileQuery.error && !profileQuery.data) {
-    const normalized = normalizeApiError(profileQuery.error);
-
-    if (normalized.status === 401) {
-      return <ProtectedState title="Session expired" description="Please sign in again to view your profile." />;
-    }
-
-    if (normalized.status === 403) {
-      return <ProtectedState title="Profile access restricted" description="Your membership does not currently allow profile access. Contact support if this seems incorrect." />;
-    }
-
-    if (normalized.status === 404 || normalized.code === "profile_data_missing") {
-      return <ProfileIncompleteState missing={["profile details", "photos"]} onRetry={() => void profileQuery.refresh(true)} />;
-    }
-
-    if (normalized.status >= 500) {
-      return <ProfileErrorState description={normalized.message} onRetry={() => void profileQuery.refresh(true)} />;
-    }
-
-    return <ProfileErrorState description={normalized.message} onRetry={() => void profileQuery.refresh(true)} />;
-  }
+  if (profileQuery.isLoading && !profileQuery.data) return <div className="p-6 text-sm">Loading profile…</div>;
+  if (!profileQuery.data) return <div className="p-6 text-sm">Unable to load profile.</div>;
 
   const profile = profileQuery.data;
-  if (!profile) {
-    return <ProfileErrorState description="Your profile is currently unavailable. Please refresh." onRetry={() => void profileQuery.refresh(true)} />;
-  }
-
-  const missingItems = getMissingProfileItems(profile);
-  const isIncomplete = missingItems.length > 0;
-
-  const settings = profile.settings ?? {
-    pushNotificationsEnabled: true,
-    profileVisible: true,
-    showOnlineStatus: true,
-    discoverableByPremiumOnly: false
-  };
-
-  const toggleSetting = async (key: SettingsField, value: boolean) => {
-    setSavingField(key);
-    setSettingsError("");
-    setSettingsMessage("");
-
-    try {
-      await apiRequestAuth("/me/profile/settings", {
-        method: "PATCH",
-        body: JSON.stringify({ [key]: value })
-      });
-      setSettingsMessage("Settings saved.");
-      await profileQuery.refresh(true);
-    } catch (error) {
-      setSettingsError(error instanceof ApiError ? error.message : "Unable to save this setting right now.");
-    } finally {
-      setSavingField(null);
-    }
-  };
-
-  const onLogout = async () => {
-    setLogoutPending(true);
-    try {
-      await logout();
-    } finally {
-      setLogoutPending(false);
-    }
-  };
-
-  const canDelete = deleteConfirm.trim().toUpperCase() === "DELETE";
-
-  const onDeleteAccount = async () => {
-    if (!canDelete) {
-      setSettingsError("Type DELETE to confirm account deletion.");
-      return;
-    }
-
-    setDeleting(true);
-    setSettingsError("");
-    setSettingsMessage("");
-
-    try {
-      await apiRequestAuth<{ ok: true }>("/account", {
-        method: "DELETE",
-        body: JSON.stringify({
-          confirmation: "DELETE_MY_ACCOUNT",
-          reason: deleteReason.trim() || undefined
-        })
-      });
-
-      localStorage.removeItem("vael_pending_phone");
-      localStorage.removeItem("vael_signup_token");
-      await logout();
-    } catch (error) {
-      setSettingsError(error instanceof ApiError ? error.message : "We could not process account deletion right now.");
-    } finally {
-      setDeleting(false);
-    }
-  };
 
   return (
-    <div className="px-6 py-8 space-y-6 pb-8">
-      <header className="space-y-2">
-        <h1 className="text-xl uppercase tracking-[0.35em] text-primary">Profile</h1>
-        <p className="text-xs uppercase tracking-[0.2em] text-foreground/45">Private membership identity</p>
+    <div className="p-6 space-y-6">
+      <header>
+        <h1 className="text-xl uppercase tracking-[0.25em] text-primary">Profile</h1>
       </header>
 
-      <section className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-5 space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-2xl font-serif text-foreground">{profile.name || "Private Member"}</p>
-            <p className="mt-1 text-sm text-foreground/60 inline-flex items-center gap-2">
-              <MapPin size={14} className="text-primary/80" />
-              {profile.age ? `${profile.age} years` : "Age private"} • {profile.place || profile.location || "Location private"}
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              setEditing((value) => !value);
-              setSaveMessage("");
-            }}
-            className="rounded-xl border border-primary/30 px-3 py-2 text-xs uppercase tracking-[0.2em] text-primary"
-          >
-            <span className="inline-flex items-center gap-2"><PencilLine size={14} />{editing ? "Close" : "Edit"}</span>
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.18em]">
-          <span className="rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-primary inline-flex items-center gap-1"><Crown size={12} />{formatPaymentPlan(profile.subscription.paymentPlan)}</span>
-          <span className="rounded-full border border-border/40 bg-foreground/[0.03] px-3 py-1 text-foreground/70">{profile.subscription.status}</span>
-          <span className="rounded-full border border-border/40 bg-foreground/[0.03] px-3 py-1 text-foreground/70">{(profile.photos ?? []).length} photos</span>
-        </div>
-
-        {profile.assignedExecutive ? (
-          <div className="rounded-2xl border border-primary/25 bg-background/60 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-primary/80">Human-managed service</p>
-            <p className="mt-2 text-sm text-foreground/85 inline-flex items-center gap-2">
-              <UserRoundCheck size={16} className="text-primary" />
-              Your profile is being managed by our executive <span className="font-medium">{profile.assignedExecutive.name}</span>
-            </p>
-          </div>
-        ) : null}
-      </section>
-
-      {isIncomplete ? <ProfileIncompleteState missing={missingItems} onRetry={() => void profileQuery.refresh(true)} compact /> : null}
-
       <PhotoManager
-        profile={profile}
-        onUpdated={async (message) => {
-          setPhotoMessage(message);
+        photos={profile.photos}
+        onUpdated={async (text) => {
+          setMessage(text);
           await profileQuery.refresh(true);
         }}
       />
 
-      {photoMessage ? <p className="text-xs text-emerald-300">{photoMessage}</p> : null}
+      <EditProfileSection
+        profile={profile}
+        onSaved={async () => {
+          setMessage("Profile updated.");
+          await profileQuery.refresh(true);
+        }}
+      />
 
-      {editing ? (
-        <ProfileEditForm
-          profile={profile}
-          onCancel={() => setEditing(false)}
-          onSaved={async (message) => {
-            setSaveMessage(message);
-            setEditing(false);
-            await profileQuery.refresh(true);
-          }}
-        />
-      ) : (
-        <ProfileReadView profile={profile} />
-      )}
-
-      {saveMessage ? <p className="text-xs text-emerald-300">{saveMessage}</p> : null}
-
-      <MembershipSummary profile={profile} />
-
-      {/* Settings merged from former Settings page */}
-      <section className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-5 space-y-3">
-        <h2 className="text-sm uppercase tracking-[0.2em] text-primary">Subscription</h2>
-        <Field
-          label="Plan"
-          value={`${formatPaymentPlan(profile.subscription.paymentPlan)} • ${formatMoneyInr(profile.subscription.paymentAmount)}`}
-        />
-        <Field label="Status" value={profile.subscription.status} />
-        <Field label="Start date" value={formatDate(profile.subscription.startedAt ?? profile.subscription.paidAt ?? null)} />
-        <Field label="Valid until" value={formatDate(profile.subscription.endsAt ?? null)} />
-        <p className="text-xs text-foreground/55">Manual renewal only. Membership never auto-renews.</p>
+      <section className="rounded-2xl border border-primary/20 p-4 space-y-2">
+        <h2 className="text-sm uppercase tracking-[0.18em] text-primary">Managed by</h2>
+        <p className="text-sm">Managed by {profile.assignedExecutive?.name ?? "VAEL Executive"}, your personal VAEL executive.</p>
       </section>
 
-      <section className="rounded-3xl border border-border/40 bg-foreground/[0.03] p-5 space-y-3">
-        <h2 className="text-sm uppercase tracking-[0.2em] text-foreground/60">Notifications</h2>
-        <ToggleRow
-          label="App alerts"
-          description="Receive updates for likes, matches, concierge coordination, and account events."
-          checked={settings.pushNotificationsEnabled}
-          disabled={savingField === "pushNotificationsEnabled"}
-          onChange={() => void toggleSetting("pushNotificationsEnabled", !settings.pushNotificationsEnabled)}
-        />
+      <section className="rounded-2xl border border-primary/20 p-4 space-y-2">
+        <h2 className="text-sm uppercase tracking-[0.18em] text-primary">Membership card</h2>
+        <p className="text-sm">Plan: {profile.subscription.paymentPlan ?? profile.subscription.tier}</p>
+        <p className="text-sm">Start: {formatDate(profile.subscription.startedAt)}</p>
+        <p className="text-sm">End: {formatDate(profile.subscription.endsAt)}</p>
+        <p className="text-sm">Days remaining: {daysRemaining(profile.subscription.endsAt)}</p>
       </section>
 
-      <section className="rounded-3xl border border-border/40 bg-foreground/[0.03] p-5 space-y-3">
-        <h2 className="text-sm uppercase tracking-[0.2em] text-foreground/60">Appearance</h2>
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-primary/15 p-3">
-          <div>
-            <p className="text-sm text-foreground/85">Theme</p>
-            <p className="text-xs text-foreground/50">Choose the app appearance for your account.</p>
-          </div>
-          <div className="inline-flex rounded-xl border border-primary/20 p-1 bg-background/70">
-            <button
-              type="button"
-              onClick={() => setTheme("light")}
-              className={`rounded-lg px-3 py-1.5 text-xs uppercase tracking-widest transition ${
-                theme === "light" ? "bg-primary/20 text-primary" : "text-foreground/55"
-              }`}
-            >
-              Light
-            </button>
-            <button
-              type="button"
-              onClick={() => setTheme("dark")}
-              className={`rounded-lg px-3 py-1.5 text-xs uppercase tracking-widest transition ${
-                theme === "dark" ? "bg-primary/20 text-primary" : "text-foreground/55"
-              }`}
-            >
-              Dark
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-border/40 bg-foreground/[0.03] p-5 space-y-3">
-        <h2 className="text-sm uppercase tracking-[0.2em] text-foreground/60">Account</h2>
-        <Field label="Member ID" value={user?.id ?? "—"} />
-        <Field label="Phone" value={user?.phone ?? "—"} />
-        <ToggleRow
-          label="Profile visibility"
-          description="Allow your approved profile to appear in private discovery."
-          checked={settings.profileVisible}
-          disabled={savingField === "profileVisible"}
-          onChange={() => void toggleSetting("profileVisible", !settings.profileVisible)}
-        />
-        <ToggleRow
-          label="Show online status"
-          description="Let matches view whether you're active in the app."
-          checked={settings.showOnlineStatus}
-          disabled={savingField === "showOnlineStatus"}
-          onChange={() => void toggleSetting("showOnlineStatus", !settings.showOnlineStatus)}
-        />
-      </section>
-
-      {settingsMessage ? <p className="text-xs text-emerald-300">{settingsMessage}</p> : null}
-      {settingsError ? <p className="text-xs text-red-200">{settingsError}</p> : null}
-
-      <section className="rounded-3xl border border-red-400/20 bg-red-500/5 p-5 space-y-4">
-        <h2 className="text-sm uppercase tracking-[0.2em] text-red-200">Security</h2>
-
-        <button
-          type="button"
-          disabled={logoutPending}
-          onClick={() => void onLogout()}
-          className="w-full rounded-xl border border-primary/30 px-4 py-3 text-sm text-primary disabled:opacity-60"
-        >
-          {logoutPending ? "Signing out…" : "Logout"}
-        </button>
-
-        <div className="space-y-2 rounded-2xl border border-red-300/25 p-4">
-          <p className="text-sm text-red-100">Delete my account</p>
-          <p className="text-xs text-red-100/70">
-            This deactivates your membership, removes app access, and takes your profile out of discoverability.
-          </p>
-          <textarea
-            rows={2}
-            placeholder="Optional reason"
-            value={deleteReason}
-            onChange={(event) => setDeleteReason(event.target.value)}
-            className="w-full rounded-xl border border-red-300/20 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-foreground/35 focus:outline-none focus:border-red-300/40"
-          />
-          <input
-            value={deleteConfirm}
-            onChange={(event) => setDeleteConfirm(event.target.value)}
-            placeholder='Type "DELETE" to confirm'
-            className="w-full rounded-xl border border-red-300/20 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-foreground/35 focus:outline-none focus:border-red-300/40"
-          />
-          <button
-            type="button"
-            onClick={() => void onDeleteAccount()}
-            disabled={deleting || !canDelete}
-            className="w-full rounded-xl border border-red-300/40 px-4 py-3 text-sm text-red-100 disabled:opacity-40"
-          >
-            {deleting ? "Processing…" : "Delete account"}
-          </button>
-        </div>
-      </section>
+      {message ? <p className="text-xs text-emerald-300">{message}</p> : null}
     </div>
   );
 }
 
-function ProfileReadView({ profile }: { profile: ProfileViewModel }) {
-  return (
-    <section className="rounded-3xl border border-border/40 bg-foreground/[0.03] p-5 space-y-4">
-      <h2 className="text-sm uppercase tracking-[0.2em] text-foreground/50">Profile Details</h2>
-      <Field label="Date of birth" value={formatDate(profile.dateOfBirth)} />
-      <Field label="Gender" value={profile.gender ? profile.gender.replaceAll("_", " ") : "—"} />
-      <Field label="Height" value={profile.height ?? (profile.heightCm ? `${profile.heightCm} cm` : "—")} />
-      <Field label="Profession" value={profile.profession || "—"} />
-      <Field label="Place" value={profile.place || profile.location || "—"} />
-      <Field label="Bio" value={profile.bio || profile.story || "—"} multiline />
-    </section>
-  );
-}
-
-function ProfileEditForm({ profile, onCancel, onSaved }: { profile: ProfileViewModel; onCancel: () => void; onSaved: (message: string) => Promise<void> }) {
-  const [name, setName] = useState(profile.name);
-  const [dateOfBirth, setDateOfBirth] = useState(profile.dateOfBirth ? profile.dateOfBirth.slice(0, 10) : "");
-  const [gender, setGender] = useState<Gender | "">(profile.gender ?? "");
-  const [heightCm, setHeightCm] = useState(profile.heightCm ? String(profile.heightCm) : "");
-  const [profession, setProfession] = useState(profile.profession);
-  const [place, setPlace] = useState(profile.place || profile.location);
-  const [bio, setBio] = useState(profile.bio || profile.story);
+function EditProfileSection({ profile, onSaved }: { profile: ProfileViewModel; onSaved: () => Promise<void> }) {
+  const [editing, setEditing] = useState(false);
+  const [bio, setBio] = useState(profile.bio ?? "");
+  const [profession, setProfession] = useState(profile.profession ?? "");
+  const [city, setCity] = useState(profile.place ?? profile.location ?? "");
+  const [height, setHeight] = useState(profile.heightCm ? String(profile.heightCm) : "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const validationError = useMemo(() => {
-    if (name.trim().length < 2) return "Name must be at least 2 characters.";
-    if (!dateOfBirth) return "Date of birth is required.";
-    const age = calculateAgeFromDate(dateOfBirth);
-    if (!age || age < 18) return "Members must be at least 18 years old.";
-    if (!gender) return "Please select gender.";
-    const parsedHeight = Number(heightCm);
-    if (!Number.isFinite(parsedHeight) || parsedHeight < MIN_HEIGHT || parsedHeight > MAX_HEIGHT) {
-      return `Height must be between ${MIN_HEIGHT} and ${MAX_HEIGHT} cm.`;
-    }
-    if (profession.trim() && profession.trim().length < 2) return "Profession must be at least 2 characters when provided.";
-    if (place.trim().length < 1) return "City is required.";
-    if (bio.length > 300) return "Bio cannot exceed 300 characters.";
+  const validation = useMemo(() => {
+    const parsedHeight = Number(height);
+    if (!city.trim()) return "City is required.";
+    if (!Number.isFinite(parsedHeight) || parsedHeight < 100 || parsedHeight > 250) return "Height must be between 100 and 250.";
+    if (bio.length > 300) return "Bio max length is 300.";
     return "";
-  }, [bio, dateOfBirth, gender, heightCm, name, place, profession]);
+  }, [bio, city, height]);
 
-  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (validationError) return;
+    if (validation) return;
     setSaving(true);
     setError("");
-
     try {
-      await apiRequestAuth("/me/profile", {
-        method: "PATCH",
-        body: JSON.stringify({
-          name: name.trim(),
-          displayName: name.trim(),
-          dateOfBirth,
-          gender,
-          heightCm: Number(heightCm),
-          profession: profession.trim() || null,
-          city: place.trim(),
-          place: place.trim(),
-          locationLabel: place.trim(),
-          bioShort: bio.trim() || null,
-          bio: bio.trim() || null,
-          story: bio.trim() || null,
-          intent: "dating"
-        })
+      const result = await apiRequestAuth<{ updated: boolean }>("/api/profile", {
+        method: "PUT",
+        body: JSON.stringify({ bio: bio.trim(), profession: profession.trim(), city: city.trim(), height: Number(height) })
       });
-      await onSaved("Profile updated successfully.");
+      if (!result.updated) throw new Error("Profile update did not complete.");
+      setEditing(false);
+      await onSaved();
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Unable to save profile details right now.");
-      }
+      setError(err instanceof ApiError ? err.message : "Unable to update profile.");
     } finally {
       setSaving(false);
     }
   };
 
+  if (!editing) {
+    return (
+      <section className="rounded-2xl border border-border/40 p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm uppercase tracking-[0.18em]">Profile details</h2>
+          <button onClick={() => setEditing(true)} className="text-xs inline-flex items-center gap-1"><PencilLine size={12} /> Edit</button>
+        </div>
+        <p className="text-sm">Name: {profile.name}</p>
+        <p className="text-sm">Age: {profile.age ?? "—"}</p>
+        <p className="text-sm">City: {profile.place || profile.location || "—"}</p>
+        <p className="text-sm">Profession: {profile.profession || "—"}</p>
+        <p className="text-sm">Bio: {profile.bio || "—"}</p>
+      </section>
+    );
+  }
+
   return (
-    <form onSubmit={onSubmit} className="rounded-3xl border border-primary/20 bg-primary/5 p-5 space-y-3">
-      <h2 className="text-sm uppercase tracking-[0.2em] text-primary">Edit Profile</h2>
-      <TextInput label="Name" value={name} onChange={setName} />
-      <TextInput label="Date of birth" value={dateOfBirth} onChange={setDateOfBirth} type="date" />
-      <div>
-        <label className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-foreground/50">Gender</label>
-        <select
-          value={gender}
-          onChange={(event) => setGender(event.target.value as Gender)}
-          className="w-full rounded-xl border border-primary/20 bg-transparent px-3 py-3 text-sm text-foreground focus:border-primary focus:outline-none"
-        >
-          <option value="">Select</option>
-          <option value="MALE">Male</option>
-          <option value="FEMALE">Female</option>
-          <option value="NON_BINARY">Non-binary</option>
-          <option value="OTHER">Other</option>
-        </select>
-      </div>
-      <TextInput label="Height (cm)" value={heightCm} onChange={setHeightCm} inputMode="numeric" />
-      <TextInput label="Profession" value={profession} onChange={setProfession} />
-      <TextInput label="Place" value={place} onChange={setPlace} />
-      <div>
-        <label className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-foreground/50">Bio</label>
-        <textarea
-          rows={4}
-          value={bio}
-          onChange={(event) => setBio(event.target.value)}
-          className="w-full rounded-xl border border-primary/20 bg-transparent px-3 py-3 text-sm text-foreground focus:border-primary focus:outline-none"
-        />
-      </div>
-      {validationError ? <p className="text-xs text-amber-300">{validationError}</p> : null}
+    <form onSubmit={submit} className="rounded-2xl border border-primary/20 p-4 space-y-3">
+      <input value={profession} onChange={(e) => setProfession(e.target.value)} placeholder="Profession" className="w-full rounded border p-2 bg-transparent" />
+      <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-full rounded border p-2 bg-transparent" />
+      <input value={height} onChange={(e) => setHeight(e.target.value)} placeholder="Height (cm)" className="w-full rounded border p-2 bg-transparent" />
+      <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Bio" className="w-full rounded border p-2 bg-transparent" rows={4} />
+      {validation ? <p className="text-xs text-amber-300">{validation}</p> : null}
       {error ? <p className="text-xs text-red-300">{error}</p> : null}
-      <div className="flex gap-3 pt-1">
-        <button type="submit" disabled={saving || Boolean(validationError)} className="btn-vael-primary disabled:opacity-40 disabled:cursor-not-allowed">
-          {saving ? "Saving…" : "Save changes"}
-        </button>
-        <button type="button" onClick={onCancel} className="rounded-xl border border-border px-4 py-2 text-xs uppercase tracking-[0.2em] text-foreground/65">
-          Cancel
-        </button>
-      </div>
+      <button disabled={saving || Boolean(validation)} className="btn-vael-primary disabled:opacity-40">{saving ? "Saving..." : "Save"}</button>
     </form>
   );
 }
 
-function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpdated: (message: string) => Promise<void> }) {
-  const photos = profile.photos;
-  const canUpload = photos.length < MAX_PHOTOS;
-  const [busyPhotoId, setBusyPhotoId] = useState<string | null>(null);
+function PhotoManager({ photos, onUpdated }: { photos: ProfileViewModel["photos"]; onUpdated: (message: string) => Promise<void> }) {
   const [uploading, setUploading] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
 
-  const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+  const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file || !canUpload) return;
-
+    if (!file || photos.length >= MAX_PHOTOS) return;
     setUploading(true);
     setError("");
     try {
       const dataUrl = await fileToDataUrl(file);
-      const upload = await apiRequestAuth<{ uploadToken: string }>("/me/profile/photos/presigned-url", {
+      const token = await apiRequestAuth<{ uploadToken: string }>("/me/profile/photos/presigned-url", {
         method: "POST",
         body: JSON.stringify({ filename: file.name, mimeType: file.type || "image/jpeg" })
       });
       await apiRequestAuth("/me/profile/photos/confirm", {
         method: "POST",
-        body: JSON.stringify({ uploadToken: upload.uploadToken, filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
+        body: JSON.stringify({ uploadToken: token.uploadToken, filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
       });
       await onUpdated("Photo uploaded.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to upload photo.");
+      setError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
       setUploading(false);
     }
   };
 
-  const movePhoto = async (index: number, direction: -1 | 1) => {
-    const target = index + direction;
-    if (target < 0 || target >= photos.length) return;
-    const next = [...photos];
-    const temp = next[index];
-    next[index] = next[target];
-    next[target] = temp;
+  const remove = async (photoId: string) => {
+    if (photos.length <= MIN_PHOTOS) return;
+    setBusy(photoId);
     setError("");
     try {
-      await apiRequestAuth("/me/profile", {
-        method: "PATCH",
-        body: JSON.stringify({ photos: next.map((photo, photoIndex) => ({ id: photo.id, photoIndex })) })
-      });
-      await onUpdated("Photo order updated.");
+      await apiRequestAuth(`/api/profile/photos/${photoId}`, { method: "DELETE" });
+      await onUpdated("Photo deleted.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to reorder photo.");
+      setError(err instanceof Error ? err.message : "Delete failed.");
+    } finally {
+      setBusy(null);
     }
   };
 
-  const removePhoto = async (photoId: string) => {
-    setBusyPhotoId(photoId);
-    setError("");
+  const reorder = async (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= photos.length) return;
+    const next = [...photos];
+    const tmp = next[index];
+    next[index] = next[target];
+    next[target] = tmp;
     try {
-      await apiRequestAuth(`/photos/${photoId}`, { method: "DELETE" });
-      await onUpdated("Photo removed.");
+      await apiRequestAuth("/api/profile/photos/reorder", {
+        method: "PATCH",
+        body: JSON.stringify({ photoIds: next.map((photo) => photo.id) })
+      });
+      await onUpdated("Photo order saved.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to remove photo.");
-    } finally {
-      setBusyPhotoId(null);
+      setError(err instanceof Error ? err.message : "Reorder failed.");
     }
   };
 
   return (
-    <section className="rounded-3xl border border-border/40 bg-foreground/[0.03] p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm uppercase tracking-[0.2em] text-foreground/50">Photos</h2>
-        <span className="text-[11px] text-foreground/55">{photos.length}/{MAX_PHOTOS}</span>
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        {Array.from({ length: MAX_PHOTOS }).map((_, index) => {
-          const photo = photos[index];
-          return (
-            <div key={index} className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-primary/20 bg-foreground/[0.03]">
-              {photo ? (
-                <>
-                  <img src={photo.url} alt={`Profile ${index + 1}`} className="h-full w-full object-cover" />
-                  <div className="absolute right-1 top-1 flex items-center gap-1">
-                    <button type="button" onClick={() => void movePhoto(index, -1)} disabled={index === 0} className="rounded bg-background/75 px-1 text-xs disabled:opacity-40">←</button>
-                    <button type="button" onClick={() => void movePhoto(index, 1)} disabled={index === photos.length - 1} className="rounded bg-background/75 px-1 text-xs disabled:opacity-40">→</button>
-                    <button
-                      disabled={busyPhotoId === photo.id || photos.length <= MIN_PHOTOS}
-                      onClick={() => void removePhoto(photo.id)}
-                      className="rounded-full bg-background/75 p-1.5 text-red-300 disabled:opacity-40"
-                    >
-                      {busyPhotoId === photo.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex h-full items-center justify-center text-[10px] uppercase tracking-[0.2em] text-foreground/35">Empty</div>
-              )}
+    <section className="rounded-2xl border border-border/40 p-4 space-y-3">
+      <h2 className="text-sm uppercase tracking-[0.18em]">Profile photo</h2>
+      <div className="grid grid-cols-3 gap-2">
+        {photos.map((photo, index) => (
+          <div key={photo.id} className="relative aspect-[3/4] rounded overflow-hidden border">
+            <img src={photo.url} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+            <div className="absolute top-1 right-1 flex gap-1">
+              <button type="button" disabled={index === 0} onClick={() => void reorder(index, -1)} className="bg-black/50 text-white px-1">←</button>
+              <button type="button" disabled={index === photos.length - 1} onClick={() => void reorder(index, 1)} className="bg-black/50 text-white px-1">→</button>
+              <button type="button" disabled={busy === photo.id || photos.length <= MIN_PHOTOS} onClick={() => void remove(photo.id)} className="bg-black/50 text-white p-1">{busy === photo.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}</button>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
-      <label className={`inline-flex items-center gap-2 rounded-xl border border-primary/30 px-3 py-2 text-xs uppercase tracking-[0.2em] ${canUpload && !uploading ? "cursor-pointer text-primary" : "cursor-not-allowed text-foreground/40"}`}>
-        <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={!canUpload || uploading} onChange={(event) => void handleUpload(event)} />
-        {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />} {uploading ? "Uploading" : canUpload ? "Add photo" : "Max reached"}
+      <label className="inline-flex border rounded px-3 py-2 text-xs cursor-pointer">
+        <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp" onChange={(e) => void upload(e)} disabled={uploading || photos.length >= MAX_PHOTOS} />
+        {uploading ? "Uploading..." : photos.length >= MAX_PHOTOS ? "Max reached" : "Tap to change / add photo"}
       </label>
-      <p className="text-xs text-foreground/55">Maintain 1 to 3 photos at all times for active membership visibility.</p>
       {error ? <p className="text-xs text-red-300">{error}</p> : null}
     </section>
   );
 }
 
-function MembershipSummary({ profile }: { profile: ProfileViewModel }) {
-  return (
-    <section className="rounded-3xl border border-primary/20 bg-primary/5 p-5 space-y-3">
-      <h2 className="text-sm uppercase tracking-[0.2em] text-primary inline-flex items-center gap-2"><ShieldCheck size={14} /> Membership</h2>
-      <Field label="Plan" value={formatPaymentPlan(profile.subscription.paymentPlan) || profile.subscription.tier} />
-      <Field label="Status" value={profile.subscription.status} />
-      <Field label="Start date" value={formatDate(profile.subscription.startedAt)} />
-      <Field label="End date" value={formatDate(profile.subscription.endsAt)} />
-      <Field label="Days remaining" value={String(daysRemaining(profile.subscription.endsAt) ?? "—")} />
-      <Field label="Amount" value={formatMoneyInr(profile.subscription.paymentAmount)} />
-      <Field label="Renewal" value={profile.subscription.renewalMode === "AUTO" ? "Auto" : "Manual renewal only"} />
-    </section>
-  );
+function formatDate(value?: string | null) {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString();
 }
 
-function ProfileErrorState({ description, onRetry }: { description: string; onRetry: () => void }) {
-  return (
-    <div className="px-6 py-10">
-      <section className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-6 space-y-4">
-        <p className="inline-flex items-center gap-2 text-sm uppercase tracking-[0.22em] text-primary"><AlertTriangle size={14} /> Profile unavailable</p>
-        <p className="text-sm text-foreground/70">{description || "We could not load your profile due to a server issue. Please try again shortly."}</p>
-        <p className="text-xs text-foreground/55">If this persists, contact support and include the time of this attempt.</p>
-        <button type="button" onClick={onRetry} className="inline-flex items-center gap-2 rounded-xl border border-primary/30 px-3 py-2 text-xs uppercase tracking-[0.18em] text-primary">
-          <RefreshCw size={13} /> Retry
-        </button>
-      </section>
-    </div>
-  );
-}
-
-function ProfileIncompleteState({ missing, onRetry, compact = false }: { missing: string[]; onRetry: () => void; compact?: boolean }) {
-  return (
-    <section className={`rounded-3xl border border-primary/20 bg-primary/5 p-5 space-y-3 ${compact ? "" : "mx-6 my-8"}`}>
-      <h2 className="text-sm uppercase tracking-[0.2em] text-primary">Complete your profile</h2>
-      <p className="text-sm text-foreground/70">Your profile is saved, but some details are still missing for a full premium presence.</p>
-      <p className="text-xs text-foreground/60">Missing: {missing.join(", ")}</p>
-      <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={onRetry} className="rounded-xl border border-primary/30 px-3 py-2 text-xs uppercase tracking-[0.18em] text-primary">Refresh status</button>
-      </div>
-    </section>
-  );
-}
-
-function ProfileSkeleton() {
-  return (
-    <div className="px-6 py-8 space-y-4 animate-pulse">
-      <div className="h-5 w-28 rounded bg-foreground/10" />
-      <div className="h-36 rounded-3xl bg-foreground/10" />
-      <div className="h-40 rounded-3xl bg-foreground/10" />
-      <div className="h-56 rounded-3xl bg-foreground/10" />
-    </div>
-  );
-}
-
-function TextInput(props: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-  inputMode?: "text" | "numeric";
-}) {
-  return (
-    <div>
-      <label className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-foreground/50">{props.label}</label>
-      <input
-        type={props.type ?? "text"}
-        value={props.value}
-        inputMode={props.inputMode}
-        onChange={(event) => props.onChange(event.target.value)}
-        className="w-full rounded-xl border border-primary/20 bg-transparent px-3 py-3 text-sm text-foreground focus:border-primary focus:outline-none"
-      />
-    </div>
-  );
-}
-
-function Field({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
-  return (
-    <div>
-      <p className="text-[10px] uppercase tracking-[0.2em] text-foreground/45">{label}</p>
-      <p className={`mt-1 text-sm text-foreground/90 ${multiline ? "leading-relaxed" : ""}`}>{value}</p>
-    </div>
-  );
-}
-
-function ToggleRow({
-  label,
-  description,
-  checked,
-  onChange,
-  disabled
-}: {
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onChange}
-      className="w-full rounded-2xl border border-primary/15 p-3 flex items-center justify-between text-left disabled:opacity-60"
-    >
-      <div>
-        <p className="text-sm text-foreground/85">{label}</p>
-        <p className="text-xs text-foreground/50 mt-1">{description}</p>
-      </div>
-      <span
-        className={`rounded-full px-3 py-1 text-[10px] tracking-[0.18em] uppercase ${
-          checked ? "bg-primary/20 text-primary" : "bg-foreground/10 text-foreground/50"
-        }`}
-      >
-        {checked ? "On" : "Off"}
-      </span>
-    </button>
-  );
+function daysRemaining(value?: string | null) {
+  if (!value) return "—";
+  const n = Math.ceil((new Date(value).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  return String(Math.max(0, n));
 }

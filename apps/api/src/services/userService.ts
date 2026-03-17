@@ -1,6 +1,6 @@
 import { prisma } from "../db/prisma";
 
-export async function deactivateAccount(options: { userId: string; reason?: string }) {
+export async function deactivateAccount(options: { userId: string }) {
   const now = new Date();
 
   await prisma.user.update({
@@ -13,10 +13,17 @@ export async function deactivateAccount(options: { userId: string; reason?: stri
       subscriptionStatus: "CANCELED"
     }
   });
+}
+
+export async function updateNotificationSettings(options: { userId: string; enabled: boolean }) {
+  const settings = await prisma.userPreference.upsert({
+    where: { userId: options.userId },
+    create: { userId: options.userId, pushNotificationsEnabled: options.enabled },
+    update: { pushNotificationsEnabled: options.enabled }
+  });
 
   return {
-    ok: true,
-    deactivatedAt: now.toISOString(),
-    message: options.reason ? "Your account has been deactivated." : "Your account has been deactivated."
+    updated: true,
+    enabled: settings.pushNotificationsEnabled
   };
 }
