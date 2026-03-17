@@ -35,13 +35,11 @@
 /* ─── Shell Reset ──────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
-  height: 100vh;
-  height: -webkit-fill-available;
+  height: 100%;
 }
 
 html, body {
-  height: 100vh;
-  height: -webkit-fill-available;
+  height: 100%;
   margin: 0;
   padding: 0;
   overscroll-behavior-y: none;
@@ -76,13 +74,11 @@ html, body {
 }
 
 .app-height {
-  height: 100vh;
-  height: -webkit-fill-available;
+  height: var(--app-height, 100dvh);
 }
 
 .app-min-height {
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
+  min-height: var(--app-height, 100dvh);
 }
 
 /* ─── Adaptive PWA Interactions ───────────────────────────── */
