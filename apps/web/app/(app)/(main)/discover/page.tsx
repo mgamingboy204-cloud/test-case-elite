@@ -37,7 +37,7 @@ function preloadImage(url: string | null | undefined) {
 
 export default function DiscoverPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const cached = readCache<DiscoverState>(DISCOVER_CACHE_KEY)?.value;
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -156,7 +156,21 @@ export default function DiscoverPage() {
   };
 
   const card = cards[0] ?? null;
-  const { scrollYProgress } = useScroll({ container: containerRef, offset: ["start start", "end start"] });
+  useEffect(() => {
+    const scrollNode = document.getElementById("app-main-scroll") as HTMLDivElement | null;
+    scrollContainerRef.current = scrollNode;
+    if (!scrollNode) return;
+
+    const handleScroll = () => setHasScrolled(scrollNode.scrollTop > 50);
+    handleScroll();
+    scrollNode.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      scrollNode.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  const { scrollYProgress } = useScroll({ container: scrollContainerRef, offset: ["start start", "end start"] });
   const photoOpacity = useTransform(scrollYProgress, [0, 0.4], [1, 0.5]);
   const photoScale = useTransform(scrollYProgress, [0, 0.4], [1, 0.95]);
 
@@ -170,15 +184,9 @@ export default function DiscoverPage() {
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
   return (
-    <div className="w-full h-full relative bg-background transition-colors duration-500 overflow-hidden flex flex-col">
-      <div
-        ref={containerRef}
-        className="w-full h-full overflow-y-auto overflow-x-hidden snap-y snap-mandatory relative no-scrollbar"
-        onScroll={(e) => setHasScrolled((e.target as HTMLDivElement).scrollTop > 50)}
-        style={{ WebkitOverflowScrolling: "touch" }}
-      >
-        <div className="w-full relative snap-start">
-          {status === "success" && card && (
+    <div className="w-full min-h-full relative bg-background transition-colors duration-500">
+      <div className="w-full relative">
+        {status === "success" && card && (
             <div className="relative z-10 w-full">
               <motion.div
                 style={{ opacity: photoOpacity, scale: photoScale, transformOrigin: "top center" }}
@@ -206,7 +214,7 @@ export default function DiscoverPage() {
                 <motion.div
                   initial={{ opacity: 0.2, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ root: containerRef, margin: "-20px" }}
+                  viewport={{ root: scrollContainerRef, margin: "-20px" }}
                   transition={{ duration: 0.8 }}
                   className="w-full"
                 >
@@ -222,7 +230,7 @@ export default function DiscoverPage() {
             </div>
           )}
 
-          {status !== "success" && (
+        {status !== "success" && (
             <div className="h-[80vh] px-8 pt-24 pb-10 flex flex-col justify-center bg-gradient-to-b from-foreground/[0.04] to-transparent border-b border-border/20">
               <h2 className="text-3xl font-serif text-foreground">{headerLabel}</h2>
               <p className="text-foreground/70 mt-4 text-sm leading-relaxed">
@@ -250,7 +258,6 @@ export default function DiscoverPage() {
               )}
             </div>
           )}
-        </div>
       </div>
 
       <AnimatePresence>
