@@ -98,6 +98,19 @@ export default function ProfilePage() {
 
   if (profileQuery.error && !profileQuery.data) {
     const normalized = normalizeApiError(profileQuery.error);
+
+    if (normalized.status === 401) {
+      return <ProtectedState title="Session expired" description="Please sign in again to view your profile." />;
+    }
+
+    if (normalized.status === 404 || normalized.code === "profile_data_missing") {
+      return <ProtectedState title="Complete your profile" description="Your profile details are not available yet. Please complete onboarding." />;
+    }
+
+    if (normalized.status >= 500) {
+      return <ProtectedState title="Profile unavailable" description="We could not load your profile due to a server issue. Please try again shortly." />;
+    }
+
     return <ProtectedState title="Profile unavailable" description={normalized.message} />;
   }
 
@@ -124,7 +137,7 @@ export default function ProfilePage() {
     setSettingsMessage("");
 
     try {
-      await apiRequest("/profile/settings", {
+      await apiRequest("/me/profile/settings", {
         method: "PATCH",
         auth: true,
         body: JSON.stringify({ [key]: value })
@@ -413,7 +426,7 @@ function ProfileEditForm({ profile, onCancel, onSaved }: { profile: ProfileViewM
     setError("");
 
     try {
-      await apiRequest("/profile", {
+      await apiRequest("/me/profile", {
         method: "PATCH",
         auth: true,
         body: JSON.stringify({
@@ -505,12 +518,12 @@ function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpd
     setError("");
     try {
       const dataUrl = await fileToDataUrl(file);
-      const upload = await apiRequest<{ uploadToken: string }>("/profile/photos/presigned-url", {
+      const upload = await apiRequest<{ uploadToken: string }>("/me/profile/photos/presigned-url", {
         method: "POST",
         auth: true,
         body: JSON.stringify({ filename: file.name, mimeType: file.type || "image/jpeg" })
       });
-      await apiRequest("/profile/photos/confirm", {
+      await apiRequest("/me/profile/photos/confirm", {
         method: "POST",
         auth: true,
         body: JSON.stringify({ uploadToken: upload.uploadToken, filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
@@ -532,7 +545,7 @@ function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpd
     next[target] = temp;
     setError("");
     try {
-      await apiRequest("/profile", {
+      await apiRequest("/me/profile", {
         method: "PATCH",
         auth: true,
         body: JSON.stringify({ photos: next.map((photo, photoIndex) => ({ id: photo.id, photoIndex })) })
