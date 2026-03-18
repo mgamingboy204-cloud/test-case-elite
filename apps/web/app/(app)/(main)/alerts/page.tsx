@@ -95,7 +95,7 @@ export default function AlertsPage() {
         ) : null}
       </div>
 
-      <div className="w-full px-4 pt-4 pb-20 flex flex-col gap-3">
+      <div className="w-full px-4 pt-4 flex flex-col gap-3">
         {isInitialLoading && (
           <div className="flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, idx) => (
