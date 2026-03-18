@@ -21,7 +21,7 @@ export function Navigation() {
   return (
     <motion.nav
       style={{ backgroundColor, borderColor, borderBottomWidth: "1px" }}
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 pb-4 pt-[calc(var(--safe-area-top)+1rem)] backdrop-blur-lg"
+      className="ios-safe-x fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 pb-4 pt-[calc(var(--safe-area-top)+1rem)] backdrop-blur-lg md:px-12"
     >
       <Link href="/" className="text-xl font-medium tracking-wide text-foreground flex items-center gap-3 group">
         <span className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:bg-primary/20 transition-colors">

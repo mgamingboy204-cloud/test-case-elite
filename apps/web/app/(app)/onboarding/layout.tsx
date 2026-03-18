@@ -44,14 +44,14 @@ export default function OnboardingLayout({ children }: { children: ReactNode }) 
   }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router, appStateCode, appStateRedirectTo]);
 
   if (!isAuthResolved) {
-    return <div className="w-full h-[100dvh] bg-background" />;
+    return <div className="min-h-[var(--app-viewport-height)] w-full bg-background" />;
   }
 
   const canGoBack = currentIndex > 0;
   const handleBack = () => { if (canGoBack) router.back(); };
 
   return (
-    <div className="w-full h-[100dvh] bg-background overflow-hidden relative flex flex-col items-center justify-center">
+    <div className="ios-safe-x relative flex min-h-[var(--app-viewport-height)] w-full flex-col items-center justify-center overflow-hidden bg-background">
 
       {/* Ambient Glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
@@ -60,10 +60,10 @@ export default function OnboardingLayout({ children }: { children: ReactNode }) 
       </div>
 
       {/* Phone-sized Glassmorphic Card */}
-      <div className="relative z-10 w-full max-w-[420px] h-[100dvh] flex flex-col bg-background/90 backdrop-blur-xl border-x border-primary/10 overflow-hidden">
+      <div className="relative z-10 flex min-h-[var(--app-viewport-height)] w-full max-w-[420px] flex-col overflow-hidden border-x border-primary/10 bg-background/90 backdrop-blur-xl">
 
         {/* ── Top Shell: Back + Progress ── */}
-        <div className="flex-none pt-[env(safe-area-inset-top,20px)] px-6 pb-3">
+        <div className="ios-safe-top flex-none px-6 pb-3 pt-5">
 
           {/* Back row */}
           <div className="h-10 flex items-center">
