@@ -5,6 +5,8 @@ import { Compass, Heart, Bell, User, Sparkles, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
+import { useDevice } from "@/hooks/useDevice";
 import { fetchAlerts, fetchDiscoverFeedPage, fetchMatches, fetchProfile, mapLegacyFeedItemToCard } from "@/lib/queries";
 import { primeCache } from "@/lib/cache";
 import { motion } from "framer-motion";
@@ -27,6 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [mounted] = useState(() => typeof window !== "undefined");
   const prefetchedRef = useRef(false);
+  const { isIOSPWA } = useDevice();
 
   const prefetchRouteBundle = useCallback((href: string) => {
     router.prefetch(href);
@@ -87,7 +90,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
   return (
-    <div className="flex flex-row h-[100dvh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
+    <div className="app-shell flex w-screen flex-row overflow-hidden bg-background transition-colors duration-500 mobile-container desktop-container">
 
       {/* ═══════════════════════════════════════════════════════════════════
           DESKTOP SIDEBAR 
@@ -182,7 +185,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           className="flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-background"
           style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
         >
-          <div className="w-full h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto">
+          <div
+            className={cn(
+              "page-content w-full h-full min-[769px]:mx-auto min-[769px]:max-w-[480px]",
+              isIOSPWA && "page-content-ios-pwa"
+            )}
+          >
             {children}
           </div>
         </main>
@@ -191,10 +199,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             MOBILE BOTTOM NAV 
         ═══════════════════════════════════════════════════════════════════ */}
         {/* Absolutely zero padding here. Force pinned to the bottom. */}
-        <nav className="flex-none min-[769px]:hidden w-full bg-background/95 backdrop-blur-2xl border-t border-white/5 z-50 text-foreground">
-          
-          {/* Exactly 50px tall, icons perfectly centered inside */}
-          <div className="flex h-[50px] items-center justify-around px-2">
+        <nav
+          className={cn(
+            "bottom-nav flex-none min-[769px]:hidden text-foreground",
+            isIOSPWA && "bottom-nav-ios-pwa"
+          )}
+        >
+          <div className="flex h-full items-center justify-around px-2">
             {NAV_ITEMS.map(({ href, icon: Icon }) => {
               const isActive = pathname === href;
               return (
