@@ -108,6 +108,21 @@ html, body {
   }
 }
 
+
+.app-main-scroll {
+  padding-top: var(--app-main-top-padding, calc(var(--safe-area-top) + 56px));
+  padding-bottom: var(--app-main-bottom-padding, calc(var(--safe-area-bottom) + 58px));
+  transition: padding 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (min-width: 769px) {
+  .app-main-scroll {
+    padding-top: 0;
+    padding-bottom: 0;
+    transition: none;
+  }
+}
+
 /* ─── Button Components ────────────────────────────────────── */
 @layer components {
   /* Solid Rose Gold CTA */

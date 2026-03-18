@@ -3,6 +3,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Briefcase, Ruler, X, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useScrollChromeController } from "@/components/ui/scroll-chrome";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import { normalizeApiError } from "@/lib/apiErrors";
 import { sendLikeAction } from "@/lib/likes";
@@ -37,6 +38,7 @@ function preloadImage(url: string | null | undefined) {
 
 export default function DiscoverPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
+  const { registerScrollElement } = useScrollChromeController();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const cached = readCache<DiscoverState>(DISCOVER_CACHE_KEY)?.value;
@@ -110,6 +112,11 @@ export default function DiscoverPage() {
     void bootstrap();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, onboardingStep]);
+
+  useEffect(() => {
+    registerScrollElement(containerRef.current);
+    return () => registerScrollElement(null);
+  }, [registerScrollElement]);
 
   useEffect(() => {
     if (status === "success" && cards.length <= REFILL_THRESHOLD && nextCursor) {
