@@ -191,7 +191,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="px-6 py-8 space-y-6 pb-24">
+    <div className="px-6 py-8 space-y-6 pb-8">
       <header className="space-y-2">
         <h1 className="text-xl uppercase tracking-[0.35em] text-primary">Profile</h1>
         <p className="text-xs uppercase tracking-[0.2em] text-foreground/45">Private membership identity</p>

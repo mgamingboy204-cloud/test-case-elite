@@ -209,7 +209,7 @@ export default function DiscoverPage() {
                 </div>
               </motion.div>
 
-              <div className="w-full mt-10 flex flex-col gap-12 px-6 md:px-12 pb-40">
+              <div className="w-full mt-10 flex flex-col gap-12 px-6 md:px-12 pb-12">
                 <motion.div
                   initial={{ opacity: 0.2, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}

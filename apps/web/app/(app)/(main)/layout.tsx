@@ -1,18 +1,19 @@
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
-import { Compass, Heart, Bell, User, Sparkles, LogOut } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { fetchAlerts, fetchDiscoverFeedPage, fetchMatches, fetchProfile, mapLegacyFeedItemToCard } from "@/lib/queries";
-import { primeCache } from "@/lib/cache";
-import { motion } from "framer-motion";
-import { resolveRouteRedirect } from "@/lib/navigationGuard";
-import { fetchIncomingLikes } from "@/lib/likes";
-import { getQueryClient } from "@/lib/queryClient";
+import { AppShell } from "@/components/ui/app-shell";
 import { OfflineIndicator } from "@/components/pwa/offline-indicator";
 import { ScrollChromeProvider, useScrollChromeController } from "@/components/ui/scroll-chrome";
+import { useAuth } from "@/contexts/AuthContext";
+import { primeCache } from "@/lib/cache";
+import { fetchIncomingLikes } from "@/lib/likes";
+import { resolveRouteRedirect } from "@/lib/navigationGuard";
+import { getQueryClient } from "@/lib/queryClient";
+import { fetchAlerts, fetchDiscoverFeedPage, fetchMatches, fetchProfile, mapLegacyFeedItemToCard } from "@/lib/queries";
+import { motion } from "framer-motion";
+import { Bell, Compass, Heart, LogOut, Sparkles, User } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/discover", icon: Compass, label: "Discover" },
@@ -42,22 +43,27 @@ function AppLayoutShell({ children }: { children: React.ReactNode }) {
   const prefetchRouteBundle = useCallback((href: string) => {
     router.prefetch(href);
     const queryClient = getQueryClient();
+
     if (href === "/likes") void queryClient.prefetchQuery({ queryKey: ["likes-incoming"], queryFn: fetchIncomingLikes }).then(() => {
       const data = queryClient.getQueryData(["likes-incoming"]);
       if (data) primeCache("likes-incoming", data);
     }).catch(() => null);
+
     if (href === "/matches") void queryClient.prefetchQuery({ queryKey: ["matches"], queryFn: fetchMatches }).then(() => {
       const data = queryClient.getQueryData(["matches"]);
       if (data) primeCache("matches", data);
     }).catch(() => null);
+
     if (href === "/alerts") void queryClient.prefetchQuery({ queryKey: ["alerts"], queryFn: fetchAlerts }).then(() => {
       const data = queryClient.getQueryData(["alerts"]);
       if (data) primeCache("alerts", data);
     }).catch(() => null);
+
     if (href === "/profile") void queryClient.prefetchQuery({ queryKey: ["profile"], queryFn: fetchProfile }).then(() => {
       const data = queryClient.getQueryData(["profile"]);
       if (data) primeCache("profile", data);
     }).catch(() => null);
+
     if (href === "/discover") {
       void queryClient.prefetchQuery({ queryKey: ["discover-feed", "bootstrap"], queryFn: () => fetchDiscoverFeedPage(undefined, 10) }).then(() => {
         const feed = queryClient.getQueryData<{ items: unknown[] }>(["discover-feed", "bootstrap"]);
@@ -101,111 +107,100 @@ function AppLayoutShell({ children }: { children: React.ReactNode }) {
   if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
   return (
-    <div className="ios-app-shell mobile-container desktop-container flex w-screen flex-row overflow-hidden bg-background transition-colors duration-500">
-      <aside className="hidden min-[769px]:flex flex-col w-[80px] xl:w-[240px] h-full flex-none bg-background border-r border-border/10 z-50">
-        <div className="h-[72px] flex items-center px-6 xl:px-8 flex-none border-b border-primary/10">
-          <span className="text-xl font-serif tracking-[0.5em] uppercase bg-clip-text text-transparent bg-gradient-to-br from-primary via-primary/80 to-primary/60">
-            E<span className="hidden xl:inline">lite</span>
-          </span>
-        </div>
+    <AppShell
+      chromeHidden={chromeHidden}
+      scrollRef={(element) => {
+        mainScrollRef.current = element;
+      }}
+      sidebar={
+        <aside className="hidden h-full w-[80px] flex-none flex-col border-r border-border/10 bg-background xl:w-[240px] min-[769px]:flex">
+          <div className="flex h-[72px] flex-none items-center border-b border-primary/10 px-6 xl:px-8">
+            <span className="bg-gradient-to-br from-primary via-primary/80 to-primary/60 bg-clip-text text-xl font-serif uppercase tracking-[0.5em] text-transparent">
+              E<span className="hidden xl:inline">lite</span>
+            </span>
+          </div>
 
-        <nav className="flex-1 flex flex-col gap-1 px-3 xl:px-4 pt-6">
-          {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
-            const isActive = pathname === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                prefetch
-                onMouseEnter={() => prefetchRouteBundle(href)}
-                onFocus={() => prefetchRouteBundle(href)}
-                className={`relative flex items-center gap-4 px-3 py-3.5 rounded-2xl transition-all duration-300 group ${isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/5"
-                  }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="sidebar-active"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-primary rounded-r-full shadow-[0_0_8px_var(--color-primary)]"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          <nav className="flex flex-1 flex-col gap-1 px-3 pt-6 xl:px-4">
+            {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+              const isActive = pathname === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  prefetch
+                  onMouseEnter={() => prefetchRouteBundle(href)}
+                  onFocus={() => prefetchRouteBundle(href)}
+                  className={`group relative flex items-center gap-4 rounded-2xl px-3 py-3.5 transition-all duration-300 ${isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-foreground/40 hover:bg-foreground/5 hover:text-foreground/70"
+                    }`}
+                >
+                  {isActive ? (
+                    <motion.div
+                      layoutId="sidebar-active"
+                      className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-primary shadow-[0_0_8px_var(--color-primary)]"
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    />
+                  ) : null}
+                  <Icon
+                    size={22}
+                    strokeWidth={isActive ? 2.5 : 1.8}
+                    className={isActive ? "drop-shadow-[0_0_8px_rgba(200,155,144,0.5)]" : ""}
                   />
-                )}
-                <Icon
-                  size={22}
-                  strokeWidth={isActive ? 2.5 : 1.8}
-                  className={isActive ? "drop-shadow-[0_0_8px_rgba(200,155,144,0.5)]" : ""}
-                />
-                <span className={`hidden xl:block text-[12px] font-medium tracking-wide transition-opacity ${isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100"
-                  }`}>
-                  {label}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
+                  <span className={`hidden text-[12px] font-medium tracking-wide transition-opacity xl:block ${isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100"}`}>
+                    {label}
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
 
-        <div className="flex-none px-3 xl:px-4 pb-8">
-          <button
-            onClick={logout}
-            className="flex items-center gap-4 w-full px-3 py-3 rounded-2xl text-foreground/25 hover:text-foreground/60 hover:bg-foreground/5 transition-all"
+          <div className="flex-none px-3 pb-8 xl:px-4">
+            <button
+              onClick={logout}
+              className="flex w-full items-center gap-4 rounded-2xl px-3 py-3 text-foreground/25 transition-all hover:bg-foreground/5 hover:text-foreground/60"
+            >
+              <LogOut size={20} strokeWidth={1.5} />
+              <span className="hidden text-[12px] font-medium tracking-wide xl:block">Sign out</span>
+            </button>
+          </div>
+        </aside>
+      }
+      header={
+        <>
+          <OfflineIndicator />
+          <header
+            className={`ios-app-header pointer-events-none border-b border-border/10 bg-background/80 backdrop-blur-xl transition-transform transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] min-[769px]:pointer-events-auto ${chromeHidden ? "-translate-y-[calc(100%+var(--safe-area-top))] opacity-0 min-[769px]:translate-y-0 min-[769px]:opacity-100" : "translate-y-0 opacity-100"}`}
+            style={{ paddingTop: "var(--safe-area-top)", willChange: "transform, opacity" }}
           >
-            <LogOut size={20} strokeWidth={1.5} />
-            <span className="hidden xl:block text-[12px] font-medium tracking-wide">Sign out</span>
-          </button>
-        </div>
-      </aside>
+            <div className="ios-safe-x flex h-[56px] items-center justify-between px-6 min-[769px]:h-[72px]">
+              <span className="bg-gradient-to-r from-primary to-highlight bg-clip-text text-xl font-serif tracking-widest text-transparent min-[769px]:hidden">
+                VAEL
+              </span>
+              <span className="hidden text-[11px] font-medium uppercase tracking-[0.4em] text-foreground/40 min-[769px]:block">
+                {NAV_ITEMS.find((item) => item.href === pathname)?.label ?? "VAEL"}
+              </span>
 
-      <div className="relative flex flex-col flex-1 min-w-0 overflow-hidden">
-        <OfflineIndicator />
-
-        <header
-          className={`ios-app-header pointer-events-none absolute inset-x-0 top-0 z-40 min-[769px]:static min-[769px]:pointer-events-auto border-b border-border/10 bg-background/80 backdrop-blur-xl transition-transform transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${chromeHidden ? "-translate-y-[calc(100%+var(--safe-area-top))] opacity-0 min-[769px]:translate-y-0 min-[769px]:opacity-100" : "translate-y-0 opacity-100"}`}
-          style={{ paddingTop: "var(--safe-area-top)", willChange: "transform, opacity" }}
-        >
-          <div className="ios-safe-x pointer-events-auto flex h-[56px] items-center justify-between px-6 min-[769px]:h-[72px]">
-            <span className="min-[769px]:hidden text-xl font-serif tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-primary to-highlight">
-              VAEL
-            </span>
-            <span className="hidden min-[769px]:block text-[11px] uppercase tracking-[0.4em] text-foreground/40 font-medium">
-              {NAV_ITEMS.find(n => n.href === pathname)?.label ?? 'VAEL'}
-            </span>
-
-            <Link href="/profile" aria-label="Open profile and account settings" className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-foreground/5 transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-                <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" />
-                <line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" />
-                <line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" />
-                <line x1="17" y1="16" x2="23" y2="16" />
-              </svg>
-            </Link>
-          </div>
-        </header>
-
-        <main
-          ref={(element) => {
-            mainScrollRef.current = element;
-          }}
-          className="app-main-scroll relative flex-1 overflow-y-auto overflow-x-hidden bg-background no-scrollbar"
-          style={{
-            WebkitOverflowScrolling: "touch",
-            overscrollBehaviorY: "contain",
-            ["--app-main-top-padding" as string]: `calc(var(--safe-area-top) + ${chromeHidden ? "12px" : "56px"})`,
-            ["--app-main-bottom-padding" as string]: `calc(var(--safe-area-bottom) + ${chromeHidden ? "12px" : "58px"})`
-          } as CSSProperties}
-        >
-          <div className="w-full min-h-full min-[769px]:mx-auto min-[769px]:max-w-[480px] min-[769px]:pt-0 min-[769px]:pb-0">
-            {children}
-          </div>
-        </main>
-
+              <Link href="/profile" aria-label="Open profile and account settings" className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-foreground/5">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                  <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" />
+                  <line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" />
+                  <line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" />
+                  <line x1="17" y1="16" x2="23" y2="16" />
+                </svg>
+              </Link>
+            </div>
+          </header>
+        </>
+      }
+      bottomNav={
         <nav
-          className={`ios-app-bottom-nav pointer-events-none absolute inset-x-0 bottom-0 z-50 min-[769px]:hidden border-t border-white/5 bg-background/95 text-foreground backdrop-blur-2xl transition-transform transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${chromeHidden ? "translate-y-[calc(100%+var(--safe-area-bottom))] opacity-0" : "translate-y-0 opacity-100"}`}
+          className={`ios-app-bottom-nav border-t border-white/5 bg-background/95 text-foreground backdrop-blur-2xl transition-transform transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${chromeHidden ? "translate-y-[calc(100%+var(--safe-area-bottom))] opacity-0" : "translate-y-0 opacity-100"}`}
           style={{ paddingBottom: "var(--safe-area-bottom)", willChange: "transform, opacity" }}
           aria-hidden={chromeHidden}
         >
-          <div className="ios-safe-x pointer-events-auto flex h-[50px] items-center justify-around px-2">
+          <div className="ios-safe-x pointer-events-auto flex h-[58px] items-center justify-around px-2">
             {NAV_ITEMS.map(({ href, icon: Icon }) => {
               const isActive = pathname === href;
               return (
@@ -215,9 +210,7 @@ function AppLayoutShell({ children }: { children: React.ReactNode }) {
                   prefetch
                   onMouseEnter={() => prefetchRouteBundle(href)}
                   onFocus={() => prefetchRouteBundle(href)}
-                  className={`flex items-center justify-center w-full h-full transition-colors ${
-                    isActive ? "text-primary" : "text-foreground/40 hover:text-foreground/70"
-                  }`}
+                  className={`flex h-full w-full items-center justify-center transition-colors ${isActive ? "text-primary" : "text-foreground/40 hover:text-foreground/70"}`}
                 >
                   <Icon size={26} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "drop-shadow-[0_0_8px_rgba(200,155,144,0.4)]" : ""} />
                 </Link>
@@ -225,7 +218,10 @@ function AppLayoutShell({ children }: { children: React.ReactNode }) {
             })}
           </div>
         </nav>
-      </div>
-    </div>
+      }
+      contentInnerClassName="min-h-full w-full min-[769px]:mx-auto min-[769px]:max-w-[480px]"
+    >
+      {children}
+    </AppShell>
   );
 }

@@ -149,10 +149,13 @@ body,
 }
 
 
-.app-main-scroll {
-  padding-top: var(--app-main-top-padding, calc(var(--safe-area-top) + var(--app-header-height)));
-  padding-bottom: var(--app-main-bottom-padding, calc(var(--safe-area-bottom) + var(--app-bottom-nav-height)));
-  transition: padding 300ms cubic-bezier(0.22, 1, 0.36, 1);
+.app-shell-frame {
+  min-height: var(--app-viewport-height);
+}
+
+.app-shell-content-layer {
+  top: var(--app-shell-header-offset, calc(var(--safe-area-top) + var(--app-header-height)));
+  bottom: var(--app-shell-bottom-offset, calc(var(--safe-area-bottom) + var(--app-bottom-nav-height)));
   min-height: 0;
   scrollbar-gutter: stable both-edges;
 }
@@ -172,10 +175,9 @@ body,
 }
 
 @media (min-width: 769px) {
-  .app-main-scroll {
-    padding-top: 0;
-    padding-bottom: 0;
-    transition: none;
+  .app-shell-content-layer {
+    top: 72px;
+    bottom: 0;
   }
 }
 
