@@ -1,5 +1,5 @@
-import { MatchesFeature } from "@/features/matches/components/MatchesFeature";
+import MatchesPage from "@/features/matches/pages/MatchesPage";
 
-export default function MatchesPage() {
-  return <MatchesFeature />;
+export default function Page() {
+  return <MatchesPage />;
 }
