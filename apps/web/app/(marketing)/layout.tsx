@@ -8,7 +8,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
     // min-h-screen ensures the Pearl White background fills the page
     // overflow-y-auto ensures that scrolling is explicitly allowed here
-    <div className="flex flex-col min-h-screen w-full overflow-y-auto overflow-x-hidden bg-background">
+    <div className="flex min-h-[var(--app-viewport-height)] w-full flex-col overflow-x-hidden overflow-y-auto bg-background">
       <Navigation />
 
       {/* Remove 'relative' if not needed to avoid z-index stacking bugs */}

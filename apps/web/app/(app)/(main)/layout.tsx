@@ -101,7 +101,7 @@ function AppLayoutShell({ children }: { children: React.ReactNode }) {
   if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
   return (
-    <div className="flex flex-row h-[100dvh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
+    <div className="ios-app-shell mobile-container desktop-container flex w-screen flex-row overflow-hidden bg-background transition-colors duration-500">
       <aside className="hidden min-[769px]:flex flex-col w-[80px] xl:w-[240px] h-full flex-none bg-background border-r border-border/10 z-50">
         <div className="h-[72px] flex items-center px-6 xl:px-8 flex-none border-b border-primary/10">
           <span className="text-xl font-serif tracking-[0.5em] uppercase bg-clip-text text-transparent bg-gradient-to-br from-primary via-primary/80 to-primary/60">
@@ -160,10 +160,10 @@ function AppLayoutShell({ children }: { children: React.ReactNode }) {
         <OfflineIndicator />
 
         <header
-          className={`pointer-events-none absolute inset-x-0 top-0 z-40 min-[769px]:static min-[769px]:pointer-events-auto bg-background/80 backdrop-blur-xl border-b border-border/10 transition-transform transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${chromeHidden ? "-translate-y-[calc(100%+var(--safe-area-top))] opacity-0 min-[769px]:translate-y-0 min-[769px]:opacity-100" : "translate-y-0 opacity-100"}`}
-          style={{ paddingTop: "env(safe-area-inset-top)", willChange: "transform, opacity" }}
+          className={`ios-app-header pointer-events-none absolute inset-x-0 top-0 z-40 min-[769px]:static min-[769px]:pointer-events-auto border-b border-border/10 bg-background/80 backdrop-blur-xl transition-transform transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${chromeHidden ? "-translate-y-[calc(100%+var(--safe-area-top))] opacity-0 min-[769px]:translate-y-0 min-[769px]:opacity-100" : "translate-y-0 opacity-100"}`}
+          style={{ paddingTop: "var(--safe-area-top)", willChange: "transform, opacity" }}
         >
-          <div className="pointer-events-auto flex items-center justify-between px-6 h-[56px] min-[769px]:h-[72px]">
+          <div className="ios-safe-x pointer-events-auto flex h-[56px] items-center justify-between px-6 min-[769px]:h-[72px]">
             <span className="min-[769px]:hidden text-xl font-serif tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-primary to-highlight">
               VAEL
             </span>
@@ -187,7 +187,7 @@ function AppLayoutShell({ children }: { children: React.ReactNode }) {
           ref={(element) => {
             mainScrollRef.current = element;
           }}
-          className="app-main-scroll flex-1 overflow-y-auto overflow-x-hidden relative no-scrollbar bg-background"
+          className="app-main-scroll relative flex-1 overflow-y-auto overflow-x-hidden bg-background no-scrollbar"
           style={{
             WebkitOverflowScrolling: "touch",
             overscrollBehaviorY: "contain",
@@ -195,17 +195,17 @@ function AppLayoutShell({ children }: { children: React.ReactNode }) {
             ["--app-main-bottom-padding" as string]: `calc(var(--safe-area-bottom) + ${chromeHidden ? "12px" : "58px"})`
           } as CSSProperties}
         >
-          <div className="w-full h-full min-[769px]:max-w-[480px] min-[769px]:mx-auto min-[769px]:pt-0 min-[769px]:pb-0">
+          <div className="w-full min-h-full min-[769px]:mx-auto min-[769px]:max-w-[480px] min-[769px]:pt-0 min-[769px]:pb-0">
             {children}
           </div>
         </main>
 
         <nav
-          className={`pointer-events-none absolute inset-x-0 bottom-0 min-[769px]:hidden z-50 text-foreground bg-background/95 backdrop-blur-2xl border-t border-white/5 transition-transform transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${chromeHidden ? "translate-y-[calc(100%+var(--safe-area-bottom))] opacity-0" : "translate-y-0 opacity-100"}`}
-          style={{ paddingBottom: "env(safe-area-inset-bottom)", willChange: "transform, opacity" }}
+          className={`ios-app-bottom-nav pointer-events-none absolute inset-x-0 bottom-0 z-50 min-[769px]:hidden border-t border-white/5 bg-background/95 text-foreground backdrop-blur-2xl transition-transform transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${chromeHidden ? "translate-y-[calc(100%+var(--safe-area-bottom))] opacity-0" : "translate-y-0 opacity-100"}`}
+          style={{ paddingBottom: "var(--safe-area-bottom)", willChange: "transform, opacity" }}
           aria-hidden={chromeHidden}
         >
-          <div className="pointer-events-auto flex h-[50px] items-center justify-around px-2">
+          <div className="ios-safe-x pointer-events-auto flex h-[50px] items-center justify-around px-2">
             {NAV_ITEMS.map(({ href, icon: Icon }) => {
               const isActive = pathname === href;
               return (

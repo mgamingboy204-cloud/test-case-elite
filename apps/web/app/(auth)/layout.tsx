@@ -27,11 +27,11 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     }
   }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router, appStateCode, appStateRedirectTo]);
 
-  if (!isAuthResolved) return <div className="min-h-screen w-full bg-background" />;
+  if (!isAuthResolved) return <div className="min-h-[var(--app-viewport-height)] w-full bg-background" />;
   if (isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 relative bg-background">
+    <div className="ios-safe-x ios-safe-top ios-safe-bottom relative flex min-h-[var(--app-viewport-height)] w-full flex-col items-center justify-center bg-background p-6">
       {/* Subtle Abstract Background for Auth */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[120px] mix-blend-screen" />
