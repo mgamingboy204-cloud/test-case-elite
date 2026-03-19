@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
- 
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -261,6 +261,8 @@ model User {
   profileCompletedAt DateTime?
   deactivatedAt DateTime?
   deletedAt DateTime?
+  /// Bumped to immediately invalidate all existing refresh tokens for this user.
+  tokenVersion Int      @default(0)
   assignedEmployeeId String?
   assignedAt DateTime?
   verifiedByEmployeeId String?
@@ -681,6 +683,9 @@ model VerificationRequest {
 
 model Notification {
   id          String   @id @default(uuid())
+  /// Deterministic uniqueness key to avoid duplicate notifications when actorUserId/matchId are null.
+  /// Postgres UNIQUE indexes allow multiple NULLs, so the old composite unique could not dedupe those cases.
+  dedupeKey   String   @unique
   type        NotificationType
   userId      String
   actorUserId String?

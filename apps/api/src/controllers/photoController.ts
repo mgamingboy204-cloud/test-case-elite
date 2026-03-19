@@ -23,7 +23,7 @@ export async function deletePhotoHandler(req: Request, res: Response) {
   if (!photoId) return res.status(400).json({ message: "photoId is required" });
 
   await deletePhoto({ userId: res.locals.user.id, photoId });
-  return res.json({ ok: true });
+  return res.json({ deleted: true, ok: true });
 }
 
 

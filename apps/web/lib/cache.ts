@@ -48,6 +48,28 @@ export function primeCache<T>(key: string, value: T) {
   getQueryClient().setQueryData([key], value);
 }
 
+export function clearAllCaches() {
+  memoryCache.clear();
+
+  if (typeof window !== "undefined") {
+    const prefix = "vael-cache:";
+    const keysToRemove: string[] = [];
+
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith(prefix)) {
+        keysToRemove.push(key);
+      }
+    }
+
+    for (const key of keysToRemove) {
+      window.localStorage.removeItem(key);
+    }
+  }
+
+  getQueryClient().clear();
+}
+
 export function readCache<T>(key: string): CacheRecord<T> | null {
   const queryData = getQueryClient().getQueryData<T>([key]);
   if (queryData !== undefined) {

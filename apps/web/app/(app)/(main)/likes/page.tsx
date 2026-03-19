@@ -6,7 +6,7 @@ import { fetchIncomingLikes, respondToIncomingLike, type LikesIncomingProfile } 
 import { fetchAlerts, fetchMatches } from "@/lib/queries";
 import { primeCache, readCache } from "@/lib/cache";
 import { X, Check, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, PanInfo } from "framer-motion";
 
 type PageStatus = "loading" | "success" | "empty" | "error";
@@ -17,10 +17,15 @@ export default function LikesPage() {
   const cached = readCache<LikesIncomingProfile[]>(LIKES_CACHE_KEY)?.value ?? [];
 
   const [profiles, setProfiles] = useState<LikesIncomingProfile[]>(cached);
+  const profilesRef = useRef<LikesIncomingProfile[]>(cached);
   const [status, setStatus] = useState<PageStatus>(cached.length > 0 ? "success" : "loading");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pendingProfileId, setPendingProfileId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    profilesRef.current = profiles;
+  }, [profiles]);
 
   const persist = useCallback((items: LikesIncomingProfile[]) => {
     primeCache(LIKES_CACHE_KEY, items);
@@ -37,7 +42,7 @@ export default function LikesPage() {
       const incoming = await fetchIncomingLikes();
       persist(incoming);
     } catch (error) {
-      if (profiles.length === 0) {
+      if (profilesRef.current.length === 0) {
         setStatus("error");
       }
       const normalized = normalizeApiError(error);
@@ -45,7 +50,7 @@ export default function LikesPage() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [isAuthenticated, onboardingStep, persist, profiles.length]);
+  }, [isAuthenticated, onboardingStep, persist]);
 
   useEffect(() => {
     void refresh();
@@ -55,6 +60,7 @@ export default function LikesPage() {
     if (pendingProfileId) return;
 
     const swipeThreshold = 50;
+    // Carousel rotation only (no backend calls). PRD actions are buttons only.
     if (info.offset.x < -swipeThreshold) {
       setProfiles((prev) => {
         if (prev.length <= 1) return prev;
@@ -79,25 +85,25 @@ export default function LikesPage() {
     const current = profiles[0];
     if (!current || pendingProfileId) return;
 
-    const previous = profiles;
-    const optimistic = previous.slice(1);
-
+    const previousCards = profiles;
+    const nextCards = previousCards.slice(1);
     setPendingProfileId(current.profileId);
     setActionError(null);
-    setProfiles(optimistic);
-    primeCache(LIKES_CACHE_KEY, optimistic);
-    if (optimistic.length === 0) setStatus("empty");
+    setProfiles(nextCards);
+    primeCache(LIKES_CACHE_KEY, nextCards);
+    if (nextCards.length === 0) setStatus("empty");
 
     try {
       const response = await respondToIncomingLike({ targetUserId: current.profileId, action });
+      // Only on LIKE_BACK should a match be created and both sides receive alerts/push.
       if (response.matchId) {
         void fetchMatches().then((data) => primeCache("matches", data));
         void fetchAlerts().then((data) => primeCache("alerts", data));
       }
-      if (optimistic.length > 0) setStatus("success");
+      if (nextCards.length > 0) setStatus("success");
     } catch (error) {
-      setProfiles(previous);
-      primeCache(LIKES_CACHE_KEY, previous);
+      setProfiles(previousCards);
+      primeCache(LIKES_CACHE_KEY, previousCards);
       setStatus("success");
       const normalized = normalizeApiError(error);
       setActionError(normalized.message);
@@ -109,7 +115,7 @@ export default function LikesPage() {
   const countLabel = useMemo(() => {
     if (status === "loading") return "Preparing your incoming interests";
     if (status === "error") return "Unable to load incoming interests";
-    return `${profiles.length} Selective Interests`;
+    return `${profiles.length} Incoming likes`;
   }, [profiles.length, status]);
 
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
@@ -138,7 +144,7 @@ export default function LikesPage() {
 
         {status === "empty" && (
           <p className="text-foreground/50 text-sm font-light text-center px-10">
-            No new interests yet. We will discreetly surface incoming likes here.
+            No likes yet. Come back soon.
           </p>
         )}
 
@@ -149,12 +155,10 @@ export default function LikesPage() {
 
             const distance = Math.abs(offset);
             const isCenter = offset === 0;
-            const isLeft = offset < 0;
-            const isRight = offset > 0;
 
             let xPos = 0;
-            if (isLeft) xPos = -90 - distance * 10;
-            if (isRight) xPos = 90 + distance * 10;
+            if (offset < 0) xPos = -90 - distance * 10;
+            if (offset > 0) xPos = 90 + distance * 10;
 
             const scale = isCenter ? 1 : 0.9 - distance * 0.05;
             const opacity = Math.max(isCenter ? 1 : 0.4 - distance * 0.1, 0);
@@ -190,16 +194,22 @@ export default function LikesPage() {
 
                 <div className="flex justify-center gap-8 items-center w-full shrink-0">
                   <button
+                    type="button"
                     onClick={isCenter ? () => void handleAction("PASS") : undefined}
                     disabled={!isCenter || Boolean(pendingProfileId)}
+                    aria-label="Pass"
+                    title="Pass"
                     className="w-[64px] h-[64px] rounded-full bg-background/50 backdrop-blur-xl border border-primary/30 shadow-lg flex items-center justify-center hover:bg-primary/10 transition-colors pointer-events-auto disabled:opacity-50"
                   >
                     {isPending ? <Loader2 size={24} className="text-primary animate-spin" /> : <X size={28} strokeWidth={1} className="text-primary" />}
                   </button>
 
                   <button
+                    type="button"
                     onClick={isCenter ? () => void handleAction("LIKE") : undefined}
                     disabled={!isCenter || Boolean(pendingProfileId)}
+                    aria-label="Like back"
+                    title="Like back"
                     className="w-[72px] h-[72px] rounded-full bg-background/50 backdrop-blur-xl border border-primary/50 shadow-2xl flex items-center justify-center hover:bg-primary/10 transition-colors pointer-events-auto disabled:opacity-50"
                   >
                     {isPending ? <Loader2 size={26} className="text-primary animate-spin" /> : <HeartVaelIconSmall />}

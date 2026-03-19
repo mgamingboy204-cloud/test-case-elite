@@ -13,6 +13,7 @@ import {
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { listEmployeeWorkloads } from "./employeeService";
+import { notificationDedupeKey } from "../utils/notificationDedupe";
 
 type VerificationRequestListItem = Prisma.VerificationRequestGetPayload<{
   include: { user: { select: { id: true; phone: true; email: true } } };
@@ -448,6 +449,12 @@ async function pushVerificationAlert(options: {
         actorUserId: options.actorUserId,
         matchId: null,
         type: "VIDEO_VERIFICATION_UPDATE",
+        dedupeKey: notificationDedupeKey({
+          userId: options.userId,
+          type: "VIDEO_VERIFICATION_UPDATE",
+          actorUserId: options.actorUserId,
+          matchId: null
+        }),
         title: options.title,
         message: options.message,
         metadata: options.metadata ?? {},

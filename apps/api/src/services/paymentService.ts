@@ -3,6 +3,7 @@ import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { env } from "../config/env";
 import { getPaymentProviderMode, initiatePaymentGatewayOrder, verifyPaymentGatewaySignature } from "./paymentGatewayService";
+import { notificationDedupeKey } from "../utils/notificationDedupe";
 
 const PLAN_DETAILS: Record<PaymentPlan, { amountInr: number; durationMonths: number; label: string }> = {
   ONE_MONTH: { amountInr: 30000, durationMonths: 1, label: "1 month" },
@@ -77,6 +78,7 @@ export async function initiateOnboardingPayment(options: {
   };
   tier: string;
 }) {
+  const isRenewal = options.user.onboardingStep === "ACTIVE";
   if (options.user.videoVerificationStatus !== "APPROVED") {
     throw new HttpError(403, {
       message: "Verification required",
@@ -106,7 +108,7 @@ export async function initiateOnboardingPayment(options: {
         onboardingPaymentPlan: plan,
         onboardingPaymentAmount: planDetails.amountInr,
         paymentStatus: "PENDING",
-        onboardingStep: "PAYMENT_PENDING"
+        onboardingStep: isRenewal ? "ACTIVE" : "PAYMENT_PENDING"
       }
     });
 
@@ -154,6 +156,7 @@ export async function verifyOnboardingPayment(options: {
   paymentId: string;
   signature: string;
 }) {
+  const isRenewal = options.user.onboardingStep === "ACTIVE";
   if (options.user.videoVerificationStatus !== "APPROVED") {
     throw new HttpError(403, {
       message: "Verification required",
@@ -194,7 +197,7 @@ export async function verifyOnboardingPayment(options: {
       ok: true,
       payment: latestPaid,
       paymentStatus: "PAID",
-      onboardingStep: "PAID",
+      onboardingStep: isRenewal ? "ACTIVE" : "PAID",
       renewalPolicy: "MANUAL_ONLY",
       autoRenew: false,
       taxIncluded: true,
@@ -249,7 +252,7 @@ export async function verifyOnboardingPayment(options: {
       where: { id: options.user.id },
       data: {
         paymentStatus: "PAID",
-        onboardingStep: "PAID",
+        onboardingStep: isRenewal ? "ACTIVE" : "PAID",
         onboardingPaymentVerifiedAt: startedAt,
         subscriptionTier: "PREMIUM",
         subscriptionStatus: "ACTIVE",
@@ -266,7 +269,7 @@ export async function verifyOnboardingPayment(options: {
     ok: true,
     payment,
     paymentStatus: "PAID",
-    onboardingStep: "PAID",
+    onboardingStep: isRenewal ? "ACTIVE" : "PAID",
     renewalPolicy: "MANUAL_ONLY",
     autoRenew: false,
     taxIncluded: true,
@@ -289,6 +292,7 @@ export async function completeMockOnboardingPayment(options: {
   if (getPaymentProviderMode() !== "mock" && !env.ALLOW_TEST_BYPASS) {
     throw new HttpError(404, { message: "Not found" });
   }
+  const isRenewal = options.user.onboardingStep === "ACTIVE";
   if (!options.user.onboardingPaymentPlan || !options.user.onboardingPaymentAmount) {
     throw new HttpError(400, { message: "Missing payment plan details. Please initiate payment again." });
   }
@@ -307,7 +311,7 @@ export async function completeMockOnboardingPayment(options: {
       where: { id: options.user.id },
       data: {
         paymentStatus: "PAID",
-        onboardingStep: "PAID",
+        onboardingStep: isRenewal ? "ACTIVE" : "PAID",
         onboardingPaymentVerifiedAt: startedAt,
         subscriptionTier: "PREMIUM",
         subscriptionStatus: "ACTIVE",
@@ -318,7 +322,7 @@ export async function completeMockOnboardingPayment(options: {
     });
     return tx.payment.findFirst({ where: { userId: options.user.id }, orderBy: { paidAt: "desc" } });
   });
-  return { ok: true, mocked: true, payment, paymentStatus: "PAID", onboardingStep: "PAID" };
+  return { ok: true, mocked: true, payment, paymentStatus: "PAID", onboardingStep: isRenewal ? "ACTIVE" : "PAID" };
 }
 
 export async function markOnboardingPaymentFailed(options: {
@@ -326,9 +330,11 @@ export async function markOnboardingPaymentFailed(options: {
     id: string;
     onboardingPaymentPlan: PaymentPlan | null;
     onboardingPaymentAmount: number | null;
+    onboardingStep?: string;
   };
   reason?: string;
 }) {
+  const isRenewal = options.user.onboardingStep === "ACTIVE";
   if (!options.user.onboardingPaymentPlan || !options.user.onboardingPaymentAmount) {
     throw new HttpError(400, { message: "No pending payment session found." });
   }
@@ -353,7 +359,7 @@ export async function markOnboardingPaymentFailed(options: {
       where: { id: options.user.id },
       data: {
         paymentStatus: "FAILED",
-        onboardingStep: "PAYMENT_PENDING"
+        onboardingStep: isRenewal ? "ACTIVE" : "PAYMENT_PENDING"
       }
     });
 
@@ -384,6 +390,7 @@ export async function markOnboardingPaymentFailed(options: {
         data: {
           userId: options.user.id,
           type: "SYSTEM_PROMO",
+          dedupeKey: notificationDedupeKey({ userId: options.user.id, type: "SYSTEM_PROMO", actorUserId: null, matchId: null }),
           title: "Payment Action Required",
           message: "Your membership payment did not complete. Please retry or contact premium support.",
           metadata: { eventType: "PAYMENT_ISSUE" },

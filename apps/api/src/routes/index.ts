@@ -12,6 +12,8 @@ import adminRoutes from "./adminRoutes";
 import verificationRoutes from "./verificationRoutes";
 import paymentRoutes from "./paymentRoutes";
 import notificationRoutes from "./notificationRoutes";
+import settingsRoutes from "./settingsRoutes";
+import employeeRoutes from "./employeeRoutes";
 import healthRoutes from "./healthRoutes";
 
 const router = Router();
@@ -29,6 +31,8 @@ router.use(adminRoutes);
 router.use(verificationRoutes);
 router.use(paymentRoutes);
 router.use(notificationRoutes);
+router.use(settingsRoutes);
+router.use(employeeRoutes);
 router.use(healthRoutes);
 
 export default router;

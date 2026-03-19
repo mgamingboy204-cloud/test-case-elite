@@ -1,5 +1,6 @@
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
+import { notificationDedupeKey } from "../utils/notificationDedupe";
 
 const ACTIVE_MATCH_WHERE = { unmatchedAt: null } as const;
 
@@ -50,7 +51,19 @@ export async function createLike(options: { actorUserId: string; targetUserId: s
 
     if (options.action === "LIKE") {
       await tx.notification.createMany({
-        data: [{ userId: options.targetUserId, actorUserId: options.actorUserId, type: "NEW_LIKE" }],
+        data: [
+          {
+            userId: options.targetUserId,
+            actorUserId: options.actorUserId,
+            type: "NEW_LIKE",
+            dedupeKey: notificationDedupeKey({
+              userId: options.targetUserId,
+              type: "NEW_LIKE",
+              actorUserId: options.actorUserId,
+              matchId: null
+            })
+          }
+        ],
         skipDuplicates: true
       });
     }
@@ -69,8 +82,30 @@ export async function createLike(options: { actorUserId: string; targetUserId: s
         });
         await tx.notification.createMany({
           data: [
-            { userId: ordered[0], actorUserId: ordered[1], type: "NEW_MATCH", matchId: match.id },
-            { userId: ordered[1], actorUserId: ordered[0], type: "NEW_MATCH", matchId: match.id }
+            {
+              userId: ordered[0],
+              actorUserId: ordered[1],
+              type: "NEW_MATCH",
+              matchId: match.id,
+              dedupeKey: notificationDedupeKey({
+                userId: ordered[0],
+                type: "NEW_MATCH",
+                actorUserId: ordered[1],
+                matchId: match.id
+              })
+            },
+            {
+              userId: ordered[1],
+              actorUserId: ordered[0],
+              type: "NEW_MATCH",
+              matchId: match.id,
+              dedupeKey: notificationDedupeKey({
+                userId: ordered[1],
+                type: "NEW_MATCH",
+                actorUserId: ordered[0],
+                matchId: match.id
+              })
+            }
           ],
           skipDuplicates: true
         });

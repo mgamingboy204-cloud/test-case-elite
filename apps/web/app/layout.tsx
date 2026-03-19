@@ -15,8 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VAEL | Connect with Intention",
-  description: "An exclusive, high-end matchmaking platform.",
+  title: "VAEL – Private Membership Club for Extraordinary People",
+  description:
+    "VAEL is a human-led, invite-only membership club for high-value individuals. Every profile is verified, every introduction is curated, and every interaction protects your privacy.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

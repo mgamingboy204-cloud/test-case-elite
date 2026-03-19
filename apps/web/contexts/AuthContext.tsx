@@ -9,6 +9,7 @@ import {
   resolveFrontendOnboardingStep,
   routeForFrontendOnboardingStep
 } from "@/lib/onboarding";
+import { clearAllCaches } from "@/lib/cache";
 
 export type OnboardingStep = FrontendOnboardingStep;
 
@@ -119,6 +120,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(me);
   };
 
+  const maybeSaveFcmToken = async () => {
+    if (typeof window === "undefined") return;
+    const token = localStorage.getItem("vael_fcm_token");
+    if (!token) return;
+    try {
+      await apiRequestAuth("/users/fcm-token", {
+        method: "POST",
+        body: JSON.stringify({ token })
+      });
+    } catch {
+      // Best-effort: token storage should never break login.
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -153,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = subscribeToAuthFailure(() => {
       setUser(null);
+      clearAllCaches();
     });
 
     return () => {
@@ -241,6 +257,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     debugLog("[signup] navigation target", { nextRoute });
     router.push(nextRoute);
+
+    // Best-effort FCM token registration (if client provided one).
+    void maybeSaveFcmToken();
   };
 
   const startLogin = async (phone: string, password: string) => {
@@ -271,6 +290,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       photoCount: response.user.photoCount
     })));
 
+    void maybeSaveFcmToken();
     return { otpRequired: false };
   };
 
@@ -292,6 +312,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileCompletedAt: response.user.profileCompletedAt,
       photoCount: response.user.photoCount
     })));
+
+    void maybeSaveFcmToken();
   };
 
   const resendSigninOtp = async () => {
@@ -322,6 +344,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileCompletedAt: response.user.profileCompletedAt,
       photoCount: response.user.photoCount
     })));
+
+    void maybeSaveFcmToken();
   };
 
   const resendSignupOtp = async () => {
@@ -344,12 +368,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // ignore logout API errors
     }
     clearAccessToken();
+    clearAllCaches();
     setUser(null);
     setPendingPhone(null);
     setSignupToken(null);
     localStorage.removeItem("vael_pending_phone");
     localStorage.removeItem("vael_signup_token");
-    router.push("/");
+    router.push("/signin");
   };
 
   if (!isInitialized) return null;

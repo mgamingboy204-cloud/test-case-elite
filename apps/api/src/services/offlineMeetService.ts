@@ -1,6 +1,7 @@
 import { NotificationType, OfflineMeetCoordinationStatus, Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
+import { notificationDedupeKey } from "../utils/notificationDedupe";
 
 type CafeOption = { id: string; name: string; address: string };
 type TimeSlotOption = { id: string; label: string; startsAtIso: string | null };
@@ -105,6 +106,7 @@ async function createNotifications(userIds: string[], type: NotificationType, ma
       userId,
       type,
       matchId,
+      dedupeKey: notificationDedupeKey({ userId, type, matchId }),
       title,
       message,
       deepLinkUrl: "/matches"
@@ -426,6 +428,7 @@ export async function listOfflineMeetCasesForEmployee(userId: string, requestedV
       id: entry.id,
       matchId: entry.matchId,
       status: entry.status,
+        createdAt: entry.createdAt.toISOString(),
       assignedEmployeeId: entry.assignedEmployeeId,
       responseDeadlineAt: entry.responseDeadlineAt,
       cooldownUntil: entry.cooldownUntil,

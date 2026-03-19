@@ -6,6 +6,7 @@ import {
 import { env } from "../config/env";
 import { parseCookies } from "../utils/cookies";
 import { prisma } from "../db/prisma";
+import bcrypt from "bcrypt";
 import {
   completeSignupWithPassword,
   issueOnboardingToken,
@@ -115,7 +116,7 @@ export async function verifyOtp(req: Request, res: Response) {
     const resolvedRememberMe = rememberMe ?? false;
 
     const accessToken = signAccessToken(user.id, { rememberMe: resolvedRememberMe });
-    const refreshToken = signRefreshToken(user.id, { rememberMe: resolvedRememberMe });
+    const refreshToken = signRefreshToken(user.id, { rememberMe: resolvedRememberMe, tokenVersion: user.tokenVersion });
     const { onboardingToken } = await issueOnboardingToken(user.id);
 
     const refreshTtlDays = resolvedRememberMe
@@ -166,7 +167,7 @@ export async function verifyOtpMock(req: Request, res: Response) {
   const photoCount = await prisma.photo.count({ where: { userId: user.id } });
   const resolvedRememberMe = rememberMe ?? false;
   const accessToken = signAccessToken(user.id, { rememberMe: resolvedRememberMe });
-  const refreshToken = signRefreshToken(user.id, { rememberMe: resolvedRememberMe });
+  const refreshToken = signRefreshToken(user.id, { rememberMe: resolvedRememberMe, tokenVersion: user.tokenVersion });
   const { onboardingToken } = await issueOnboardingToken(user.id);
   const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
   const cookies = setAuthCookies(res, { accessToken, refreshToken, refreshTtlDays });
@@ -250,7 +251,7 @@ export async function signupComplete(req: Request, res: Response) {
   const user = await completeSignupWithPassword({ phone, password });
 
   const accessToken = signAccessToken(user.id, { rememberMe: true });
-  const refreshToken = signRefreshToken(user.id, { rememberMe: true });
+  const refreshToken = signRefreshToken(user.id, { rememberMe: true, tokenVersion: user.tokenVersion });
   const { onboardingToken } = await issueOnboardingToken(user.id);
   const cookies = setAuthCookies(res, { accessToken, refreshToken, refreshTtlDays: env.REFRESH_TOKEN_TTL_DAYS });
 
@@ -281,7 +282,10 @@ export async function login(req: Request, res: Response) {
   });
 
   const accessToken = signAccessToken(result.user.id, { rememberMe: resolvedRememberMe });
-  const refreshToken = signRefreshToken(result.user.id, { rememberMe: resolvedRememberMe });
+  const refreshToken = signRefreshToken(result.user.id, {
+    rememberMe: resolvedRememberMe,
+    tokenVersion: result.user.tokenVersion
+  });
   const { onboardingToken } = await issueOnboardingToken(result.user.id);
 
   const refreshTtlDays = resolvedRememberMe
@@ -334,13 +338,19 @@ export async function employeeLogin(req: Request, res: Response) {
   const user = await validateEmployeeLogin({ employeeId, password });
   const resolvedRememberMe = rememberMe ?? true;
   const accessToken = signAccessToken(user.id, { rememberMe: resolvedRememberMe });
-  const refreshToken = signRefreshToken(user.id, { rememberMe: resolvedRememberMe });
+  const refreshToken = signRefreshToken(user.id, { rememberMe: resolvedRememberMe, tokenVersion: user.tokenVersion });
   const refreshTtlDays = resolvedRememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
   const cookies = setAuthCookies(res, { accessToken, refreshToken, refreshTtlDays });
 
   return res.json({
     ok: true,
     accessToken,
+    employee: {
+      id: user.id,
+      name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.displayName || "Employee",
+      role: user.role
+    },
+    // Backwards-compatible field for older console clients.
     user: {
       id: user.id,
       employeeId: user.employeeId,
@@ -359,6 +369,36 @@ export async function logout(req: Request, res: Response) {
   res.clearCookie("vael_access_token", buildAccessCookieOptions(env.ACCESS_TOKEN_TTL_MINUTES));
 
   return res.json({ ok: true });
+}
+
+export async function changePasswordHandler(req: Request, res: Response) {
+  const userId = res.locals.user.id as string;
+  const { currentPassword, newPassword } = req.body as { currentPassword: string; newPassword: string };
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { passwordHash: true, tokenVersion: true }
+  });
+
+  if (!user?.passwordHash) {
+    throw new HttpError(400, { message: "Password is not set for this account." });
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) {
+    throw new HttpError(401, { message: "Current password is incorrect." });
+  }
+
+  const nextPasswordHash = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      passwordHash: nextPasswordHash,
+      tokenVersion: { increment: 1 }
+    }
+  });
+
+  return res.json({ updated: true });
 }
 
 export async function refreshAccessToken(req: Request, res: Response) {
@@ -384,11 +424,13 @@ export async function refreshAccessToken(req: Request, res: Response) {
 
   let userId: string;
   let rememberMe = false;
+  let tokenVersionFromToken = 0;
 
   try {
     const verification = verifyRefreshToken(refreshToken);
     userId = verification.userId;
     rememberMe = verification.rememberMe;
+    tokenVersionFromToken = verification.tokenVersion;
   } catch (error) {
     const reason = getJwtErrorReason(error);
     logSessionEvent("refresh.fail", { requestId, reason });
@@ -404,9 +446,13 @@ export async function refreshAccessToken(req: Request, res: Response) {
   if (user.deletedAt) return res.status(403).json({ message: "Account deleted" });
   if (user.deactivatedAt) return res.status(403).json({ message: "Account deactivated" });
   if (user.status === "BANNED") return res.status(403).json({ message: "Banned" });
+  if (user.tokenVersion !== tokenVersionFromToken) {
+    logSessionEvent("refresh.fail", { requestId, userId: user.id, reason: "token_version_mismatch" });
+    return res.status(401).json({ message: "Invalid refresh token", reason: "token_version_mismatch" });
+  }
 
   const accessToken = signAccessToken(user.id, { rememberMe });
-  const nextRefreshToken = signRefreshToken(user.id, { rememberMe });
+  const nextRefreshToken = signRefreshToken(user.id, { rememberMe, tokenVersion: user.tokenVersion });
 
   const refreshTtlDays = rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
   const cookieMeta = setAuthCookies(res, { accessToken, refreshToken: nextRefreshToken, refreshTtlDays });

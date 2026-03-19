@@ -2,6 +2,7 @@ import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { createOrActivateOfflineMeetCase, notifyOfflineMeetRequest } from "./offlineMeetService";
 import { createOrActivateOnlineMeetCase, notifyOnlineMeetRequest } from "./onlineMeetService";
+import { notificationDedupeKey } from "../utils/notificationDedupe";
 
 type ConsentType = "PHONE_NUMBER" | "OFFLINE_MEET" | "ONLINE_MEET" | "SOCIAL_EXCHANGE";
 type ConsentResponse = "YES" | "NO";
@@ -45,20 +46,17 @@ function getConsentPayloadMap(consents: Array<{ type: ConsentType; userId: strin
 }
 
 async function createPhoneExchangeAlert(userId: string, actorUserId: string, matchId: string, type: "PHONE_EXCHANGE_REQUEST" | "PHONE_EXCHANGE_ACCEPTED" | "PHONE_EXCHANGE_REJECTED" | "PHONE_EXCHANGE_MUTUAL_CONSENT_CONFIRMED" | "PHONE_EXCHANGE_REVEALED", message: string) {
+  const dedupeKey = notificationDedupeKey({ userId, type, actorUserId, matchId });
   await prisma.notification.upsert({
     where: {
-      userId_type_actorUserId_matchId: {
-        userId,
-        type,
-        actorUserId,
-        matchId
-      }
+      dedupeKey
     },
     create: {
       userId,
       type,
       actorUserId,
       matchId,
+      dedupeKey,
       message,
       deepLinkUrl: "/matches"
     },

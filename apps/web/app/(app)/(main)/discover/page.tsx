@@ -1,12 +1,18 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { Briefcase, Ruler, X, type LucideIcon } from "lucide-react";
+import { Briefcase, Ruler, X, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import { normalizeApiError } from "@/lib/apiErrors";
 import { sendLikeAction } from "@/lib/likes";
-import { fetchAlerts, fetchDiscoverFeedPage, fetchMatches, mapLegacyFeedItemToCard, type DiscoverCard } from "@/lib/queries";
+import {
+  fetchAlerts,
+  fetchDiscoverFeedPageWithFilters,
+  fetchMatches,
+  mapLegacyFeedItemToCard,
+  type DiscoverCard
+} from "@/lib/queries";
 import { primeCache, readCache } from "@/lib/cache";
 
 type DiscoverState = {
@@ -48,12 +54,24 @@ export default function DiscoverPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [status, setStatus] = useState<PageStatus>(cached?.cards?.length ? "success" : "loading");
 
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [draftCity, setDraftCity] = useState("");
+  const [draftAge, setDraftAge] = useState<string>("");
+  const [appliedCity, setAppliedCity] = useState<string | undefined>(undefined);
+  const [appliedAge, setAppliedAge] = useState<number | undefined>(undefined);
+
   const persistState = (nextCards: DiscoverCard[], cursor?: string) => {
     primeCache(DISCOVER_CACHE_KEY, { cards: nextCards, nextCursor: cursor });
   };
 
-  const fetchPage = async (cursor?: string) => {
-    const response = await fetchDiscoverFeedPage(cursor, BUFFER_TARGET);
+  const fetchPage = async (
+    cursor?: string,
+    overrideFilters?: { city?: string; age?: number }
+  ) => {
+    const response = await fetchDiscoverFeedPageWithFilters(cursor, BUFFER_TARGET, {
+      city: overrideFilters?.city ?? appliedCity,
+      age: overrideFilters?.age ?? appliedAge
+    });
     const mapped = response.items.map(mapLegacyFeedItemToCard);
     return {
       // De-dupe is handled when merging into the existing buffer.
@@ -78,6 +96,59 @@ export default function DiscoverPage() {
         return merged;
       });
       setNextCursor(next.nextCursor);
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  const applyFilters = async () => {
+    const nextCity = draftCity.trim() ? draftCity.trim() : undefined;
+    const parsedAge = draftAge.trim() ? Number(draftAge.trim()) : NaN;
+    const nextAge = Number.isFinite(parsedAge) ? parsedAge : undefined;
+
+    setFilterOpen(false);
+    setStatus("loading");
+    setIsFetching(true);
+    setCards([]);
+    setNextCursor(undefined);
+
+    try {
+      setAppliedCity(nextCity);
+      setAppliedAge(nextAge);
+
+      const first = await fetchPage(undefined, { city: nextCity, age: nextAge });
+      setCards(first.items);
+      setNextCursor(first.nextCursor);
+      persistState(first.items, first.nextCursor);
+      setStatus(first.items.length ? "success" : "empty");
+    } catch {
+      setStatus("error");
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  const clearFilters = async () => {
+    setDraftCity("");
+    setDraftAge("");
+    setFilterOpen(false);
+
+    setStatus("loading");
+    setIsFetching(true);
+    setCards([]);
+    setNextCursor(undefined);
+
+    try {
+      setAppliedCity(undefined);
+      setAppliedAge(undefined);
+
+      const first = await fetchPage(undefined, { city: undefined, age: undefined });
+      setCards(first.items);
+      setNextCursor(first.nextCursor);
+      persistState(first.items, first.nextCursor);
+      setStatus(first.items.length ? "success" : "empty");
+    } catch {
+      setStatus("error");
     } finally {
       setIsFetching(false);
     }
@@ -252,6 +323,106 @@ export default function DiscoverPage() {
           )}
         </div>
       </div>
+
+      {/* Discover filters (age + city) */}
+      <button
+        type="button"
+        onClick={() => {
+          setDraftCity(appliedCity ?? "");
+          setDraftAge(typeof appliedAge === "number" ? String(appliedAge) : "");
+          setFilterOpen(true);
+        }}
+        className="absolute top-5 right-4 z-50 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-background/70 backdrop-blur-lg px-3 py-2 text-xs uppercase tracking-[0.15em] text-primary hover:bg-primary/10 transition-colors"
+      >
+        <SlidersHorizontal size={16} strokeWidth={1.8} />
+        <span className="leading-none">Filter</span>
+      </button>
+
+      <AnimatePresence>
+        {filterOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setFilterOpen(false);
+            }}
+          >
+            <div className="w-full h-full flex items-end sm:items-center justify-center p-5">
+              <motion.div
+                initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.98 }}
+                transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                className="w-full max-w-md rounded-3xl border border-border/30 bg-background/95 p-5 shadow-2xl"
+              >
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <h3 className="text-sm uppercase tracking-[0.2em] text-foreground/60 font-medium">Discover filters</h3>
+                    <p className="text-sm text-foreground/70 mt-2">Choose age (min) and city to refine the queue.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFilterOpen(false)}
+                    className="w-10 h-10 rounded-full border border-border/30 bg-background/70 flex items-center justify-center hover:bg-foreground/5 transition-colors"
+                    aria-label="Close filters"
+                  >
+                    <X size={18} strokeWidth={1.8} className="text-foreground/70" />
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs uppercase tracking-[0.18em] text-foreground/60">Age (min)</label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={18}
+                      step={1}
+                      value={draftAge}
+                      onChange={(e) => setDraftAge(e.target.value)}
+                      placeholder="e.g. 25"
+                      className="w-full rounded-xl border border-border/30 bg-background/70 px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs uppercase tracking-[0.18em] text-foreground/60">City</label>
+                    <input
+                      type="text"
+                      value={draftCity}
+                      onChange={(e) => setDraftCity(e.target.value)}
+                      placeholder="e.g. Hyderabad"
+                      className="w-full rounded-xl border border-border/30 bg-background/70 px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-5 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void clearFilters()}
+                    className="flex-1 rounded-xl border border-border/40 bg-background/70 px-4 py-2 text-xs uppercase tracking-[0.15em] text-foreground/70 hover:bg-foreground/5 transition-colors"
+                    disabled={status === "loading" || isFetching}
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void applyFilters()}
+                    className="flex-1 btn-vael-primary px-4 py-2 text-xs uppercase tracking-[0.15em] disabled:opacity-40 disabled:cursor-not-allowed"
+                    disabled={status === "loading" || isFetching}
+                  >
+                    Apply
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {actionError && (

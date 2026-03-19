@@ -14,7 +14,7 @@ export async function discoverProfiles(req: Request, res: Response) {
 }
 
 export async function discoverFeed(req: Request, res: Response) {
-  const { city, cursor, limit, intent } = req.query as Record<
+  const { city, cursor, limit, intent, age } = req.query as Record<
     string,
     string | number | undefined
   >;
@@ -25,6 +25,7 @@ export async function discoverFeed(req: Request, res: Response) {
     cursor: typeof cursor === "string" ? cursor : undefined,
     limit: typeof limit === "number" ? limit : undefined,
     intent: typeof intent === "string" ? intent : undefined,
+    minAge: typeof age === "number" ? age : undefined,
     baseUrl: `${req.protocol}://${req.get("host")}`
   });
   return res.json(result);

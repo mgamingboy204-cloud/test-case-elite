@@ -1,9 +1,20 @@
 function resolveApiBaseUrl() {
-  const configured = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").trim();
+  const configured = (
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    ""
+  ).trim();
   const fallback = "http://localhost:4000";
   const baseUrl = (configured || fallback).replace(/\/$/, "");
 
-  if (process.env.NODE_ENV === "production" && /localhost|127\.0\.0\.1/.test(baseUrl)) {
+  // During `next build`, Next may evaluate this module with `NODE_ENV=production`.
+  // Avoid hard-crashing builds for local/dev environments that accidentally point to localhost.
+  // We still enforce the rule on real Vercel deployments.
+  if (
+    process.env.NODE_ENV === "production" &&
+    (process.env.VERCEL === "1" || Boolean(process.env.VERCEL_URL)) &&
+    /localhost|127\.0\.0\.1/.test(baseUrl)
+  ) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL must not point to localhost in production.");
   }
 
@@ -17,6 +28,7 @@ const ACCESS_TOKEN_STORAGE_KEY = "vael_access_token";
 
 let accessToken: string | null = null;
 const authFailureListeners = new Set<() => void>();
+let authGeneration = 0;
 
 function readStoredAccessToken() {
   if (typeof window === "undefined") return null;
@@ -37,6 +49,8 @@ export function initializeAccessToken() {
 }
 
 export function setAccessToken(token: string | null) {
+  // Bump generation when clearing so in-flight refreshes can't re-save tokens.
+  if (!token) authGeneration += 1;
   accessToken = token;
   writeStoredAccessToken(token);
 }
@@ -79,6 +93,7 @@ async function refreshAccessToken(): Promise<"success" | "unauthorized" | "forbi
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
+    const generationAtStart = authGeneration;
     try {
       const response = await fetch(`${API_BASE_URL}/auth/token/refresh`, {
         method: "POST",
@@ -96,6 +111,12 @@ async function refreshAccessToken(): Promise<"success" | "unauthorized" | "forbi
 
       const body = (await response.json().catch(() => null)) as { accessToken?: string } | null;
       if (!body?.accessToken) {
+        clearAccessToken();
+        return "unauthorized";
+      }
+
+      // If the user logged out while we were refreshing, do not store a new token.
+      if (authGeneration !== generationAtStart) {
         clearAccessToken();
         return "unauthorized";
       }

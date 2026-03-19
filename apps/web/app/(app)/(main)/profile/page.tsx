@@ -7,8 +7,9 @@ import { normalizeApiError } from "@/lib/apiErrors";
 import { ProtectedState } from "@/components/ui/protected-state";
 import { fetchProfile, type ProfileViewModel } from "@/lib/queries";
 import { useStaleWhileRevalidate } from "@/lib/cache";
-import { Loader2, PencilLine, ShieldCheck, UserRoundCheck, ImagePlus, Trash2 } from "lucide-react";
+import { Loader2, PencilLine, ShieldCheck, UserRoundCheck, ImagePlus, Trash2, KeyRound } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
 
 const MAX_PHOTOS = 3;
 const MIN_PHOTOS = 1;
@@ -72,6 +73,7 @@ function fileToDataUrl(file: File) {
 export default function ProfilePage() {
   const { isAuthenticated, onboardingStep, logout, user } = useAuth();
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [photoMessage, setPhotoMessage] = useState("");
@@ -79,9 +81,16 @@ export default function ProfilePage() {
   const [settingsMessage, setSettingsMessage] = useState("");
   const [settingsError, setSettingsError] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
-  const [deleteReason, setDeleteReason] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
+  const [renewPending, setRenewPending] = useState(false);
+
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
 
   const profileQuery = useStaleWhileRevalidate({
     key: "profile",
@@ -131,16 +140,27 @@ export default function ProfilePage() {
     discoverableByPremiumOnly: false
   };
 
+  const remainingDays = daysRemaining(profile.subscription.endsAt);
+  const canRenew = typeof remainingDays === "number" && remainingDays <= 7;
+
   const toggleSetting = async (key: SettingsField, value: boolean) => {
     setSavingField(key);
     setSettingsError("");
     setSettingsMessage("");
 
     try {
-      await apiRequestAuth("/me/profile/settings", {
-        method: "PATCH",
-        body: JSON.stringify({ [key]: value })
-      });
+      if (key === "pushNotificationsEnabled") {
+        // PRD endpoint
+        await apiRequestAuth("/settings/notifications", {
+          method: "POST",
+          body: JSON.stringify({ enabled: value })
+        });
+      } else {
+        await apiRequestAuth("/me/profile/settings", {
+          method: "PATCH",
+          body: JSON.stringify({ [key]: value })
+        });
+      }
       setSettingsMessage("Settings saved.");
       await profileQuery.refresh(true);
     } catch (error) {
@@ -172,12 +192,9 @@ export default function ProfilePage() {
     setSettingsMessage("");
 
     try {
-      await apiRequestAuth<{ ok: true }>("/account", {
+      await apiRequestAuth<{ deleted: boolean }>("/users/account", {
         method: "DELETE",
-        body: JSON.stringify({
-          confirmation: "DELETE_MY_ACCOUNT",
-          reason: deleteReason.trim() || undefined
-        })
+        body: JSON.stringify({ confirmation: "DELETE" })
       });
 
       localStorage.removeItem("vael_pending_phone");
@@ -218,10 +235,10 @@ export default function ProfilePage() {
 
         {profile.assignedExecutive ? (
           <div className="mt-4 rounded-2xl border border-primary/25 bg-background/60 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-primary/80">Human-managed service</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-primary/80">VAEL Concierge</p>
             <p className="mt-2 text-sm text-foreground/85 inline-flex items-center gap-2">
               <UserRoundCheck size={16} className="text-primary" />
-              Your profile is being managed by our executive <span className="font-medium">{profile.assignedExecutive.name}</span>
+              Managed by <span className="font-medium">{profile.assignedExecutive.name}</span>, your personal VAEL executive
             </p>
           </div>
         ) : null}
@@ -266,6 +283,19 @@ export default function ProfilePage() {
         <Field label="Start date" value={formatDate(profile.subscription.startedAt ?? profile.subscription.paidAt ?? null)} />
         <Field label="Valid until" value={formatDate(profile.subscription.endsAt ?? null)} />
         <p className="text-xs text-foreground/55">Manual renewal only. Membership never auto-renews.</p>
+        {canRenew ? (
+          <button
+            type="button"
+            disabled={renewPending}
+            onClick={() => {
+              setRenewPending(true);
+              router.push("/renew");
+            }}
+            className="w-full rounded-xl border border-primary/30 px-4 py-3 text-sm text-primary disabled:opacity-60"
+          >
+            {renewPending ? "Redirecting…" : "Renew membership"}
+          </button>
+        ) : null}
       </section>
 
       <section className="rounded-3xl border border-border/40 bg-foreground/[0.03] p-5 space-y-3">
@@ -332,8 +362,43 @@ export default function ProfilePage() {
       {settingsMessage ? <p className="text-xs text-emerald-300">{settingsMessage}</p> : null}
       {settingsError ? <p className="text-xs text-red-200">{settingsError}</p> : null}
 
+      <section className="rounded-3xl border border-border/40 bg-foreground/[0.03] p-5 space-y-3">
+        <h2 className="text-sm uppercase tracking-[0.2em] text-foreground/60">Support</h2>
+        <a
+          href="mailto:support@vael.club"
+          className="block w-full rounded-2xl border border-primary/15 p-3 text-sm text-foreground/85 hover:bg-foreground/5 transition-colors"
+        >
+          Contact support
+        </a>
+        <a
+          href="https://wa.me/91XXXXXXXXXX"
+          target="_blank"
+          rel="noreferrer"
+          className="block w-full rounded-2xl border border-primary/15 p-3 text-sm text-foreground/85 hover:bg-foreground/5 transition-colors"
+        >
+          WhatsApp support
+        </a>
+      </section>
+
       <section className="rounded-3xl border border-red-400/20 bg-red-500/5 p-5 space-y-4">
         <h2 className="text-sm uppercase tracking-[0.2em] text-red-200">Security</h2>
+
+        <button
+          type="button"
+          onClick={() => {
+            setPasswordModalOpen(true);
+            setPasswordError("");
+            setPasswordSuccess("");
+            setCurrentPassword("");
+            setNewPassword("");
+          }}
+          className="w-full rounded-xl border border-primary/15 px-4 py-3 text-sm text-primary"
+        >
+          <span className="inline-flex items-center gap-2">
+            <KeyRound size={16} />
+            Change password
+          </span>
+        </button>
 
         <button
           type="button"
@@ -347,15 +412,8 @@ export default function ProfilePage() {
         <div className="space-y-2 rounded-2xl border border-red-300/25 p-4">
           <p className="text-sm text-red-100">Delete my account</p>
           <p className="text-xs text-red-100/70">
-            This deactivates your membership, removes app access, and takes your profile out of discoverability.
+            This is permanent and cannot be undone.
           </p>
-          <textarea
-            rows={2}
-            placeholder="Optional reason"
-            value={deleteReason}
-            onChange={(event) => setDeleteReason(event.target.value)}
-            className="w-full rounded-xl border border-red-300/20 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-foreground/35 focus:outline-none focus:border-red-300/40"
-          />
           <input
             value={deleteConfirm}
             onChange={(event) => setDeleteConfirm(event.target.value)}
@@ -372,6 +430,99 @@ export default function ProfilePage() {
           </button>
         </div>
       </section>
+
+      {passwordModalOpen ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-3xl border border-border bg-background p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <h3 className="text-sm uppercase tracking-[0.2em] text-foreground/60">Change password</h3>
+                <p className="text-xs text-foreground/45 mt-1">Use your current password and set a new one.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPasswordModalOpen(false)}
+                className="rounded-xl border border-primary/15 px-3 py-2 text-xs uppercase tracking-[0.2em] text-foreground/65"
+              >
+                Close
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setPasswordError("");
+                setPasswordSuccess("");
+
+                if (!currentPassword) {
+                  setPasswordError("Current password is required.");
+                  return;
+                }
+                if (!newPassword || newPassword.length < 8) {
+                  setPasswordError("New password must be at least 8 characters.");
+                  return;
+                }
+
+                setPasswordSaving(true);
+                try {
+                  await apiRequestAuth("/auth/change-password", {
+                    method: "POST",
+                    body: JSON.stringify({ currentPassword, newPassword })
+                  });
+                  setPasswordSuccess("Password updated. You can continue using the app.");
+                  setPasswordModalOpen(false);
+                } catch (err) {
+                  setPasswordError(err instanceof ApiError ? err.message : "Unable to change password right now.");
+                } finally {
+                  setPasswordSaving(false);
+                }
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-foreground/50">Current password</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="w-full rounded-xl border border-primary/20 bg-transparent px-3 py-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-foreground/50">New password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full rounded-xl border border-primary/20 bg-transparent px-3 py-3 text-sm text-foreground focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              {passwordError ? <p className="text-xs text-red-200">{passwordError}</p> : null}
+              {passwordSuccess ? <p className="text-xs text-emerald-300">{passwordSuccess}</p> : null}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={passwordSaving}
+                  className="btn-vael-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {passwordSaving ? "Updating…" : "Update"}
+                </button>
+                <button
+                  type="button"
+                  disabled={passwordSaving}
+                  onClick={() => setPasswordModalOpen(false)}
+                  className="rounded-xl border border-border px-4 py-2 text-xs uppercase tracking-[0.2em] text-foreground/65 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -515,11 +666,11 @@ function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpd
     setError("");
     try {
       const dataUrl = await fileToDataUrl(file);
-      const upload = await apiRequestAuth<{ uploadToken: string }>("/me/profile/photos/presigned-url", {
+      const upload = await apiRequestAuth<{ uploadToken: string }>("/profile/photos/presigned-url", {
         method: "POST",
         body: JSON.stringify({ filename: file.name, mimeType: file.type || "image/jpeg" })
       });
-      await apiRequestAuth("/me/profile/photos/confirm", {
+      await apiRequestAuth("/profile/photos/confirm", {
         method: "POST",
         body: JSON.stringify({ uploadToken: upload.uploadToken, filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
       });
@@ -540,9 +691,11 @@ function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpd
     next[target] = temp;
     setError("");
     try {
-      await apiRequestAuth("/me/profile", {
+      await apiRequestAuth("/profile/photos/reorder", {
         method: "PATCH",
-        body: JSON.stringify({ photos: next.map((photo, photoIndex) => ({ id: photo.id, photoIndex })) })
+        body: JSON.stringify({
+          photos: next.map((photo, photoIndex) => ({ photoId: photo.id, photoIndex }))
+        })
       });
       await onUpdated("Photo order updated.");
     } catch (err) {
@@ -554,7 +707,7 @@ function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpd
     setBusyPhotoId(photoId);
     setError("");
     try {
-      await apiRequestAuth(`/photos/${photoId}`, { method: "DELETE" });
+      await apiRequestAuth(`/profile/photos/${photoId}`, { method: "DELETE" });
       await onUpdated("Photo removed.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to remove photo.");

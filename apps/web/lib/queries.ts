@@ -74,8 +74,18 @@ export function mapLegacyFeedItemToCard(item: LegacyDiscoverFeedItem): DiscoverC
 }
 
 export async function fetchDiscoverFeedPage(cursor?: string, limit = 10): Promise<LegacyDiscoverFeedResponse> {
+  return fetchDiscoverFeedPageWithFilters(cursor, limit);
+}
+
+export async function fetchDiscoverFeedPageWithFilters(
+  cursor: string | undefined,
+  limit: number,
+  filters?: { city?: string; age?: number }
+): Promise<LegacyDiscoverFeedResponse> {
   const cursorQuery = cursor ? `&cursor=${encodeURIComponent(cursor)}` : "";
-  return apiRequestAuth<LegacyDiscoverFeedResponse>(`/discover/feed?limit=${limit}${cursorQuery}`);
+  const cityQuery = filters?.city ? `&city=${encodeURIComponent(filters.city)}` : "";
+  const ageQuery = typeof filters?.age === "number" && !Number.isNaN(filters.age) ? `&age=${encodeURIComponent(String(filters.age))}` : "";
+  return apiRequestAuth<LegacyDiscoverFeedResponse>(`/discover/feed?limit=${limit}${cursorQuery}${cityQuery}${ageQuery}`);
 }
 
 const FALLBACK_MATCH_IMAGE = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&auto=format&fit=crop&q=80";
@@ -283,12 +293,10 @@ export interface NotificationApiItem {
 
 export interface Alert {
   id: string;
-  type: "INTEREST" | "CONNECTION" | "CONCIERGE";
-  eventType?: NotificationApiItem["eventType"];
+  type: string;
   title: string;
-  message: string;
-  timestamp: string;
-  image: string;
+  body: string;
+  createdAt: string;
   isUnread: boolean;
   deepLinkUrl?: string | null;
 }
@@ -296,39 +304,31 @@ export interface Alert {
 const FALLBACK_ALERT_IMAGE =
   "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&auto=format&fit=crop&q=80";
 
-function toAlert(item: NotificationApiItem): Alert {
-  const conciergeTypes = new Set(["SYSTEM_PROMO", "OFFLINE_MEET_REQUEST", "OFFLINE_MEET_ACCEPTED", "OFFLINE_MEET_OPTIONS_SENT", "OFFLINE_MEET_TIMEOUT", "OFFLINE_MEET_NO_OVERLAP", "OFFLINE_MEET_FINALIZED", "OFFLINE_MEET_RESCHEDULE_UPDATE", "ONLINE_MEET_REQUEST", "ONLINE_MEET_ACCEPTED", "ONLINE_MEET_OPTIONS_SENT", "ONLINE_MEET_TIMEOUT", "ONLINE_MEET_NO_OVERLAP", "ONLINE_MEET_FINALIZED", "ONLINE_MEET_RESCHEDULE_UPDATE", "SOCIAL_EXCHANGE_REQUEST", "SOCIAL_EXCHANGE_ACCEPTED", "SOCIAL_EXCHANGE_REJECTED", "SOCIAL_EXCHANGE_HANDLE_READY", "SOCIAL_EXCHANGE_VIEWED", "SOCIAL_EXCHANGE_EXPIRED", "SOCIAL_EXCHANGE_RESEND_AVAILABLE", "PHONE_EXCHANGE_REQUEST", "PHONE_EXCHANGE_ACCEPTED", "PHONE_EXCHANGE_REJECTED", "PHONE_EXCHANGE_MUTUAL_CONSENT_CONFIRMED", "PHONE_EXCHANGE_REVEALED"]);
-  const normalizedType = item.type === "NEW_MATCH" ? "CONNECTION" : conciergeTypes.has(item.type) ? "CONCIERGE" : "INTEREST";
-  const title =
-    item.title ??
-    (item.type === "NEW_MATCH" ? "New Match" : item.type === "NEW_LIKE" ? "New Interest" : item.type === "SYSTEM_PROMO" ? "VAEL Update" : "Update");
-  const message =
-    item.message ??
-    (item.type === "NEW_MATCH"
-      ? "A new match is waiting for your move."
-      : item.type === "NEW_LIKE"
-        ? "A member showed interest in your profile."
-        : item.type === "SYSTEM_PROMO"
-          ? "Concierge shared a new update for you."
-          : "You have a new notification.");
-
-  return {
-    id: item.id,
-    type: normalizedType,
-    title,
-    message,
-    timestamp: new Date(item.createdAt).toLocaleDateString(),
-    image: item.imageUrl ?? item.actor?.photos[0]?.url ?? FALLBACK_ALERT_IMAGE,
-    isUnread: !item.isRead,
-    eventType: item.eventType,
-    deepLinkUrl: item.deepLinkUrl
-  };
-}
-
 export async function fetchAlerts(): Promise<Alert[]> {
-  const response = await apiRequestAuth<{ notifications: NotificationApiItem[] }>("/notifications");
-  const deduped = Array.from(new Map(response.notifications.map((item) => [item.id, item])).values());
-  return deduped.map(toAlert);
+  const response = await apiRequestAuth<{
+    alerts: Array<{
+      id: string;
+      type: string;
+      title: string;
+      body: string;
+      isRead: boolean;
+      createdAt: string;
+      deepLinkUrl?: string | null;
+    }>;
+    unreadCount: number;
+  }>("/alerts");
+
+  // Server already returns newest-first; keep it stable and make sure ids are unique.
+  const deduped = Array.from(new Map(response.alerts.map((a) => [a.id, a])).values());
+  return deduped.map((a) => ({
+    id: a.id,
+    type: a.type,
+    title: a.title,
+    body: a.body,
+    createdAt: a.createdAt,
+    isUnread: !a.isRead,
+    deepLinkUrl: a.deepLinkUrl
+  }));
 }
 
 export type ProfileViewModel = {

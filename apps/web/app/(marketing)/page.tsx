@@ -28,15 +28,22 @@ export default function Home() {
               transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
               className="text-6xl md:text-9xl font-bold tracking-tight text-foreground mb-8 leading-[0.9]"
             >
-              Connect with <br /><span className="text-primary italic font-light drop-shadow-[0_0_20px_rgba(183,110,121,0.4)]">Intention.</span>
+              VAEL
+              <br />
+              <span className="text-primary italic font-light drop-shadow-[0_0_20px_rgba(183,110,121,0.4)]">
+                A private club for
+                <br className="hidden md:block" />
+                extraordinary people.
+              </span>
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="text-xl md:text-3xl text-foreground/70 max-w-2xl mb-12 leading-relaxed font-light"
+              className="text-xl md:text-3xl text-foreground/70 max-w-3xl mb-12 leading-relaxed font-light"
             >
-              Experience the world&apos;s most exclusive matchmaking platform. Designed for those who value time, privacy, and exceptional connection.
+              VAEL is a human-led, invite-only membership for high-value individuals. Every profile is verified, every
+              introduction is curated, and every interaction is designed to protect your time, privacy, and reputation.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 20 }}

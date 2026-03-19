@@ -6,6 +6,7 @@ type DiscoverFilterOptions = {
   viewerGender?: string | null;
   city?: string;
   intent?: string;
+  minAge?: number;
 };
 
 const imageExtensionPattern = /\.(png|jpe?g|webp|gif|avif)(\?.*)?$/i;
@@ -82,6 +83,11 @@ function buildDiscoverWhere(options: DiscoverFilterOptions) {
 
   if (options.city) where.city = options.city;
 
+  // Age filter: PRD/UI uses a single input as "min age".
+  if (typeof options.minAge === "number") {
+    where.age = { gte: options.minAge };
+  }
+
   return where;
 }
 
@@ -152,6 +158,7 @@ export async function getDiscoverFeed(options: {
   intent?: string;
   cursor?: string;
   limit?: number;
+  minAge?: number;
   baseUrl?: string;
 }) {
   const take = Math.min(Math.max(options.limit ?? 20, 1), 50);
@@ -161,7 +168,8 @@ export async function getDiscoverFeed(options: {
     userId: options.userId,
     city: options.city,
     intent: options.intent,
-    viewerGender: profile?.gender
+    viewerGender: profile?.gender,
+    minAge: options.minAge
   });
 
   const feedWhere: Prisma.ProfileWhereInput = {

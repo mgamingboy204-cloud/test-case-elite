@@ -25,10 +25,11 @@ export const ProfileSchema = z
     displayName: z.string().min(1).optional(),
     firstName: z.string().min(1).optional().nullable(),
     lastName: z.string().min(1).optional().nullable(),
-    dateOfBirth: z.coerce.date(),
-    gender: GenderSchema,
+    dateOfBirth: z.coerce.date().optional(),
+    gender: GenderSchema.optional(),
     age: z.number().int().min(18).optional(),
     heightCm: z.number().int().min(100).max(250).optional().nullable(),
+    height: z.number().int().min(100).max(250).optional().nullable(),
     city: z.string().min(1),
     place: z.string().min(1).optional(),
     profession: z.string().min(1).optional().nullable(),
@@ -37,14 +38,8 @@ export const ProfileSchema = z
     intent: z.enum(["dating", "friends", "all"]).default("dating")
   })
   .superRefine((value, ctx) => {
-    if (!value.displayName && !value.name) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["displayName"],
-        message: "Display name is required."
-      });
-    }
-
+    // Allow PRD-style partial profile updates (bio/profession/city/height)
+    // by only enforcing 18+ rule when DOB is present.
     if (value.dateOfBirth) {
       const now = new Date();
       let age = now.getUTCFullYear() - value.dateOfBirth.getUTCFullYear();
@@ -72,6 +67,7 @@ export const ProfilePatchSchema = z.object({
   age: z.number().int().min(18).max(120).optional(),
   profession: z.string().trim().min(1).max(120).optional().nullable(),
   heightCm: z.number().int().min(100).max(250).optional().nullable(),
+  height: z.number().int().min(100).max(250).optional().nullable(),
   bioShort: z.string().trim().max(300).optional().nullable(),
   bio: z.string().trim().max(300).optional().nullable(),
   story: z.string().min(1).optional().nullable(),
@@ -83,7 +79,8 @@ export const ProfilePatchSchema = z.object({
     .array(
       z.object({
         id: z.string().uuid().optional(),
-        url: z.string().min(1),
+        // Reordering only needs `id` + `photoIndex` (no `url`).
+        url: z.string().min(1).optional().nullable(),
         photoIndex: z.number().int().min(0)
       })
     )

@@ -6,6 +6,7 @@ type TokenPayload = JwtPayload & {
   type: "access" | "refresh" | "signup";
   rememberMe?: boolean;
   phone?: string;
+  tokenVersion?: number;
 };
 
 export function signAccessToken(userId: string, options?: { rememberMe?: boolean }) {
@@ -15,10 +16,10 @@ export function signAccessToken(userId: string, options?: { rememberMe?: boolean
   });
 }
 
-export function signRefreshToken(userId: string, options?: { rememberMe?: boolean }) {
+export function signRefreshToken(userId: string, options?: { rememberMe?: boolean; tokenVersion?: number }) {
   const rememberMe = options?.rememberMe ?? false;
   const ttlDays = rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
-  return jwt.sign({ sub: userId, type: "refresh", rememberMe }, env.JWT_REFRESH_SECRET, {
+  return jwt.sign({ sub: userId, type: "refresh", rememberMe, tokenVersion: options?.tokenVersion ?? 0 }, env.JWT_REFRESH_SECRET, {
     expiresIn: `${ttlDays}d`
   });
 }
@@ -36,7 +37,7 @@ export function verifyRefreshToken(token: string) {
   if (!payload?.sub || payload.type !== "refresh") {
     throw new Error("Invalid refresh token");
   }
-  return { userId: payload.sub, rememberMe: payload.rememberMe ?? false };
+  return { userId: payload.sub, rememberMe: payload.rememberMe ?? false, tokenVersion: payload.tokenVersion ?? 0 };
 }
 
 export function signSignupToken(phone: string) {

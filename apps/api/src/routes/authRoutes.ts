@@ -5,16 +5,19 @@ import {
   OtpSendSchema,
   OtpMockVerifySchema,
   OtpVerifySchema,
+  OtpVerifyCompatSchema,
   RefreshTokenSchema,
   RegisterBodySchema,
   SignupCompleteSchema,
   SignupStartSchema,
-  SignupVerifySchema
+  SignupVerifySchema,
+  ChangePasswordSchema
 } from "../validators/authValidators";
 import {
   employeeLogin,
   login,
   logout,
+  changePasswordHandler,
   refreshAccessToken,
   register,
   sendOtp,
@@ -28,6 +31,7 @@ import {
 import { loginLimiter, otpLimiterByIp, otpLimiterByPhone, otpVerifyLimiter, registerLimiter } from "../middlewares/rateLimiters";
 import { validateBody } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
@@ -75,5 +79,38 @@ router.post(
 
 router.post("/auth/token/refresh", validateBody(RefreshTokenSchema), asyncHandler(refreshAccessToken));
 router.post("/auth/logout", asyncHandler(logout));
+
+// PRD: POST /api/auth/change-password
+router.post(
+  "/auth/change-password",
+  requireAuth,
+  validateBody(ChangePasswordSchema),
+  asyncHandler(changePasswordHandler)
+);
+
+// PRD compatibility aliases
+// These provide the documented `/auth/request-otp` and `/auth/verify-otp` shapes
+// while delegating to the existing OTP controllers.
+
+router.post(
+  "/auth/request-otp",
+  otpLimiterByIp,
+  otpLimiterByPhone,
+  validateBody(OtpSendSchema),
+  asyncHandler(sendOtp)
+);
+
+router.post(
+  "/auth/verify-otp",
+  otpVerifyLimiter,
+  validateBody(OtpVerifyCompatSchema),
+  asyncHandler(async (req, res) => {
+    // Normalize `otp` to `code` so the main verifier can handle both shapes.
+    if (!("code" in req.body) && typeof req.body.otp === "string") {
+      req.body.code = req.body.otp;
+    }
+    return verifyOtp(req, res);
+  })
+);
 
 export default router;

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchAlerts, fetchDiscoverFeedPage, fetchMatches, fetchProfile, mapLegacyFeedItemToCard } from "@/lib/queries";
-import { primeCache } from "@/lib/cache";
+import { primeCache, readCache } from "@/lib/cache";
 import { motion } from "framer-motion";
 import { resolveRouteRedirect } from "@/lib/navigationGuard";
 import { fetchIncomingLikes } from "@/lib/likes";
@@ -31,41 +31,75 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const prefetchRouteBundle = useCallback((href: string) => {
     router.prefetch(href);
     const queryClient = getQueryClient();
-    if (href === "/likes") void queryClient.prefetchQuery({ queryKey: ["likes-incoming"], queryFn: fetchIncomingLikes }).then(() => {
-      const data = queryClient.getQueryData(["likes-incoming"]);
-      if (data) primeCache("likes-incoming", data);
-    }).catch(() => null);
-    if (href === "/matches") void queryClient.prefetchQuery({ queryKey: ["matches"], queryFn: fetchMatches }).then(() => {
-      const data = queryClient.getQueryData(["matches"]);
-      if (data) primeCache("matches", data);
-    }).catch(() => null);
-    if (href === "/alerts") void queryClient.prefetchQuery({ queryKey: ["alerts"], queryFn: fetchAlerts }).then(() => {
-      const data = queryClient.getQueryData(["alerts"]);
-      if (data) primeCache("alerts", data);
-    }).catch(() => null);
-    if (href === "/profile") void queryClient.prefetchQuery({ queryKey: ["profile"], queryFn: fetchProfile }).then(() => {
-      const data = queryClient.getQueryData(["profile"]);
-      if (data) primeCache("profile", data);
-    }).catch(() => null);
+    if (href === "/likes") {
+      if (readCache("likes-incoming")?.value) return;
+      void queryClient
+        .prefetchQuery({ queryKey: ["likes-incoming"], queryFn: fetchIncomingLikes })
+        .then(() => {
+          const data = queryClient.getQueryData(["likes-incoming"]);
+          if (data) primeCache("likes-incoming", data);
+        })
+        .catch(() => null);
+      return;
+    }
+
+    if (href === "/matches") {
+      if (readCache("matches")?.value) return;
+      void queryClient
+        .prefetchQuery({ queryKey: ["matches"], queryFn: fetchMatches })
+        .then(() => {
+          const data = queryClient.getQueryData(["matches"]);
+          if (data) primeCache("matches", data);
+        })
+        .catch(() => null);
+      return;
+    }
+
+    if (href === "/alerts") {
+      if (readCache("alerts")?.value) return;
+      void queryClient
+        .prefetchQuery({ queryKey: ["alerts"], queryFn: fetchAlerts })
+        .then(() => {
+          const data = queryClient.getQueryData(["alerts"]);
+          if (data) primeCache("alerts", data);
+        })
+        .catch(() => null);
+      return;
+    }
+
+    if (href === "/profile") {
+      if (readCache("profile")?.value) return;
+      void queryClient
+        .prefetchQuery({ queryKey: ["profile"], queryFn: fetchProfile })
+        .then(() => {
+          const data = queryClient.getQueryData(["profile"]);
+          if (data) primeCache("profile", data);
+        })
+        .catch(() => null);
+      return;
+    }
+
     if (href === "/discover") {
-      void queryClient.prefetchQuery({ queryKey: ["discover-feed", "bootstrap"], queryFn: () => fetchDiscoverFeedPage(undefined, 10) }).then(() => {
-        const feed = queryClient.getQueryData<{ items: unknown[] }>(["discover-feed", "bootstrap"]);
-        const cards = feed?.items?.map((item) => mapLegacyFeedItemToCard(item as never)) ?? [];
-        cards.slice(0, 3).forEach((card) => {
-          const imageUrl = (card as { imageUrl?: string | null }).imageUrl;
-          if (!imageUrl || typeof window === "undefined") return;
-          const img = new Image();
-          img.src = imageUrl;
-        });
-      }).catch(() => null);
+      // Avoid auto-prefetching the feed on mount (duplicate with DiscoverPage bootstrap).
+      // We'll only warm images if the discover feed is already cached.
+      const cached = readCache<{ cards: Array<{ imageUrl?: string | null }> }>("discover-feed")?.value;
+      const cards = cached?.cards ?? [];
+      cards.slice(0, 3).forEach((card) => {
+        const imageUrl = card.imageUrl;
+        if (!imageUrl || typeof window === "undefined") return;
+        const img = new Image();
+        img.src = imageUrl;
+      });
+      return;
     }
   }, [router]);
 
 
   useEffect(() => {
-    if (prefetchedRef.current) return;
+    // Do not auto-prefetch all tabs on mount. It causes duplicate network calls
+    // because each page also fetches its own data on first render.
+    // We keep hover/focus prefetch for responsiveness.
     prefetchedRef.current = true;
-    NAV_ITEMS.forEach((item) => prefetchRouteBundle(item.href));
   }, [prefetchRouteBundle]);
 
   useEffect(() => {

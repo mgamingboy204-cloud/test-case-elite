@@ -24,6 +24,9 @@ const DiscoverFeedQuerySchema = z.object({
   intent: z.string().optional(),
   city: z.string().optional(),
   distance: toOptionalNumber,
+  // PRD/UI filter uses a single age input; we interpret it as min age (age >= value).
+  // Example: ?age=25 means return profiles age >= 25.
+  age: toOptionalNumber,
   cursor: z.string().optional(),
   limit: toOptionalNumber
 });

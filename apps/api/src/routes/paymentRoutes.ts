@@ -61,4 +61,50 @@ router.post(
   asyncHandler(completeMockOnboardingPaymentHandler)
 );
 
+// PRD-style alias: POST /payment/create-order
+// Returns Razorpay-order-compatible payload for the selected plan.
+router.post(
+  "/payment/create-order",
+  requireAuth,
+  requireOnboardingTokenMatch,
+  validateBody(
+    z.object({
+      plan: PaymentPlanSchema
+    })
+  ),
+  asyncHandler(async (req, res) => {
+    const { plan } = req.body as { plan: z.infer<typeof PaymentPlanSchema> };
+    const result = await initiateOnboardingPaymentHandler(
+      // reuse existing controller but adapt body shape
+      Object.assign(req, { body: { tier: plan } }) as typeof req,
+      res
+    );
+
+    // If using Razorpay gateway, adapt to PRD response shape.
+    if (
+      result &&
+      typeof result === "object" &&
+      "gateway" in result &&
+      (result as { gateway?: string }).gateway === "razorpay"
+    ) {
+      const payload = (result as unknown) as {
+        paymentRef: string;
+        razorpay: { keyId: string; orderId: string; amountPaise: number; currency: string };
+        plan: string;
+        amountInr: number;
+      };
+      return res.json({
+        orderId: payload.razorpay.orderId,
+        amount: payload.razorpay.amountPaise,
+        currency: payload.razorpay.currency,
+        key: payload.razorpay.keyId,
+        plan: payload.plan,
+        amountInr: payload.amountInr
+      });
+    }
+
+    return result;
+  })
+);
+
 export default router;

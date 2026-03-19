@@ -1,10 +1,12 @@
 import { NotificationType, Prisma, SocialExchangeStatus, SocialPlatform } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
+import { notificationDedupeKey } from "../utils/notificationDedupe";
 
 const REVEAL_WINDOW_MS = 10 * 60 * 1000;
 const UNOPENED_EXPIRY_MS = 24 * 60 * 60 * 1000;
-const RESEND_COOLDOWN_MS = 30 * 60 * 1000;
+// PRD: cooldown before resend is 48 hours.
+const RESEND_COOLDOWN_MS = 48 * 60 * 60 * 1000;
 
 const ACTIVE_STATUSES: SocialExchangeStatus[] = [
   "REQUESTED",
@@ -39,20 +41,17 @@ function normalizeHandle(raw: string): string {
 }
 
 async function createAlert(userId: string, type: NotificationType, matchId: string, actorUserId: string, message: string) {
+  const dedupeKey = notificationDedupeKey({ userId, type, actorUserId, matchId });
   await prisma.notification.upsert({
     where: {
-      userId_type_actorUserId_matchId: {
-        userId,
-        type,
-        actorUserId,
-        matchId
-      }
+      dedupeKey
     },
     create: {
       userId,
       type,
       matchId,
       actorUserId,
+      dedupeKey,
       message,
       deepLinkUrl: "/matches"
     },
@@ -264,12 +263,16 @@ export async function openSocialReveal(options: { caseId: string; userId: string
     });
     await createAlert(revealed.requesterUserId, "SOCIAL_EXCHANGE_VIEWED", revealed.matchId, revealed.receiverUserId, "Your social handle was viewed.");
 
+    const secondsRemaining =
+      revealed.revealExpiresAt ? Math.max(0, Math.floor((revealed.revealExpiresAt.getTime() - now.getTime()) / 1000)) : null;
+
     return {
       ok: true,
       status: revealed.status,
       platform: revealed.platform,
       handle: revealed.handleValue,
-      revealExpiresAt: revealed.revealExpiresAt
+      revealExpiresAt: revealed.revealExpiresAt,
+      secondsRemaining
     };
   }
 
@@ -287,7 +290,9 @@ export async function openSocialReveal(options: { caseId: string; userId: string
     status: hydrated.status,
     platform: hydrated.platform,
     handle: hydrated.handleValue,
-    revealExpiresAt: hydrated.revealExpiresAt
+    revealExpiresAt: hydrated.revealExpiresAt,
+    secondsRemaining:
+      hydrated.revealExpiresAt ? Math.max(0, Math.floor((hydrated.revealExpiresAt.getTime() - now.getTime()) / 1000)) : null
   };
 }
 

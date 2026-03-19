@@ -118,7 +118,7 @@ export default function VideoVerificationPage() {
       if (!latest.whatsappHelpRequestedAt) {
         throw new Error("Request failed. Please try again.");
       }
-      setMessage("Your request has been received. Our agent will notify you when they are ready.");
+      setMessage("Your request has been received. A VAEL executive will coordinate with you personally on WhatsApp.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed. Please try again.");
     } finally {

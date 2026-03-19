@@ -20,6 +20,14 @@ router.post(
   requireOnboardingTokenMatch,
   asyncHandler(createVerificationRequestHandler)
 );
+
+// PRD-style alias: POST /verification/request
+router.post(
+  "/verification/request",
+  requireAuth,
+  requireOnboardingTokenMatch,
+  asyncHandler(createVerificationRequestHandler)
+);
 router.post(
   "/verification/video",
   requireAuth,

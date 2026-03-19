@@ -4,6 +4,7 @@ import { deletePhotoHandler, listPhotosHandler, uploadPhotoHandler } from "../co
 import { requireAuth, requireOnboardingTokenMatch } from "../middlewares/auth";
 import { validateBody } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
+import { updateProfile } from "../services/profileService";
 
 const router = Router();
 
@@ -28,6 +29,40 @@ router.delete(
   requireAuth,
   requireOnboardingTokenMatch,
   asyncHandler(deletePhotoHandler)
+);
+
+// PRD compatibility aliases
+router.delete(
+  "/profile/photos/:photoId",
+  requireAuth,
+  requireOnboardingTokenMatch,
+  asyncHandler(deletePhotoHandler)
+);
+
+router.patch(
+  "/profile/photos/reorder",
+  requireAuth,
+  requireOnboardingTokenMatch,
+  validateBody(
+    z.object({
+      photos: z.array(
+        z.object({
+          photoId: z.string().uuid(),
+          photoIndex: z.number().int().min(0)
+        })
+      ).min(1)
+    })
+  ),
+  asyncHandler(async (req, res) => {
+    const { photos } = req.body as { photos: Array<{ photoId: string; photoIndex: number }> };
+    await updateProfile({
+      userId: res.locals.user.id,
+      paymentStatus: res.locals.user.paymentStatus,
+      onboardingStep: res.locals.user.onboardingStep,
+      data: { photos: photos.map((p) => ({ id: p.photoId, photoIndex: p.photoIndex })) }
+    });
+    return res.json({ updated: true });
+  })
 );
 
 export default router;

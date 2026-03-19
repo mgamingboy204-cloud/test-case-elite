@@ -48,7 +48,7 @@ export async function updateProfileHandler(req: Request, res: Response) {
     onboardingStep: res.locals.user.onboardingStep,
     data: req.body
   });
-  return res.json(result);
+  return res.json({ updated: true, ...result });
 }
 
 export async function updateProfileDetailsHandler(req: Request, res: Response) {
