@@ -14,6 +14,7 @@ import notificationRoutes from "./notificationRoutes";
 import settingsRoutes from "./settingsRoutes";
 import employeeRoutes from "./employeeRoutes";
 import healthRoutes from "./healthRoutes";
+import liveRoutes from "./liveRoutes";
 
 const router = Router();
 
@@ -32,5 +33,6 @@ router.use(notificationRoutes);
 router.use(settingsRoutes);
 router.use(employeeRoutes);
 router.use(healthRoutes);
+router.use(liveRoutes);
 
 export default router;

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Link as LinkIcon, Loader2, RefreshCcw, ShieldBan, UserCheck } from "lucide-react";
 import { ApiError } from "@/lib/api";
+import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 import {
   approveVerificationRequest,
   assignVerificationRequest,
@@ -63,12 +64,12 @@ export function VerificationWorkspace() {
     void load();
   }, [refresh, view]);
 
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      void refresh().catch(() => undefined);
-    }, 10000);
-    return () => window.clearInterval(id);
-  }, [refresh]);
+  useLiveResourceRefresh({
+    enabled: true,
+    refresh: () => refresh(),
+    eventTypes: ["admin.verification.queue.changed"],
+    fallbackIntervalMs: 60_000
+  });
 
   const runAction = async (key: string, action: () => Promise<void>, successMessage: string) => {
     if (isBusy) return;
@@ -236,4 +237,3 @@ export function VerificationWorkspace() {
 }
 
 export default VerificationWorkspace;
-

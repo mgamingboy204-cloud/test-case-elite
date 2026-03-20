@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { Loader2, MapPin, Phone, UserMinus, Video, Link2, ShieldCheck, RefreshCcw, Clock3 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 import { primeCache, useStaleWhileRevalidate } from "@/lib/cache";
 import { fetchMatches, type MatchInteraction, type MatchRequestType, type MatchCard } from "@/lib/queries";
 import {
@@ -121,6 +122,12 @@ export default function MatchesPage() {
     fetcher: fetchMatches,
     enabled: isAuthenticated && onboardingStep === "COMPLETED",
     staleTimeMs: 45_000
+  });
+
+  useLiveResourceRefresh({
+    enabled: isAuthenticated && onboardingStep === "COMPLETED",
+    refresh: () => matchesQuery.refresh(true),
+    fallbackIntervalMs: 60_000
   });
 
   const matches = useMemo(() => matchesQuery.data ?? [], [matchesQuery.data]);

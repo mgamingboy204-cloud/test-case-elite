@@ -30,7 +30,15 @@ export async function getVerificationStatusHandler(req: Request, res: Response) 
 
 export async function getMyVerificationStatusHandler(req: Request, res: Response) {
   const result = await getVerificationStatusPayload(res.locals.user.id);
-  return res.json({ status: result.displayStatus, meetUrl: result.meetUrl, canRetry: result.canRetry });
+  return res.json({
+    status: result.status,
+    displayStatus: result.displayStatus,
+    meetUrl: result.meetUrl,
+    canRetry: result.canRetry,
+    remainingSeconds: result.remainingSeconds,
+    requestedAt: result.requestedAt,
+    whatsappHelpRequestedAt: result.whatsappHelpRequestedAt
+  });
 }
 
 export async function requestVerificationWhatsAppHelpHandler(req: Request, res: Response) {

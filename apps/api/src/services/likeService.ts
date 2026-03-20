@@ -1,6 +1,13 @@
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { notificationDedupeKey } from "../utils/notificationDedupe";
+import {
+  emitAdminDashboardChanged,
+  emitAlertsChanged,
+  emitDiscoverActionApplied,
+  emitLikesChanged,
+  emitMatchesChanged
+} from "../live/liveEventBroker";
 
 const ACTIVE_MATCH_WHERE = { unmatchedAt: null } as const;
 
@@ -114,6 +121,24 @@ export async function createLike(options: { actorUserId: string; targetUserId: s
 
     return { like, match, alreadyProcessed: false };
   });
+
+  emitDiscoverActionApplied({
+    userId: options.actorUserId,
+    targetUserId: options.targetUserId,
+    action: options.action
+  });
+  emitLikesChanged([options.actorUserId, options.targetUserId]);
+
+  if (options.action === "LIKE") {
+    emitAlertsChanged([options.targetUserId]);
+    emitAdminDashboardChanged();
+  }
+
+  if (result.match) {
+    emitMatchesChanged([options.actorUserId, options.targetUserId]);
+    emitAlertsChanged([options.actorUserId, options.targetUserId]);
+    emitAdminDashboardChanged();
+  }
 
   return { matchId: result.match?.id ?? null, alreadyProcessed: result.alreadyProcessed };
 }

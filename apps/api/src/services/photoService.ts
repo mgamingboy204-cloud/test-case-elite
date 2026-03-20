@@ -4,6 +4,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { prisma } from "../db/prisma";
 import { env } from "../config/env";
 import { HttpError } from "../utils/httpErrors";
+import { emitProfileChanged, emitSessionStateChanged } from "../live/liveEventBroker";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 const PROFILE_BUCKET = "profile-photos";
@@ -128,7 +129,7 @@ export async function uploadPhoto(options: { userId: string; filename: string; d
     await fs.promises.writeFile(filePath, buffer);
     url = `/uploads/${storagePath}`;
   }
-  return prisma.photo.create({
+  const photo = await prisma.photo.create({
     data: {
       userId: options.userId,
       url,
@@ -138,6 +139,9 @@ export async function uploadPhoto(options: { userId: string; filename: string; d
       photoIndex: existingCount
     }
   });
+  emitProfileChanged([options.userId]);
+  emitSessionStateChanged([options.userId], "photo_uploaded");
+  return photo;
 }
 
 export async function deletePhoto(options: { userId: string; photoId: string }) {
@@ -153,4 +157,6 @@ export async function deletePhoto(options: { userId: string; photoId: string }) 
 
   await removePhotoAsset(photo.url);
   await prisma.photo.delete({ where: { id: photo.id } });
+  emitProfileChanged([options.userId]);
+  emitSessionStateChanged([options.userId], "photo_deleted");
 }

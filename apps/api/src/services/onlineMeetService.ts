@@ -2,6 +2,12 @@ import { NotificationType, OnlineMeetCoordinationStatus, Prisma } from "@prisma/
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { notificationDedupeKey } from "../utils/notificationDedupe";
+import {
+  emitAdminDashboardChanged,
+  emitAlertsChanged,
+  emitMatchesChanged,
+  emitOnlineMeetQueueChanged
+} from "../live/liveEventBroker";
 
 type MeetPlatform = "ZOOM" | "GOOGLE_MEET";
 type TimeSlotOption = { id: string; label: string; startsAtIso: string | null };
@@ -106,6 +112,7 @@ async function createNotifications(userIds: string[], type: NotificationType, ma
     })),
     skipDuplicates: true
   });
+  emitAlertsChanged(userIds);
 }
 
 async function evaluateTimeout(caseId: string) {
@@ -137,6 +144,10 @@ async function evaluateTimeout(caseId: string) {
       "The other member did not submit preferences in time. You may retry after cooldown."
     );
   }
+
+  emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
+  emitOnlineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
 
   return updated;
 }
@@ -190,6 +201,7 @@ export async function notifyOnlineMeetRequest(matchId: string, requesterId: stri
     "Online Meet Request",
     "Your match requested a concierge-managed online meet. Please review and respond."
   );
+  emitMatchesChanged([requesterId, receiverId]);
 }
 
 export async function createOrActivateOnlineMeetCase(params: { matchId: string; requesterUserId: string; receiverUserId: string }) {
@@ -238,6 +250,9 @@ export async function createOrActivateOnlineMeetCase(params: { matchId: string; 
       "Both members agreed. A match handler will now coordinate platform and timing options."
     );
 
+    emitMatchesChanged([params.requesterUserId, params.receiverUserId]);
+    emitOnlineMeetQueueChanged(updated.id);
+    emitAdminDashboardChanged();
     return updated;
   }
 
@@ -258,6 +273,9 @@ export async function createOrActivateOnlineMeetCase(params: { matchId: string; 
     "Both members agreed. A match handler will now coordinate platform and timing options."
   );
 
+  emitMatchesChanged([params.requesterUserId, params.receiverUserId]);
+  emitOnlineMeetQueueChanged(created.id);
+  emitAdminDashboardChanged();
   return created;
 }
 
@@ -326,6 +344,9 @@ export async function submitOnlineMeetSelections(params: {
   if (!requesterDone || !receiverDone) {
     const status: OnlineMeetCoordinationStatus = requesterDone ? "USER_ONE_RESPONDED" : "USER_TWO_RESPONDED";
     await prisma.onlineMeetCase.update({ where: { id: refreshed.id }, data: { status } });
+    emitMatchesChanged([refreshed.requesterUserId, refreshed.receiverUserId]);
+    emitOnlineMeetQueueChanged(refreshed.id);
+    emitAdminDashboardChanged();
     return { ok: true, status };
   }
 
@@ -349,10 +370,16 @@ export async function submitOnlineMeetSelections(params: {
       "Online Meet Not Compatible",
       "Your selected platform or timing did not overlap. You may retry after one day."
     );
+    emitMatchesChanged([refreshed.requesterUserId, refreshed.receiverUserId]);
+    emitOnlineMeetQueueChanged(refreshed.id);
+    emitAdminDashboardChanged();
     return { ok: true, status: "NO_COMPATIBLE_OVERLAP" as const };
   }
 
   await prisma.onlineMeetCase.update({ where: { id: refreshed.id }, data: { status: "READY_FOR_FINALIZATION" } });
+  emitMatchesChanged([refreshed.requesterUserId, refreshed.receiverUserId]);
+  emitOnlineMeetQueueChanged(refreshed.id);
+  emitAdminDashboardChanged();
   return { ok: true, status: "READY_FOR_FINALIZATION" as const };
 }
 
@@ -452,6 +479,8 @@ export async function assignOnlineMeetCase(caseId: string, employeeUserId: strin
   }
   const updated = await prisma.onlineMeetCase.findUnique({ where: { id: caseId } });
   if (!updated) throw new HttpError(404, { message: "Case not found." });
+  emitOnlineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return updated;
 }
 
@@ -492,6 +521,9 @@ export async function sendOnlineMeetOptions(params: {
     "Your match handler shared platform and timing options. Please submit your preferences within 12 hours."
   );
 
+  emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
+  emitOnlineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return updated;
 }
 
@@ -542,6 +574,9 @@ export async function finalizeOnlineMeetCase(params: {
     `Your online meeting is confirmed on ${params.finalPlatform.replace("_", " ")} at ${finalTime.label}. Concierge may follow up personally if needed.`
   );
 
+  emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
+  emitOnlineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return updated;
 }
 
@@ -572,6 +607,9 @@ export async function markOnlineMeetTimeout(params: { caseId: string; employeeUs
     "The other member did not submit preferences in time. Please retry after cooldown if needed."
   );
 
+  emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
+  emitOnlineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return updated;
 }
 
@@ -597,6 +635,9 @@ export async function markOnlineMeetNoOverlap(params: { caseId: string; employee
     "No compatible platform/time overlap was found in this round. You may retry after one day."
   );
 
+  emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
+  emitOnlineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return updated;
 }
 
@@ -641,5 +682,8 @@ export async function updateOnlineMeetCancelOrReschedule(params: {
       : "Concierge received a serious-condition reschedule request and will follow up privately."
   );
 
+  emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
+  emitOnlineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return updated;
 }

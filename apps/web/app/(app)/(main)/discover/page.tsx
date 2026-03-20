@@ -1,8 +1,9 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useLiveEventSubscription } from "@/contexts/LiveUpdatesContext";
 import { Briefcase, Ruler, X, SlidersHorizontal, type LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import { normalizeApiError } from "@/lib/apiErrors";
 import { sendLikeAction } from "@/lib/likes";
@@ -10,18 +11,20 @@ import {
   fetchAlerts,
   fetchDiscoverFeedPageWithFilters,
   fetchMatches,
-  mapLegacyFeedItemToCard,
-  type DiscoverCard
+  mapLegacyFeedItemToCard
 } from "@/lib/queries";
-import { primeCache, readCache } from "@/lib/cache";
-
-type DiscoverState = {
-  cards: DiscoverCard[];
-  nextCursor?: string;
-};
+import { primeCache } from "@/lib/cache";
+import {
+  applyDiscoverActionToState,
+  mergeDiscoverFeedPage,
+  readDiscoverFeedState,
+  replaceDiscoverFeedPage,
+  writeDiscoverFeedState,
+  type DiscoverFeedState,
+  type DiscoverFilters
+} from "@/lib/discoverFeed";
 
 type PageStatus = "loading" | "success" | "empty" | "error";
-
 type PendingAction = { id: string; action: "LIKE" | "PASS" };
 
 function buildActionId() {
@@ -29,7 +32,6 @@ function buildActionId() {
   return `discover-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
-const DISCOVER_CACHE_KEY = "discover-feed";
 const BUFFER_TARGET = 10;
 const REFILL_THRESHOLD = 4;
 const FALLBACK_DISCOVER_IMAGE = "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=2127&auto=format&fit=crop";
@@ -41,65 +43,132 @@ function preloadImage(url: string | null | undefined) {
   image.src = url;
 }
 
+function toDraftAge(value: number | undefined) {
+  return typeof value === "number" ? String(value) : "";
+}
+
 export default function DiscoverPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
+  const initialFeedState = useMemo(() => readDiscoverFeedState(), []);
+  const feedStateRef = useRef<DiscoverFeedState>(initialFeedState);
+  const backgroundSyncRef = useRef<Promise<void> | null>(null);
 
-  const cached = readCache<DiscoverState>(DISCOVER_CACHE_KEY)?.value;
   const [hasScrolled, setHasScrolled] = useState(false);
-  const [cards, setCards] = useState<DiscoverCard[]>(cached?.cards ?? []);
-  const [nextCursor, setNextCursor] = useState<string | undefined>(cached?.nextCursor);
+  const [feedState, setFeedState] = useState<DiscoverFeedState>(initialFeedState);
   const [isFetching, setIsFetching] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [status, setStatus] = useState<PageStatus>(cached?.cards?.length ? "success" : "loading");
+  const [status, setStatus] = useState<PageStatus>(initialFeedState.cards.length ? "success" : "loading");
 
   const [filterOpen, setFilterOpen] = useState(false);
-  const [draftCity, setDraftCity] = useState("");
-  const [draftAge, setDraftAge] = useState<string>("");
-  const [appliedCity, setAppliedCity] = useState<string | undefined>(undefined);
-  const [appliedAge, setAppliedAge] = useState<number | undefined>(undefined);
+  const [draftCity, setDraftCity] = useState(initialFeedState.filters.city ?? "");
+  const [draftAge, setDraftAge] = useState(toDraftAge(initialFeedState.filters.age));
 
-  const persistState = (nextCards: DiscoverCard[], cursor?: string) => {
-    primeCache(DISCOVER_CACHE_KEY, { cards: nextCards, nextCursor: cursor });
-  };
+  useEffect(() => {
+    feedStateRef.current = feedState;
+  }, [feedState]);
 
-  const fetchPage = async (
-    cursor?: string,
-    overrideFilters?: { city?: string; age?: number }
-  ) => {
-    const response = await fetchDiscoverFeedPageWithFilters(cursor, BUFFER_TARGET, {
-      city: overrideFilters?.city ?? appliedCity,
-      age: overrideFilters?.age ?? appliedAge
+  const persistFeedState = useCallback((updater: DiscoverFeedState | ((current: DiscoverFeedState) => DiscoverFeedState)) => {
+    setFeedState((current) => {
+      const next = typeof updater === "function" ? updater(current) : updater;
+      const persisted = writeDiscoverFeedState(next);
+      feedStateRef.current = persisted;
+      return persisted;
     });
-    const mapped = response.items.map(mapLegacyFeedItemToCard);
-    return {
-      // De-dupe is handled when merging into the existing buffer.
-      items: mapped,
-      nextCursor: response.nextCursor
-    };
-  };
+  }, []);
 
-  const refillBuffer = async () => {
-    if (isFetching || !nextCursor) return;
+  const cards = feedState.cards;
+  const nextCursor = feedState.nextCursor;
+  const appliedFilters = feedState.filters;
+
+  const fetchPage = useCallback(
+    async (cursor?: string, overrideFilters?: DiscoverFilters) => {
+      const filters = overrideFilters ?? feedStateRef.current.filters;
+      const response = await fetchDiscoverFeedPageWithFilters(cursor, BUFFER_TARGET, filters);
+      return {
+        items: response.items.map(mapLegacyFeedItemToCard),
+        nextCursor: response.nextCursor
+      };
+    },
+    []
+  );
+
+  const refillBuffer = useCallback(async () => {
+    const cursor = feedStateRef.current.nextCursor;
+    if (isFetching || !cursor) return;
+
     setIsFetching(true);
     try {
-      const next = await fetchPage(nextCursor);
-      setCards((prev) => {
-        const existingIds = new Set(prev.map((entry) => entry.id));
-        const uniqueIncoming = next.items.filter((entry) => !existingIds.has(entry.id));
-        const merged = [...prev, ...uniqueIncoming];
-        persistState(merged, next.nextCursor);
-        if (merged.length === 0) {
-          setStatus("empty");
-        }
-        return merged;
-      });
-      setNextCursor(next.nextCursor);
+      const next = await fetchPage(cursor);
+      persistFeedState((current) => mergeDiscoverFeedPage(current, next.items, next.nextCursor));
+      const updated = feedStateRef.current;
+      if (updated.cards.length > 0) {
+        setStatus("success");
+      } else {
+        setStatus("empty");
+      }
     } finally {
       setIsFetching(false);
     }
-  };
+  }, [fetchPage, isFetching, persistFeedState]);
+
+  const loadFirstPage = useCallback(async (filters?: DiscoverFilters, options?: { showLoading?: boolean }) => {
+    const showLoading = options?.showLoading !== false;
+    const hadCards = feedStateRef.current.cards.length > 0;
+
+    if (showLoading) {
+      setStatus("loading");
+    }
+    setIsFetching(true);
+
+    try {
+      const nextFilters = filters ?? feedStateRef.current.filters;
+      const first = await fetchPage(undefined, nextFilters);
+      persistFeedState((current) => replaceDiscoverFeedPage(current, first.items, first.nextCursor, nextFilters));
+      const updated = feedStateRef.current;
+      setStatus(updated.cards.length ? "success" : "empty");
+    } catch {
+      if (showLoading || !hadCards) {
+        setStatus("error");
+      }
+    } finally {
+      setIsFetching(false);
+    }
+  }, [fetchPage, persistFeedState]);
+
+  const syncFromTail = useCallback(async () => {
+    if (isFetching || backgroundSyncRef.current) {
+      return backgroundSyncRef.current ?? undefined;
+    }
+
+    const current = feedStateRef.current;
+    backgroundSyncRef.current = (async () => {
+      try {
+        if (current.cards.length === 0) {
+          await loadFirstPage(current.filters, { showLoading: false });
+          return;
+        }
+
+        const tailCursor = current.cards[current.cards.length - 1]?.id;
+        if (!tailCursor) return;
+
+        const next = await fetchPage(tailCursor, current.filters);
+        if (next.items.length === 0 && !next.nextCursor) return;
+
+        persistFeedState((state) => mergeDiscoverFeedPage(state, next.items, state.nextCursor ?? next.nextCursor));
+        if (feedStateRef.current.cards.length > 0) {
+          setStatus("success");
+        }
+      } catch {
+        // Keep the current queue visible if a silent tail sync fails.
+      } finally {
+        backgroundSyncRef.current = null;
+      }
+    })();
+
+    return backgroundSyncRef.current;
+  }, [fetchPage, isFetching, loadFirstPage, persistFeedState]);
 
   const applyFilters = async () => {
     const nextCity = draftCity.trim() ? draftCity.trim() : undefined;
@@ -107,102 +176,84 @@ export default function DiscoverPage() {
     const nextAge = Number.isFinite(parsedAge) ? parsedAge : undefined;
 
     setFilterOpen(false);
-    setStatus("loading");
-    setIsFetching(true);
-    setCards([]);
-    setNextCursor(undefined);
-
-    try {
-      setAppliedCity(nextCity);
-      setAppliedAge(nextAge);
-
-      const first = await fetchPage(undefined, { city: nextCity, age: nextAge });
-      setCards(first.items);
-      setNextCursor(first.nextCursor);
-      persistState(first.items, first.nextCursor);
-      setStatus(first.items.length ? "success" : "empty");
-    } catch {
-      setStatus("error");
-    } finally {
-      setIsFetching(false);
-    }
+    await loadFirstPage({ city: nextCity, age: nextAge });
   };
 
   const clearFilters = async () => {
     setDraftCity("");
     setDraftAge("");
     setFilterOpen(false);
-
-    setStatus("loading");
-    setIsFetching(true);
-    setCards([]);
-    setNextCursor(undefined);
-
-    try {
-      setAppliedCity(undefined);
-      setAppliedAge(undefined);
-
-      const first = await fetchPage(undefined, { city: undefined, age: undefined });
-      setCards(first.items);
-      setNextCursor(first.nextCursor);
-      persistState(first.items, first.nextCursor);
-      setStatus(first.items.length ? "success" : "empty");
-    } catch {
-      setStatus("error");
-    } finally {
-      setIsFetching(false);
-    }
+    await loadFirstPage({});
   };
 
   useEffect(() => {
     const bootstrap = async () => {
       if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
-      if (cards.length > 0) {
+      if (feedStateRef.current.cards.length > 0) {
         setStatus("success");
-        void refillBuffer();
+        if (feedStateRef.current.nextCursor) {
+          void refillBuffer();
+        } else {
+          void syncFromTail();
+        }
         return;
       }
-
-      setStatus("loading");
-      setIsFetching(true);
-      try {
-        const first = await fetchPage();
-        setCards(first.items);
-        setNextCursor(first.nextCursor);
-        persistState(first.items, first.nextCursor);
-        setStatus(first.items.length ? "success" : "empty");
-      } catch {
-        setStatus("error");
-      } finally {
-        setIsFetching(false);
-      }
+      await loadFirstPage(feedStateRef.current.filters);
     };
 
     void bootstrap();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, onboardingStep]);
+  }, [isAuthenticated, loadFirstPage, onboardingStep, refillBuffer, syncFromTail]);
 
   useEffect(() => {
     if (status === "success" && cards.length <= REFILL_THRESHOLD && nextCursor) {
       void refillBuffer();
     }
     cards.slice(1, 4).forEach((card) => preloadImage(card.imageUrl));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cards.length, nextCursor, status]);
+  }, [cards, nextCursor, refillBuffer, status]);
+
+  useEffect(() => {
+    if (!isAuthenticated || onboardingStep !== "COMPLETED") return undefined;
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+
+      const current = feedStateRef.current;
+      if (current.nextCursor && current.cards.length <= REFILL_THRESHOLD) {
+        void refillBuffer();
+        return;
+      }
+
+      if (!current.nextCursor) {
+        void syncFromTail();
+      }
+    }, 45_000);
+
+    return () => window.clearInterval(intervalId);
+  }, [isAuthenticated, onboardingStep, refillBuffer, syncFromTail]);
+
+  useLiveEventSubscription(["discover.action_applied"], () => {
+    const next = readDiscoverFeedState();
+    feedStateRef.current = next;
+    setFeedState(next);
+    if (next.cards.length === 0 && !next.nextCursor) {
+      setStatus("empty");
+    } else if (next.cards.length > 0) {
+      setStatus("success");
+    }
+  }, isAuthenticated && onboardingStep === "COMPLETED");
 
   const handleInteraction = async (action: "LIKE" | "PASS") => {
-    const current = cards[0];
+    const current = feedStateRef.current.cards[0];
     if (!current || pendingAction) return;
 
     const actionId = buildActionId();
+    const previousState = feedStateRef.current;
     setPendingAction({ id: actionId, action });
     setActionError(null);
 
-    const previousCards = cards;
-    const nextCards = previousCards.slice(1);
-    setCards(nextCards);
-    persistState(nextCards, nextCursor);
-    if (nextCards.length === 0 && !nextCursor) {
+    persistFeedState((state) => applyDiscoverActionToState(state, current.id));
+    const optimisticState = feedStateRef.current;
+    if (optimisticState.cards.length === 0 && !optimisticState.nextCursor) {
       setStatus("empty");
     }
 
@@ -212,13 +263,12 @@ export default function DiscoverPage() {
         void fetchMatches().then((data) => primeCache("matches", data));
         void fetchAlerts().then((data) => primeCache("alerts", data));
       }
-      if (nextCards.length > 0) {
+      if (feedStateRef.current.cards.length > 0) {
         setStatus("success");
       }
     } catch (error) {
-      setCards(previousCards);
-      persistState(previousCards, nextCursor);
-      setStatus("success");
+      persistFeedState(previousState);
+      setStatus(previousState.cards.length ? "success" : "empty");
       const normalized = normalizeApiError(error);
       setActionError(normalized.message);
     } finally {
@@ -303,33 +353,18 @@ export default function DiscoverPage() {
               </p>
               {status === "loading" && <div className="mt-8 h-2 w-40 rounded-full bg-foreground/10 overflow-hidden"><motion.div className="h-full bg-primary/60" animate={{ x: ["-100%", "120%"] }} transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }} /></div>}
               {status === "error" && (
-                <button onClick={() => void (async () => {
-                  setStatus("loading");
-                  setIsFetching(true);
-                  try {
-                    const first = await fetchPage();
-                    setCards(first.items);
-                    setNextCursor(first.nextCursor);
-                    persistState(first.items, first.nextCursor);
-                    setStatus(first.items.length ? "success" : "empty");
-                  } catch {
-                    setStatus("error");
-                  } finally {
-                    setIsFetching(false);
-                  }
-                })()} className="mt-8 w-fit rounded-full border border-primary/50 px-6 py-2 text-xs uppercase tracking-[0.2em] text-primary hover:bg-primary/10 transition-colors">Retry</button>
+                <button onClick={() => void loadFirstPage()} className="mt-8 w-fit rounded-full border border-primary/50 px-6 py-2 text-xs uppercase tracking-[0.2em] text-primary hover:bg-primary/10 transition-colors">Retry</button>
               )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Discover filters (age + city) */}
       <button
         type="button"
         onClick={() => {
-          setDraftCity(appliedCity ?? "");
-          setDraftAge(typeof appliedAge === "number" ? String(appliedAge) : "");
+          setDraftCity(appliedFilters.city ?? "");
+          setDraftAge(toDraftAge(appliedFilters.age));
           setFilterOpen(true);
         }}
         className="absolute top-5 right-4 z-50 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-background/70 backdrop-blur-lg px-3 py-2 text-xs uppercase tracking-[0.15em] text-primary hover:bg-primary/10 transition-colors"

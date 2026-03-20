@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Clock3, ExternalLink, MessageCircleWarning, ShieldCheck, UserRoundCheck, XCircle } from "lucide-react";
 import { apiRequestAuth } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 type VerificationPayload = {
@@ -18,6 +19,7 @@ type VerificationPayload = {
 };
 
 type MemberVerificationStage = "intro" | "requesting" | "waiting" | "timed_out" | "in_progress" | "approved_redirect" | "rejected";
+const WAIT_WINDOW_SECONDS = 5 * 60;
 
 function formatCountdown(value: number) {
   const safe = Math.max(0, value);
@@ -30,11 +32,11 @@ function formatCountdown(value: number) {
   return `${minutes}:${seconds}`;
 }
 
-function deriveStage(payload: VerificationPayload | null, requesting: boolean): MemberVerificationStage {
+function deriveStage(payload: VerificationPayload | null, requesting: boolean, remainingSeconds: number): MemberVerificationStage {
   if (requesting) return "requesting";
   if (!payload || payload.status === "NOT_REQUESTED") return "intro";
   if (payload.status === "REQUESTED" || payload.status === "ASSIGNED") {
-    return payload.remainingSeconds > 0 ? "waiting" : "timed_out";
+    return remainingSeconds > 0 ? "waiting" : "timed_out";
   }
   if (payload.status === "TIMED_OUT") return "timed_out";
   if (payload.status === "IN_PROGRESS") return "in_progress";
@@ -44,13 +46,17 @@ function deriveStage(payload: VerificationPayload | null, requesting: boolean): 
 }
 
 export default function VideoVerificationPage() {
-  const { refreshCurrentUserAndRoute } = useAuth();
+  const { refreshCurrentUser, refreshCurrentUserAndRoute } = useAuth();
   const [payload, setPayload] = useState<VerificationPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const [helping, setHelping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [clockTickMs, setClockTickMs] = useState(() => Date.now());
+  const payloadStatus = payload?.status ?? null;
+  const payloadRequestedAt = payload?.requestedAt ?? null;
+  const payloadDisplayStatus = payload?.displayStatus ?? null;
 
   const loadStatus = useCallback(async () => {
     const response = await apiRequestAuth<VerificationPayload>(API_ENDPOINTS.verification.status);
@@ -72,18 +78,44 @@ export default function VideoVerificationPage() {
     void run();
   }, [loadStatus]);
 
-  useEffect(() => {
-    if (!payload || !["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(payload.status)) return;
-    const id = window.setInterval(() => {
-      void loadStatus().catch(() => undefined);
-    }, 15000);
-    return () => window.clearInterval(id);
-  }, [loadStatus, payload]);
+  useLiveResourceRefresh({
+    enabled: Boolean(payloadStatus),
+    refresh: loadStatus,
+    eventTypes: ["verification.status.changed"],
+    fallbackIntervalMs: ["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(payloadStatus ?? "") ? 60_000 : undefined
+  });
 
   useEffect(() => {
-    if (payload?.displayStatus !== "APPROVED") return;
+    if (!payloadStatus || !["REQUESTED", "ASSIGNED"].includes(payloadStatus)) return;
+    setClockTickMs(Date.now());
+    const id = window.setInterval(() => {
+      setClockTickMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [payloadRequestedAt, payloadStatus]);
+
+  const effectiveRemainingSeconds = useMemo(() => {
+    if (!payload) return WAIT_WINDOW_SECONDS;
+    if (!["REQUESTED", "ASSIGNED"].includes(payload.status)) return payload.remainingSeconds;
+    if (!payload.requestedAt) return payload.remainingSeconds;
+
+    const requestedAtMs = new Date(payload.requestedAt).getTime();
+    if (Number.isNaN(requestedAtMs)) return payload.remainingSeconds;
+
+    const deadlineMs = requestedAtMs + WAIT_WINDOW_SECONDS * 1000;
+    return Math.max(0, Math.ceil((deadlineMs - clockTickMs) / 1000));
+  }, [clockTickMs, payload]);
+
+  useEffect(() => {
+    if (!payloadStatus || !["REQUESTED", "ASSIGNED"].includes(payloadStatus)) return;
+    if (effectiveRemainingSeconds > 0) return;
+    void loadStatus().catch(() => undefined);
+  }, [effectiveRemainingSeconds, loadStatus, payloadStatus]);
+
+  useEffect(() => {
+    if (payloadDisplayStatus !== "APPROVED") return;
     void refreshCurrentUserAndRoute();
-  }, [payload?.displayStatus, refreshCurrentUserAndRoute]);
+  }, [payloadDisplayStatus, refreshCurrentUserAndRoute]);
 
   const createRequest = async () => {
     setRequesting(true);
@@ -94,6 +126,7 @@ export default function VideoVerificationPage() {
         method: "POST",
         body: JSON.stringify({})
       });
+      await refreshCurrentUser().catch(() => undefined);
       await loadStatus();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to request video verification right now.");
@@ -111,6 +144,7 @@ export default function VideoVerificationPage() {
         method: "POST",
         body: JSON.stringify({})
       });
+      await refreshCurrentUser().catch(() => undefined);
       const latest = await loadStatus();
       if (!latest.whatsappHelpRequestedAt) {
         throw new Error("Request failed. Please try again.");
@@ -123,7 +157,7 @@ export default function VideoVerificationPage() {
     }
   };
 
-  const stage = useMemo(() => deriveStage(payload, requesting), [payload, requesting]);
+  const stage = useMemo(() => deriveStage(payload, requesting, effectiveRemainingSeconds), [effectiveRemainingSeconds, payload, requesting]);
   const showWhatsAppCta = stage === "waiting" || stage === "timed_out";
 
   if (loading) {
@@ -157,7 +191,7 @@ export default function VideoVerificationPage() {
         </div>
 
         {stage === "waiting" && payload ? (
-          <p className="text-sm text-foreground/80">Waiting for an executive... {formatCountdown(payload.remainingSeconds)} remaining</p>
+          <p className="text-sm text-foreground/80">Waiting for an executive... {formatCountdown(effectiveRemainingSeconds)} remaining</p>
         ) : null}
 
         {stage === "timed_out" ? (

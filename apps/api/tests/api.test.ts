@@ -628,6 +628,85 @@ describe("Verification concierge flow", () => {
     expect(response.body.meetUrl).toBeNull();
   });
 
+  it("creates a fresh verification request on the first retry after timeout", async () => {
+    const agent = request.agent(app);
+    const token = await registerAndLogin(agent, "5552223344", "Password@1");
+    const user = await prisma.user.findUnique({ where: { phone: "5552223344" } });
+    if (!user) throw new Error("User not found");
+
+    const expiredRequest = await prisma.verificationRequest.create({
+      data: {
+        userId: user.id,
+        status: "REQUESTED",
+        createdAt: new Date(Date.now() - 6 * 60 * 1000)
+      }
+    });
+
+    const response = await withAuth(agent.post("/verification-requests"), token);
+    expect(response.status).toBe(200);
+    expect(response.body.request.id).not.toBe(expiredRequest.id);
+    expect(response.body.request.status).toBe("REQUESTED");
+
+    const requests = await prisma.verificationRequest.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" }
+    });
+
+    expect(requests).toHaveLength(2);
+    expect(requests[0]?.status).toBe("REQUESTED");
+    expect(requests[1]?.status).toBe("TIMED_OUT");
+  });
+
+  it("requeues WhatsApp help requests into the active employee queue after timeout", async () => {
+    const adminPhone = "5552223355";
+    await prisma.user.create({
+      data: {
+        phone: adminPhone,
+        email: "admin-help@example.com",
+        passwordHash: await bcrypt.hash("Admin@123", 10),
+        role: "ADMIN",
+        isAdmin: true,
+        status: "APPROVED",
+        verifiedAt: new Date(),
+        phoneVerifiedAt: new Date()
+      }
+    });
+
+    const userAgent = request.agent(app);
+    const userToken = await registerAndLogin(userAgent, "5552223366", "Password@1");
+    const user = await prisma.user.findUnique({ where: { phone: "5552223366" } });
+    if (!user) throw new Error("User not found");
+
+    await prisma.verificationRequest.create({
+      data: {
+        userId: user.id,
+        status: "TIMED_OUT",
+        createdAt: new Date(Date.now() - 10 * 60 * 1000),
+        decidedAt: new Date(Date.now() - 4 * 60 * 1000),
+        reason: "Timed out without employee response"
+      }
+    });
+
+    const help = await withAuth(userAgent.post("/verification/help/whatsapp"), userToken);
+    expect(help.status).toBe(200);
+    expect(help.body.ok).toBe(true);
+
+    const latest = await prisma.verificationRequest.findFirst({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" }
+    });
+    expect(latest?.status).toBe("REQUESTED");
+    expect(latest?.reason).toContain("WHATSAPP_HELP_REQUESTED:");
+
+    const adminAgent = request.agent(app);
+    const adminLogin = await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
+    const adminToken = adminLogin.body.accessToken as string;
+
+    const queue = await withAuth(adminAgent.get("/admin/verification-requests?statusView=ACTIVE"), adminToken);
+    expect(queue.status).toBe(200);
+    expect(queue.body.requests.some((requestItem: { id: string }) => requestItem.id === latest?.id)).toBe(true);
+  });
+
   it("allows admin to reject a verification request", async () => {
     const adminPhone = "5559000001";
     const passwordHash = await bcrypt.hash("Admin@123", 10);

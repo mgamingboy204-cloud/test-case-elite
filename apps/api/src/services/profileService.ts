@@ -2,6 +2,7 @@ import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { type ProfileInput, type ProfilePatchInput, hasRequiredOnboardingProfile } from "@vael/shared";
 import { Gender } from "@prisma/client";
+import { emitProfileChanged, emitSessionStateChanged } from "../live/liveEventBroker";
 
 type UpdateOptions = { userId: string; paymentStatus: string; onboardingStep: string; data: ProfileInput | ProfilePatchInput };
 
@@ -261,6 +262,8 @@ export async function updateProfile(options: UpdateOptions) {
     await updateProfileSettings(options.userId, normalized.settings);
   }
 
+  emitProfileChanged([options.userId]);
+  emitSessionStateChanged([options.userId], "profile_updated");
   return { profile, requiresPhoto: false, onboardingStep: updatedUser.onboardingStep };
 }
 
@@ -281,6 +284,7 @@ export async function updateProfileSettings(userId: string, data: {
         typeof data?.discoverableByPremiumOnly === "boolean" ? data.discoverableByPremiumOnly : current.discoverableByPremiumOnly
     }
   });
+  emitProfileChanged([userId]);
   return { settings: updated };
 }
 
@@ -323,5 +327,7 @@ export async function completeProfile(options: {
     }
   });
 
+  emitProfileChanged([options.userId]);
+  emitSessionStateChanged([options.userId], "profile_completed");
   return { ok: true, onboardingStep: user.onboardingStep };
 }

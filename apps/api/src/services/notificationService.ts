@@ -1,5 +1,6 @@
 import { NotificationType } from "@prisma/client";
 import { prisma } from "../db/prisma";
+import { emitAlertsChanged } from "../live/liveEventBroker";
 
 type ProductAlertType =
   | "LIKE_RECEIVED"
@@ -243,5 +244,6 @@ export async function markNotificationsRead(userId: string, notificationIds?: st
   });
 
   const unreadCount = await prisma.notification.count({ where: { userId, isRead: false } });
+  emitAlertsChanged([userId]);
   return { updatedCount: result.count, unreadCount };
 }

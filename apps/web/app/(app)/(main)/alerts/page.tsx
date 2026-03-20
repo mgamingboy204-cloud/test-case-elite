@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -71,6 +72,12 @@ export default function AlertsPage() {
     fetcher: fetchAlerts,
     enabled: isAuthenticated && onboardingStep === "COMPLETED",
     staleTimeMs: 30_000
+  });
+
+  useLiveResourceRefresh({
+    enabled: isAuthenticated && onboardingStep === "COMPLETED",
+    refresh: () => alertsQuery.refresh(true),
+    fallbackIntervalMs: 60_000
   });
 
   const alerts = alertsQuery.data ?? [];

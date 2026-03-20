@@ -5,12 +5,19 @@ import { Prisma, VerificationRequestStatus } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { env } from "../config/env";
 import { HttpError } from "../utils/httpErrors";
+import {
+  emitAdminDashboardChanged,
+  emitSessionStateChanged,
+  emitVerificationQueueChanged,
+  emitVerificationStatusChanged
+} from "../live/liveEventBroker";
 
 const ACTIVE_VERIFICATION_STATUSES = ["REQUESTED", "ASSIGNED", "IN_PROGRESS"] as const;
 const USER_RETRYABLE_STATUSES = ["REJECTED", "TIMED_OUT"] as const;
 const MAX_VIDEO_SIZE_BYTES = 25 * 1024 * 1024;
 const RESPONSE_TIMEOUT_MS = 5 * 60 * 1000;
 const WHATSAPP_HELP_PREFIX = "WHATSAPP_HELP_REQUESTED:";
+const TIMEOUT_REASON = "Timed out without employee response";
 const allowedVideoMimeTypes = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
 function calculateBase64Size(base64: string) {
@@ -37,19 +44,119 @@ function isRequestExpired(request: { status: VerificationRequestStatus; createdA
 
 type VerificationRequestRecord = Awaited<ReturnType<typeof prisma.verificationRequest.findFirst>>;
 
+function hasWhatsAppHelpReason(reason?: string | null) {
+  return typeof reason === "string" && reason.startsWith(WHATSAPP_HELP_PREFIX);
+}
+
+function buildWhatsAppHelpReason(requestedAt: string) {
+  return `${WHATSAPP_HELP_PREFIX}${requestedAt}`;
+}
+
+function getWhatsAppHelpRequestedAt(reason?: string | null) {
+  if (typeof reason !== "string" || !hasWhatsAppHelpReason(reason)) return null;
+  return reason.replace(WHATSAPP_HELP_PREFIX, "");
+}
+
 async function markTimedOutIfNeeded(request: NonNullable<VerificationRequestRecord>) {
   if (!isRequestExpired(request)) return request;
-  return prisma.verificationRequest.update({
-    where: { id: request.id },
-    data: {
-      status: "TIMED_OUT",
-      reason: "Timed out without employee response",
-      verificationLink: null,
-      meetUrl: null,
-      linkExpiresAt: null,
-      decidedAt: new Date()
+  const decidedAt = new Date();
+  const updated = await prisma.$transaction(async (tx) => {
+    const updated = await tx.verificationRequest.update({
+      where: { id: request.id },
+      data: {
+        status: "TIMED_OUT",
+        reason: hasWhatsAppHelpReason(request.reason) ? request.reason : TIMEOUT_REASON,
+        verificationLink: null,
+        meetUrl: null,
+        linkExpiresAt: null,
+        decidedAt
+      }
+    });
+
+    await tx.user.update({
+      where: { id: updated.userId },
+      data: {
+        videoVerificationStatus: "PENDING",
+        onboardingStep: "VIDEO_VERIFICATION_PENDING"
+      }
+    });
+
+    return updated;
+  });
+
+  emitVerificationStatusChanged({ userId: updated.userId, requestId: updated.id, status: updated.status });
+  emitSessionStateChanged([updated.userId], "verification_timed_out");
+  emitVerificationQueueChanged(updated.id);
+  emitAdminDashboardChanged();
+
+  return updated;
+}
+
+async function reopenExpiredMeetLinkIfNeeded(request: NonNullable<VerificationRequestRecord>) {
+  if (request.status !== "IN_PROGRESS") return request;
+  if (!request.linkExpiresAt || request.linkExpiresAt.getTime() > Date.now()) return request;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const updated = await tx.verificationRequest.update({
+      where: { id: request.id },
+      data: {
+        status: "REQUESTED",
+        verificationLink: null,
+        meetUrl: null,
+        linkExpiresAt: null
+      }
+    });
+
+    await tx.user.update({
+      where: { id: updated.userId },
+      data: {
+        videoVerificationStatus: "PENDING",
+        onboardingStep: "VIDEO_VERIFICATION_PENDING"
+      }
+    });
+
+    return updated;
+  });
+
+  emitVerificationStatusChanged({ userId: updated.userId, requestId: updated.id, status: updated.status });
+  emitSessionStateChanged([updated.userId], "verification_reopened");
+  emitVerificationQueueChanged(updated.id);
+  emitAdminDashboardChanged();
+
+  return updated;
+}
+
+export async function synchronizeVerificationRequests(options?: { userId?: string; requestId?: string }) {
+  const now = new Date();
+  const requestScope: Prisma.VerificationRequestWhereInput = {
+    ...(options?.userId ? { userId: options.userId } : {}),
+    ...(options?.requestId ? { id: options.requestId } : {})
+  };
+
+  const expiredMeetLinks = await prisma.verificationRequest.findMany({
+    where: {
+      ...requestScope,
+      status: "IN_PROGRESS",
+      linkExpiresAt: { not: null, lte: now }
     }
   });
+
+  for (const request of expiredMeetLinks) {
+    await reopenExpiredMeetLinkIfNeeded(request);
+  }
+
+  const waitingCutoff = new Date(now.getTime() - RESPONSE_TIMEOUT_MS);
+  const expiredWaitingRequests = await prisma.verificationRequest.findMany({
+    where: {
+      ...requestScope,
+      status: { in: ["REQUESTED", "ASSIGNED"] },
+      createdAt: { lte: waitingCutoff }
+    }
+  });
+
+  for (const request of expiredWaitingRequests) {
+    await markTimedOutIfNeeded(request);
+  }
 }
 
 function mapUserStatus(requestStatus: VerificationRequestStatus) {
@@ -128,16 +235,23 @@ export async function submitVerificationVideo(options: { userId: string; dataUrl
     }
   });
 
+  emitSessionStateChanged([options.userId], "verification_video_uploaded");
+  emitVerificationStatusChanged({ userId: options.userId, requestId: request.id, status: request.status });
+  emitVerificationQueueChanged(request.id);
+  emitAdminDashboardChanged();
+
   return { request, videoUrl };
 }
 
 export async function createVerificationRequest(options: { userId: string }) {
+  await synchronizeVerificationRequests({ userId: options.userId });
+
   const existing = await prisma.verificationRequest.findFirst({
     where: { userId: options.userId, status: { in: [...ACTIVE_VERIFICATION_STATUSES] } },
     orderBy: { createdAt: "desc" }
   });
   if (existing) {
-    return markTimedOutIfNeeded(existing);
+    return existing;
   }
 
   const latest = await prisma.verificationRequest.findFirst({
@@ -171,10 +285,16 @@ export async function createVerificationRequest(options: { userId: string }) {
       onboardingStep: "VIDEO_VERIFICATION_PENDING"
     }
   });
+  emitSessionStateChanged([options.userId], "verification_requested");
+  emitVerificationStatusChanged({ userId: options.userId, requestId: request.id, status: request.status });
+  emitVerificationQueueChanged(request.id);
+  emitAdminDashboardChanged();
   return request;
 }
 
 export async function getLatestVerificationRequest(userId: string) {
+  await synchronizeVerificationRequests({ userId });
+
   const request = await prisma.verificationRequest.findFirst({
     where: { userId },
     orderBy: { createdAt: "desc" }
@@ -183,8 +303,7 @@ export async function getLatestVerificationRequest(userId: string) {
     return { request: null };
   }
 
-  const refreshed = await markTimedOutIfNeeded(request);
-  return { request: refreshed };
+  return { request };
 }
 
 export async function getVerificationStatusPayload(userId: string) {
@@ -203,7 +322,10 @@ export async function getVerificationStatusPayload(userId: string) {
     };
   }
 
-  const remainingMs = Math.max(0, request.createdAt.getTime() + RESPONSE_TIMEOUT_MS - Date.now());
+  const remainingMs =
+    request.status === "REQUESTED" || request.status === "ASSIGNED"
+      ? Math.max(0, request.createdAt.getTime() + RESPONSE_TIMEOUT_MS - Date.now())
+      : 0;
 
   return {
     request,
@@ -212,14 +334,14 @@ export async function getVerificationStatusPayload(userId: string) {
     meetUrl: request.meetUrl ?? request.verificationLink ?? null,
     canRetry: request.status === "TIMED_OUT",
     remainingSeconds: Math.floor(remainingMs / 1000),
-    whatsappHelpRequestedAt: request.reason?.startsWith(WHATSAPP_HELP_PREFIX)
-      ? request.reason.replace(WHATSAPP_HELP_PREFIX, "")
-      : null,
+    whatsappHelpRequestedAt: getWhatsAppHelpRequestedAt(request.reason),
     requestedAt: request.createdAt.toISOString()
   };
 }
 
 export async function requestWhatsAppVerificationHelp(userId: string) {
+  await synchronizeVerificationRequests({ userId });
+
   const latest = await prisma.verificationRequest.findFirst({
     where: { userId },
     orderBy: { createdAt: "desc" }
@@ -230,12 +352,45 @@ export async function requestWhatsAppVerificationHelp(userId: string) {
   }
 
   const timestamp = new Date().toISOString();
-  await prisma.verificationRequest.update({
-    where: { id: latest.id },
-    data: {
-      reason: `${WHATSAPP_HELP_PREFIX}${timestamp}`
-    }
-  });
+  let targetRequestId = latest.id;
+
+  if (latest.status === "COMPLETED" || latest.status === "REJECTED") {
+    throw new HttpError(400, { message: "This verification request is already closed." });
+  }
+
+  if (latest.status === "TIMED_OUT") {
+    const reopened = await prisma.$transaction(async (tx) => {
+      const request = await tx.verificationRequest.create({
+        data: {
+          userId,
+          status: "REQUESTED",
+          reason: buildWhatsAppHelpReason(timestamp)
+        }
+      });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          videoVerificationStatus: "PENDING",
+          onboardingStep: "VIDEO_VERIFICATION_PENDING"
+        }
+      });
+
+      return request;
+    });
+
+    targetRequestId = reopened.id;
+  } else if (!getWhatsAppHelpRequestedAt(latest.reason)) {
+    await prisma.verificationRequest.update({
+      where: { id: latest.id },
+      data: {
+        reason: buildWhatsAppHelpReason(timestamp)
+      }
+    });
+  }
+
+  const existingHelpRequestedAt = latest.status === "TIMED_OUT" ? null : getWhatsAppHelpRequestedAt(latest.reason);
+  const requestedAt = existingHelpRequestedAt ?? timestamp;
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -247,15 +402,20 @@ export async function requestWhatsAppVerificationHelp(userId: string) {
       actorUserId: userId,
       action: "verification_whatsapp_help_requested",
       targetType: "VerificationRequest",
-      targetId: latest.id,
+      targetId: targetRequestId,
       metadata: {
         note: "Manual employee follow-up required. Do not automate responses.",
-        requestedAt: timestamp,
+        requestedAt,
         userPhone: user?.phone ?? null,
         verificationStatus: latest.status
       }
     }
   });
 
-  return { ok: true, requestedAt: timestamp };
+  emitSessionStateChanged([userId], "verification_help_requested");
+  emitVerificationStatusChanged({ userId, requestId: targetRequestId, status: latest.status === "TIMED_OUT" ? "REQUESTED" : latest.status });
+  emitVerificationQueueChanged(targetRequestId);
+  emitAdminDashboardChanged();
+
+  return { ok: true, requestedAt };
 }

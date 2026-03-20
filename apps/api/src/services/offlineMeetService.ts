@@ -2,6 +2,12 @@ import { NotificationType, OfflineMeetCoordinationStatus, Prisma } from "@prisma
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { notificationDedupeKey } from "../utils/notificationDedupe";
+import {
+  emitAdminDashboardChanged,
+  emitAlertsChanged,
+  emitMatchesChanged,
+  emitOfflineMeetQueueChanged
+} from "../live/liveEventBroker";
 
 type CafeOption = { id: string; name: string; address: string };
 type TimeSlotOption = { id: string; label: string; startsAtIso: string | null };
@@ -113,6 +119,7 @@ async function createNotifications(userIds: string[], type: NotificationType, ma
     })),
     skipDuplicates: true
   });
+  emitAlertsChanged(userIds);
 }
 
 async function evaluateTimeout(caseId: string) {
@@ -151,6 +158,13 @@ async function evaluateTimeout(caseId: string) {
     );
   }
 
+  emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
+  emitOfflineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
+
+  emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
+  emitOfflineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return updated;
 }
 
@@ -245,6 +259,10 @@ export async function createOrActivateOfflineMeetCase(params: { matchId: string;
       "Both members agreed. A match handler will now prepare curated venue and time options."
     );
 
+    emitMatchesChanged([params.requesterUserId, params.receiverUserId]);
+    emitOfflineMeetQueueChanged(updated.id);
+    emitAdminDashboardChanged();
+
     return updated;
   }
 
@@ -265,6 +283,10 @@ export async function createOrActivateOfflineMeetCase(params: { matchId: string;
     "Both members agreed. A match handler will now prepare curated venue and time options."
   );
 
+  emitMatchesChanged([params.requesterUserId, params.receiverUserId]);
+  emitOfflineMeetQueueChanged(created.id);
+  emitAdminDashboardChanged();
+
   return created;
 }
 
@@ -276,6 +298,7 @@ export async function notifyOfflineMeetRequest(matchId: string, requesterId: str
     "Offline Meet Request",
     "Your match has requested an in-person meet. Review and accept if you'd like concierge coordination."
   );
+  emitMatchesChanged([requesterId, receiverId]);
 }
 
 export async function getOfflineMeetCaseForUser(matchId: string, userId: string) {
@@ -356,6 +379,9 @@ export async function submitOfflineMeetSelections(params: { matchId: string; use
   if (!requesterDone || !receiverDone) {
     const nextStatus: OfflineMeetCoordinationStatus = requesterDone ? "USER_ONE_RESPONDED" : "USER_TWO_RESPONDED";
     await prisma.offlineMeetCase.update({ where: { id: refreshed.id }, data: { status: nextStatus } });
+    emitMatchesChanged([refreshed.requesterUserId, refreshed.receiverUserId]);
+    emitOfflineMeetQueueChanged(refreshed.id);
+    emitAdminDashboardChanged();
     return { ok: true, status: nextStatus };
   }
 
@@ -374,10 +400,16 @@ export async function submitOfflineMeetSelections(params: { matchId: string; use
       "Offline Meet Not Compatible",
       "Your selected options did not overlap this round. You may retry after one day."
     );
+    emitMatchesChanged([refreshed.requesterUserId, refreshed.receiverUserId]);
+    emitOfflineMeetQueueChanged(refreshed.id);
+    emitAdminDashboardChanged();
     return { ok: true, status: "NO_COMPATIBLE_OVERLAP" as const };
   }
 
   await prisma.offlineMeetCase.update({ where: { id: refreshed.id }, data: { status: "READY_FOR_FINALIZATION" } });
+  emitMatchesChanged([refreshed.requesterUserId, refreshed.receiverUserId]);
+  emitOfflineMeetQueueChanged(refreshed.id);
+  emitAdminDashboardChanged();
   return { ok: true, status: "READY_FOR_FINALIZATION" as const };
 }
 
@@ -482,6 +514,8 @@ export async function assignOfflineMeetCase(caseId: string, employeeUserId: stri
   }
   const updated = await prisma.offlineMeetCase.findUnique({ where: { id: caseId } });
   if (!updated) throw new HttpError(404, { message: "Case not found." });
+  emitOfflineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return updated;
 }
 
@@ -522,6 +556,9 @@ export async function sendOfflineMeetOptions(params: {
     "Your match handler shared curated cafés and time windows. Please submit your preferences within 12 hours."
   );
 
+  emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
+  emitOfflineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return updated;
 }
 
@@ -570,6 +607,9 @@ export async function finalizeOfflineMeetCase(params: { caseId: string; employee
     `Your in-person meeting is confirmed at ${finalCafe.name} — ${finalTimeSlot.label}. Concierge will follow up if required.`
   );
 
+  emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
+  emitOfflineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return updated;
 }
 
@@ -601,6 +641,9 @@ export async function markOfflineMeetTimeout(params: { caseId: string; employeeU
     "The other member did not submit preferences in time. Please retry after cooldown if you still wish to proceed."
   );
 
+  emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
+  emitOfflineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return updated;
 }
 
@@ -626,6 +669,9 @@ export async function markOfflineMeetNoOverlap(params: { caseId: string; employe
     "No overlapping options were found this round. You may try again after one day."
   );
 
+  emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
+  emitOfflineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return updated;
 }
 
@@ -668,5 +714,8 @@ export async function updateOfflineMeetCancelOrReschedule(params: {
     params.action === "CANCEL" ? "Your meet has been canceled by concierge under serious-condition protocol." : "Concierge received a serious-condition reschedule request and will follow up privately."
   );
 
+  emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
+  emitOfflineMeetQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return updated;
 }

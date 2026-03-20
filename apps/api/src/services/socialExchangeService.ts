@@ -2,6 +2,7 @@ import { NotificationType, Prisma, SocialExchangeStatus, SocialPlatform } from "
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { notificationDedupeKey } from "../utils/notificationDedupe";
+import { emitAdminDashboardChanged, emitAlertsChanged, emitMatchesChanged } from "../live/liveEventBroker";
 
 const REVEAL_WINDOW_MS = 10 * 60 * 1000;
 const UNOPENED_EXPIRY_MS = 24 * 60 * 60 * 1000;
@@ -63,6 +64,7 @@ async function createAlert(userId: string, type: NotificationType, matchId: stri
       deepLinkUrl: "/matches"
     }
   });
+  emitAlertsChanged([userId]);
 }
 
 async function requireActiveMatch(matchId: string, userId: string) {
@@ -97,6 +99,8 @@ async function maybeExpire(caseId: string) {
   await createAlert(expired.requesterUserId, "SOCIAL_EXCHANGE_EXPIRED", expired.matchId, expired.receiverUserId, "Your social handle reveal expired.");
   await createAlert(expired.receiverUserId, "SOCIAL_EXCHANGE_EXPIRED", expired.matchId, expired.requesterUserId, "A social handle reveal has expired.");
   await createAlert(expired.requesterUserId, "SOCIAL_EXCHANGE_RESEND_AVAILABLE", expired.matchId, expired.receiverUserId, "You can resend a social exchange request after cooldown.");
+  emitMatchesChanged([expired.requesterUserId, expired.receiverUserId]);
+  emitAdminDashboardChanged();
 
   return expired;
 }
@@ -173,6 +177,8 @@ export async function createSocialExchangeRequest(options: { matchId: string; us
   });
 
   await createAlert(receiverUserId, "SOCIAL_EXCHANGE_REQUEST", options.matchId, options.userId, "Your match requested a temporary social exchange.");
+  emitMatchesChanged([options.userId, receiverUserId]);
+  emitAdminDashboardChanged();
 
   return { ok: true, socialExchange: toCaseView(socialCase) };
 }
@@ -198,6 +204,8 @@ export async function respondToSocialExchangeRequest(options: { caseId: string; 
       }
     });
     await createAlert(rejected.requesterUserId, "SOCIAL_EXCHANGE_REJECTED", rejected.matchId, rejected.receiverUserId, "Your social exchange request was declined.");
+    emitMatchesChanged([rejected.requesterUserId, rejected.receiverUserId]);
+    emitAdminDashboardChanged();
     return { ok: true, socialExchange: toCaseView(rejected) };
   }
 
@@ -209,6 +217,8 @@ export async function respondToSocialExchangeRequest(options: { caseId: string; 
     }
   });
   await createAlert(accepted.requesterUserId, "SOCIAL_EXCHANGE_ACCEPTED", accepted.matchId, accepted.receiverUserId, "Your social exchange request was accepted. Submit your handle.");
+  emitMatchesChanged([accepted.requesterUserId, accepted.receiverUserId]);
+  emitAdminDashboardChanged();
   return { ok: true, socialExchange: toCaseView(accepted) };
 }
 
@@ -237,6 +247,8 @@ export async function submitSocialHandle(options: { caseId: string; userId: stri
   });
 
   await createAlert(submitted.receiverUserId, "SOCIAL_EXCHANGE_HANDLE_READY", submitted.matchId, submitted.requesterUserId, "A temporary social handle is ready to reveal.");
+  emitMatchesChanged([submitted.requesterUserId, submitted.receiverUserId]);
+  emitAdminDashboardChanged();
 
   return { ok: true, socialExchange: toCaseView(submitted) };
 }
@@ -262,6 +274,8 @@ export async function openSocialReveal(options: { caseId: string; userId: string
       }
     });
     await createAlert(revealed.requesterUserId, "SOCIAL_EXCHANGE_VIEWED", revealed.matchId, revealed.receiverUserId, "Your social handle was viewed.");
+    emitMatchesChanged([revealed.requesterUserId, revealed.receiverUserId]);
+    emitAdminDashboardChanged();
 
     const secondsRemaining =
       revealed.revealExpiresAt ? Math.max(0, Math.floor((revealed.revealExpiresAt.getTime() - now.getTime()) / 1000)) : null;

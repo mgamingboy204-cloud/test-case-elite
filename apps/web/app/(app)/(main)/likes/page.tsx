@@ -1,82 +1,67 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 import { normalizeApiError } from "@/lib/apiErrors";
 import { fetchIncomingLikes, respondToIncomingLike, type LikesIncomingProfile } from "@/lib/likes";
 import { fetchAlerts, fetchMatches } from "@/lib/queries";
-import { primeCache, readCache } from "@/lib/cache";
+import { primeCache, useStaleWhileRevalidate } from "@/lib/cache";
 import { X, Check, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, PanInfo } from "framer-motion";
+import { useMemo, useState } from "react";
+import { motion, type PanInfo } from "framer-motion";
 
-type PageStatus = "loading" | "success" | "empty" | "error";
+type ViewState = "loading" | "success" | "empty" | "error";
 const LIKES_CACHE_KEY = "likes-incoming";
 
 export default function LikesPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
-  const cached = readCache<LikesIncomingProfile[]>(LIKES_CACHE_KEY)?.value ?? [];
-
-  const [profiles, setProfiles] = useState<LikesIncomingProfile[]>(cached);
-  const profilesRef = useRef<LikesIncomingProfile[]>(cached);
-  const [status, setStatus] = useState<PageStatus>(cached.length > 0 ? "success" : "loading");
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [pendingProfileId, setPendingProfileId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  useEffect(() => {
-    profilesRef.current = profiles;
-  }, [profiles]);
+  const likesQuery = useStaleWhileRevalidate({
+    key: LIKES_CACHE_KEY,
+    fetcher: fetchIncomingLikes,
+    enabled: isAuthenticated && onboardingStep === "COMPLETED",
+    staleTimeMs: 60_000
+  });
 
-  const persist = useCallback((items: LikesIncomingProfile[]) => {
-    primeCache(LIKES_CACHE_KEY, items);
-    setProfiles(items);
-    setStatus(items.length > 0 ? "success" : "empty");
-  }, []);
+  useLiveResourceRefresh({
+    enabled: isAuthenticated && onboardingStep === "COMPLETED",
+    refresh: () => likesQuery.refresh(true),
+    fallbackIntervalMs: 60_000
+  });
 
-  const refresh = useCallback(async () => {
-    if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
+  const profiles = likesQuery.data ?? [];
+  const state: ViewState = useMemo(() => {
+    if (likesQuery.isLoading && profiles.length === 0) return "loading";
+    if (likesQuery.error && profiles.length === 0) return "error";
+    if (profiles.length === 0) return "empty";
+    return "success";
+  }, [likesQuery.error, likesQuery.isLoading, profiles.length]);
 
-    setIsRefreshing(true);
-    setActionError(null);
-    try {
-      const incoming = await fetchIncomingLikes();
-      persist(incoming);
-    } catch (error) {
-      if (profilesRef.current.length === 0) {
-        setStatus("error");
-      }
-      const normalized = normalizeApiError(error);
-      setActionError(normalized.message);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [isAuthenticated, onboardingStep, persist]);
+  const persist = (items: LikesIncomingProfile[]) => {
+    likesQuery.setData(items);
+  };
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (pendingProfileId) return;
 
     const swipeThreshold = 50;
-    // Carousel rotation only (no backend calls). PRD actions are buttons only.
     if (info.offset.x < -swipeThreshold) {
-      setProfiles((prev) => {
-        if (prev.length <= 1) return prev;
-        const [first, ...rest] = prev;
-        const next = [...rest, first];
-        primeCache(LIKES_CACHE_KEY, next);
-        return next;
+      likesQuery.mutate((current = []) => {
+        if (current.length <= 1) return current;
+        const [first, ...rest] = current;
+        return [...rest, first];
       });
-    } else if (info.offset.x > swipeThreshold) {
-      setProfiles((prev) => {
-        if (prev.length <= 1) return prev;
-        const last = prev[prev.length - 1];
-        const rest = prev.slice(0, prev.length - 1);
-        const next = [last, ...rest];
-        primeCache(LIKES_CACHE_KEY, next);
-        return next;
+      return;
+    }
+
+    if (info.offset.x > swipeThreshold) {
+      likesQuery.mutate((current = []) => {
+        if (current.length <= 1) return current;
+        const last = current[current.length - 1];
+        const rest = current.slice(0, current.length - 1);
+        return [last, ...rest];
       });
     }
   };
@@ -89,22 +74,16 @@ export default function LikesPage() {
     const nextCards = previousCards.slice(1);
     setPendingProfileId(current.profileId);
     setActionError(null);
-    setProfiles(nextCards);
-    primeCache(LIKES_CACHE_KEY, nextCards);
-    if (nextCards.length === 0) setStatus("empty");
+    persist(nextCards);
 
     try {
       const response = await respondToIncomingLike({ targetUserId: current.profileId, action });
-      // Only on LIKE_BACK should a match be created and both sides receive alerts/push.
       if (response.matchId) {
         void fetchMatches().then((data) => primeCache("matches", data));
         void fetchAlerts().then((data) => primeCache("alerts", data));
       }
-      if (nextCards.length > 0) setStatus("success");
     } catch (error) {
-      setProfiles(previousCards);
-      primeCache(LIKES_CACHE_KEY, previousCards);
-      setStatus("success");
+      persist(previousCards);
       const normalized = normalizeApiError(error);
       setActionError(normalized.message);
     } finally {
@@ -113,10 +92,10 @@ export default function LikesPage() {
   };
 
   const countLabel = useMemo(() => {
-    if (status === "loading") return "Preparing your incoming interests";
-    if (status === "error") return "Unable to load incoming interests";
+    if (state === "loading") return "Preparing your incoming interests";
+    if (state === "error") return "Unable to load incoming interests";
     return `${profiles.length} Incoming likes`;
-  }, [profiles.length, status]);
+  }, [profiles.length, state]);
 
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
 
@@ -128,13 +107,13 @@ export default function LikesPage() {
       </div>
 
       <div className="flex-1 w-full relative flex items-center justify-center overflow-hidden" style={{ overscrollBehavior: "contain" }}>
-        {status === "loading" && <LoadingCard />}
+        {state === "loading" && <LoadingCard />}
 
-        {status === "error" && (
+        {state === "error" && (
           <div className="flex flex-col items-center gap-3 text-center px-8">
             <p className="text-sm text-foreground/70">We couldn’t load your likes right now.</p>
             <button
-              onClick={() => void refresh()}
+              onClick={() => void likesQuery.refresh(true)}
               className="rounded-full border border-primary/50 px-6 py-2 text-[11px] uppercase tracking-[0.2em] text-primary hover:bg-primary/10 transition-colors"
             >
               Retry
@@ -142,24 +121,20 @@ export default function LikesPage() {
           </div>
         )}
 
-        {status === "empty" && (
+        {state === "empty" && (
           <p className="text-foreground/50 text-sm font-light text-center px-10">
             No likes yet. Come back soon.
           </p>
         )}
 
-        {status === "success" &&
+        {state === "success" &&
           profiles.map((profile, index) => {
             let offset = index;
             if (offset > Math.floor(profiles.length / 2)) offset -= profiles.length;
 
             const distance = Math.abs(offset);
             const isCenter = offset === 0;
-
-            let xPos = 0;
-            if (offset < 0) xPos = -90 - distance * 10;
-            if (offset > 0) xPos = 90 + distance * 10;
-
+            const xPos = offset < 0 ? -90 - distance * 10 : offset > 0 ? 90 + distance * 10 : 0;
             const scale = isCenter ? 1 : 0.9 - distance * 0.05;
             const opacity = Math.max(isCenter ? 1 : 0.4 - distance * 0.1, 0);
             const zIndex = isCenter ? profiles.length + 10 : profiles.length - distance;
@@ -226,7 +201,7 @@ export default function LikesPage() {
         </div>
       )}
 
-      {isRefreshing && status === "success" && (
+      {likesQuery.isRefreshing && state === "success" && (
         <div className="absolute right-6 top-7 text-foreground/40">
           <Loader2 size={16} className="animate-spin" />
         </div>

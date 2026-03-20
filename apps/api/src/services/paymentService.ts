@@ -4,6 +4,7 @@ import { HttpError } from "../utils/httpErrors";
 import { env } from "../config/env";
 import { getPaymentProviderMode, initiatePaymentGatewayOrder, verifyPaymentGatewaySignature } from "./paymentGatewayService";
 import { notificationDedupeKey } from "../utils/notificationDedupe";
+import { emitAdminDashboardChanged, emitAlertsChanged, emitSessionStateChanged } from "../live/liveEventBroker";
 
 const PLAN_DETAILS: Record<PaymentPlan, { amountInr: number; durationMonths: number; label: string }> = {
   ONE_MONTH: { amountInr: 30000, durationMonths: 1, label: "1 month" },
@@ -265,6 +266,9 @@ export async function verifyOnboardingPayment(options: {
     return latestPaid;
   });
 
+  emitSessionStateChanged([options.user.id], "payment_verified");
+  emitAdminDashboardChanged();
+
   return {
     ok: true,
     payment,
@@ -322,6 +326,8 @@ export async function completeMockOnboardingPayment(options: {
     });
     return tx.payment.findFirst({ where: { userId: options.user.id }, orderBy: { paidAt: "desc" } });
   });
+  emitSessionStateChanged([options.user.id], "payment_verified");
+  emitAdminDashboardChanged();
   return { ok: true, mocked: true, payment, paymentStatus: "PAID", onboardingStep: isRenewal ? "ACTIVE" : "PAID" };
 }
 
@@ -399,6 +405,10 @@ export async function markOnboardingPaymentFailed(options: {
       });
     }
   });
+
+  emitAlertsChanged([options.user.id]);
+  emitSessionStateChanged([options.user.id], "payment_failed");
+  emitAdminDashboardChanged();
 
   return {
     ok: false,

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Loader2, RefreshCcw } from "lucide-react";
+import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 import {
   assignOfflineMeetCase,
   finalizeOfflineMeet,
@@ -211,6 +212,13 @@ export function MatchHandlerWorkspace() {
       setRefreshing(false);
     }
   };
+
+  useLiveResourceRefresh({
+    enabled: true,
+    refresh: refreshActive,
+    eventTypes: ["admin.offline_meets.changed", "admin.online_meets.changed"],
+    fallbackIntervalMs: 60_000
+  });
 
   const withAction = async (key: string, run: () => Promise<unknown>, successMessage: string) => {
     setBusyAction(key);
@@ -595,4 +603,3 @@ function OverlapSummary({ overlapItems }: { overlapItems: string[] }) {
 }
 
 export default MatchHandlerWorkspace;
-

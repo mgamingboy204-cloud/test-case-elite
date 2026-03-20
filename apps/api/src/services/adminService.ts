@@ -14,6 +14,14 @@ import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { listEmployeeWorkloads } from "./employeeService";
 import { notificationDedupeKey } from "../utils/notificationDedupe";
+import { synchronizeVerificationRequests } from "./verificationService";
+import {
+  emitAdminDashboardChanged,
+  emitAlertsChanged,
+  emitSessionStateChanged,
+  emitVerificationQueueChanged,
+  emitVerificationStatusChanged
+} from "../live/liveEventBroker";
 
 type VerificationRequestListItem = Prisma.VerificationRequestGetPayload<{
   include: { user: { select: { id: true; phone: true; email: true } } };
@@ -95,6 +103,7 @@ export async function approveUser(userId: string, actorUserId: string) {
   await prisma.auditLog.create({
     data: { actorUserId, action: "approve", targetType: "User", targetId: user.id, metadata: {} }
   });
+  emitAdminDashboardChanged();
   return { id: user.id, status: user.status };
 }
 
@@ -106,6 +115,7 @@ export async function rejectUser(userId: string, actorUserId: string) {
   await prisma.auditLog.create({
     data: { actorUserId, action: "reject", targetType: "User", targetId: user.id, metadata: {} }
   });
+  emitAdminDashboardChanged();
   return { id: user.id, status: user.status };
 }
 
@@ -117,6 +127,7 @@ export async function banUser(userId: string, actorUserId: string) {
   await prisma.auditLog.create({
     data: { actorUserId, action: "ban", targetType: "User", targetId: user.id, metadata: {} }
   });
+  emitAdminDashboardChanged();
   return { id: user.id, status: user.status };
 }
 
@@ -353,6 +364,7 @@ export async function deactivateUser(userId: string) {
     where: { id: userId },
     data: { deactivatedAt: new Date() }
   });
+  emitAdminDashboardChanged();
   return { id: user.id, deactivatedAt: user.deactivatedAt };
 }
 
@@ -389,6 +401,7 @@ export async function deleteUser(userId: string) {
     await tx.user.delete({ where: { id: userId } });
   });
 
+  emitAdminDashboardChanged();
   return { id: userId, deleted: true };
 }
 
@@ -418,6 +431,7 @@ export async function approveRefund(refundId: string, actorUserId: string) {
   await prisma.auditLog.create({
     data: { actorUserId, action: "refund_approve", targetType: "RefundRequest", targetId: refund.id, metadata: {} }
   });
+  emitAdminDashboardChanged();
   return { refund, refundAmount: 0.8 };
 }
 
@@ -429,6 +443,7 @@ export async function denyRefund(refundId: string, actorUserId: string) {
   await prisma.auditLog.create({
     data: { actorUserId, action: "refund_deny", targetType: "RefundRequest", targetId: refund.id, metadata: {} }
   });
+  emitAdminDashboardChanged();
   return { refund };
 }
 
@@ -501,6 +516,8 @@ export async function listVerificationRequestsForActor(options: {
     throw new HttpError(403, { message: "Employee access required" });
   }
 
+  await synchronizeVerificationRequests();
+
   const isPrivileged = options.isAdmin || options.actorRole === "ADMIN";
   const statusView = resolveVerificationWorkerView(options.statusView);
   const statusInView = statusView === "ALL" ? undefined : VERIFICATION_VIEW_STATUS_MAP[statusView];
@@ -518,7 +535,7 @@ export async function listVerificationRequestsForActor(options: {
         : {})
     },
     include: { user: { select: { id: true, phone: true, email: true } } },
-    orderBy: { createdAt: "desc" }
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }]
   });
   return { statusView, requests };
 }
@@ -531,6 +548,8 @@ function ensureAssignableToActor(caseItem: { assignedEmployeeId: string | null }
 }
 
 export async function startVerificationRequest(requestId: string, meetUrl: string, actorUserId: string, isPrivileged: boolean) {
+  await synchronizeVerificationRequests({ requestId });
+
   const existing = await prisma.verificationRequest.findUnique({ where: { id: requestId }, select: { assignedEmployeeId: true, status: true, meetUrl: true } });
   if (!existing) throw new HttpError(404, { message: "Verification request not found" });
   assertRequestIsActive(existing.status);
@@ -566,10 +585,17 @@ export async function startVerificationRequest(requestId: string, meetUrl: strin
     });
     return updated;
   });
+  emitAlertsChanged([request.userId]);
+  emitVerificationStatusChanged({ userId: request.userId, requestId: request.id, status: request.status });
+  emitSessionStateChanged([request.userId], "verification_started");
+  emitVerificationQueueChanged(request.id);
+  emitAdminDashboardChanged();
   return { request };
 }
 
 export async function assignVerificationRequest(requestId: string, actorUserId: string) {
+  await synchronizeVerificationRequests({ requestId });
+
   const existing = await prisma.verificationRequest.findUnique({ where: { id: requestId }, select: { status: true } });
   if (!existing) throw new HttpError(404, { message: "Verification request not found" });
   if (!["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(existing.status)) {
@@ -612,10 +638,17 @@ export async function assignVerificationRequest(requestId: string, actorUserId: 
     message: "Our team has assigned your verification case and will guide the next step shortly.",
     metadata: { eventType: "VERIFICATION_ASSIGNED" }
   });
+  emitAlertsChanged([request.userId]);
+  emitVerificationStatusChanged({ userId: request.userId, requestId: request.id, status: request.status });
+  emitSessionStateChanged([request.userId], "verification_assigned");
+  emitVerificationQueueChanged(request.id);
+  emitAdminDashboardChanged();
   return { request };
 }
 
 export async function approveVerificationRequest(requestId: string, actorUserId: string, isPrivileged: boolean) {
+  await synchronizeVerificationRequests({ requestId });
+
   const existing = await prisma.verificationRequest.findUnique({ where: { id: requestId }, select: { assignedEmployeeId: true, userId: true, status: true } });
   if (!existing) throw new HttpError(404, { message: "Verification request not found" });
   assertRequestIsActive(existing.status);
@@ -665,10 +698,17 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
     });
     return updated;
   });
+  emitAlertsChanged([request.userId]);
+  emitVerificationStatusChanged({ userId: request.userId, requestId: request.id, status: request.status });
+  emitSessionStateChanged([request.userId], "verification_approved");
+  emitVerificationQueueChanged(request.id);
+  emitAdminDashboardChanged();
   return { request };
 }
 
 export async function rejectVerificationRequest(requestId: string, actorUserId: string, reason: string, isPrivileged: boolean) {
+  await synchronizeVerificationRequests({ requestId });
+
   const existing = await prisma.verificationRequest.findUnique({ where: { id: requestId }, select: { assignedEmployeeId: true, status: true } });
   if (!existing) throw new HttpError(404, { message: "Verification request not found" });
   assertRequestIsActive(existing.status);
@@ -717,15 +757,22 @@ export async function rejectVerificationRequest(requestId: string, actorUserId: 
     });
     return updated;
   });
+  emitAlertsChanged([request.userId]);
+  emitVerificationStatusChanged({ userId: request.userId, requestId: request.id, status: request.status });
+  emitSessionStateChanged([request.userId], "verification_rejected");
+  emitVerificationQueueChanged(request.id);
+  emitAdminDashboardChanged();
   return { request };
 }
 
 async function findOrCreateVerificationRequest(userId: string) {
+  await synchronizeVerificationRequests({ userId });
+
   const existing = await prisma.verificationRequest.findFirst({
     where: { userId },
     orderBy: { createdAt: "desc" }
   });
-  if (existing) return existing;
+  if (existing && existing.status !== "TIMED_OUT") return existing;
   return prisma.verificationRequest.create({
     data: { userId, status: "REQUESTED" }
   });
@@ -761,6 +808,11 @@ export async function setVerificationMeetLink(userId: string, meetUrl: string, a
     });
     return inProgress;
   });
+  emitAlertsChanged([userId]);
+  emitVerificationStatusChanged({ userId, requestId: updated.id, status: updated.status });
+  emitSessionStateChanged([userId], "verification_started");
+  emitVerificationQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return { request: updated };
 }
 
@@ -810,6 +862,11 @@ export async function approveVerificationForUser(userId: string, actorUserId: st
     message: "Your video verification is complete. Please proceed with membership payment.",
     metadata: { eventType: "VERIFICATION_APPROVED" }
   });
+  emitAlertsChanged([userId]);
+  emitVerificationStatusChanged({ userId, requestId: updated.id, status: updated.status });
+  emitSessionStateChanged([userId], "verification_approved");
+  emitVerificationQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return { request: updated };
 }
 
@@ -856,6 +913,11 @@ export async function rejectVerificationForUser(userId: string, actorUserId: str
     message: "Your verification could not be approved yet. Please review the update and reconnect with support.",
     metadata: { eventType: "VERIFICATION_REJECTED", reason: normalizedReason }
   });
+  emitAlertsChanged([userId]);
+  emitVerificationStatusChanged({ userId, requestId: updated.id, status: updated.status });
+  emitSessionStateChanged([userId], "verification_rejected");
+  emitVerificationQueueChanged(updated.id);
+  emitAdminDashboardChanged();
   return { request: updated };
 }
 

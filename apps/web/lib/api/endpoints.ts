@@ -157,4 +157,8 @@ export const API_ENDPOINTS = {
     status: "/verification/status",
     whatsapp: "/verification/help/whatsapp",
   },
+
+  live: {
+    stream: "/events/stream",
+  },
 } as const;

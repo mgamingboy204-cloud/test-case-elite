@@ -5,6 +5,7 @@ import { AlertCircle, Loader2, RefreshCcw } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { fetchAdminDashboard, type AdminDashboardPayload } from "@/lib/adminDashboard";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 
 function StatCard({ label, value, tone = "default" }: { label: string; value: number; tone?: "default" | "warn" | "danger" }) {
   const toneClass = tone === "danger" ? "text-red-300" : tone === "warn" ? "text-amber-200" : "text-[#f0c8be]";
@@ -57,6 +58,13 @@ export function AdminDashboardWorkspace() {
     if (!isAuthResolved) return;
     void load(false);
   }, [isAuthResolved, load]);
+
+  useLiveResourceRefresh({
+    enabled: isAuthResolved && hasAdminAccess,
+    refresh: () => load(true),
+    eventTypes: ["admin.dashboard.changed"],
+    fallbackIntervalMs: 60_000
+  });
 
   const employeeRows = useMemo(() => data?.employeeWorkload.perEmployee ?? [], [data]);
 

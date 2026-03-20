@@ -18,7 +18,7 @@ export async function discoverFeed(req: Request, res: Response) {
     string,
     string | number | undefined
   >;
-  res.setHeader("Cache-Control", "private, max-age=15, stale-while-revalidate=45");
+  res.setHeader("Cache-Control", "private, no-store");
   const result = await getDiscoverFeed({
     userId: req.user!.id,
     city: typeof city === "string" ? city : undefined,

@@ -3,6 +3,7 @@ import { HttpError } from "../utils/httpErrors";
 import { createOrActivateOfflineMeetCase, notifyOfflineMeetRequest } from "./offlineMeetService";
 import { createOrActivateOnlineMeetCase, notifyOnlineMeetRequest } from "./onlineMeetService";
 import { notificationDedupeKey } from "../utils/notificationDedupe";
+import { emitAdminDashboardChanged, emitAlertsChanged, emitMatchesChanged } from "../live/liveEventBroker";
 
 type ConsentType = "PHONE_NUMBER" | "OFFLINE_MEET" | "ONLINE_MEET" | "SOCIAL_EXCHANGE";
 type ConsentResponse = "YES" | "NO";
@@ -68,6 +69,7 @@ async function createPhoneExchangeAlert(userId: string, actorUserId: string, mat
       deepLinkUrl: "/matches"
     }
   });
+  emitAlertsChanged([userId]);
 }
 
 async function syncPhoneExchangeCase(options: {
@@ -450,6 +452,9 @@ export async function respondConsent(options: {
     await notifyOnlineMeetRequest(options.matchId, options.userId, otherUserId);
   }
 
+  emitMatchesChanged([match.userAId, match.userBId]);
+  emitAdminDashboardChanged();
+
   return {
     ok: true,
     matchId: options.matchId,
@@ -539,6 +544,9 @@ export async function getPhoneUnlock(options: { matchId: string; userId: string 
     await createPhoneExchangeAlert(otherUserId, options.userId, match.id, "PHONE_EXCHANGE_REVEALED", "Your match opened phone number exchange.");
   }
 
+  emitMatchesChanged([match.userAId, match.userBId]);
+  emitAdminDashboardChanged();
+
   return {
     matchId: match.id,
     users: [
@@ -549,6 +557,11 @@ export async function getPhoneUnlock(options: { matchId: string; userId: string 
 }
 
 export async function unmatch(options: { matchId: string; userId: string }) {
+  const existing = await prisma.match.findUnique({ where: { id: options.matchId } });
+  if (!existing || ![existing.userAId, existing.userBId].includes(options.userId)) {
+    throw new HttpError(404, { message: "Match not found" });
+  }
+
   const updated = await prisma.match.updateMany({
     where: {
       id: options.matchId,
@@ -562,13 +575,13 @@ export async function unmatch(options: { matchId: string; userId: string }) {
   });
 
   if (updated.count === 0) {
-    const existing = await prisma.match.findUnique({ where: { id: options.matchId } });
-    if (!existing || ![existing.userAId, existing.userBId].includes(options.userId)) {
-      throw new HttpError(404, { message: "Match not found" });
-    }
-
+    emitMatchesChanged([existing.userAId, existing.userBId]);
+    emitAdminDashboardChanged();
     return { ok: true, matchId: options.matchId, alreadyUnmatched: true };
   }
+
+  emitMatchesChanged([existing.userAId, existing.userBId]);
+  emitAdminDashboardChanged();
 
   return { ok: true, matchId: options.matchId, alreadyUnmatched: false };
 }
