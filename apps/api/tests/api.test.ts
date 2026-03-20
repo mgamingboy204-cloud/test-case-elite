@@ -1307,7 +1307,7 @@ describe("Account settings and deletion", () => {
     const session = await registerAndLoginSession(agent, phone, "Password@1");
 
     const response = await withAuth(
-      agent.patch("/profile/settings").set("x-onboarding-token", session.onboardingToken).send({}),
+      agent.patch("/me/profile/settings").set("x-onboarding-token", session.onboardingToken).send({}),
       session.accessToken
     );
 

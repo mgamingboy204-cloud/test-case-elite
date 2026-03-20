@@ -35,6 +35,7 @@ export function routeForFrontendOnboardingStep(step: FrontendOnboardingStep) {
 export function routeForAuthenticatedUser(input: {
   role?: "USER" | "EMPLOYEE" | "ADMIN" | null;
   backendStep?: BackendOnboardingStep | null;
+  onboardingStep?: BackendOnboardingStep | null;
   profileCompletedAt?: Date | string | null;
   photoCount?: number;
 }) {
@@ -42,10 +43,12 @@ export function routeForAuthenticatedUser(input: {
     return "/employee/verification";
   }
 
+  const backendStep = input.backendStep ?? input.onboardingStep;
+
   return routeForFrontendOnboardingStep(
     resolveFrontendOnboardingStep({
       isAuthenticated: true,
-      backendStep: input.backendStep,
+      backendStep,
       profileCompletedAt: input.profileCompletedAt,
       photoCount: input.photoCount
     })

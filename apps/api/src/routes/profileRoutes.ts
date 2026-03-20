@@ -11,11 +11,17 @@ import {
 import { requireAuth, requireOnboardingTokenMatch } from "../middlewares/auth";
 import { validateBody } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
-import { confirmPhotoUploadHandler, requestPhotoUploadUrlHandler } from "../controllers/photoController";
+import {
+  confirmPhotoUploadHandler,
+  deletePhotoHandler,
+  listPhotosHandler,
+  requestPhotoUploadUrlHandler
+} from "../controllers/photoController";
+import { updateProfile } from "../services/profileService";
 
 const router = Router();
 
-function registerProfileRoutes(basePath: "/profile" | "/me/profile") {
+function registerProfileRoutes(basePath: "/me/profile") {
   router.get(basePath, requireAuth, asyncHandler(getProfileHandler));
   router.post(`${basePath}/details`, requireAuth, requireOnboardingTokenMatch, asyncHandler(updateProfileDetailsHandler));
   router.put(
@@ -71,7 +77,32 @@ function registerProfileRoutes(basePath: "/profile" | "/me/profile") {
 
 registerProfileRoutes("/me/profile");
 
-// Backwards-compatible aliases for older clients.
-registerProfileRoutes("/profile");
+router.get("/me/profile/photos", requireAuth, asyncHandler(listPhotosHandler));
+router.delete("/me/profile/photos/:photoId", requireAuth, requireOnboardingTokenMatch, asyncHandler(deletePhotoHandler));
+router.patch(
+  "/me/profile/photos/reorder",
+  requireAuth,
+  requireOnboardingTokenMatch,
+  validateBody(
+    z.object({
+      photos: z.array(
+        z.object({
+          photoId: z.string().uuid(),
+          photoIndex: z.number().int().min(0)
+        })
+      ).min(1)
+    })
+  ),
+  asyncHandler(async (req, res) => {
+    const { photos } = req.body as { photos: Array<{ photoId: string; photoIndex: number }> };
+    await updateProfile({
+      userId: res.locals.user.id,
+      paymentStatus: res.locals.user.paymentStatus,
+      onboardingStep: res.locals.user.onboardingStep,
+      data: { photos: photos.map((photo) => ({ id: photo.photoId, photoIndex: photo.photoIndex })) }
+    });
+    return res.json({ updated: true });
+  })
+);
 
 export default router;

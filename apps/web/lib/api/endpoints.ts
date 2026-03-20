@@ -46,12 +46,15 @@ export const API_ENDPOINTS = {
   profile: {
     get: "/me/profile",
     update: "/me/profile",
+    details: "/me/profile/details",
+    complete: "/me/profile/complete",
     settings: "/me/profile/settings",
     photos: {
-      presignedUrl: "/profile/photos/presigned-url",
-      confirm: "/profile/photos/confirm",
-      reorder: "/profile/photos/reorder",
-      delete: (photoId: string) => `/profile/photos/${photoId}`,
+      list: "/me/profile/photos",
+      presignedUrl: "/me/profile/photos/presigned-url",
+      confirm: "/me/profile/photos/confirm",
+      reorder: "/me/profile/photos/reorder",
+      delete: (photoId: string) => `/me/profile/photos/${photoId}`,
     },
   },
 
@@ -150,7 +153,8 @@ export const API_ENDPOINTS = {
   // VERIFICATION
   verification: {
     video: "/verification/video",
-    request: "/verification/request",
+    request: "/verification-requests",
+    status: "/verification/status",
     whatsapp: "/verification/help/whatsapp",
   },
 } as const;

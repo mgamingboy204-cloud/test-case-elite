@@ -1,32 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { apiRequestAuth } from "@/lib/api";
 import { allowTestBypass, useAuth } from "@/contexts/AuthContext";
+import {
+  completeMockPayment,
+  failPayment,
+  fetchPaymentOverview,
+  initiatePayment,
+  type PaymentOverview,
+  type PlanId,
+  verifyPayment
+} from "@/lib/payments";
 import { motion } from "framer-motion";
 import { ShieldCheck, Check } from "lucide-react";
-
-type PlanId = "ONE_MONTH" | "FIVE_MONTHS" | "TWELVE_MONTHS";
-
-type PaymentStatus = "NOT_STARTED" | "PENDING" | "PAID" | "FAILED" | "CANCELED";
-
-interface PaymentOverview {
-  paymentStatus: PaymentStatus;
-  onboardingStep: string;
-  plans: Array<{ plan: PlanId; amountInr: number; durationMonths: number; taxIncluded: boolean; autoRenew: boolean; renewalPolicy: "MANUAL_ONLY" }>;
-}
-
-type PaymentInitResponse =
-  | {
-      paymentRef: string;
-      gateway: "razorpay";
-      razorpay: { keyId: string; orderId: string; amountPaise: number; currency: string };
-    }
-  | {
-      paymentRef: string;
-      gateway: "mock";
-      mock: { orderId: string; paymentId: string; signature: string };
-    };
 
 const PLAN_COPY: Record<PlanId, { label: string; price: string }> = {
   ONE_MONTH: { label: "1 Month", price: "INR 30,000" },
@@ -51,7 +37,7 @@ async function ensureRazorpayCheckoutLoaded() {
 }
 
 export default function PaymentStep() {
-  const { completeOnboardingStep, refreshCurrentUser } = useAuth();
+  const { refreshCurrentUserAndRoute } = useAuth();
   const [error, setError] = useState("");
   const [selectedTier, setSelectedTier] = useState<PlanId | "">("");
   const [processing, setProcessing] = useState(false);
@@ -67,11 +53,10 @@ export default function PaymentStep() {
   useEffect(() => {
     const loadOverview = async () => {
       try {
-        const data = await apiRequestAuth<PaymentOverview>("/payments/me");
+        const data = await fetchPaymentOverview();
         setOverview(data);
         if (data.paymentStatus === "PAID") {
-          await refreshCurrentUser();
-          completeOnboardingStep("PROFILE");
+          await refreshCurrentUserAndRoute();
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not load membership plans.");
@@ -80,7 +65,7 @@ export default function PaymentStep() {
       }
     };
     void loadOverview();
-  }, [completeOnboardingStep, refreshCurrentUser]);
+  }, [refreshCurrentUserAndRoute]);
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,16 +73,13 @@ export default function PaymentStep() {
     setError("");
     setProcessing(true);
     try {
-      const init = await apiRequestAuth<PaymentInitResponse>("/payments/initiate", { method: "POST", body: JSON.stringify({ tier: selectedTier }) });
+      const init = await initiatePayment(selectedTier);
 
       if (init.gateway === "mock") {
-        await apiRequestAuth("/payments/verify", {
-          method: "POST",
-          body: JSON.stringify({
-            orderId: init.mock.orderId,
-            paymentId: init.mock.paymentId,
-            signature: init.mock.signature
-          })
+        await verifyPayment({
+          orderId: init.mock.orderId,
+          paymentId: init.mock.paymentId,
+          signature: init.mock.signature
         });
       } else {
         const loaded = await ensureRazorpayCheckoutLoaded();
@@ -118,9 +100,10 @@ export default function PaymentStep() {
             description: `Membership ${selectedTier}`,
             handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
               try {
-                await apiRequestAuth("/payments/verify", {
-                  method: "POST",
-                  body: JSON.stringify({ orderId: response.razorpay_order_id, paymentId: response.razorpay_payment_id, signature: response.razorpay_signature })
+                await verifyPayment({
+                  orderId: response.razorpay_order_id,
+                  paymentId: response.razorpay_payment_id,
+                  signature: response.razorpay_signature
                 });
                 resolve();
               } catch (verificationError) {
@@ -129,7 +112,7 @@ export default function PaymentStep() {
             },
             modal: {
               ondismiss: async () => {
-                await apiRequestAuth("/payments/fail", { method: "POST", body: JSON.stringify({ reason: "Payment canceled by user." }) });
+                await failPayment("Payment canceled by user.");
                 reject(new Error("Payment canceled."));
               }
             }
@@ -138,8 +121,7 @@ export default function PaymentStep() {
         });
       }
 
-      await refreshCurrentUser();
-      completeOnboardingStep("PROFILE");
+      await refreshCurrentUserAndRoute();
     } catch (err) {
       setError(err instanceof Error ? err.message : FAILURE_MESSAGE);
     } finally {
@@ -156,14 +138,9 @@ export default function PaymentStep() {
     setProcessing(true);
     setError("");
     try {
-      // Ensure onboardingPaymentPlan/onboardingPaymentAmount are set server-side.
-      await apiRequestAuth<PaymentInitResponse>("/payments/initiate", {
-        method: "POST",
-        body: JSON.stringify({ tier: selectedTier })
-      });
-      await apiRequestAuth("/payments/mock/complete", { method: "POST" });
-      await refreshCurrentUser();
-      completeOnboardingStep("PROFILE");
+      await initiatePayment(selectedTier);
+      await completeMockPayment();
+      await refreshCurrentUserAndRoute();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Mock payment failed.");
       setProcessing(false);

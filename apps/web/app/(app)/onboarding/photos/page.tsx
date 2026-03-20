@@ -3,6 +3,7 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { apiRequestAuth } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 type UploadedPhoto = { id: string; url: string; photoIndex?: number | null };
 
@@ -19,7 +20,7 @@ function fileToDataUrl(file: File) {
 }
 
 export default function OnboardingPhotosPage() {
-  const { completeOnboardingStep, refreshCurrentUser } = useAuth();
+  const { refreshCurrentUserAndRoute } = useAuth();
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -27,7 +28,7 @@ export default function OnboardingPhotosPage() {
   const [error, setError] = useState("");
 
   const loadPhotos = async () => {
-    const data = await apiRequestAuth<{ photos: UploadedPhoto[] }>("/photos/me");
+    const data = await apiRequestAuth<{ photos: UploadedPhoto[] }>(API_ENDPOINTS.profile.photos.list);
     const ordered = [...data.photos].sort((a, b) => (a.photoIndex ?? 0) - (b.photoIndex ?? 0));
     setPhotos(ordered.slice(0, MAX_PHOTOS));
   };
@@ -57,9 +58,9 @@ export default function OnboardingPhotosPage() {
   }, [photos.length]);
 
   const persistOrder = async (next: UploadedPhoto[]) => {
-    await apiRequestAuth("/me/profile", {
+    await apiRequestAuth(API_ENDPOINTS.profile.photos.reorder, {
       method: "PATCH",
-      body: JSON.stringify({ photos: next.map((photo, index) => ({ id: photo.id, photoIndex: index })) })
+      body: JSON.stringify({ photos: next.map((photo, photoIndex) => ({ photoId: photo.id, photoIndex })) })
     });
   };
 
@@ -73,11 +74,11 @@ export default function OnboardingPhotosPage() {
 
     try {
       const dataUrl = await fileToDataUrl(file);
-      const upload = await apiRequestAuth<{ uploadToken: string }>("/me/profile/photos/presigned-url", {
+      const upload = await apiRequestAuth<{ uploadToken: string }>(API_ENDPOINTS.profile.photos.presignedUrl, {
         method: "POST",
         body: JSON.stringify({ filename: file.name, mimeType: file.type || "image/jpeg" })
       });
-      await apiRequestAuth<{ photo: UploadedPhoto }>("/me/profile/photos/confirm", {
+      await apiRequestAuth<{ photo: UploadedPhoto }>(API_ENDPOINTS.profile.photos.confirm, {
         method: "POST",
         body: JSON.stringify({ uploadToken: upload.uploadToken, filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
       });
@@ -93,7 +94,7 @@ export default function OnboardingPhotosPage() {
     if (photos.length <= MIN_PHOTOS) return;
     setError("");
     try {
-      await apiRequestAuth(`/photos/${photoId}`, { method: "DELETE" });
+      await apiRequestAuth(API_ENDPOINTS.profile.photos.delete(photoId), { method: "DELETE" });
       await loadPhotos();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to remove photo.");
@@ -122,9 +123,8 @@ export default function OnboardingPhotosPage() {
     setError("");
 
     try {
-      await apiRequestAuth("/me/profile/complete", { method: "POST", body: JSON.stringify({}) });
-      await refreshCurrentUser();
-      completeOnboardingStep("COMPLETED");
+      await apiRequestAuth(API_ENDPOINTS.profile.complete, { method: "POST", body: JSON.stringify({}) });
+      await refreshCurrentUserAndRoute();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to complete onboarding.");
     } finally {

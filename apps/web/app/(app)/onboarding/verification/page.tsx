@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Clock3, ExternalLink, MessageCircleWarning, ShieldCheck, UserRoundCheck, XCircle } from "lucide-react";
 import { apiRequestAuth } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 type VerificationPayload = {
   status: "NOT_REQUESTED" | "REQUESTED" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED" | "TIMED_OUT";
@@ -44,8 +44,7 @@ function deriveStage(payload: VerificationPayload | null, requesting: boolean): 
 }
 
 export default function VideoVerificationPage() {
-  const router = useRouter();
-  const { refreshCurrentUser } = useAuth();
+  const { refreshCurrentUserAndRoute } = useAuth();
   const [payload, setPayload] = useState<VerificationPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
@@ -54,7 +53,7 @@ export default function VideoVerificationPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   const loadStatus = useCallback(async () => {
-    const response = await apiRequestAuth<VerificationPayload>("/verification/status");
+    const response = await apiRequestAuth<VerificationPayload>(API_ENDPOINTS.verification.status);
     setPayload(response);
     return response;
   }, []);
@@ -83,17 +82,15 @@ export default function VideoVerificationPage() {
 
   useEffect(() => {
     if (payload?.displayStatus !== "APPROVED") return;
-    void refreshCurrentUser().finally(() => {
-      router.replace("/onboarding/payment");
-    });
-  }, [payload?.displayStatus, refreshCurrentUser, router]);
+    void refreshCurrentUserAndRoute();
+  }, [payload?.displayStatus, refreshCurrentUserAndRoute]);
 
   const createRequest = async () => {
     setRequesting(true);
     setError(null);
     setMessage(null);
     try {
-      await apiRequestAuth("/verification-requests", {
+      await apiRequestAuth(API_ENDPOINTS.verification.request, {
         method: "POST",
         body: JSON.stringify({})
       });
@@ -110,7 +107,7 @@ export default function VideoVerificationPage() {
     setError(null);
     setMessage(null);
     try {
-      await apiRequestAuth("/verification/help/whatsapp", {
+      await apiRequestAuth(API_ENDPOINTS.verification.whatsapp, {
         method: "POST",
         body: JSON.stringify({})
       });

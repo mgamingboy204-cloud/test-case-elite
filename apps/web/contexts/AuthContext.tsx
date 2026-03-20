@@ -15,7 +15,6 @@ import {
   type FrontendOnboardingStep,
   resolveFrontendOnboardingStep,
   routeForAuthenticatedUser,
-  routeForFrontendOnboardingStep,
 } from "@/lib/onboarding";
 import {
   type AuthFlowMode,
@@ -38,10 +37,6 @@ const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
 
 export type OnboardingStep = FrontendOnboardingStep;
 export type SessionRole = "USER" | "EMPLOYEE" | "ADMIN";
-
-export function routeForOnboardingStep(step: OnboardingStep) {
-  return routeForFrontendOnboardingStep(step);
-}
 
 type AppState = {
   code:
@@ -94,8 +89,8 @@ interface AuthContextType {
   verifySigninOtpMock: () => Promise<void>;
   resendSigninOtp: () => Promise<void>;
   resendSignupOtp: () => Promise<void>;
-  refreshCurrentUser: () => Promise<void>;
-  completeOnboardingStep: (nextStep: OnboardingStep) => void;
+  refreshCurrentUser: () => Promise<User>;
+  refreshCurrentUserAndRoute: (options?: { replace?: boolean }) => Promise<User>;
   logout: () => Promise<void>;
   appStateCode: AppState["code"] | null;
   appStateRedirectTo: string | null;
@@ -197,6 +192,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshCurrentUser = async () => {
     const me = await apiRequestAuth<User>(API_ENDPOINTS.user.me);
     setUser(me);
+    return me;
+  };
+
+  const refreshCurrentUserAndRoute = async (options?: { replace?: boolean }) => {
+    const me = await refreshCurrentUser();
+    const nextRoute = routeForAuthenticatedUser(me);
+
+    if (options?.replace === false) {
+      router.push(nextRoute);
+    } else {
+      router.replace(nextRoute);
+    }
+
+    return me;
   };
 
   const maybeSaveFcmToken = async () => {
@@ -485,10 +494,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const completeOnboardingStep = (nextStep: OnboardingStep) => {
-    router.push(routeForOnboardingStep(nextStep));
-  };
-
   const logout = async () => {
     const nextRoute =
       user?.role === "EMPLOYEE" || user?.role === "ADMIN"
@@ -530,7 +535,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resendSigninOtp,
         resendSignupOtp,
         refreshCurrentUser,
-        completeOnboardingStep,
+        refreshCurrentUserAndRoute,
         logout,
         appStateCode,
         appStateRedirectTo,

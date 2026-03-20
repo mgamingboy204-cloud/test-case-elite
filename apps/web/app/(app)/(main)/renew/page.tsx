@@ -1,34 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { apiRequestAuth } from "@/lib/api";
 import { allowTestBypass, useAuth } from "@/contexts/AuthContext";
-import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import {
+  completeMockPayment,
+  failPayment,
+  fetchPaymentOverview,
+  initiatePayment,
+  type PaymentOverview,
+  type PlanId,
+  verifyPayment
+} from "@/lib/payments";
 import { motion } from "framer-motion";
 import { Check, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-
-type PlanId = "ONE_MONTH" | "FIVE_MONTHS" | "TWELVE_MONTHS";
-
-type PaymentStatus = "NOT_STARTED" | "PENDING" | "PAID" | "FAILED" | "CANCELED";
-
-interface PaymentOverview {
-  paymentStatus: PaymentStatus;
-  onboardingStep: string;
-  plans: Array<{ plan: PlanId; amountInr: number; durationMonths: number; taxIncluded: boolean; autoRenew: boolean; renewalPolicy: "MANUAL_ONLY" }>;
-}
-
-type PaymentInitResponse =
-  | {
-      paymentRef: string;
-      gateway: "razorpay";
-      razorpay: { keyId: string; orderId: string; amountPaise: number; currency: string };
-    }
-  | {
-      paymentRef: string;
-      gateway: "mock";
-      mock: { orderId: string; paymentId: string; signature: string };
-    };
 
 type RazorpayVerificationPayload = {
   razorpay_order_id: string;
@@ -109,7 +94,7 @@ export default function RenewMembershipPage() {
   useEffect(() => {
     const loadOverview = async () => {
       try {
-        const data = await apiRequestAuth<PaymentOverview>(API_ENDPOINTS.payments.overview);
+        const data = await fetchPaymentOverview();
         setOverview(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not load membership plans.");
@@ -128,19 +113,13 @@ export default function RenewMembershipPage() {
     setError("");
     setProcessing(true);
     try {
-      const init = await apiRequestAuth<PaymentInitResponse>(API_ENDPOINTS.payments.initiate, {
-        method: "POST",
-        body: JSON.stringify({ tier: selectedTier })
-      });
+      const init = await initiatePayment(selectedTier);
 
       if (init.gateway === "mock") {
-        await apiRequestAuth(API_ENDPOINTS.payments.verify, {
-          method: "POST",
-          body: JSON.stringify({
-            orderId: init.mock.orderId,
-            paymentId: init.mock.paymentId,
-            signature: init.mock.signature
-          })
+        await verifyPayment({
+          orderId: init.mock.orderId,
+          paymentId: init.mock.paymentId,
+          signature: init.mock.signature
         });
       } else {
         const loaded = await ensureRazorpayCheckoutLoaded();
@@ -157,13 +136,10 @@ export default function RenewMembershipPage() {
             description: `Membership ${selectedTier}`,
             handler: async (response: RazorpayVerificationPayload) => {
               try {
-                await apiRequestAuth(API_ENDPOINTS.payments.verify, {
-                  method: "POST",
-                  body: JSON.stringify({
-                    orderId: response.razorpay_order_id,
-                    paymentId: response.razorpay_payment_id,
-                    signature: response.razorpay_signature
-                  })
+                await verifyPayment({
+                  orderId: response.razorpay_order_id,
+                  paymentId: response.razorpay_payment_id,
+                  signature: response.razorpay_signature
                 });
                 resolve();
               } catch (verificationError) {
@@ -172,10 +148,7 @@ export default function RenewMembershipPage() {
             },
             modal: {
               ondismiss: async () => {
-                await apiRequestAuth(API_ENDPOINTS.payments.fail, {
-                  method: "POST",
-                  body: JSON.stringify({ reason: "Payment canceled by user." })
-                });
+                await failPayment("Payment canceled by user.");
                 reject(new Error("Payment canceled."));
               }
             }
@@ -204,11 +177,8 @@ export default function RenewMembershipPage() {
     setProcessing(true);
     setError("");
     try {
-      await apiRequestAuth<PaymentInitResponse>(API_ENDPOINTS.payments.initiate, {
-        method: "POST",
-        body: JSON.stringify({ tier: selectedTier })
-      });
-      await apiRequestAuth(API_ENDPOINTS.payments.mockComplete, { method: "POST" });
+      await initiatePayment(selectedTier);
+      await completeMockPayment();
       await refreshCurrentUser();
       router.push("/profile");
     } catch (err) {

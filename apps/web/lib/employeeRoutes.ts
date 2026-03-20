@@ -3,11 +3,5 @@ export const EMPLOYEE_ROUTES = {
   verification: "/employee/verification",
   matches: "/employee/matches",
   members: "/employee/members",
-  admin: "/employee/admin",
-  legacy: {
-    verification: "/verify",
-    matches: "/agent",
-    admin: "/admin"
-  }
+  admin: "/employee/admin"
 } as const;
-
