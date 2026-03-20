@@ -1,11 +1,10 @@
 import { clearAllCaches } from "@/lib/cache";
-import { clearAllAuthStorage } from "@/lib/auth/tokenStorage";
+import { clearAuthFlowStorage } from "@/lib/auth/flowStorage";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import {
-  apiRequestAuth,
+  apiRequest,
   clearAccessToken,
-  initializeAccessToken,
-  refreshAccessToken,
+  setAccessToken,
   subscribeToAuthFailure,
   type ApiError
 } from "@/lib/api";
@@ -29,26 +28,36 @@ export type CurrentUser = {
 };
 
 export async function bootstrapSession<TUser extends CurrentUser>() {
-  initializeAccessToken();
+  const session = await apiRequest<
+    | { ok: true; authenticated: false; reason?: string | null }
+    | { ok: true; authenticated: true; accessToken: string; user: TUser }
+  >(API_ENDPOINTS.auth.session.bootstrap, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
 
-  const refreshStatus = await refreshAccessToken({ allowMissingSession: true });
-  if (refreshStatus !== "success") {
+  if (!session.authenticated) {
     clearAccessToken();
     return null;
   }
 
-  return apiRequestAuth<TUser>(API_ENDPOINTS.user.me);
+  setAccessToken(session.accessToken);
+  return session.user;
 }
 
-export function clearSessionState() {
+export function clearMemberSessionState() {
   clearAccessToken();
   clearAllCaches();
-  clearAllAuthStorage();
+}
+
+export function clearClientAuthState() {
+  clearMemberSessionState();
+  clearAuthFlowStorage();
 }
 
 export function subscribeToSessionInvalidation(listener: () => void) {
   return subscribeToAuthFailure(() => {
-    clearSessionState();
+    clearMemberSessionState();
     listener();
   });
 }

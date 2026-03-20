@@ -34,4 +34,11 @@ describe("Public auth access", () => {
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
   });
+
+  it("returns unauthenticated bootstrap result without a refresh session", async () => {
+    const response = await request(app).post("/auth/session").send({});
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.authenticated).toBe(false);
+  });
 });

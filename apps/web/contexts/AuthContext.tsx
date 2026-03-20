@@ -1,38 +1,58 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
-import { ApiError, apiRequest, apiRequestAuth, initializeAccessToken, setAccessToken } from "@/lib/api";
+import { apiRequest, apiRequestAuth, setAccessToken } from "@/lib/api";
 import {
   type BackendOnboardingStep,
   type FrontendOnboardingStep,
   resolveFrontendOnboardingStep,
-  routeForFrontendOnboardingStep
+  routeForAuthenticatedUser,
+  routeForFrontendOnboardingStep,
 } from "@/lib/onboarding";
 import {
+  type AuthFlowMode,
+  readStoredAuthFlowMode,
   readStoredPendingPhone,
-  writeStoredPendingPhone,
   readStoredSignupToken,
+  writeStoredAuthFlowMode,
+  writeStoredPendingPhone,
   writeStoredSignupToken,
-} from "@/lib/auth/tokenStorage";
+} from "@/lib/auth/flowStorage";
 import {
-  clearSessionState,
-  subscribeToSessionInvalidation
+  bootstrapSession,
+  clearClientAuthState,
+  clearMemberSessionState,
+  subscribeToSessionInvalidation,
 } from "@/lib/authSession";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
-// Timeout for initial /me bootstrap call (prevents infinite hang)
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
 
 export type OnboardingStep = FrontendOnboardingStep;
-
+export type SessionRole = "USER" | "EMPLOYEE" | "ADMIN";
 
 export function routeForOnboardingStep(step: OnboardingStep) {
   return routeForFrontendOnboardingStep(step);
 }
 
 type AppState = {
-  code: "guest" | "onboarding_required" | "verification_required" | "payment_required" | "profile_incomplete" | "matching_ineligible" | "profile_data_missing" | "eligible";
+  code:
+    | "guest"
+    | "onboarding_required"
+    | "verification_required"
+    | "payment_required"
+    | "profile_incomplete"
+    | "matching_ineligible"
+    | "profile_data_missing"
+    | "eligible";
   redirectTo?: string | null;
   reasons?: string[];
 };
@@ -44,6 +64,10 @@ interface User {
   firstName?: string | null;
   lastName?: string | null;
   displayName?: string | null;
+  gender?: string | null;
+  role: SessionRole;
+  isAdmin?: boolean;
+  status?: string;
   onboardingStep: BackendOnboardingStep;
   profileCompletedAt?: string | null;
   photoCount?: number;
@@ -55,14 +79,17 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAuthResolved: boolean;
   user: User | null;
+  authFlowMode: AuthFlowMode | null;
   onboardingStep: OnboardingStep;
   pendingPhone: string | null;
   signupToken: string | null;
+  resetAuthFlow: () => void;
   startSignup: (phone: string) => Promise<void>;
   verifySignupOtp: (otp: string) => Promise<void>;
   verifySignupOtpMock: () => Promise<void>;
   completeSignup: (password: string) => Promise<void>;
   startLogin: (phone: string, password: string) => Promise<{ otpRequired: boolean }>;
+  startEmployeeLogin: (employeeId: string, password: string) => Promise<void>;
   verifySigninOtp: (otp: string) => Promise<void>;
   verifySigninOtpMock: () => Promise<void>;
   resendSigninOtp: () => Promise<void>;
@@ -74,25 +101,31 @@ interface AuthContextType {
   appStateRedirectTo: string | null;
 }
 
-type LoginApiResponse =
-  | { ok: true; otpRequired: true }
-  | { ok: true; otpRequired?: false; onboardingToken?: string | null; accessToken: string; user: User };
-
-type SignupCompleteResponse = {
+type AuthenticatedSessionResponse = {
   ok: true;
-  onboardingToken?: string | null;
   accessToken: string;
-  user?: User;
+  user: User;
 };
 
-function isSessionPayload(value: unknown): value is { user: User; onboardingToken?: string | null } {
+type LoginApiResponse =
+  | { ok: true; otpRequired: true }
+  | AuthenticatedSessionResponse;
+
+function isAuthenticatedSessionResponse(
+  value: unknown
+): value is AuthenticatedSessionResponse {
   if (!value || typeof value !== "object") return false;
-  const candidate = value as { user?: unknown };
-  return typeof candidate.user === "object" && candidate.user !== null;
+  const candidate = value as { accessToken?: unknown; user?: unknown };
+  return (
+    typeof candidate.accessToken === "string" &&
+    typeof candidate.user === "object" &&
+    candidate.user !== null
+  );
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-export const allowTestBypass = process.env.NEXT_PUBLIC_ALLOW_TEST_BYPASS === "true";
+export const allowTestBypass =
+  process.env.NEXT_PUBLIC_ALLOW_TEST_BYPASS === "true";
 const authDebug = process.env.NODE_ENV !== "production";
 
 function debugLog(message: string, details?: unknown) {
@@ -107,6 +140,7 @@ function debugError(message: string, details?: unknown) {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [authFlowMode, setAuthFlowMode] = useState<AuthFlowMode | null>(null);
   const [pendingPhone, setPendingPhone] = useState<string | null>(null);
   const [signupToken, setSignupToken] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -123,29 +157,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signupToken,
         backendStep: user?.onboardingStep,
         profileCompletedAt: user?.profileCompletedAt,
-        photoCount: user?.photoCount
+        photoCount: user?.photoCount,
       }),
     [isAuthenticated, pendingPhone, signupToken, user]
   );
 
-  const refreshCurrentUser = async () => {
-    const me = await apiRequestAuth<User>(API_ENDPOINTS.user.me);
-    setUser(me);
-  };
-
-  const applyAuthenticatedUser = (nextUser: User) => {
-    setUser(nextUser);
+  const clearPendingAuthFlow = () => {
+    setAuthFlowMode(null);
     setPendingPhone(null);
-    writeStoredPendingPhone(null);
     setSignupToken(null);
+    writeStoredAuthFlowMode(null);
+    writeStoredPendingPhone(null);
     writeStoredSignupToken(null);
   };
 
-  const clearLocalAuthState = () => {
-    clearSessionState();
+  const clearAuthenticatedState = () => {
+    clearMemberSessionState();
     setUser(null);
+  };
+
+  const clearAllLocalAuthState = () => {
+    clearClientAuthState();
+    setUser(null);
+    setAuthFlowMode(null);
     setPendingPhone(null);
     setSignupToken(null);
+  };
+
+  const applyAuthenticatedUser = (accessToken: string, nextUser: User) => {
+    setAccessToken(accessToken);
+    setUser(nextUser);
+    clearPendingAuthFlow();
+  };
+
+  const resetAuthFlow = () => {
+    clearPendingAuthFlow();
+  };
+
+  const refreshCurrentUser = async () => {
+    const me = await apiRequestAuth<User>(API_ENDPOINTS.user.me);
+    setUser(me);
   };
 
   const maybeSaveFcmToken = async () => {
@@ -155,10 +206,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiRequestAuth(API_ENDPOINTS.user.fcmToken, {
         method: "POST",
-        body: JSON.stringify({ token })
+        body: JSON.stringify({ token }),
       });
     } catch {
-      // Best-effort: token storage should never break login.
+      // Best-effort only.
     }
   };
 
@@ -167,42 +218,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     const hydrate = async () => {
-      initializeAccessToken();
-
-      // Restore temporary signup/login state from storage
+      const storedAuthFlowMode = readStoredAuthFlowMode();
       const storedPendingPhone = readStoredPendingPhone();
       const storedSignupToken = readStoredSignupToken();
+      setAuthFlowMode(storedAuthFlowMode);
       setPendingPhone(storedPendingPhone);
       setSignupToken(storedSignupToken);
 
       try {
-        // Attempt to restore session with timeout protection
-        await Promise.race([
-          refreshCurrentUser(),
-          new Promise((_, reject) =>
-            (timeoutId = setTimeout(
+        const restoredUser = await Promise.race([
+          bootstrapSession<User>(),
+          new Promise<null>((_, reject) => {
+            timeoutId = setTimeout(
               () => reject(new Error("Auth bootstrap timeout")),
               AUTH_BOOTSTRAP_TIMEOUT_MS
-            ))
-          ),
+            );
+          }),
         ]);
+
+        if (!cancelled) {
+          if (restoredUser) {
+            setUser(restoredUser);
+            clearPendingAuthFlow();
+          } else {
+            clearAuthenticatedState();
+          }
+        }
       } catch (error) {
-        if (error instanceof ApiError && error.status === 401) {
-          // Session missing/expired; treat as logged out
-        } else if (error instanceof Error && error.message === "Auth bootstrap timeout") {
-          // Timeout occurred; clear auth and proceed unauthenticated
-          if (process.env.NODE_ENV !== "production") {
-            console.warn("[auth] Bootstrap timeout; proceeding as unauthenticated");
+        clearAuthenticatedState();
+        if (
+          error instanceof Error &&
+          error.message === "Auth bootstrap timeout"
+        ) {
+          if (authDebug) {
+            console.warn(
+              "[auth] Bootstrap timeout; proceeding as unauthenticated"
+            );
           }
         } else {
           debugError("[auth] failed to bootstrap session", error);
         }
-        clearLocalAuthState();
       } finally {
         if (!cancelled) {
           setIsInitialized(true);
         }
-        // Clean up timeout
         if (timeoutId !== undefined) clearTimeout(timeoutId);
       }
     };
@@ -218,8 +277,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = subscribeToSessionInvalidation(() => {
       setUser(null);
-      setPendingPhone(null);
-      setSignupToken(null);
     });
 
     return () => {
@@ -230,172 +287,201 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const startSignup = async (phone: string) => {
     await apiRequest<{ ok: boolean }>(API_ENDPOINTS.auth.signup.start, {
       method: "POST",
-      body: JSON.stringify({ phone })
+      body: JSON.stringify({ phone }),
     });
 
+    setAuthFlowMode("signup");
     setPendingPhone(phone);
+    writeStoredAuthFlowMode("signup");
     writeStoredPendingPhone(phone);
     router.push("/signup/otp");
   };
 
   const verifySignupOtp = async (otp: string) => {
+    if (authFlowMode !== "signup") {
+      throw new Error("Signup verification has expired. Please start again.");
+    }
     if (!pendingPhone) throw new Error("Phone number is missing");
 
-    const response = await apiRequest<{ ok: true; signupToken: string }>(API_ENDPOINTS.auth.signup.verify, {
-      method: "POST",
-      body: JSON.stringify({ phone: pendingPhone, code: otp })
-    });
+    const response = await apiRequest<{ ok: true; signupToken: string }>(
+      API_ENDPOINTS.auth.signup.verify,
+      {
+        method: "POST",
+        body: JSON.stringify({ phone: pendingPhone, code: otp }),
+      }
+    );
 
+    setAuthFlowMode("signup");
     setSignupToken(response.signupToken);
+    writeStoredAuthFlowMode("signup");
     writeStoredSignupToken(response.signupToken);
     router.push("/signup/password");
   };
 
   const verifySignupOtpMock = async () => {
+    if (authFlowMode !== "signup") {
+      throw new Error("Signup verification has expired. Please start again.");
+    }
     if (!pendingPhone) throw new Error("Phone number is missing");
     if (!allowTestBypass) throw new Error("Mock OTP is disabled.");
 
-    const response = await apiRequest<{ ok: true; signupToken: string }>(API_ENDPOINTS.auth.signup.mockVerify, {
-      method: "POST",
-      body: JSON.stringify({ phone: pendingPhone })
-    });
+    const response = await apiRequest<{ ok: true; signupToken: string }>(
+      API_ENDPOINTS.auth.signup.mockVerify,
+      {
+        method: "POST",
+        body: JSON.stringify({ phone: pendingPhone }),
+      }
+    );
 
+    setAuthFlowMode("signup");
     setSignupToken(response.signupToken);
+    writeStoredAuthFlowMode("signup");
     writeStoredSignupToken(response.signupToken);
     router.push("/signup/password");
   };
 
   const completeSignup = async (password: string) => {
+    if (authFlowMode !== "signup") {
+      throw new Error("Signup session missing");
+    }
     if (!signupToken) throw new Error("Signup session missing");
 
-    const response = await apiRequest<SignupCompleteResponse>(API_ENDPOINTS.auth.signup.complete, {
-      method: "POST",
-      body: JSON.stringify({ signupToken, password })
-    });
-
-    debugLog("[signup] complete response", response);
-
-    setAccessToken(response.accessToken);
-
-    const onboardingToken = response.onboardingToken ?? response.user?.onboardingToken ?? null;
-
-    debugLog("[signup] storing tokens", {
-      hasOnboardingToken: Boolean(onboardingToken)
-    });
-
-    let authenticatedUser = response.user ?? null;
-    if (authenticatedUser) {
-      applyAuthenticatedUser(authenticatedUser);
-    } else {
-      try {
-        authenticatedUser = await apiRequestAuth<User>(API_ENDPOINTS.user.me);
-        applyAuthenticatedUser(authenticatedUser);
-      } catch (error) {
-        debugError("[signup] failed to fetch /me immediately after signup complete", error);
-        throw error;
+    const response = await apiRequest<AuthenticatedSessionResponse>(
+      API_ENDPOINTS.auth.signup.complete,
+      {
+        method: "POST",
+        body: JSON.stringify({ signupToken, password }),
       }
+    );
+
+    debugLog("[signup] complete response", {
+      hasAccessToken: Boolean(response.accessToken),
+      role: response.user.role,
+    });
+
+    if (!isAuthenticatedSessionResponse(response)) {
+      throw new Error("Unexpected signup response. Please try again.");
     }
 
-    const nextRoute = routeForOnboardingStep(resolveFrontendOnboardingStep({
-      isAuthenticated: true,
-      backendStep: authenticatedUser.onboardingStep,
-      profileCompletedAt: authenticatedUser.profileCompletedAt,
-      photoCount: authenticatedUser.photoCount
-    }));
-
-    debugLog("[signup] navigation target", { nextRoute });
-    router.push(nextRoute);
-
-    // Best-effort FCM token registration (if client provided one).
+    applyAuthenticatedUser(response.accessToken, response.user);
+    router.push(routeForAuthenticatedUser(response.user));
     void maybeSaveFcmToken();
   };
 
   const startLogin = async (phone: string, password: string) => {
     const response = await apiRequest<LoginApiResponse>(API_ENDPOINTS.auth.login, {
       method: "POST",
-      body: JSON.stringify({ phone, password, rememberMe: true })
+      body: JSON.stringify({ phone, password, rememberMe: true }),
     });
 
+    setAuthFlowMode("signin");
     setPendingPhone(phone);
+    writeStoredAuthFlowMode("signin");
     writeStoredPendingPhone(phone);
 
-    if (response.otpRequired) {
+    if ("otpRequired" in response && response.otpRequired) {
       return { otpRequired: true };
     }
 
-    if (!isSessionPayload(response)) {
+    if (!isAuthenticatedSessionResponse(response)) {
       throw new Error("Unexpected login response. Please try again.");
     }
 
-    setAccessToken(response.accessToken);
-    applyAuthenticatedUser(response.user);
-    router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
-      isAuthenticated: true,
-      backendStep: response.user.onboardingStep,
-      profileCompletedAt: response.user.profileCompletedAt,
-      photoCount: response.user.photoCount
-    })));
-
+    applyAuthenticatedUser(response.accessToken, response.user);
+    router.push(routeForAuthenticatedUser(response.user));
     void maybeSaveFcmToken();
     return { otpRequired: false };
   };
 
+  const startEmployeeLogin = async (employeeId: string, password: string) => {
+    const response = await apiRequest<AuthenticatedSessionResponse>(
+      API_ENDPOINTS.employee.auth.login,
+      {
+        method: "POST",
+        body: JSON.stringify({ employeeId, password, rememberMe: true }),
+      }
+    );
+
+    if (!isAuthenticatedSessionResponse(response)) {
+      throw new Error("Unexpected employee login response. Please try again.");
+    }
+
+    applyAuthenticatedUser(response.accessToken, response.user);
+    router.push(routeForAuthenticatedUser(response.user));
+  };
+
   const verifySigninOtp = async (otp: string) => {
+    if (authFlowMode !== "signin") {
+      throw new Error("Sign-in verification has expired. Please sign in again.");
+    }
     if (!pendingPhone) throw new Error("Phone number is missing");
 
-    const response = await apiRequest<{ ok: true; onboardingToken: string; accessToken: string; user: User }>(API_ENDPOINTS.auth.otp.verify, {
-      method: "POST",
-      body: JSON.stringify({ phone: pendingPhone, code: otp, rememberMe: true })
-    });
+    const response = await apiRequest<AuthenticatedSessionResponse>(
+      API_ENDPOINTS.auth.otp.verify,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          phone: pendingPhone,
+          code: otp,
+          rememberMe: true,
+        }),
+      }
+    );
 
-    setAccessToken(response.accessToken);
-    applyAuthenticatedUser(response.user);
-    router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
-      isAuthenticated: true,
-      backendStep: response.user.onboardingStep,
-      profileCompletedAt: response.user.profileCompletedAt,
-      photoCount: response.user.photoCount
-    })));
+    if (!isAuthenticatedSessionResponse(response)) {
+      throw new Error("Unexpected OTP response. Please try again.");
+    }
 
+    applyAuthenticatedUser(response.accessToken, response.user);
+    router.push(routeForAuthenticatedUser(response.user));
     void maybeSaveFcmToken();
   };
 
   const resendSigninOtp = async () => {
+    if (authFlowMode !== "signin") {
+      throw new Error("Sign-in verification has expired. Please sign in again.");
+    }
     if (!pendingPhone) throw new Error("Phone number is missing");
 
     await apiRequest<{ ok: true }>(API_ENDPOINTS.auth.otp.send, {
       method: "POST",
-      body: JSON.stringify({ phone: pendingPhone })
+      body: JSON.stringify({ phone: pendingPhone }),
     });
   };
 
   const verifySigninOtpMock = async () => {
+    if (authFlowMode !== "signin") {
+      throw new Error("Sign-in verification has expired. Please sign in again.");
+    }
     if (!pendingPhone) throw new Error("Phone number is missing");
     if (!allowTestBypass) throw new Error("Mock OTP is disabled.");
 
-    const response = await apiRequest<{ ok: true; onboardingToken: string; accessToken: string; user: User }>(API_ENDPOINTS.auth.otp.mockVerify, {
-      method: "POST",
-      body: JSON.stringify({ phone: pendingPhone, rememberMe: true })
-    });
+    const response = await apiRequest<AuthenticatedSessionResponse>(
+      API_ENDPOINTS.auth.otp.mockVerify,
+      {
+        method: "POST",
+        body: JSON.stringify({ phone: pendingPhone, rememberMe: true }),
+      }
+    );
 
-    setAccessToken(response.accessToken);
-    applyAuthenticatedUser(response.user);
-    router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
-      isAuthenticated: true,
-      backendStep: response.user.onboardingStep,
-      profileCompletedAt: response.user.profileCompletedAt,
-      photoCount: response.user.photoCount
-    })));
+    if (!isAuthenticatedSessionResponse(response)) {
+      throw new Error("Unexpected OTP response. Please try again.");
+    }
 
+    applyAuthenticatedUser(response.accessToken, response.user);
+    router.push(routeForAuthenticatedUser(response.user));
     void maybeSaveFcmToken();
   };
 
   const resendSignupOtp = async () => {
+    if (authFlowMode !== "signup") {
+      throw new Error("Signup verification has expired. Please start again.");
+    }
     if (!pendingPhone) throw new Error("Phone number is missing");
 
     await apiRequest<{ ok: true }>(API_ENDPOINTS.auth.signup.start, {
       method: "POST",
-      body: JSON.stringify({ phone: pendingPhone })
+      body: JSON.stringify({ phone: pendingPhone }),
     });
   };
 
@@ -404,16 +490,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    try {
-      await apiRequestAuth<{ ok: true }>(API_ENDPOINTS.auth.logout, { method: "POST" });
-    } catch {
-      // Best-effort: ignore logout API errors
-    }
-    clearLocalAuthState();
-    router.push("/signin");
-  };
+    const nextRoute =
+      user?.role === "EMPLOYEE" || user?.role === "ADMIN"
+        ? "/employee/login"
+        : "/signin";
 
-  if (!isInitialized) return null;
+    try {
+      await apiRequest<{ ok: true }>(API_ENDPOINTS.auth.logout, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+    } catch {
+      // Best-effort.
+    }
+
+    clearAllLocalAuthState();
+    router.push(nextRoute);
+  };
 
   return (
     <AuthContext.Provider
@@ -421,14 +514,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isAuthResolved: isInitialized,
         user,
+        authFlowMode,
         onboardingStep,
         pendingPhone,
         signupToken,
+        resetAuthFlow,
         startSignup,
         verifySignupOtp,
         verifySignupOtpMock,
         completeSignup,
         startLogin,
+        startEmployeeLogin,
         verifySigninOtp,
         verifySigninOtpMock,
         resendSigninOtp,
@@ -437,7 +533,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         completeOnboardingStep,
         logout,
         appStateCode,
-        appStateRedirectTo
+        appStateRedirectTo,
       }}
     >
       {children}

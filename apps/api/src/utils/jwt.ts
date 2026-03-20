@@ -9,9 +9,9 @@ type TokenPayload = JwtPayload & {
   tokenVersion?: number;
 };
 
-export function signAccessToken(userId: string, options?: { rememberMe?: boolean }) {
+export function signAccessToken(userId: string, options?: { rememberMe?: boolean; tokenVersion?: number }) {
   const ttlMinutes = options?.rememberMe ? env.ACCESS_TOKEN_TTL_MINUTES : env.ACCESS_TOKEN_TTL_MINUTES_SHORT;
-  return jwt.sign({ sub: userId, type: "access" }, env.JWT_ACCESS_SECRET, {
+  return jwt.sign({ sub: userId, type: "access", tokenVersion: options?.tokenVersion ?? 0 }, env.JWT_ACCESS_SECRET, {
     expiresIn: `${ttlMinutes}m`
   });
 }
@@ -29,7 +29,7 @@ export function verifyAccessToken(token: string) {
   if (!payload?.sub || payload.type !== "access") {
     throw new Error("Invalid access token");
   }
-  return payload.sub;
+  return { userId: payload.sub, tokenVersion: payload.tokenVersion ?? 0 };
 }
 
 export function verifyRefreshToken(token: string) {

@@ -60,8 +60,8 @@ describe("auth + likes unit", () => {
   });
 
   it("requireAuth sets req.user.id", async () => {
-    (verifyAccessToken as any).mockReturnValue("user-1");
-    (prisma.user.findUnique as any).mockResolvedValue({ id: "user-1", status: "APPROVED" });
+    (verifyAccessToken as any).mockReturnValue({ userId: "user-1", tokenVersion: 0 });
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "user-1", status: "APPROVED", tokenVersion: 0 });
     const req = mockReq({ headers: { authorization: "Bearer good-token" } });
     const res = mockRes();
     const next = vi.fn();

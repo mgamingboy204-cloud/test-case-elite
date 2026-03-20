@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from "express";
 import { prisma } from "../db/prisma";
 import { verifyAccessToken } from "../utils/jwt";
 import { logger } from "../utils/logger";
-import { parseCookies } from "../utils/cookies";
 
 function getAccessToken(req: Request) {
   const authHeader = req.get("authorization") ?? req.get("Authorization") ?? "";
@@ -11,12 +10,7 @@ function getAccessToken(req: Request) {
     if (bearerToken) return bearerToken;
   }
 
-  const cookieHeader = req.headers.cookie ?? "";
-  if (!cookieHeader) return null;
-  const cookies = parseCookies(cookieHeader);
-  const token = cookies["vael_access_token"];
-  if (!token) return null;
-  return token.trim();
+  return null;
 }
 
 function isLikesDebugRequest(req: Request) {
@@ -50,19 +44,23 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ message: "Authentication required" });
   }
 
-  let userId: string;
+  let verifiedToken: { userId: string; tokenVersion: number };
   try {
-    userId = verifyAccessToken(token);
+    verifiedToken = verifyAccessToken(token);
   } catch (error) {
     logger.warn("auth.resolve", { requestId, path: req.path, result: "fail", reason: "invalid_token" });
     return res.status(401).json({ message: "Invalid token" });
   }
 
-  req.user = { id: userId };
+  req.user = { id: verifiedToken.userId };
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({ where: { id: verifiedToken.userId } });
   if (!user) {
     logger.warn("auth.resolve", { requestId, path: req.path, result: "fail", reason: "user_not_found" });
+    return res.status(401).json({ message: "Invalid token" });
+  }
+  if (user.tokenVersion !== verifiedToken.tokenVersion) {
+    logger.warn("auth.resolve", { requestId, path: req.path, result: "fail", reason: "token_version_mismatch" });
     return res.status(401).json({ message: "Invalid token" });
   }
 
@@ -87,19 +85,19 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       logger.warn("auth.photo_count_failed", {
         requestId,
         path: req.path,
-        userId,
+        userId: verifiedToken.userId,
         reason: error instanceof Error ? error.message : "unknown"
       });
     }
   }
   res.locals.user = { ...user, photoCount };
-  logger.info("auth.resolve", { requestId, path: req.path, result: "success", userId });
+  logger.info("auth.resolve", { requestId, path: req.path, result: "success", userId: verifiedToken.userId });
 
   if (isLikesDebugRequest(req)) {
     console.info("likes.auth.resolved", {
       marker: "likes_auth_v3",
       requestId,
-      resolvedUserId: userId
+      resolvedUserId: verifiedToken.userId
     });
   }
 

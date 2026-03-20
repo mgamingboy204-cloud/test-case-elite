@@ -5,7 +5,7 @@ import { Compass, Heart, Bell, User, Sparkles, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchAlerts, fetchDiscoverFeedPage, fetchMatches, fetchProfile, mapLegacyFeedItemToCard } from "@/lib/queries";
+import { fetchAlerts, fetchMatches, fetchProfile } from "@/lib/queries";
 import { primeCache, readCache } from "@/lib/cache";
 import { motion } from "framer-motion";
 import { resolveRouteRedirect } from "@/lib/navigationGuard";
@@ -22,7 +22,7 @@ const NAV_ITEMS = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isAuthResolved, onboardingStep, logout, appStateCode, appStateRedirectTo } = useAuth();
+  const { isAuthenticated, isAuthResolved, onboardingStep, logout, appStateCode, appStateRedirectTo, user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [mounted] = useState(() => typeof window !== "undefined");
@@ -109,6 +109,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       isAuthResolved,
       onboardingStep,
       scope: "main",
+      userRole: user?.role ?? null,
       appStateCode,
       appStateRedirectTo
     });
@@ -116,7 +117,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (redirect && pathname !== redirect) {
       router.replace(redirect);
     }
-  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router, appStateCode, appStateRedirectTo]);
+  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router, appStateCode, appStateRedirectTo, user?.role]);
 
   if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
 

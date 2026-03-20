@@ -10,7 +10,17 @@ import { useEffect } from "react";
 export default function AuthLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated, isAuthResolved, onboardingStep, appStateCode, appStateRedirectTo } = useAuth();
+  const {
+    isAuthenticated,
+    isAuthResolved,
+    onboardingStep,
+    appStateCode,
+    appStateRedirectTo,
+    user,
+    authFlowMode,
+    pendingPhone,
+    signupToken
+  } = useAuth();
 
   useEffect(() => {
     const redirect = resolveRouteRedirect({
@@ -19,13 +29,29 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       isAuthResolved,
       onboardingStep,
       scope: "auth",
+      userRole: user?.role ?? null,
       appStateCode,
-      appStateRedirectTo
+      appStateRedirectTo,
+      authFlowMode,
+      pendingPhone,
+      signupToken
     });
     if (redirect && pathname !== redirect) {
       router.replace(redirect);
     }
-  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router, appStateCode, appStateRedirectTo]);
+  }, [
+    appStateCode,
+    appStateRedirectTo,
+    authFlowMode,
+    isAuthResolved,
+    isAuthenticated,
+    onboardingStep,
+    pathname,
+    pendingPhone,
+    router,
+    signupToken,
+    user?.role
+  ]);
 
   if (!isAuthResolved) return <div className="min-h-screen w-full bg-background" />;
   if (isAuthenticated) return null;

@@ -32,6 +32,26 @@ export function routeForFrontendOnboardingStep(step: FrontendOnboardingStep) {
   return routeMap[step];
 }
 
+export function routeForAuthenticatedUser(input: {
+  role?: "USER" | "EMPLOYEE" | "ADMIN" | null;
+  backendStep?: BackendOnboardingStep | null;
+  profileCompletedAt?: Date | string | null;
+  photoCount?: number;
+}) {
+  if (input.role === "EMPLOYEE" || input.role === "ADMIN") {
+    return "/employee/verification";
+  }
+
+  return routeForFrontendOnboardingStep(
+    resolveFrontendOnboardingStep({
+      isAuthenticated: true,
+      backendStep: input.backendStep,
+      profileCompletedAt: input.profileCompletedAt,
+      photoCount: input.photoCount
+    })
+  );
+}
+
 export function resolveFrontendOnboardingStep(input: {
   isAuthenticated: boolean;
   pendingPhone?: string | null;

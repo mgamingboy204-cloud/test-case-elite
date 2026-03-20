@@ -14,6 +14,7 @@ import {
   ChangePasswordSchema
 } from "../validators/authValidators";
 import {
+  bootstrapSession,
   employeeLogin,
   login,
   logout,
@@ -77,6 +78,7 @@ router.post(
   asyncHandler(employeeLogin)
 );
 
+router.post("/auth/session", validateBody(RefreshTokenSchema), asyncHandler(bootstrapSession));
 router.post("/auth/token/refresh", validateBody(RefreshTokenSchema), asyncHandler(refreshAccessToken));
 router.post("/auth/logout", asyncHandler(logout));
 

@@ -4,20 +4,30 @@ import { useState, useEffect } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { OTPInput } from "@/components/auth/otp-input";
 import { allowTestBypass, useAuth } from "@/contexts/AuthContext";
+import { resolvePendingAuthRoute } from "@/lib/navigationGuard";
 import { useRouter } from "next/navigation";
 
 export default function SignInOTP() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(30);
-  const { pendingPhone, verifySigninOtp, verifySigninOtpMock, resendSigninOtp } = useAuth();
+  const { authFlowMode, pendingPhone, resetAuthFlow, signupToken, verifySigninOtp, verifySigninOtpMock, resendSigninOtp } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!pendingPhone) {
-      router.replace('/signin');
+    const expectedRoute = resolvePendingAuthRoute({
+      authFlowMode,
+      pendingPhone,
+      signupToken
+    });
+    if (expectedRoute && expectedRoute !== "/signin/otp") {
+      router.replace(expectedRoute);
+      return;
     }
-  }, [pendingPhone, router]);
+    if (!expectedRoute) {
+      router.replace("/signin");
+    }
+  }, [authFlowMode, pendingPhone, router, signupToken]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -88,7 +98,10 @@ export default function SignInOTP() {
           )}
           
           <button 
-            onClick={() => router.back()}
+            onClick={() => {
+              resetAuthFlow();
+              router.replace("/signin");
+            }}
             className="text-xs text-foreground/40 hover:text-foreground/80 transition-colors"
           >
             Use a different number

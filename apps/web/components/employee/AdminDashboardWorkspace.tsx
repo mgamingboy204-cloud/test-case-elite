@@ -2,11 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, Loader2, RefreshCcw } from "lucide-react";
-import { ApiError, apiRequestAuth } from "@/lib/api";
+import { ApiError } from "@/lib/api";
 import { fetchAdminDashboard, type AdminDashboardPayload } from "@/lib/adminDashboard";
-import { API_ENDPOINTS } from "@/lib/api/endpoints";
-
-type MePayload = { role: "USER" | "EMPLOYEE" | "ADMIN"; isAdmin?: boolean };
+import { useAuth } from "@/contexts/AuthContext";
 
 function StatCard({ label, value, tone = "default" }: { label: string; value: number; tone?: "default" | "warn" | "danger" }) {
   const toneClass = tone === "danger" ? "text-red-300" : tone === "warn" ? "text-amber-200" : "text-[#f0c8be]";
@@ -19,11 +17,13 @@ function StatCard({ label, value, tone = "default" }: { label: string; value: nu
 }
 
 export function AdminDashboardWorkspace() {
+  const { isAuthResolved, user } = useAuth();
   const [data, setData] = useState<AdminDashboardPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const hasAdminAccess = user?.role === "ADMIN" || Boolean(user?.isAdmin);
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -31,8 +31,7 @@ export function AdminDashboardWorkspace() {
     setError(null);
 
     try {
-      const me = await apiRequestAuth<MePayload>(API_ENDPOINTS.user.me);
-      if (me.role !== "ADMIN" && !me.isAdmin) {
+      if (!hasAdminAccess) {
         setForbidden(true);
         setData(null);
         return;
@@ -52,11 +51,12 @@ export function AdminDashboardWorkspace() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [hasAdminAccess]);
 
   useEffect(() => {
+    if (!isAuthResolved) return;
     void load(false);
-  }, [load]);
+  }, [isAuthResolved, load]);
 
   const employeeRows = useMemo(() => data?.employeeWorkload.perEmployee ?? [], [data]);
 
@@ -232,4 +232,3 @@ export function AdminDashboardWorkspace() {
 }
 
 export default AdminDashboardWorkspace;
-

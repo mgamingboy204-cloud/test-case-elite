@@ -2,66 +2,55 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { apiRequestAuth } from "@/lib/api";
-import { clearSessionState } from "@/lib/authSession";
-import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import { useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { EMPLOYEE_ROUTES } from "@/lib/employeeRoutes";
+import { routeForAuthenticatedUser } from "@/lib/onboarding";
 import { LogOut, Shield, UserRoundCheck, Users, Video } from "lucide-react";
-
-type MePayload = {
-  role: "USER" | "EMPLOYEE" | "ADMIN";
-  isAdmin?: boolean;
-  firstName?: string | null;
-  lastName?: string | null;
-  displayName?: string | null;
-};
 
 export default function EmployeeLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [name, setName] = useState("Employee");
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isAuthResolved, isAuthenticated, user, logout } = useAuth();
+  const isAdmin = user?.role === "ADMIN" || Boolean(user?.isAdmin);
+  const name = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.displayName || "Employee";
 
   useEffect(() => {
-    const run = async () => {
-      try {
-        const me = await apiRequestAuth<MePayload>(API_ENDPOINTS.user.me);
-        if (me.role !== "EMPLOYEE" && me.role !== "ADMIN") {
-          router.replace(EMPLOYEE_ROUTES.login);
-          return;
-        }
+    if (!isAuthResolved) return;
 
-        const hasAdminAccess = me.role === "ADMIN" || Boolean(me.isAdmin);
-        setIsAdmin(hasAdminAccess);
-        setName([me.firstName, me.lastName].filter(Boolean).join(" ") || me.displayName || "Employee");
+    if (!isAuthenticated || !user) {
+      router.replace(EMPLOYEE_ROUTES.login);
+      return;
+    }
 
-        if (pathname === EMPLOYEE_ROUTES.admin && !hasAdminAccess) {
-          router.replace(EMPLOYEE_ROUTES.verification);
-          return;
-        }
-      } catch {
-        router.replace(EMPLOYEE_ROUTES.login);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void run();
-  }, [pathname, router]);
+    if (user.role !== "EMPLOYEE" && user.role !== "ADMIN") {
+      router.replace(routeForAuthenticatedUser(user));
+      return;
+    }
 
-  const navItems = useMemo(
-    () => [
-      { href: EMPLOYEE_ROUTES.verification, label: "Verification Queue", icon: Video },
-      { href: EMPLOYEE_ROUTES.matches, label: "Match Coordination", icon: Users },
-      { href: EMPLOYEE_ROUTES.members, label: "My Members", icon: UserRoundCheck },
-      ...(isAdmin ? [{ href: EMPLOYEE_ROUTES.admin, label: "Founder Dashboard", icon: Shield }] : [])
-    ],
-    [isAdmin]
-  );
+    if (pathname === EMPLOYEE_ROUTES.admin && !isAdmin) {
+      router.replace(EMPLOYEE_ROUTES.verification);
+      return;
+    }
+  }, [isAdmin, isAuthenticated, isAuthResolved, pathname, router, user]);
 
-  if (loading) {
+  const navItems = [
+    { href: EMPLOYEE_ROUTES.verification, label: "Verification Queue", icon: Video },
+    { href: EMPLOYEE_ROUTES.matches, label: "Match Coordination", icon: Users },
+    { href: EMPLOYEE_ROUTES.members, label: "My Members", icon: UserRoundCheck },
+    ...(isAdmin ? [{ href: EMPLOYEE_ROUTES.admin, label: "Founder Dashboard", icon: Shield }] : [])
+  ];
+
+  if (!isAuthResolved) {
     return <div className="min-h-screen bg-[#0a0c10] text-white/70 flex items-center justify-center">Loading employee workspace...</div>;
+  }
+
+  if (!isAuthenticated || !user || (user.role !== "EMPLOYEE" && user.role !== "ADMIN")) {
+    return <div className="min-h-screen bg-[#0a0c10]" />;
+  }
+
+  if (pathname === EMPLOYEE_ROUTES.admin && !isAdmin) {
+    return <div className="min-h-screen bg-[#0a0c10]" />;
   }
 
   return (
@@ -92,15 +81,7 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
         <div className="p-6 border-t border-[#1f222b] space-y-3">
           <div className="text-xs text-white/70">{name}</div>
           <button
-            onClick={async () => {
-              try {
-                await apiRequestAuth(API_ENDPOINTS.auth.logout, { method: "POST" });
-              } catch {
-                // ignore
-              }
-              clearSessionState();
-              router.replace(EMPLOYEE_ROUTES.login);
-            }}
+            onClick={() => void logout()}
             className="w-full inline-flex justify-center items-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-xs uppercase tracking-[0.16em] text-white/75"
             type="button"
           >
@@ -115,4 +96,3 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
     </div>
   );
 }
-

@@ -11,7 +11,6 @@ import {
   getAccessToken,
   setAccessToken as setAccessTokenService,
   clearAccessToken as clearAccessTokenService,
-  initializeAccessToken as initializeAccessTokenService,
   subscribeToAuthFailure,
   refreshAccessToken as refreshAccessTokenService,
   notifyAuthFailure,
@@ -45,10 +44,6 @@ const apiDebug = process.env.NODE_ENV !== "production";
 
 // Re-export from token service for backwards compatibility
 export { subscribeToAuthFailure };
-
-export function initializeAccessToken() {
-  initializeAccessTokenService();
-}
 
 export function setAccessToken(token: string | null) {
   setAccessTokenService(token);

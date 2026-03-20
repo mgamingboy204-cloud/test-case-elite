@@ -5,21 +5,31 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useAuth } from "@/contexts/AuthContext";
+import { resolvePendingAuthRoute } from "@/lib/navigationGuard";
 import { useRouter } from "next/navigation";
 
 export default function SignUpPassword() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { pendingPhone, signupToken, completeSignup } = useAuth();
+  const { authFlowMode, pendingPhone, resetAuthFlow, signupToken, completeSignup } = useAuth();
   const [error, setError] = useState("");
   const router = useRouter();
 
   useEffect(() => {
-    if (!pendingPhone || !signupToken) {
-      router.replace('/signup/phone');
+    const expectedRoute = resolvePendingAuthRoute({
+      authFlowMode,
+      pendingPhone,
+      signupToken
+    });
+    if (expectedRoute && expectedRoute !== "/signup/password") {
+      router.replace(expectedRoute);
+      return;
     }
-  }, [pendingPhone, signupToken, router]);
+    if (!expectedRoute) {
+      router.replace("/signup/phone");
+    }
+  }, [authFlowMode, pendingPhone, router, signupToken]);
 
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +90,17 @@ export default function SignUpPassword() {
         </Button>
 
         {error ? <p className="text-sm text-red-400 text-center">{error}</p> : null}
+
+        <button
+          type="button"
+          onClick={() => {
+            resetAuthFlow();
+            router.replace("/signup/phone");
+          }}
+          className="text-xs text-foreground/40 hover:text-foreground/80 transition-colors"
+        >
+          Start over
+        </button>
       </form>
     </GlassCard>
   );

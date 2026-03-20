@@ -19,6 +19,9 @@ export const API_ENDPOINTS = {
       mockVerify: "/auth/otp/mock-verify",
       send: "/auth/otp/send",
     },
+    session: {
+      bootstrap: "/auth/session",
+    },
     logout: "/auth/logout",
     refreshToken: "/auth/token/refresh",
     changePassword: "/auth/change-password",

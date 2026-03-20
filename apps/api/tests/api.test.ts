@@ -4,8 +4,8 @@ import bcrypt from "bcrypt";
 import { app } from "../src/app";
 import { prisma } from "../src/db/prisma";
 
-// Auth is cookie-based (httpOnly JWT cookies). The supertest agent carries cookies automatically.
-const withAuth = (req: request.Test, _token: string) => req;
+const withAuth = (req: request.Test, token: string) =>
+  token ? req.set("Authorization", `Bearer ${token}`) : req;
 
 async function resetDb() {
   await prisma.notification.deleteMany();
@@ -47,16 +47,17 @@ async function createOtp(phone: string, code = "123456") {
 async function registerAndLogin(agent: request.SuperAgentTest, phone: string, password: string) {
   await agent.post("/auth/register").send({ phone, password, email: `${phone}@example.com` });
   await createOtp(phone);
-  await agent.post("/auth/otp/verify").send({ phone, code: "123456" });
-  return "";
+  const response = await agent.post("/auth/otp/verify").send({ phone, code: "123456" });
+  return response.body.accessToken as string;
 }
 
 async function registerAndLoginSession(agent: request.SuperAgentTest, phone: string, password: string) {
   await agent.post("/auth/register").send({ phone, password, email: `${phone}@example.com` });
   await createOtp(phone);
+  const response = await agent.post("/auth/otp/verify").send({ phone, code: "123456" });
   return {
-    accessToken: "",
-    onboardingToken: ""
+    accessToken: response.body.accessToken as string,
+    onboardingToken: (response.body.user?.onboardingToken as string | undefined) ?? ""
   };
 }
 
@@ -189,6 +190,32 @@ describe("Auth routes", () => {
 
     expect(shortCookie).toContain("Max-Age=604800");
     expect(longCookie).toContain("Max-Age=2592000");
+  });
+
+  it("bootstraps a session from refresh cookie without requiring /me probing", async () => {
+    const agent = request.agent(app);
+    const phone = "5551010105";
+    await prisma.user.create({
+      data: {
+        phone,
+        email: "bootstrap@example.com",
+        passwordHash: await bcrypt.hash("Password@1", 10),
+        status: "APPROVED",
+        verifiedAt: new Date(),
+        phoneVerifiedAt: new Date(),
+        onboardingStep: "ACTIVE",
+        paymentStatus: "PAID",
+        profileCompletedAt: new Date()
+      }
+    });
+
+    await agent.post("/auth/login").send({ phone, password: "Password@1" });
+    const boot = await agent.post("/auth/session").send({});
+
+    expect(boot.status).toBe(200);
+    expect(boot.body.authenticated).toBe(true);
+    expect(typeof boot.body.accessToken).toBe("string");
+    expect(boot.body.user.phone).toBe(phone);
   });
 });
 
@@ -399,7 +426,7 @@ describe("Phone unlock authorization", () => {
 });
 
 describe("Session authentication", () => {
-  it("sets session on register, returns /me, and clears on logout", async () => {
+  it("sets session on register, returns /me, and clears boot session on logout", async () => {
     const agent = request.agent(app);
     const phone = "5551230000";
     const token = await registerAndLogin(agent, phone, "Password@1");
@@ -411,8 +438,9 @@ describe("Session authentication", () => {
     const logout = await withAuth(agent.post("/auth/logout"), token);
     expect(logout.status).toBe(200);
 
-    const after = await withAuth(agent.get("/me"), token);
-    expect(after.status).toBe(200);
+    const bootAfterLogout = await agent.post("/auth/session").send({});
+    expect(bootAfterLogout.status).toBe(200);
+    expect(bootAfterLogout.body.authenticated).toBe(false);
   });
 });
 
@@ -456,8 +484,8 @@ describe("Login without OTP for verified phones", () => {
     const login = await agent.post("/auth/login").send({ phone, password, rememberDevice: true });
     expect(login.body.ok).toBe(true);
     expect(login.body.otpRequired).not.toBe(true);
+    expect(typeof login.body.accessToken).toBe("string");
     const setCookie = login.headers["set-cookie"] as string[] | undefined;
-    expect(setCookie?.some((c) => c.startsWith("vael_access_token="))).toBe(true);
     expect(setCookie?.some((c) => c.startsWith("em_refresh="))).toBe(true);
   });
 });

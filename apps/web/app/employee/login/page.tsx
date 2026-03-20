@@ -1,17 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiRequest, setAccessToken } from "@/lib/api";
-import { API_ENDPOINTS } from "@/lib/api/endpoints";
-import { EMPLOYEE_ROUTES } from "@/lib/employeeRoutes";
+import { useAuth } from "@/contexts/AuthContext";
+import { routeForAuthenticatedUser } from "@/lib/onboarding";
 
 export default function EmployeeLoginPage() {
   const router = useRouter();
+  const { startEmployeeLogin, isAuthResolved, isAuthenticated, user } = useAuth();
   const [employeeId, setEmployeeId] = useState("VAEL-EMP-001");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!isAuthResolved || !isAuthenticated || !user) return;
+    router.replace(routeForAuthenticatedUser(user));
+  }, [isAuthResolved, isAuthenticated, router, user]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,17 +26,7 @@ export default function EmployeeLoginPage() {
 
     setLoading(true);
     try {
-      const res = await apiRequest<{
-        ok: boolean;
-        accessToken: string;
-        employee?: { id: string; name: string; role: "EMPLOYEE" | "ADMIN" };
-      }>(API_ENDPOINTS.employee.auth.login, {
-        method: "POST",
-        body: JSON.stringify({ employeeId, password })
-      });
-
-      setAccessToken(res.accessToken);
-      router.push(EMPLOYEE_ROUTES.verification);
+      await startEmployeeLogin(employeeId, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to login");
     } finally {

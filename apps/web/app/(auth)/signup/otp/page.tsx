@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { OTPInput } from "@/components/auth/otp-input";
 import { allowTestBypass, useAuth } from "@/contexts/AuthContext";
+import { resolvePendingAuthRoute } from "@/lib/navigationGuard";
 import { useRouter } from "next/navigation";
 
 export default function SignUpOTP() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { pendingPhone, verifySignupOtp, verifySignupOtpMock, resendSignupOtp } = useAuth();
+  const { authFlowMode, pendingPhone, resetAuthFlow, signupToken, verifySignupOtp, verifySignupOtpMock, resendSignupOtp } = useAuth();
   const router = useRouter();
 
   const [countdown, setCountdown] = useState(30);
@@ -23,10 +24,19 @@ export default function SignUpOTP() {
   }, []);
 
   useEffect(() => {
-    if (!pendingPhone) {
-      router.replace('/signup/phone');
+    const expectedRoute = resolvePendingAuthRoute({
+      authFlowMode,
+      pendingPhone,
+      signupToken
+    });
+    if (expectedRoute && expectedRoute !== "/signup/otp") {
+      router.replace(expectedRoute);
+      return;
     }
-  }, [pendingPhone, router]);
+    if (!expectedRoute) {
+      router.replace("/signup/phone");
+    }
+  }, [authFlowMode, pendingPhone, router, signupToken]);
 
   const handleComplete = async (otp: string) => {
     setLoading(true);
@@ -93,6 +103,17 @@ export default function SignUpOTP() {
               Proceed with Mock OTP
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => {
+              resetAuthFlow();
+              router.replace("/signup/phone");
+            }}
+            className="text-xs text-foreground/40 hover:text-foreground/80 transition-colors"
+          >
+            Use a different number
+          </button>
         </div>
       </div>
     </GlassCard>

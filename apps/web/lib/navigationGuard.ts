@@ -1,5 +1,5 @@
-import type { OnboardingStep } from "@/contexts/AuthContext";
-import { routeForOnboardingStep } from "@/contexts/AuthContext";
+import { routeForFrontendOnboardingStep, type FrontendOnboardingStep } from "@/lib/onboarding";
+import type { AuthFlowMode } from "@/lib/auth/flowStorage";
 
 export type AppStateCode =
   | "guest"
@@ -11,28 +11,67 @@ export type AppStateCode =
   | "profile_data_missing"
   | "eligible";
 
+export function resolvePendingAuthRoute(options: {
+  authFlowMode?: AuthFlowMode | null;
+  pendingPhone?: string | null;
+  signupToken?: string | null;
+}) {
+  if (options.authFlowMode === "signup") {
+    if (options.signupToken) return "/signup/password";
+    if (options.pendingPhone) return "/signup/otp";
+    return "/signup/phone";
+  }
+
+  if (options.authFlowMode === "signin" && options.pendingPhone) {
+    return "/signin/otp";
+  }
+
+  return null;
+}
+
 export function resolveRouteRedirect(options: {
   pathname: string;
   isAuthenticated: boolean;
   isAuthResolved: boolean;
-  onboardingStep: OnboardingStep;
+  onboardingStep: FrontendOnboardingStep;
   scope: "auth" | "onboarding" | "main";
+  userRole?: "USER" | "EMPLOYEE" | "ADMIN" | null;
   appStateCode?: AppStateCode | null;
   appStateRedirectTo?: string | null;
+  authFlowMode?: AuthFlowMode | null;
+  pendingPhone?: string | null;
+  signupToken?: string | null;
 }) {
   if (!options.isAuthResolved) return null;
 
   const appStateCode = options.appStateCode;
   const appStateRedirect = options.appStateRedirectTo;
+  const defaultAuthenticatedRoute =
+    options.userRole === "EMPLOYEE" || options.userRole === "ADMIN"
+      ? "/employee/verification"
+      : routeForFrontendOnboardingStep(options.onboardingStep);
 
   if (options.scope === "auth") {
-    if (!options.isAuthenticated) return null;
-    return routeForOnboardingStep(options.onboardingStep);
+    if (!options.isAuthenticated) {
+      const pendingAuthRoute = resolvePendingAuthRoute({
+        authFlowMode: options.authFlowMode,
+        pendingPhone: options.pendingPhone,
+        signupToken: options.signupToken
+      });
+      if (pendingAuthRoute && options.pathname !== pendingAuthRoute) {
+        return pendingAuthRoute;
+      }
+      return null;
+    }
+    return defaultAuthenticatedRoute;
   }
 
   if (!options.isAuthenticated) return "/signin";
+  if (options.userRole === "EMPLOYEE" || options.userRole === "ADMIN") {
+    return defaultAuthenticatedRoute;
+  }
 
-  const expected = routeForOnboardingStep(options.onboardingStep);
+  const expected = routeForFrontendOnboardingStep(options.onboardingStep);
 
   if (options.scope === "onboarding") {
     if (options.onboardingStep === "COMPLETED") return "/discover";
