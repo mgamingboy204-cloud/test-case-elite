@@ -1,4 +1,5 @@
 import { apiRequestAuth } from "./api";
+import { API_ENDPOINTS } from "./api/endpoints";
 
 export type OnlineMeetStatus =
   | "REQUESTED"
@@ -40,11 +41,11 @@ export type OnlineMeetCase = {
 };
 
 export async function fetchOnlineMeetCase(matchId: string) {
-  return apiRequestAuth<OnlineMeetCase>(`/online-meet-cases/${matchId}`);
+  return apiRequestAuth<OnlineMeetCase>(API_ENDPOINTS.onlineMeet.get(matchId));
 }
 
 export async function submitOnlineMeetSelections(matchId: string, payload: { platform: MeetPlatform; timeSlots: string[] }) {
-  return apiRequestAuth<{ ok: boolean; status: OnlineMeetStatus }>(`/online-meet-cases/${matchId}/selections`, {
+  return apiRequestAuth<{ ok: boolean; status: OnlineMeetStatus }>(API_ENDPOINTS.onlineMeet.submitSelections(matchId), {
     method: "POST",
     body: JSON.stringify(payload)
   });
@@ -74,40 +75,40 @@ export type OnlineMeetEmployeeCase = {
 export type OnlineMeetStatusView = "ACTIVE" | "FINALIZED" | "CONFLICT" | "TIMEOUT" | "CANCELED" | "ALL";
 
 export async function listOnlineMeetCasesForEmployee(statusView: OnlineMeetStatusView = "ACTIVE") {
-  return apiRequestAuth<{ statusView: OnlineMeetStatusView; cases: OnlineMeetEmployeeCase[] }>(`/admin/online-meets?statusView=${statusView}`);
+  return apiRequestAuth<{ statusView: OnlineMeetStatusView; cases: OnlineMeetEmployeeCase[] }>(API_ENDPOINTS.onlineMeet.employeeActions.list(statusView));
 }
 
 export async function assignOnlineMeetCase(caseId: string) {
-  return apiRequestAuth(`/admin/online-meets/${caseId}/assign`, { method: "POST" });
+  return apiRequestAuth(API_ENDPOINTS.onlineMeet.employeeActions.assign(caseId), { method: "POST" });
 }
 
 export async function sendOnlineMeetOptions(caseId: string, payload: { platforms: MeetPlatform[]; timeSlots: Array<{ id: string; label: string; startsAtIso?: string | null }> }) {
-  return apiRequestAuth(`/admin/online-meets/${caseId}/options`, {
+  return apiRequestAuth(API_ENDPOINTS.onlineMeet.employeeActions.sendOptions(caseId), {
     method: "POST",
     body: JSON.stringify(payload)
   });
 }
 
 export async function finalizeOnlineMeet(caseId: string, payload: { finalPlatform: MeetPlatform; finalTimeSlotId: string; finalMeetingLink: string }) {
-  return apiRequestAuth(`/admin/online-meets/${caseId}/finalize`, {
+  return apiRequestAuth(API_ENDPOINTS.onlineMeet.employeeActions.finalize(caseId), {
     method: "POST",
     body: JSON.stringify(payload)
   });
 }
 
 export async function markOnlineMeetTimeout(caseId: string, nonResponderUserId: string) {
-  return apiRequestAuth(`/admin/online-meets/${caseId}/timeout`, {
+  return apiRequestAuth(API_ENDPOINTS.onlineMeet.employeeActions.timeout(caseId), {
     method: "POST",
     body: JSON.stringify({ nonResponderUserId })
   });
 }
 
 export async function markOnlineMeetNoOverlap(caseId: string) {
-  return apiRequestAuth(`/admin/online-meets/${caseId}/no-overlap`, { method: "POST" });
+  return apiRequestAuth(API_ENDPOINTS.onlineMeet.employeeActions.noOverlap(caseId), { method: "POST" });
 }
 
 export async function updateOnlineMeetCase(caseId: string, payload: { action: "CANCEL" | "RESCHEDULE"; reason: string; requestedByUserId?: string | null }) {
-  return apiRequestAuth(`/admin/online-meets/${caseId}/case-update`, {
+  return apiRequestAuth(API_ENDPOINTS.onlineMeet.employeeActions.caseUpdate(caseId), {
     method: "POST",
     body: JSON.stringify(payload)
   });

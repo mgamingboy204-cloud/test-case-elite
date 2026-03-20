@@ -2,21 +2,24 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ApiError, apiRequest, apiRequestAuth, clearAccessToken, initializeAccessToken, setAccessToken, subscribeToAuthFailure } from "@/lib/api";
+import { ApiError, apiRequest, apiRequestAuth, initializeAccessToken, setAccessToken } from "@/lib/api";
 import {
   type BackendOnboardingStep,
   type FrontendOnboardingStep,
   resolveFrontendOnboardingStep,
   routeForFrontendOnboardingStep
 } from "@/lib/onboarding";
-import { clearAllCaches } from "@/lib/cache";
 import {
   readStoredPendingPhone,
   writeStoredPendingPhone,
   readStoredSignupToken,
   writeStoredSignupToken,
 } from "@/lib/auth/tokenStorage";
-import { performSessionCleanup } from "@/lib/auth/tokenService";
+import {
+  clearSessionState,
+  subscribeToSessionInvalidation
+} from "@/lib/authSession";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 // Timeout for initial /me bootstrap call (prevents infinite hang)
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
@@ -126,8 +129,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const refreshCurrentUser = async () => {
-    const me = await apiRequestAuth<User>("/me");
+    const me = await apiRequestAuth<User>(API_ENDPOINTS.user.me);
     setUser(me);
+  };
+
+  const applyAuthenticatedUser = (nextUser: User) => {
+    setUser(nextUser);
+    setPendingPhone(null);
+    writeStoredPendingPhone(null);
+    setSignupToken(null);
+    writeStoredSignupToken(null);
+  };
+
+  const clearLocalAuthState = () => {
+    clearSessionState();
+    setUser(null);
+    setPendingPhone(null);
+    setSignupToken(null);
   };
 
   const maybeSaveFcmToken = async () => {
@@ -135,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem("vael_fcm_token");
     if (!token) return;
     try {
-      await apiRequestAuth("/users/fcm-token", {
+      await apiRequestAuth(API_ENDPOINTS.user.fcmToken, {
         method: "POST",
         body: JSON.stringify({ token })
       });
@@ -146,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    let timeoutId: NodeJS.Timeout | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     const hydrate = async () => {
       initializeAccessToken();
@@ -162,10 +180,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await Promise.race([
           refreshCurrentUser(),
           new Promise((_, reject) =>
-            setTimeout(
+            (timeoutId = setTimeout(
               () => reject(new Error("Auth bootstrap timeout")),
               AUTH_BOOTSTRAP_TIMEOUT_MS
-            )
+            ))
           ),
         ]);
       } catch (error) {
@@ -176,15 +194,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (process.env.NODE_ENV !== "production") {
             console.warn("[auth] Bootstrap timeout; proceeding as unauthenticated");
           }
+        } else {
+          debugError("[auth] failed to bootstrap session", error);
         }
-        clearAccessToken();
-        setUser(null);
+        clearLocalAuthState();
       } finally {
         if (!cancelled) {
           setIsInitialized(true);
         }
         // Clean up timeout
-        if (timeoutId) clearTimeout(timeoutId);
+        if (timeoutId !== undefined) clearTimeout(timeoutId);
       }
     };
 
@@ -192,14 +211,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
-      if (timeoutId) clearTimeout(timeoutId);
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
     };
   }, []);
 
   useEffect(() => {
-    const unsubscribe = subscribeToAuthFailure(() => {
+    const unsubscribe = subscribeToSessionInvalidation(() => {
       setUser(null);
-      clearAllCaches();
+      setPendingPhone(null);
+      setSignupToken(null);
     });
 
     return () => {
@@ -208,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startSignup = async (phone: string) => {
-    await apiRequest<{ ok: boolean }>("/auth/signup/start", {
+    await apiRequest<{ ok: boolean }>(API_ENDPOINTS.auth.signup.start, {
       method: "POST",
       body: JSON.stringify({ phone })
     });
@@ -221,7 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifySignupOtp = async (otp: string) => {
     if (!pendingPhone) throw new Error("Phone number is missing");
 
-    const response = await apiRequest<{ ok: true; signupToken: string }>("/auth/signup/verify", {
+    const response = await apiRequest<{ ok: true; signupToken: string }>(API_ENDPOINTS.auth.signup.verify, {
       method: "POST",
       body: JSON.stringify({ phone: pendingPhone, code: otp })
     });
@@ -235,7 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!pendingPhone) throw new Error("Phone number is missing");
     if (!allowTestBypass) throw new Error("Mock OTP is disabled.");
 
-    const response = await apiRequest<{ ok: true; signupToken: string }>("/auth/signup/mock-verify", {
+    const response = await apiRequest<{ ok: true; signupToken: string }>(API_ENDPOINTS.auth.signup.mockVerify, {
       method: "POST",
       body: JSON.stringify({ phone: pendingPhone })
     });
@@ -248,7 +268,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const completeSignup = async (password: string) => {
     if (!signupToken) throw new Error("Signup session missing");
 
-    const response = await apiRequest<SignupCompleteResponse>("/auth/signup/complete", {
+    const response = await apiRequest<SignupCompleteResponse>(API_ENDPOINTS.auth.signup.complete, {
       method: "POST",
       body: JSON.stringify({ signupToken, password })
     });
@@ -263,27 +283,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hasOnboardingToken: Boolean(onboardingToken)
     });
 
-    if (response.user) {
-      setUser(response.user);
+    let authenticatedUser = response.user ?? null;
+    if (authenticatedUser) {
+      applyAuthenticatedUser(authenticatedUser);
     } else {
       try {
-        await refreshCurrentUser();
+        authenticatedUser = await apiRequestAuth<User>(API_ENDPOINTS.user.me);
+        applyAuthenticatedUser(authenticatedUser);
       } catch (error) {
         debugError("[signup] failed to fetch /me immediately after signup complete", error);
         throw error;
       }
     }
 
-    setPendingPhone(null);
-    writeStoredPendingPhone(null);
-    setSignupToken(null);
-    writeStoredSignupToken(null);
-
     const nextRoute = routeForOnboardingStep(resolveFrontendOnboardingStep({
       isAuthenticated: true,
-      backendStep: response.user?.onboardingStep ?? user?.onboardingStep,
-      profileCompletedAt: response.user?.profileCompletedAt ?? user?.profileCompletedAt,
-      photoCount: response.user?.photoCount ?? user?.photoCount
+      backendStep: authenticatedUser.onboardingStep,
+      profileCompletedAt: authenticatedUser.profileCompletedAt,
+      photoCount: authenticatedUser.photoCount
     }));
 
     debugLog("[signup] navigation target", { nextRoute });
@@ -294,7 +311,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const startLogin = async (phone: string, password: string) => {
-    const response = await apiRequest<LoginApiResponse>("/auth/login", {
+    const response = await apiRequest<LoginApiResponse>(API_ENDPOINTS.auth.login, {
       method: "POST",
       body: JSON.stringify({ phone, password, rememberMe: true })
     });
@@ -311,9 +328,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setAccessToken(response.accessToken);
-    setUser(response.user);
-    setPendingPhone(null);
-    writeStoredPendingPhone(null);
+    applyAuthenticatedUser(response.user);
     router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
       isAuthenticated: true,
       backendStep: response.user.onboardingStep,
@@ -328,15 +343,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifySigninOtp = async (otp: string) => {
     if (!pendingPhone) throw new Error("Phone number is missing");
 
-    const response = await apiRequest<{ ok: true; onboardingToken: string; accessToken: string; user: User }>("/auth/otp/verify", {
+    const response = await apiRequest<{ ok: true; onboardingToken: string; accessToken: string; user: User }>(API_ENDPOINTS.auth.otp.verify, {
       method: "POST",
       body: JSON.stringify({ phone: pendingPhone, code: otp, rememberMe: true })
     });
 
     setAccessToken(response.accessToken);
-    setUser(response.user);
-    setPendingPhone(null);
-    writeStoredPendingPhone(null);
+    applyAuthenticatedUser(response.user);
     router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
       isAuthenticated: true,
       backendStep: response.user.onboardingStep,
@@ -350,7 +363,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resendSigninOtp = async () => {
     if (!pendingPhone) throw new Error("Phone number is missing");
 
-    await apiRequest<{ ok: true }>("/auth/otp/send", {
+    await apiRequest<{ ok: true }>(API_ENDPOINTS.auth.otp.send, {
       method: "POST",
       body: JSON.stringify({ phone: pendingPhone })
     });
@@ -360,15 +373,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!pendingPhone) throw new Error("Phone number is missing");
     if (!allowTestBypass) throw new Error("Mock OTP is disabled.");
 
-    const response = await apiRequest<{ ok: true; onboardingToken: string; accessToken: string; user: User }>("/auth/otp/mock-verify", {
+    const response = await apiRequest<{ ok: true; onboardingToken: string; accessToken: string; user: User }>(API_ENDPOINTS.auth.otp.mockVerify, {
       method: "POST",
       body: JSON.stringify({ phone: pendingPhone, rememberMe: true })
     });
 
     setAccessToken(response.accessToken);
-    setUser(response.user);
-    setPendingPhone(null);
-    writeStoredPendingPhone(null);
+    applyAuthenticatedUser(response.user);
     router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
       isAuthenticated: true,
       backendStep: response.user.onboardingStep,
@@ -382,7 +393,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resendSignupOtp = async () => {
     if (!pendingPhone) throw new Error("Phone number is missing");
 
-    await apiRequest<{ ok: true }>("/auth/signup/start", {
+    await apiRequest<{ ok: true }>(API_ENDPOINTS.auth.signup.start, {
       method: "POST",
       body: JSON.stringify({ phone: pendingPhone })
     });
@@ -394,16 +405,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await apiRequestAuth<{ ok: true }>("/auth/logout", { method: "POST" });
+      await apiRequestAuth<{ ok: true }>(API_ENDPOINTS.auth.logout, { method: "POST" });
     } catch {
       // Best-effort: ignore logout API errors
     }
-    // Centralized cleanup: clears all auth storage, bumps generation, notifies listeners
-    performSessionCleanup();
-    clearAllCaches();
-    setUser(null);
-    setPendingPhone(null);
-    setSignupToken(null);
+    clearLocalAuthState();
     router.push("/signin");
   };
 

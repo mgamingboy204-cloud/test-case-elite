@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, Loader2, RefreshCcw } from "lucide-react";
 import { ApiError, apiRequestAuth } from "@/lib/api";
 import { fetchAdminDashboard, type AdminDashboardPayload } from "@/lib/adminDashboard";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 type MePayload = { role: "USER" | "EMPLOYEE" | "ADMIN"; isAdmin?: boolean };
 
@@ -17,7 +18,7 @@ function StatCard({ label, value, tone = "default" }: { label: string; value: nu
   );
 }
 
-export default function AdminDashboardPage() {
+export function AdminDashboardWorkspace() {
   const [data, setData] = useState<AdminDashboardPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -30,7 +31,7 @@ export default function AdminDashboardPage() {
     setError(null);
 
     try {
-      const me = await apiRequestAuth<MePayload>("/me");
+      const me = await apiRequestAuth<MePayload>(API_ENDPOINTS.user.me);
       if (me.role !== "ADMIN" && !me.isAdmin) {
         setForbidden(true);
         setData(null);
@@ -62,7 +63,7 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="p-10 text-white/70 inline-flex items-center gap-3">
-        <Loader2 className="animate-spin" size={18} /> Loading founder dashboard…
+        <Loader2 className="animate-spin" size={18} /> Loading founder dashboard...
       </div>
     );
   }
@@ -229,3 +230,6 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
+export default AdminDashboardWorkspace;
+

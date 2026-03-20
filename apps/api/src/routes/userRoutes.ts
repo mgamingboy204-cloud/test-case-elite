@@ -8,10 +8,24 @@ import { z } from "zod";
 
 const router = Router();
 
+const DeleteAccountSchema = z.object({
+  confirmation: z.literal("DELETE").describe("Must be exactly 'DELETE' to confirm account deletion")
+});
+
 router.get("/me", requireAuth, asyncHandler(whoAmI));
-router.delete("/account", requireAuth, asyncHandler(deleteMyAccountHandler));
+router.delete(
+  "/account",
+  requireAuth,
+  validateBody(DeleteAccountSchema),
+  asyncHandler(deleteMyAccountHandler)
+);
 // PRD compatibility alias: DELETE /api/users/account { confirmation: "DELETE" }
-router.delete("/users/account", requireAuth, asyncHandler(deleteMyAccountHandler));
+router.delete(
+  "/users/account",
+  requireAuth,
+  validateBody(DeleteAccountSchema),
+  asyncHandler(deleteMyAccountHandler)
+);
 router.post(
   "/users/fcm-token",
   requireAuth,

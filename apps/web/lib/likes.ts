@@ -1,4 +1,5 @@
 import { apiRequestAuth } from "@/lib/api";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&auto=format&fit=crop&q=80";
 
@@ -79,7 +80,7 @@ function toIncomingProfile(item: LegacyIncomingLike): LikesIncomingProfile | nul
 }
 
 export async function fetchIncomingLikes(): Promise<LikesIncomingProfile[]> {
-  const response = await apiRequestAuth<IncomingLikesResponse>("/likes/incoming");
+  const response = await apiRequestAuth<IncomingLikesResponse>(API_ENDPOINTS.likes.list);
   const incoming = response.incoming ?? [];
   const normalized = incoming
     .map(toIncomingProfile)
@@ -94,7 +95,7 @@ function buildActionId() {
 }
 
 export async function sendLikeAction(options: { actionId?: string; targetUserId: string; action: "LIKE" | "PASS" }) {
-  return apiRequestAuth<{ ok: boolean; matchId: string | null; alreadyProcessed: boolean }>("/likes", {
+  return apiRequestAuth<{ ok: boolean; matchId: string | null; alreadyProcessed: boolean }>(API_ENDPOINTS.likes.send, {
     method: "POST",
     body: JSON.stringify({
       actionId: options.actionId ?? buildActionId(),

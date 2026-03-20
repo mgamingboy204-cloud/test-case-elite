@@ -1,4 +1,5 @@
 import { apiRequestAuth } from "@/lib/api";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 export interface AdminDashboardPayload {
   generatedAt: string;
@@ -69,5 +70,5 @@ export interface AdminDashboardPayload {
 }
 
 export async function fetchAdminDashboard() {
-  return apiRequestAuth<AdminDashboardPayload>("/admin/dashboard");
+  return apiRequestAuth<AdminDashboardPayload>(API_ENDPOINTS.admin.dashboard);
 }

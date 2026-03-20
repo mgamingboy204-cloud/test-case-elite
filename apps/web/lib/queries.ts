@@ -1,4 +1,5 @@
 import { apiRequestAuth } from "@/lib/api";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { type LikesIncomingProfile } from "@/lib/likes";
 
 export const queryKeys = {
@@ -85,7 +86,7 @@ export async function fetchDiscoverFeedPageWithFilters(
   const cursorQuery = cursor ? `&cursor=${encodeURIComponent(cursor)}` : "";
   const cityQuery = filters?.city ? `&city=${encodeURIComponent(filters.city)}` : "";
   const ageQuery = typeof filters?.age === "number" && !Number.isNaN(filters.age) ? `&age=${encodeURIComponent(String(filters.age))}` : "";
-  return apiRequestAuth<LegacyDiscoverFeedResponse>(`/discover/feed?limit=${limit}${cursorQuery}${cityQuery}${ageQuery}`);
+  return apiRequestAuth<LegacyDiscoverFeedResponse>(`${API_ENDPOINTS.discover.feed}?limit=${limit}${cursorQuery}${cityQuery}${ageQuery}`);
 }
 
 const FALLBACK_MATCH_IMAGE = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&auto=format&fit=crop&q=80";
@@ -170,7 +171,7 @@ type ApiMatch = {
 };
 
 export async function fetchMatches(): Promise<MatchCard[]> {
-  const response = await apiRequestAuth<{ matches: ApiMatch[] }>("/matches");
+  const response = await apiRequestAuth<{ matches: ApiMatch[] }>(API_ENDPOINTS.matches.list);
   const seen = new Set<string>();
 
   return response.matches
@@ -316,7 +317,7 @@ export async function fetchAlerts(): Promise<Alert[]> {
       deepLinkUrl?: string | null;
     }>;
     unreadCount: number;
-  }>("/alerts");
+  }>(API_ENDPOINTS.alerts.list);
 
   // Server already returns newest-first; keep it stable and make sure ids are unique.
   const deduped = Array.from(new Map(response.alerts.map((a) => [a.id, a])).values());
@@ -399,7 +400,7 @@ type RawProfileResponse = {
 };
 
 export async function fetchProfile(): Promise<ProfileViewModel> {
-  const data = await apiRequestAuth<RawProfileResponse>("/me/profile");
+  const data = await apiRequestAuth<RawProfileResponse>(API_ENDPOINTS.profile.get);
   const vm = data.viewModel ?? {};
   const image = vm.photos?.[0]?.url ?? FALLBACK_PROFILE_IMAGE;
   return {

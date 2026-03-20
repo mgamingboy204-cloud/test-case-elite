@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { apiRequestAuth } from "@/lib/api";
 import { ApiError } from "@/lib/api";
-import { Loader2, ShieldCheck, UserRoundCheck } from "lucide-react";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import { Loader2 } from "lucide-react";
 
 type EmployeeMemberRow = {
   id: string;
@@ -39,7 +40,7 @@ export default function EmployeeMembersPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await apiRequestAuth<{ members: EmployeeMemberRow[]; capacity: { max: number; approaching: boolean } }>("/employee/members");
+        const res = await apiRequestAuth<{ members: EmployeeMemberRow[]; capacity: { max: number; approaching: boolean } }>(API_ENDPOINTS.employee.members);
         setMembers(res.members);
         setCapacity(res.capacity);
       } catch (err) {

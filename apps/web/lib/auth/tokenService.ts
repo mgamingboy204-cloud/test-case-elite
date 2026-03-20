@@ -56,7 +56,7 @@ export function subscribeToAuthFailure(listener: () => void): () => void {
 /**
  * Notify all listeners that auth has failed and needs cleanup.
  */
-function notifyAuthFailure() {
+export function notifyAuthFailure() {
   for (const listener of authFailureListeners) {
     try {
       listener();
@@ -74,7 +74,13 @@ function notifyAuthFailure() {
  * Decode JWT payload without verification.
  * Does NOT validate signature—use only for expiryvalidation.
  */
-function decodeJwtPayload(token: string): Record<string, any> | null {
+type JwtPayload = {
+  exp?: number;
+  sub?: string;
+  iat?: number;
+};
+
+function decodeJwtPayload(token: string): JwtPayload | null {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
@@ -105,6 +111,11 @@ function isTokenExpired(token: string | null): boolean {
 export function initializeAccessToken(): void {
   const stored = readStoredAccessToken();
   accessToken = stored;
+  if (stored && isTokenExpired(stored)) {
+    clearAccessToken();
+    if (DEBUG) console.info("[auth] Cleared expired access token during initialization");
+    return;
+  }
   if (DEBUG && stored) {
     console.info("[auth] Initialized access token from storage");
   }
@@ -154,7 +165,7 @@ export function getAuthGeneration(): number {
  * Prevents multiple simultaneous refresh requests.
  * Returns success status; does NOT throw.
  */
-export async function refreshAccessToken(): Promise<
+export async function refreshAccessToken(options?: { allowMissingSession?: boolean }): Promise<
   "success" | "unauthorized" | "forbidden"
 > {
   // If already refreshing, return the existing promise
@@ -173,6 +184,7 @@ export async function refreshAccessToken(): Promise<
 
       if (!response.ok) {
         if (response.status === 403) return "forbidden";
+        if (response.status === 401 && options?.allowMissingSession) return "unauthorized";
         return "unauthorized";
       }
 

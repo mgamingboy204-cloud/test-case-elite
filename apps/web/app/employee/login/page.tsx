@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest, setAccessToken } from "@/lib/api";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import { EMPLOYEE_ROUTES } from "@/lib/employeeRoutes";
 
 export default function EmployeeLoginPage() {
   const router = useRouter();
@@ -23,13 +25,13 @@ export default function EmployeeLoginPage() {
         ok: boolean;
         accessToken: string;
         employee?: { id: string; name: string; role: "EMPLOYEE" | "ADMIN" };
-      }>("/employee/auth/login", {
+      }>(API_ENDPOINTS.employee.auth.login, {
         method: "POST",
         body: JSON.stringify({ employeeId, password })
       });
 
       setAccessToken(res.accessToken);
-      router.push("/employee/verification");
+      router.push(EMPLOYEE_ROUTES.verification);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to login");
     } finally {

@@ -14,6 +14,7 @@ import {
   initializeAccessToken as initializeAccessTokenService,
   subscribeToAuthFailure,
   refreshAccessToken as refreshAccessTokenService,
+  notifyAuthFailure,
 } from "./auth/tokenService";
 
 function resolveApiBaseUrl() {
@@ -57,6 +58,10 @@ export function clearAccessToken() {
   clearAccessTokenService();
 }
 
+export async function refreshAccessToken(options?: { allowMissingSession?: boolean }) {
+  return refreshAccessTokenService(options);
+}
+
 // ============================================================================
 // API Error Class
 // ============================================================================
@@ -81,6 +86,14 @@ export async function apiRequest<T>(
   options?: RequestInit & { auth?: boolean }
 ) {
   const method = options?.method ?? "GET";
+  let didNotifyAuthFailure = false;
+
+  const handleAuthFailure = () => {
+    if (didNotifyAuthFailure) return;
+    didNotifyAuthFailure = true;
+    clearAccessTokenService();
+    notifyAuthFailure();
+  };
 
   const runRequest = async () => {
     const headers = new Headers(options?.headers);
@@ -158,8 +171,7 @@ export async function apiRequest<T>(
       response = retry.response;
       body = retry.body;
     } else {
-      clearAccessTokenService();
-      subscribeToAuthFailure; // Re-export, but we also call notify via tokenService
+      handleAuthFailure();
       if (apiDebug)
         console.warn(
           "[api] Refresh failed. Request remains unauthorized",
@@ -181,7 +193,7 @@ export async function apiRequest<T>(
       rawCode.includes("token") ||
       rawCode.includes("session")
     ) {
-      clearAccessTokenService();
+      handleAuthFailure();
       if (apiDebug)
         console.warn("[api] Session revoked (403 with auth error code)", {
           method,
@@ -189,6 +201,10 @@ export async function apiRequest<T>(
           code: rawCode,
         });
     }
+  }
+
+  if (options?.auth && response.status === 401 && !path.startsWith("/auth/")) {
+    handleAuthFailure();
   }
 
   // ── ERROR HANDLING ──

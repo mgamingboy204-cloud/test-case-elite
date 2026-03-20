@@ -1,4 +1,5 @@
 import { apiRequestAuth } from "./api";
+import { API_ENDPOINTS } from "./api/endpoints";
 
 export type VerificationQueueView = "ACTIVE" | "COMPLETED" | "REJECTED" | "TIMEOUT" | "ALL";
 
@@ -32,32 +33,32 @@ export function isValidGoogleMeetUrl(rawValue: string) {
 }
 
 export async function listVerificationRequestsForWorker(statusView: VerificationQueueView = "ACTIVE") {
-  return apiRequestAuth<{ statusView: VerificationQueueView; requests: WorkerVerificationRequest[] }>(`/admin/verification-requests?statusView=${statusView}`);
+  return apiRequestAuth<{ statusView: VerificationQueueView; requests: WorkerVerificationRequest[] }>(API_ENDPOINTS.admin.verification.list(statusView));
 }
 
 export async function assignVerificationRequest(requestId: string) {
-  return apiRequestAuth<{ request: WorkerVerificationRequest }>(`/admin/verification-requests/${requestId}/assign`, {
+  return apiRequestAuth<{ request: WorkerVerificationRequest }>(API_ENDPOINTS.admin.verification.assign(requestId), {
     method: "POST",
     body: JSON.stringify({})
   });
 }
 
 export async function startVerificationRequest(requestId: string, meetUrl: string) {
-  return apiRequestAuth<{ request: WorkerVerificationRequest }>(`/admin/verification-requests/${requestId}/start`, {
+  return apiRequestAuth<{ request: WorkerVerificationRequest }>(API_ENDPOINTS.admin.verification.start(requestId), {
     method: "POST",
     body: JSON.stringify({ meetUrl })
   });
 }
 
 export async function approveVerificationRequest(requestId: string) {
-  return apiRequestAuth<{ request: WorkerVerificationRequest }>(`/admin/verification-requests/${requestId}/approve`, {
+  return apiRequestAuth<{ request: WorkerVerificationRequest }>(API_ENDPOINTS.admin.verification.approve(requestId), {
     method: "POST",
     body: JSON.stringify({})
   });
 }
 
 export async function rejectVerificationRequest(requestId: string, reason: string) {
-  return apiRequestAuth<{ request: WorkerVerificationRequest }>(`/admin/verification-requests/${requestId}/reject`, {
+  return apiRequestAuth<{ request: WorkerVerificationRequest }>(API_ENDPOINTS.admin.verification.reject(requestId), {
     method: "POST",
     body: JSON.stringify({ reason })
   });

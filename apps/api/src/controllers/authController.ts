@@ -96,6 +96,32 @@ function resolveRememberPreference(
   return Boolean(value?.rememberMe ?? value?.rememberDevice30Days ?? value?.rememberDevice ?? false);
 }
 
+
+async function ensureOnboardingAccess(user: {
+  id: string;
+  onboardingStep?: string | null;
+  onboardingToken?: string | null;
+  onboardingTokenExpiresAt?: Date | null;
+}) {
+  if (user.onboardingStep === "ACTIVE") {
+    return {
+      onboardingToken: user.onboardingToken ?? null,
+      onboardingTokenExpiresAt: user.onboardingTokenExpiresAt ?? null
+    };
+  }
+
+  const expiresAt = user.onboardingTokenExpiresAt?.getTime() ?? 0;
+  const hasValidOnboardingToken = Boolean(user.onboardingToken) && expiresAt > Date.now();
+  if (hasValidOnboardingToken) {
+    return {
+      onboardingToken: user.onboardingToken ?? null,
+      onboardingTokenExpiresAt: user.onboardingTokenExpiresAt ?? null
+    };
+  }
+
+  return issueOnboardingToken(user.id);
+}
+
 export async function sendOtp(req: Request, res: Response) {
   const { phone } = req.body as { phone: string };
   await requestOtp(phone);
@@ -453,6 +479,7 @@ export async function refreshAccessToken(req: Request, res: Response) {
 
   const accessToken = signAccessToken(user.id, { rememberMe });
   const nextRefreshToken = signRefreshToken(user.id, { rememberMe, tokenVersion: user.tokenVersion });
+  const onboardingAccess = await ensureOnboardingAccess(user);
 
   const refreshTtlDays = rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
   const cookieMeta = setAuthCookies(res, { accessToken, refreshToken: nextRefreshToken, refreshTtlDays });
@@ -465,7 +492,12 @@ export async function refreshAccessToken(req: Request, res: Response) {
     refreshCookie: cookieMeta.refreshCookie
   });
 
-  return res.json({ ok: true, accessToken });
+  return res.json({
+    ok: true,
+    accessToken,
+    onboardingToken: onboardingAccess.onboardingToken ?? null,
+    onboardingTokenExpiresAt: onboardingAccess.onboardingTokenExpiresAt ?? null
+  });
 }
 
 export async function whoAmI(req: Request, res: Response) {
@@ -501,6 +533,11 @@ export async function whoAmI(req: Request, res: Response) {
     await ensureUserExecutiveAssignmentAfterOnboarding(user.id);
   }
 
+  const onboardingAccess = await ensureOnboardingAccess({
+    ...user,
+    onboardingStep: resolvedOnboardingStep
+  });
+
   const appState = resolveUserAppState({
     isAuthenticated: true,
     onboardingStep: resolvedOnboardingStep,
@@ -531,8 +568,8 @@ export async function whoAmI(req: Request, res: Response) {
     paymentStatus: user.paymentStatus,
     profileCompletedAt: user.profileCompletedAt,
     photoCount,
-    onboardingToken: user.onboardingToken,
-    onboardingTokenExpiresAt: user.onboardingTokenExpiresAt,
+    onboardingToken: onboardingAccess.onboardingToken ?? null,
+    onboardingTokenExpiresAt: onboardingAccess.onboardingTokenExpiresAt ?? null,
     subscriptionStartedAt: user.subscriptionStartedAt,
     subscriptionEndsAt: user.subscriptionEndsAt,
     appState

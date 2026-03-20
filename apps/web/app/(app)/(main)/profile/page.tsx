@@ -7,6 +7,7 @@ import { normalizeApiError } from "@/lib/apiErrors";
 import { ProtectedState } from "@/components/ui/protected-state";
 import { fetchProfile, type ProfileViewModel } from "@/lib/queries";
 import { useStaleWhileRevalidate } from "@/lib/cache";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { Loader2, PencilLine, ShieldCheck, UserRoundCheck, ImagePlus, Trash2, KeyRound } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
@@ -151,12 +152,12 @@ export default function ProfilePage() {
     try {
       if (key === "pushNotificationsEnabled") {
         // PRD endpoint
-        await apiRequestAuth("/settings/notifications", {
+        await apiRequestAuth(API_ENDPOINTS.settings.notifications, {
           method: "POST",
           body: JSON.stringify({ enabled: value })
         });
       } else {
-        await apiRequestAuth("/me/profile/settings", {
+        await apiRequestAuth(API_ENDPOINTS.profile.settings, {
           method: "PATCH",
           body: JSON.stringify({ [key]: value })
         });
@@ -192,12 +193,10 @@ export default function ProfilePage() {
     setSettingsMessage("");
 
     try {
-      await apiRequestAuth<{ deleted: boolean }>("/users/account", {
+      await apiRequestAuth<{ deleted: boolean }>(API_ENDPOINTS.user.account, {
         method: "DELETE",
         body: JSON.stringify({ confirmation: "DELETE" })
       });
-
-      // Cleanup happens via logout
       await logout();
     } catch (error) {
       setSettingsError(error instanceof ApiError ? error.message : "We could not process account deletion right now.");
@@ -464,7 +463,7 @@ export default function ProfilePage() {
 
                 setPasswordSaving(true);
                 try {
-                  await apiRequestAuth("/auth/change-password", {
+                  await apiRequestAuth(API_ENDPOINTS.auth.changePassword, {
                     method: "POST",
                     body: JSON.stringify({ currentPassword, newPassword })
                   });
@@ -574,7 +573,7 @@ function ProfileEditForm({ profile, onCancel, onSaved }: { profile: ProfileViewM
     setError("");
 
     try {
-      await apiRequestAuth("/me/profile", {
+      await apiRequestAuth(API_ENDPOINTS.profile.update, {
         method: "PATCH",
         body: JSON.stringify({
           name: name.trim(),
@@ -665,11 +664,11 @@ function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpd
     setError("");
     try {
       const dataUrl = await fileToDataUrl(file);
-      const upload = await apiRequestAuth<{ uploadToken: string }>("/profile/photos/presigned-url", {
+      const upload = await apiRequestAuth<{ uploadToken: string }>(API_ENDPOINTS.profile.photos.presignedUrl, {
         method: "POST",
         body: JSON.stringify({ filename: file.name, mimeType: file.type || "image/jpeg" })
       });
-      await apiRequestAuth("/profile/photos/confirm", {
+      await apiRequestAuth(API_ENDPOINTS.profile.photos.confirm, {
         method: "POST",
         body: JSON.stringify({ uploadToken: upload.uploadToken, filename: file.name, dataUrl, cropX: 0, cropY: 0, cropZoom: 1 })
       });
@@ -690,7 +689,7 @@ function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpd
     next[target] = temp;
     setError("");
     try {
-      await apiRequestAuth("/profile/photos/reorder", {
+      await apiRequestAuth(API_ENDPOINTS.profile.photos.reorder, {
         method: "PATCH",
         body: JSON.stringify({
           photos: next.map((photo, photoIndex) => ({ photoId: photo.id, photoIndex }))
@@ -706,7 +705,7 @@ function PhotoManager({ profile, onUpdated }: { profile: ProfileViewModel; onUpd
     setBusyPhotoId(photoId);
     setError("");
     try {
-      await apiRequestAuth(`/profile/photos/${photoId}`, { method: "DELETE" });
+      await apiRequestAuth(API_ENDPOINTS.profile.photos.delete(photoId), { method: "DELETE" });
       await onUpdated("Photo removed.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to remove photo.");

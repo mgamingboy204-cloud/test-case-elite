@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiRequestAuth } from "@/lib/api";
 import { allowTestBypass, useAuth } from "@/contexts/AuthContext";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { motion } from "framer-motion";
 import { Check, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -29,6 +30,31 @@ type PaymentInitResponse =
       mock: { orderId: string; paymentId: string; signature: string };
     };
 
+type RazorpayVerificationPayload = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
+
+type RazorpayCheckoutOptions = {
+  key: string;
+  amount: number;
+  currency: string;
+  order_id: string;
+  name: string;
+  description: string;
+  handler: (response: RazorpayVerificationPayload) => void | Promise<void>;
+  modal: {
+    ondismiss: () => void | Promise<void>;
+  };
+};
+
+type RazorpayCheckoutInstance = {
+  open: () => void;
+};
+
+type RazorpayCheckoutConstructor = new (options: RazorpayCheckoutOptions) => RazorpayCheckoutInstance;
+
 const PLAN_COPY: Record<PlanId, { label: string; price: string }> = {
   ONE_MONTH: { label: "1 Month", price: "INR 30,000" },
   FIVE_MONTHS: { label: "5 Months", price: "INR 70,000" },
@@ -38,9 +64,14 @@ const PLAN_COPY: Record<PlanId, { label: string; price: string }> = {
 const FAILURE_MESSAGE =
   "Payment could not be completed. Please contact premium support on WhatsApp — our team responds within 1 to 2 hours.";
 
+function getRazorpayConstructor() {
+  if (typeof window === "undefined") return null;
+  return (window as Window & typeof globalThis & { Razorpay?: RazorpayCheckoutConstructor }).Razorpay ?? null;
+}
+
 async function ensureRazorpayCheckoutLoaded() {
   if (typeof window === "undefined") return false;
-  if ((window as any).Razorpay) return true;
+  if (getRazorpayConstructor()) return true;
 
   await new Promise<void>((resolve, reject) => {
     const script = document.createElement("script");
@@ -51,7 +82,7 @@ async function ensureRazorpayCheckoutLoaded() {
     document.body.appendChild(script);
   });
 
-  return Boolean((window as any).Razorpay);
+  return Boolean(getRazorpayConstructor());
 }
 
 export default function RenewMembershipPage() {
@@ -78,7 +109,7 @@ export default function RenewMembershipPage() {
   useEffect(() => {
     const loadOverview = async () => {
       try {
-        const data = await apiRequestAuth<PaymentOverview>("/payments/me");
+        const data = await apiRequestAuth<PaymentOverview>(API_ENDPOINTS.payments.overview);
         setOverview(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not load membership plans.");
@@ -97,13 +128,13 @@ export default function RenewMembershipPage() {
     setError("");
     setProcessing(true);
     try {
-      const init = await apiRequestAuth<PaymentInitResponse>("/payments/initiate", {
+      const init = await apiRequestAuth<PaymentInitResponse>(API_ENDPOINTS.payments.initiate, {
         method: "POST",
         body: JSON.stringify({ tier: selectedTier })
       });
 
       if (init.gateway === "mock") {
-        await apiRequestAuth("/payments/verify", {
+        await apiRequestAuth(API_ENDPOINTS.payments.verify, {
           method: "POST",
           body: JSON.stringify({
             orderId: init.mock.orderId,
@@ -113,19 +144,20 @@ export default function RenewMembershipPage() {
         });
       } else {
         const loaded = await ensureRazorpayCheckoutLoaded();
-        if (!loaded || !(window as any).Razorpay) throw new Error("Payment gateway unavailable.");
+        const Razorpay = getRazorpayConstructor();
+        if (!loaded || !Razorpay) throw new Error("Payment gateway unavailable.");
 
         await new Promise<void>((resolve, reject) => {
-          const paymentObject = new (window as any).Razorpay({
+          const paymentObject = new Razorpay({
             key: init.razorpay.keyId,
             amount: init.razorpay.amountPaise,
             currency: init.razorpay.currency,
             order_id: init.razorpay.orderId,
             name: "VAEL Membership",
             description: `Membership ${selectedTier}`,
-            handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+            handler: async (response: RazorpayVerificationPayload) => {
               try {
-                await apiRequestAuth("/payments/verify", {
+                await apiRequestAuth(API_ENDPOINTS.payments.verify, {
                   method: "POST",
                   body: JSON.stringify({
                     orderId: response.razorpay_order_id,
@@ -140,7 +172,7 @@ export default function RenewMembershipPage() {
             },
             modal: {
               ondismiss: async () => {
-                await apiRequestAuth("/payments/fail", {
+                await apiRequestAuth(API_ENDPOINTS.payments.fail, {
                   method: "POST",
                   body: JSON.stringify({ reason: "Payment canceled by user." })
                 });
@@ -172,11 +204,11 @@ export default function RenewMembershipPage() {
     setProcessing(true);
     setError("");
     try {
-      await apiRequestAuth<PaymentInitResponse>("/payments/initiate", {
+      await apiRequestAuth<PaymentInitResponse>(API_ENDPOINTS.payments.initiate, {
         method: "POST",
         body: JSON.stringify({ tier: selectedTier })
       });
-      await apiRequestAuth("/payments/mock/complete", { method: "POST" });
+      await apiRequestAuth(API_ENDPOINTS.payments.mockComplete, { method: "POST" });
       await refreshCurrentUser();
       router.push("/profile");
     } catch (err) {

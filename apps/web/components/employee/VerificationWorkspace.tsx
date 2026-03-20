@@ -22,7 +22,7 @@ const VIEWS: Array<{ value: VerificationQueueView; label: string }> = [
   { value: "ALL", label: "All" }
 ];
 
-export default function VerifyConsolePage() {
+export function VerificationWorkspace() {
   const [view, setView] = useState<VerificationQueueView>("ACTIVE");
   const [requests, setRequests] = useState<WorkerVerificationRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -40,9 +40,7 @@ export default function VerifyConsolePage() {
     return selected.reason.replace("WHATSAPP_HELP_REQUESTED:", "");
   }, [selected?.reason]);
 
-  const isValidMeetUrl = useMemo(() => {
-    return isValidGoogleMeetUrl(meetUrl);
-  }, [meetUrl]);
+  const isValidMeetUrl = useMemo(() => isValidGoogleMeetUrl(meetUrl), [meetUrl]);
 
   const refresh = useCallback(async (targetView = view) => {
     const data = await listVerificationRequestsForWorker(targetView);
@@ -122,7 +120,7 @@ export default function VerifyConsolePage() {
 
       {loading ? (
         <div className="rounded-xl border border-[#1f222b] bg-[#0d1016] p-6 text-sm text-white/65 inline-flex items-center gap-2">
-          <Loader2 size={16} className="animate-spin" /> Loading verification queue…
+          <Loader2 size={16} className="animate-spin" /> Loading verification queue...
         </div>
       ) : requests.length === 0 ? (
         <div className="rounded-xl border border-[#1f222b] bg-[#0d1016] p-8 text-sm text-white/60">No verification requests in this view.</div>
@@ -226,7 +224,7 @@ export default function VerifyConsolePage() {
                     </button>
                   </div>
 
-                  {busyAction ? <p className="text-xs text-white/60 inline-flex items-center gap-2"><Loader2 size={13} className="animate-spin" /> Processing action…</p> : null}
+                  {busyAction ? <p className="text-xs text-white/60 inline-flex items-center gap-2"><Loader2 size={13} className="animate-spin" /> Processing action...</p> : null}
                 </div>
               </div>
             )}
@@ -236,3 +234,6 @@ export default function VerifyConsolePage() {
     </div>
   );
 }
+
+export default VerificationWorkspace;
+

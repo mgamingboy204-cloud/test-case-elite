@@ -89,7 +89,7 @@ function newDefaultOnlineOptions() {
   };
 }
 
-export default function AgentWorkspace() {
+export function MatchHandlerWorkspace() {
   const [mode, setMode] = useState<MeetMode>("OFFLINE");
   const [offlineView, setOfflineView] = useState<OfflineMeetStatusView>("ACTIVE");
   const [onlineView, setOnlineView] = useState<OnlineMeetStatusView>("ACTIVE");
@@ -267,7 +267,7 @@ export default function AgentWorkspace() {
                 onClick={() => setSelectedCaseId(entry.id)}
                 className={`w-full rounded-xl border p-2 text-left text-xs ${selectedCaseId === entry.id ? "border-primary/60 bg-primary/10" : "border-white/15"}`}
               >
-                <p className="font-medium">{entry.users[0]?.name ?? "Member"} × {entry.users[1]?.name ?? "Member"}</p>
+                <p className="font-medium">{entry.users[0]?.name ?? "Member"} x {entry.users[1]?.name ?? "Member"}</p>
                 <p className="mt-1 uppercase tracking-[0.12em] text-[10px] text-white/50">{statusText(entry.status)}</p>
               </button>
             ))}
@@ -277,7 +277,7 @@ export default function AgentWorkspace() {
 
         <section className="rounded-2xl border border-white/10 bg-[#121826] p-5 text-white">
           {loading ? (
-            <div className="flex items-center gap-2 text-white/65"><Loader2 size={16} className="animate-spin" /> Loading…</div>
+            <div className="flex items-center gap-2 text-white/65"><Loader2 size={16} className="animate-spin" /> Loading...</div>
           ) : mode === "OFFLINE" && selectedOffline ? (
             <div className="space-y-4">
               <DeskSummary
@@ -593,3 +593,6 @@ function OverlapSummary({ overlapItems }: { overlapItems: string[] }) {
     </div>
   );
 }
+
+export default MatchHandlerWorkspace;
+
