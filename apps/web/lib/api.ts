@@ -1,3 +1,21 @@
+/**
+ * API client with built-in token management and refresh logic.
+ * This is a thin wrapper around fetch that:
+ * - Injects access token in Authorization header
+ * - Automatically retries on 401 with token refresh
+ * - Handles auth failure notifications
+ * - Uses the centralized token service
+ */
+
+import {
+  getAccessToken,
+  setAccessToken as setAccessTokenService,
+  clearAccessToken as clearAccessTokenService,
+  initializeAccessToken as initializeAccessTokenService,
+  subscribeToAuthFailure,
+  refreshAccessToken as refreshAccessTokenService,
+} from "./auth/tokenService";
+
 function resolveApiBaseUrl() {
   const configured = (
     process.env.NEXT_PUBLIC_API_BASE_URL ??
@@ -24,57 +42,24 @@ function resolveApiBaseUrl() {
 export const API_BASE_URL = resolveApiBaseUrl();
 const apiDebug = process.env.NODE_ENV !== "production";
 
-const ACCESS_TOKEN_STORAGE_KEY = "vael_access_token";
-
-let accessToken: string | null = null;
-const authFailureListeners = new Set<() => void>();
-let authGeneration = 0;
-
-function readStoredAccessToken() {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
-}
-
-function writeStoredAccessToken(token: string | null) {
-  if (typeof window === "undefined") return;
-  if (token) {
-    localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token);
-    return;
-  }
-  localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
-}
+// Re-export from token service for backwards compatibility
+export { subscribeToAuthFailure };
 
 export function initializeAccessToken() {
-  accessToken = readStoredAccessToken();
+  initializeAccessTokenService();
 }
 
 export function setAccessToken(token: string | null) {
-  // Bump generation when clearing so in-flight refreshes can't re-save tokens.
-  if (!token) authGeneration += 1;
-  accessToken = token;
-  writeStoredAccessToken(token);
+  setAccessTokenService(token);
 }
 
 export function clearAccessToken() {
-  setAccessToken(null);
+  clearAccessTokenService();
 }
 
-export function subscribeToAuthFailure(listener: () => void) {
-  authFailureListeners.add(listener);
-  return () => {
-    authFailureListeners.delete(listener);
-  };
-}
-
-function notifyAuthFailure() {
-  for (const listener of authFailureListeners) {
-    try {
-      listener();
-    } catch (error) {
-      if (apiDebug) console.error("[auth] Auth failure listener crashed", error);
-    }
-  }
-}
+// ============================================================================
+// API Error Class
+// ============================================================================
 
 export class ApiError extends Error {
   status: number;
@@ -87,68 +72,30 @@ export class ApiError extends Error {
   }
 }
 
-let refreshPromise: Promise<"success" | "unauthorized" | "forbidden"> | null = null;
+// ============================================================================
+// API Request Implementation
+// ============================================================================
 
-async function refreshAccessToken(): Promise<"success" | "unauthorized" | "forbidden"> {
-  if (refreshPromise) return refreshPromise;
-
-  refreshPromise = (async () => {
-    const generationAtStart = authGeneration;
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/token/refresh`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({}),
-        credentials: "include"
-      });
-
-      if (!response.ok) {
-        if (response.status === 403) return "forbidden";
-        return "unauthorized";
-      }
-
-      const body = (await response.json().catch(() => null)) as { accessToken?: string } | null;
-      if (!body?.accessToken) {
-        clearAccessToken();
-        return "unauthorized";
-      }
-
-      // If the user logged out while we were refreshing, do not store a new token.
-      if (authGeneration !== generationAtStart) {
-        clearAccessToken();
-        return "unauthorized";
-      }
-
-      setAccessToken(body.accessToken);
-      return "success";
-    } catch (error) {
-      clearAccessToken();
-      if (apiDebug) console.error("[auth] Refresh token request failed", {
-        url: `${API_BASE_URL}/auth/token/refresh`,
-        error
-      });
-      return "unauthorized";
-    } finally {
-      refreshPromise = null;
-    }
-  })();
-
-  return refreshPromise;
-}
-
-export async function apiRequest<T>(path: string, options?: RequestInit & { auth?: boolean }) {
+export async function apiRequest<T>(
+  path: string,
+  options?: RequestInit & { auth?: boolean }
+) {
   const method = options?.method ?? "GET";
 
   const runRequest = async () => {
     const headers = new Headers(options?.headers);
-    const resolvedAccessToken = accessToken ?? readStoredAccessToken();
-    accessToken = resolvedAccessToken;
-    if (options?.auth && resolvedAccessToken && !headers.has("Authorization")) {
-      headers.set("Authorization", `Bearer ${resolvedAccessToken}`);
+
+    // Get current access token
+    if (options?.auth) {
+      const token = getAccessToken();
+      if (token && !headers.has("Authorization")) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
     }
-    const hasJsonBody = options?.body !== undefined && !(options.body instanceof FormData);
+
+    // Set default content-type for JSON bodies
+    const hasJsonBody =
+      options?.body !== undefined && !(options.body instanceof FormData);
     if (hasJsonBody && !headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");
     }
@@ -158,64 +105,120 @@ export async function apiRequest<T>(path: string, options?: RequestInit & { auth
       response = await fetch(`${API_BASE_URL}${path}`, {
         ...options,
         headers,
-        credentials: "include"
+        credentials: "include", // Include HttpOnly cookies for refresh token
       });
     } catch (error) {
-      if (apiDebug) console.error("[api] Network request failed", {
-        method,
-        path,
-        auth: options?.auth ?? false,
-        error
-      });
+      if (apiDebug)
+        console.error("[api] Network request failed", {
+          method,
+          path,
+          auth: options?.auth ?? false,
+          error,
+        });
       throw new ApiError(`Network error while calling ${method} ${path}`, 0, {
-        cause: error instanceof Error ? error.message : String(error)
+        cause:
+          error instanceof Error ? error.message : String(error),
       });
     }
 
+    // Parse response body
     const contentType = response.headers.get("content-type") ?? "";
-    const body = contentType.includes("application/json") ? await response.json() : await response.text();
+    const body = contentType.includes("application/json")
+      ? await response.json()
+      : await response.text();
 
     return { response, body };
   };
 
   let { response, body } = await runRequest();
 
-  if (options?.auth && response.status === 401 && !path.startsWith("/auth/")) {
-    if (apiDebug) console.warn("[api] Received 401 on authenticated request. Attempting token refresh", { method, path });
-    const refreshStatus = await refreshAccessToken();
+  // ── AUTH-SPECIFIC HANDLING ──
+
+  // On 401: attempt token refresh if not already an auth endpoint
+  if (
+    options?.auth &&
+    response.status === 401 &&
+    !path.startsWith("/auth/")
+  ) {
+    if (apiDebug)
+      console.warn(
+        "[api] Received 401 on authenticated request. Attempting token refresh",
+        { method, path }
+      );
+
+    const refreshStatus = await refreshAccessTokenService();
+
     if (refreshStatus === "success") {
-      if (apiDebug) console.info("[api] Refresh succeeded. Retrying request", { method, path });
+      if (apiDebug)
+        console.info("[api] Refresh succeeded. Retrying request", {
+          method,
+          path,
+        });
       const retry = await runRequest();
       response = retry.response;
       body = retry.body;
     } else {
-      clearAccessToken();
-      notifyAuthFailure();
-      if (apiDebug) console.warn("[api] Refresh failed. Request remains unauthorized", { method, path, refreshStatus });
+      clearAccessTokenService();
+      subscribeToAuthFailure; // Re-export, but we also call notify via tokenService
+      if (apiDebug)
+        console.warn(
+          "[api] Refresh failed. Request remains unauthorized",
+          { method, path, refreshStatus }
+        );
     }
   }
 
+  // On 403: check for auth-related error codes and notify
   if (options?.auth && response.status === 403) {
-    const rawCode = typeof body === "object" && body !== null && "code" in body
-      ? String((body as { code?: string }).code ?? "").toLowerCase()
-      : "";
-    if (rawCode.includes("unauth") || rawCode.includes("token") || rawCode.includes("session")) {
-      clearAccessToken();
-      notifyAuthFailure();
+    const rawCode =
+      typeof body === "object" &&
+      body !== null &&
+      "code" in body
+        ? String((body as { code?: string }).code ?? "").toLowerCase()
+        : "";
+    if (
+      rawCode.includes("unauth") ||
+      rawCode.includes("token") ||
+      rawCode.includes("session")
+    ) {
+      clearAccessTokenService();
+      if (apiDebug)
+        console.warn("[api] Session revoked (403 with auth error code)", {
+          method,
+          path,
+          code: rawCode,
+        });
     }
   }
+
+  // ── ERROR HANDLING ──
 
   if (!response.ok) {
-    const message = typeof body === "object" && body !== null && "message" in body
-      ? String((body as { message?: string }).message)
-      : `Request failed: ${response.status}`;
-    if (apiDebug) console.error("[api] Request failed", { method, path, status: response.status, body });
+    const message =
+      typeof body === "object" &&
+      body !== null &&
+      "message" in body
+        ? String((body as { message?: string }).message)
+        : `Request failed: ${response.status}`;
+    if (apiDebug)
+      console.error("[api] Request failed", {
+        method,
+        path,
+        status: response.status,
+        body,
+      });
     throw new ApiError(message, response.status, body);
   }
 
   return body as T;
 }
 
-export async function apiRequestAuth<T>(path: string, options?: Omit<RequestInit, "headers"> & { headers?: HeadersInit }) {
+/**
+ * Convenience wrapper for authenticated requests.
+ */
+export async function apiRequestAuth<T>(
+  path: string,
+  options?: Omit<RequestInit, "headers"> & { headers?: HeadersInit }
+) {
   return apiRequest<T>(path, { ...options, auth: true });
 }

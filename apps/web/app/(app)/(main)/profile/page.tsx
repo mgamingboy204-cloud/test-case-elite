@@ -197,8 +197,7 @@ export default function ProfilePage() {
         body: JSON.stringify({ confirmation: "DELETE" })
       });
 
-      localStorage.removeItem("vael_pending_phone");
-      localStorage.removeItem("vael_signup_token");
+      // Cleanup happens via logout
       await logout();
     } catch (error) {
       setSettingsError(error instanceof ApiError ? error.message : "We could not process account deletion right now.");

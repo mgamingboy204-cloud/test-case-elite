@@ -10,6 +10,16 @@ import {
   routeForFrontendOnboardingStep
 } from "@/lib/onboarding";
 import { clearAllCaches } from "@/lib/cache";
+import {
+  readStoredPendingPhone,
+  writeStoredPendingPhone,
+  readStoredSignupToken,
+  writeStoredSignupToken,
+} from "@/lib/auth/tokenStorage";
+import { performSessionCleanup } from "@/lib/auth/tokenService";
+
+// Timeout for initial /me bootstrap call (prevents infinite hang)
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
 
 export type OnboardingStep = FrontendOnboardingStep;
 
@@ -136,25 +146,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    let timeoutId: NodeJS.Timeout | null = null;
 
     const hydrate = async () => {
       initializeAccessToken();
 
-      const storedPendingPhone = localStorage.getItem("vael_pending_phone");
-      const storedSignupToken = localStorage.getItem("vael_signup_token");
-      setPendingPhone(storedPendingPhone || null);
-      setSignupToken(storedSignupToken || null);
+      // Restore temporary signup/login state from storage
+      const storedPendingPhone = readStoredPendingPhone();
+      const storedSignupToken = readStoredSignupToken();
+      setPendingPhone(storedPendingPhone);
+      setSignupToken(storedSignupToken);
 
       try {
-        await refreshCurrentUser();
+        // Attempt to restore session with timeout protection
+        await Promise.race([
+          refreshCurrentUser(),
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Auth bootstrap timeout")),
+              AUTH_BOOTSTRAP_TIMEOUT_MS
+            )
+          ),
+        ]);
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
-          // Session missing/expired; treat as logged out.
+          // Session missing/expired; treat as logged out
+        } else if (error instanceof Error && error.message === "Auth bootstrap timeout") {
+          // Timeout occurred; clear auth and proceed unauthenticated
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("[auth] Bootstrap timeout; proceeding as unauthenticated");
+          }
         }
         clearAccessToken();
         setUser(null);
       } finally {
-        if (!cancelled) setIsInitialized(true);
+        if (!cancelled) {
+          setIsInitialized(true);
+        }
+        // Clean up timeout
+        if (timeoutId) clearTimeout(timeoutId);
       }
     };
 
@@ -162,6 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, []);
 
@@ -183,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     setPendingPhone(phone);
-    localStorage.setItem("vael_pending_phone", phone);
+    writeStoredPendingPhone(phone);
     router.push("/signup/otp");
   };
 
@@ -196,7 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     setSignupToken(response.signupToken);
-    localStorage.setItem("vael_signup_token", response.signupToken);
+    writeStoredSignupToken(response.signupToken);
     router.push("/signup/password");
   };
 
@@ -210,7 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     setSignupToken(response.signupToken);
-    localStorage.setItem("vael_signup_token", response.signupToken);
+    writeStoredSignupToken(response.signupToken);
     router.push("/signup/password");
   };
 
@@ -244,9 +275,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setPendingPhone(null);
-    localStorage.removeItem("vael_pending_phone");
+    writeStoredPendingPhone(null);
     setSignupToken(null);
-    localStorage.removeItem("vael_signup_token");
+    writeStoredSignupToken(null);
 
     const nextRoute = routeForOnboardingStep(resolveFrontendOnboardingStep({
       isAuthenticated: true,
@@ -269,7 +300,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     setPendingPhone(phone);
-    localStorage.setItem("vael_pending_phone", phone);
+    writeStoredPendingPhone(phone);
 
     if (response.otpRequired) {
       return { otpRequired: true };
@@ -282,7 +313,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(response.accessToken);
     setUser(response.user);
     setPendingPhone(null);
-    localStorage.removeItem("vael_pending_phone");
+    writeStoredPendingPhone(null);
     router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
       isAuthenticated: true,
       backendStep: response.user.onboardingStep,
@@ -305,7 +336,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(response.accessToken);
     setUser(response.user);
     setPendingPhone(null);
-    localStorage.removeItem("vael_pending_phone");
+    writeStoredPendingPhone(null);
     router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
       isAuthenticated: true,
       backendStep: response.user.onboardingStep,
@@ -337,7 +368,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(response.accessToken);
     setUser(response.user);
     setPendingPhone(null);
-    localStorage.removeItem("vael_pending_phone");
+    writeStoredPendingPhone(null);
     router.push(routeForOnboardingStep(resolveFrontendOnboardingStep({
       isAuthenticated: true,
       backendStep: response.user.onboardingStep,
@@ -365,15 +396,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiRequestAuth<{ ok: true }>("/auth/logout", { method: "POST" });
     } catch {
-      // ignore logout API errors
+      // Best-effort: ignore logout API errors
     }
-    clearAccessToken();
+    // Centralized cleanup: clears all auth storage, bumps generation, notifies listeners
+    performSessionCleanup();
     clearAllCaches();
     setUser(null);
     setPendingPhone(null);
     setSignupToken(null);
-    localStorage.removeItem("vael_pending_phone");
-    localStorage.removeItem("vael_signup_token");
     router.push("/signin");
   };
 

@@ -4,8 +4,21 @@ import { SceneCanvas } from "@/components/scene/scene-canvas";
 import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { motion, useScroll } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 
 export default function Home() {
+  const { isAuthenticated, onboardingStep } = useAuth();
+  const router = useRouter();
+
+  // Redirect authenticated users to the app
+  useEffect(() => {
+    if (isAuthenticated && onboardingStep === "COMPLETED") {
+      router.replace("/discover");
+    }
+  }, [isAuthenticated, onboardingStep, router]);
+
   // No target/container needed — the marketing layout owns the scroll context.
   // useScroll() defaults to tracking window scroll, which is what we want here.
   useScroll();
