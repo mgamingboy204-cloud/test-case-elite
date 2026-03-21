@@ -6,14 +6,7 @@
  * - Temporary signup flow state is handled elsewhere
  */
 
-const API_BASE_URL = (() => {
-  const configured = (
-    process.env.NEXT_PUBLIC_API_BASE_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
-    ""
-  ).trim();
-  return (configured || "http://localhost:4000").replace(/\/$/, "");
-})();
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 
 const DEBUG = process.env.NODE_ENV !== "production";
 

@@ -5,6 +5,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -139,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [pendingPhone, setPendingPhone] = useState<string | null>(null);
   const [signupToken, setSignupToken] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const authStateRevisionRef = useRef(0);
   const router = useRouter();
 
   const isAuthenticated = Boolean(user);
@@ -166,23 +168,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     writeStoredSignupToken(null);
   };
 
-  const clearAuthenticatedState = () => {
-    clearMemberSessionState();
-    setUser(null);
+  const bumpAuthStateRevision = () => {
+    authStateRevisionRef.current += 1;
+    return authStateRevisionRef.current;
   };
 
-  const clearAllLocalAuthState = () => {
+  const clearAllLocalAuthState = (options?: { bumpRevision?: boolean }) => {
+    if (options?.bumpRevision !== false) {
+      bumpAuthStateRevision();
+    }
     clearClientAuthState();
     setUser(null);
     setAuthFlowMode(null);
     setPendingPhone(null);
     setSignupToken(null);
+    setIsInitialized(true);
   };
 
   const applyAuthenticatedUser = (accessToken: string, nextUser: User) => {
+    bumpAuthStateRevision();
     setAccessToken(accessToken);
     setUser(nextUser);
     clearPendingAuthFlow();
+    setIsInitialized(true);
   };
 
   const resetAuthFlow = () => {
@@ -227,6 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     const hydrate = async () => {
+      const bootstrapRevision = authStateRevisionRef.current;
       const storedAuthFlowMode = readStoredAuthFlowMode();
       const storedPendingPhone = readStoredPendingPhone();
       const storedSignupToken = readStoredSignupToken();
@@ -245,16 +254,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }),
         ]);
 
-        if (!cancelled) {
-          if (restoredUser) {
-            setUser(restoredUser);
-            clearPendingAuthFlow();
-          } else {
-            clearAuthenticatedState();
-          }
+        if (cancelled) {
+          return;
+        }
+
+        if (authStateRevisionRef.current !== bootstrapRevision) {
+          debugLog("[auth] Ignoring stale bootstrap result");
+          return;
+        }
+
+        if (restoredUser) {
+          setUser(restoredUser);
+          clearPendingAuthFlow();
+        } else {
+          clearMemberSessionState();
+          setUser(null);
+          setIsInitialized(true);
         }
       } catch (error) {
-        clearAuthenticatedState();
+        if (cancelled) {
+          return;
+        }
+
+        if (authStateRevisionRef.current !== bootstrapRevision) {
+          debugLog("[auth] Ignoring stale bootstrap error");
+          return;
+        }
+
+        clearMemberSessionState();
+        setUser(null);
+        setIsInitialized(true);
         if (
           error instanceof Error &&
           error.message === "Auth bootstrap timeout"
@@ -285,7 +314,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = subscribeToSessionInvalidation(() => {
+      bumpAuthStateRevision();
       setUser(null);
+      setIsInitialized(true);
     });
 
     return () => {

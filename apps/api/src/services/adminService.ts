@@ -486,24 +486,50 @@ function assertRequestIsActive(status: VerificationRequestStatus) {
   }
 }
 
+async function syncVerificationAssignmentOnUser(options: {
+  db: Prisma.TransactionClient;
+  userId: string;
+  actorUserId: string;
+  assignedAt: Date;
+  verificationStatus: "PENDING" | "IN_PROGRESS";
+}) {
+  await options.db.user.update({
+    where: { id: options.userId },
+    data: {
+      assignedEmployeeId: options.actorUserId,
+      assignedAt: options.assignedAt,
+      videoVerificationStatus: options.verificationStatus,
+      onboardingStep: "VIDEO_VERIFICATION_PENDING"
+    }
+  });
+}
+
 async function applyMeetLinkToVerificationRequest(options: {
   db: Prisma.TransactionClient;
   requestId: string;
   actorUserId: string;
   meetUrl: string;
+  assignedAt?: Date | null;
 }) {
   const now = new Date();
-  return options.db.verificationRequest.update({
-    where: { id: options.requestId },
+  const assignedAt = options.assignedAt ?? now;
+  const result = await options.db.verificationRequest.updateMany({
+    where: {
+      id: options.requestId,
+      assignedEmployeeId: options.actorUserId,
+      status: { in: ["ASSIGNED", "IN_PROGRESS"] }
+    },
     data: {
       status: "IN_PROGRESS",
       assignedEmployeeId: options.actorUserId,
-      assignedAt: now,
+      assignedAt,
       verificationLink: options.meetUrl,
       meetUrl: options.meetUrl,
       linkExpiresAt: new Date(now.getTime() + 5 * 60 * 1000)
     }
   });
+  if (result.count === 0) return null;
+  return options.db.verificationRequest.findUnique({ where: { id: options.requestId } });
 }
 export async function listVerificationRequestsForActor(options: {
   statusFilter?: string;
@@ -518,7 +544,6 @@ export async function listVerificationRequestsForActor(options: {
 
   await synchronizeVerificationRequests();
 
-  const isPrivileged = options.isAdmin || options.actorRole === "ADMIN";
   const statusView = resolveVerificationWorkerView(options.statusView);
   const statusInView = statusView === "ALL" ? undefined : VERIFICATION_VIEW_STATUS_MAP[statusView];
   const requests: VerificationRequestListItem[] = await prisma.verificationRequest.findMany({
@@ -527,11 +552,6 @@ export async function listVerificationRequestsForActor(options: {
         ? { status: options.statusFilter as VerificationRequestStatus }
         : statusInView
         ? { status: { in: statusInView } }
-        : {}),
-      ...(!isPrivileged
-        ? {
-            OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: options.actorUserId }]
-          }
         : {})
     },
     include: { user: { select: { id: true, phone: true, email: true } } },
@@ -540,31 +560,66 @@ export async function listVerificationRequestsForActor(options: {
   return { statusView, requests };
 }
 
-function ensureAssignableToActor(caseItem: { assignedEmployeeId: string | null }, actorUserId: string, isPrivileged: boolean) {
-  if (isPrivileged) return;
-  if (caseItem.assignedEmployeeId && caseItem.assignedEmployeeId !== actorUserId) {
+function ensureRequestOwnedByActor(
+  request: { assignedEmployeeId: string | null },
+  actorUserId: string,
+  actionLabel: string
+) {
+  if (!request.assignedEmployeeId) {
+    throw new HttpError(409, { message: `Claim this request before ${actionLabel}.` });
+  }
+  if (request.assignedEmployeeId !== actorUserId) {
     throw new HttpError(403, { message: "This request is assigned to another employee." });
   }
 }
 
-export async function startVerificationRequest(requestId: string, meetUrl: string, actorUserId: string, isPrivileged: boolean) {
+export async function startVerificationRequest(requestId: string, meetUrl: string, actorUserId: string, _isPrivileged: boolean) {
   await synchronizeVerificationRequests({ requestId });
 
-  const existing = await prisma.verificationRequest.findUnique({ where: { id: requestId }, select: { assignedEmployeeId: true, status: true, meetUrl: true } });
+  const existing = await prisma.verificationRequest.findUnique({
+    where: { id: requestId },
+    select: { assignedEmployeeId: true, assignedAt: true, status: true, meetUrl: true, userId: true }
+  });
   if (!existing) throw new HttpError(404, { message: "Verification request not found" });
   assertRequestIsActive(existing.status);
-  ensureAssignableToActor(existing, actorUserId, isPrivileged);
+  ensureRequestOwnedByActor(existing, actorUserId, "sending the meeting link");
+  if (existing.status === "REQUESTED") {
+    throw new HttpError(409, { message: "Claim this request before sending the meeting link." });
+  }
   if (existing.status === "IN_PROGRESS" && existing.assignedEmployeeId === actorUserId && existing.meetUrl === meetUrl) {
-    const request = await prisma.verificationRequest.findUnique({ where: { id: requestId } });
+    const request = await prisma.$transaction(async (tx) => {
+      const current = await tx.verificationRequest.findUnique({ where: { id: requestId } });
+      if (!current) return null;
+      await syncVerificationAssignmentOnUser({
+        db: tx,
+        userId: current.userId,
+        actorUserId,
+        assignedAt: current.assignedAt ?? new Date(),
+        verificationStatus: "IN_PROGRESS"
+      });
+      return current;
+    });
     if (!request) throw new HttpError(404, { message: "Verification request not found" });
     return { request };
   }
 
   const request = await prisma.$transaction(async (tx) => {
-    const updated = await applyMeetLinkToVerificationRequest({ db: tx, requestId, actorUserId, meetUrl });
-    await tx.user.update({
-      where: { id: updated.userId },
-      data: { videoVerificationStatus: "IN_PROGRESS", onboardingStep: "VIDEO_VERIFICATION_PENDING" }
+    const updated = await applyMeetLinkToVerificationRequest({
+      db: tx,
+      requestId,
+      actorUserId,
+      meetUrl,
+      assignedAt: existing.assignedAt
+    });
+    if (!updated) {
+      throw new HttpError(409, { message: "This request is no longer available for this action." });
+    }
+    await syncVerificationAssignmentOnUser({
+      db: tx,
+      userId: updated.userId,
+      actorUserId,
+      assignedAt: updated.assignedAt ?? new Date(),
+      verificationStatus: "IN_PROGRESS"
     });
     await tx.auditLog.create({
       data: {
@@ -596,48 +651,81 @@ export async function startVerificationRequest(requestId: string, meetUrl: strin
 export async function assignVerificationRequest(requestId: string, actorUserId: string) {
   await synchronizeVerificationRequests({ requestId });
 
-  const existing = await prisma.verificationRequest.findUnique({ where: { id: requestId }, select: { status: true } });
-  if (!existing) throw new HttpError(404, { message: "Verification request not found" });
-  if (!["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(existing.status)) {
-    throw new HttpError(409, { message: "This verification request is already closed." });
-  }
-  const now = new Date();
-  const claimResult = await prisma.verificationRequest.updateMany({
-    where: {
-      id: requestId,
-      OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: actorUserId }]
-    },
-    data: {
-      status: "ASSIGNED",
-      assignedEmployeeId: actorUserId,
-      assignedAt: now
-    }
+  const existing = await prisma.verificationRequest.findUnique({
+    where: { id: requestId },
+    select: { status: true, assignedEmployeeId: true, assignedAt: true, userId: true }
   });
-  if (claimResult.count === 0) {
+  if (!existing) throw new HttpError(404, { message: "Verification request not found" });
+  assertRequestIsActive(existing.status);
+  if (existing.assignedEmployeeId && existing.assignedEmployeeId !== actorUserId) {
     throw new HttpError(409, { message: "This request is already assigned to another employee." });
   }
-  const request = await prisma.verificationRequest.findUnique({ where: { id: requestId } });
-  if (!request) throw new HttpError(404, { message: "Verification request not found" });
-  await prisma.user.update({
-    where: { id: request.userId },
-    data: { videoVerificationStatus: "IN_PROGRESS", onboardingStep: "VIDEO_VERIFICATION_PENDING" }
-  });
-  await prisma.auditLog.create({
-    data: {
-      actorUserId,
-      action: "verification_assigned",
-      targetType: "VerificationRequest",
-      targetId: request.id,
-      metadata: {}
+  if (existing.status === "IN_PROGRESS") {
+    if (existing.assignedEmployeeId !== actorUserId) {
+      throw new HttpError(409, { message: "This verification session is already in progress with another employee." });
     }
+    const request = await prisma.$transaction(async (tx) => {
+      const current = await tx.verificationRequest.findUnique({ where: { id: requestId } });
+      if (!current) return null;
+      await syncVerificationAssignmentOnUser({
+        db: tx,
+        userId: current.userId,
+        actorUserId,
+        assignedAt: current.assignedAt ?? new Date(),
+        verificationStatus: "IN_PROGRESS"
+      });
+      return current;
+    });
+    if (!request) throw new HttpError(404, { message: "Verification request not found" });
+    return { request };
+  }
+  const now = new Date();
+  const assignedAt = existing.assignedEmployeeId === actorUserId ? existing.assignedAt ?? now : now;
+  const request = await prisma.$transaction(async (tx) => {
+    const claimResult = await tx.verificationRequest.updateMany({
+      where: {
+        id: requestId,
+        status: { in: ["REQUESTED", "ASSIGNED"] },
+        OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: actorUserId }]
+      },
+      data: {
+        status: "ASSIGNED",
+        assignedEmployeeId: actorUserId,
+        assignedAt
+      }
+    });
+    if (claimResult.count === 0) {
+      throw new HttpError(409, { message: "This request is already assigned to another employee." });
+    }
+    const updated = await tx.verificationRequest.findUnique({ where: { id: requestId } });
+    if (!updated) return null;
+    await syncVerificationAssignmentOnUser({
+      db: tx,
+      userId: updated.userId,
+      actorUserId,
+      assignedAt: updated.assignedAt ?? assignedAt,
+      verificationStatus: "PENDING"
+    });
+    await tx.auditLog.create({
+      data: {
+        actorUserId,
+        action: "verification_assigned",
+        targetType: "VerificationRequest",
+        targetId: updated.id,
+        metadata: {}
+      }
+    });
+    await pushVerificationAlert({
+      db: tx,
+      userId: updated.userId,
+      actorUserId,
+      title: "Verification Assigned",
+      message: "Our team has assigned your verification case and will guide the next step shortly.",
+      metadata: { eventType: "VERIFICATION_ASSIGNED" }
+    });
+    return updated;
   });
-  await pushVerificationAlert({
-    userId: request.userId,
-    actorUserId,
-    title: "Verification Assigned",
-    message: "Our team has assigned your verification case and will guide the next step shortly.",
-    metadata: { eventType: "VERIFICATION_ASSIGNED" }
-  });
+  if (!request) throw new HttpError(404, { message: "Verification request not found" });
   emitAlertsChanged([request.userId]);
   emitVerificationStatusChanged({ userId: request.userId, requestId: request.id, status: request.status });
   emitSessionStateChanged([request.userId], "verification_assigned");
@@ -646,13 +734,16 @@ export async function assignVerificationRequest(requestId: string, actorUserId: 
   return { request };
 }
 
-export async function approveVerificationRequest(requestId: string, actorUserId: string, isPrivileged: boolean) {
+export async function approveVerificationRequest(requestId: string, actorUserId: string, _isPrivileged: boolean) {
   await synchronizeVerificationRequests({ requestId });
 
-  const existing = await prisma.verificationRequest.findUnique({ where: { id: requestId }, select: { assignedEmployeeId: true, userId: true, status: true } });
+  const existing = await prisma.verificationRequest.findUnique({
+    where: { id: requestId },
+    select: { assignedEmployeeId: true, assignedAt: true, userId: true, status: true }
+  });
   if (!existing) throw new HttpError(404, { message: "Verification request not found" });
   assertRequestIsActive(existing.status);
-  ensureAssignableToActor(existing, actorUserId, isPrivileged);
+  ensureRequestOwnedByActor(existing, actorUserId, "approving it");
   const request = await prisma.$transaction(async (tx) => {
     const now = new Date();
     const updated = await tx.verificationRequest.update({
@@ -664,7 +755,9 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
         meetUrl: null,
         linkExpiresAt: null,
         decidedAt: now,
-        decidedBy: actorUserId
+        decidedBy: actorUserId,
+        assignedEmployeeId: existing.assignedEmployeeId ?? actorUserId,
+        assignedAt: existing.assignedAt ?? now
       }
     });
     await tx.user.update({
@@ -676,7 +769,7 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
         onboardingStep: "VIDEO_VERIFIED",
         verifiedByEmployeeId: actorUserId,
         assignedEmployeeId: actorUserId,
-        assignedAt: now
+        assignedAt: existing.assignedAt ?? now
       }
     });
     await tx.auditLog.create({
@@ -706,13 +799,16 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
   return { request };
 }
 
-export async function rejectVerificationRequest(requestId: string, actorUserId: string, reason: string, isPrivileged: boolean) {
+export async function rejectVerificationRequest(requestId: string, actorUserId: string, reason: string, _isPrivileged: boolean) {
   await synchronizeVerificationRequests({ requestId });
 
-  const existing = await prisma.verificationRequest.findUnique({ where: { id: requestId }, select: { assignedEmployeeId: true, status: true } });
+  const existing = await prisma.verificationRequest.findUnique({
+    where: { id: requestId },
+    select: { assignedEmployeeId: true, assignedAt: true, status: true }
+  });
   if (!existing) throw new HttpError(404, { message: "Verification request not found" });
   assertRequestIsActive(existing.status);
-  ensureAssignableToActor(existing, actorUserId, isPrivileged);
+  ensureRequestOwnedByActor(existing, actorUserId, "rejecting it");
   const normalizedReason = reason.trim();
   const marksFraud = /(fake|fraud|impersonat|scam)/i.test(normalizedReason);
   const request = await prisma.$transaction(async (tx) => {
@@ -727,6 +823,8 @@ export async function rejectVerificationRequest(requestId: string, actorUserId: 
         linkExpiresAt: null,
         decidedAt: now,
         decidedBy: actorUserId,
+        assignedEmployeeId: existing.assignedEmployeeId ?? actorUserId,
+        assignedAt: existing.assignedAt ?? now,
         reason: normalizedReason
       }
     });
@@ -784,10 +882,33 @@ export async function setVerificationMeetLink(userId: string, meetUrl: string, a
     const refreshed = await tx.verificationRequest.findUnique({ where: { id: request.id } });
     if (!refreshed) throw new HttpError(404, { message: "Verification request not found" });
     assertRequestIsActive(refreshed.status);
-    const inProgress = await applyMeetLinkToVerificationRequest({ db: tx, requestId: refreshed.id, actorUserId, meetUrl });
-    await tx.user.update({
-      where: { id: userId },
-      data: { videoVerificationStatus: "IN_PROGRESS", onboardingStep: "VIDEO_VERIFICATION_PENDING" }
+    const assignedAt = refreshed.assignedAt ?? new Date();
+    const startResult = await tx.verificationRequest.updateMany({
+      where: {
+        id: refreshed.id,
+        status: { in: ["REQUESTED", "ASSIGNED", "IN_PROGRESS"] },
+        OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: actorUserId }]
+      },
+      data: {
+        status: "IN_PROGRESS",
+        assignedEmployeeId: actorUserId,
+        assignedAt,
+        verificationLink: meetUrl,
+        meetUrl,
+        linkExpiresAt: new Date(Date.now() + 5 * 60 * 1000)
+      }
+    });
+    if (startResult.count === 0) {
+      throw new HttpError(409, { message: "This request is already assigned to another employee." });
+    }
+    const inProgress = await tx.verificationRequest.findUnique({ where: { id: refreshed.id } });
+    if (!inProgress) throw new HttpError(404, { message: "Verification request not found" });
+    await syncVerificationAssignmentOnUser({
+      db: tx,
+      userId,
+      actorUserId,
+      assignedAt: inProgress.assignedAt ?? assignedAt,
+      verificationStatus: "IN_PROGRESS"
     });
     await tx.auditLog.create({
       data: {
@@ -829,6 +950,8 @@ export async function approveVerificationForUser(userId: string, actorUserId: st
       linkExpiresAt: undefined,
       decidedAt: now,
       decidedBy: actorUserId,
+      assignedEmployeeId: request.assignedEmployeeId ?? actorUserId,
+      assignedAt: request.assignedAt ?? now,
       reason: reason?.trim() || undefined
     }
 
@@ -842,7 +965,7 @@ export async function approveVerificationForUser(userId: string, actorUserId: st
       onboardingStep: "VIDEO_VERIFIED",
       verifiedByEmployeeId: actorUserId,
       assignedEmployeeId: actorUserId,
-      assignedAt: now
+      assignedAt: request.assignedAt ?? now
     }
   });
   await prisma.auditLog.create({
@@ -885,6 +1008,8 @@ export async function rejectVerificationForUser(userId: string, actorUserId: str
       linkExpiresAt: undefined,
       decidedAt: now,
       decidedBy: actorUserId,
+      assignedEmployeeId: request.assignedEmployeeId ?? actorUserId,
+      assignedAt: request.assignedAt ?? now,
       reason: normalizedReason
     }
 

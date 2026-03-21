@@ -61,6 +61,29 @@ async function registerAndLoginSession(agent: request.SuperAgentTest, phone: str
   };
 }
 
+async function createStaffUser(options: {
+  phone: string;
+  password: string;
+  email: string;
+  role: "ADMIN" | "EMPLOYEE";
+  isAdmin?: boolean;
+  employeeId?: string;
+}) {
+  return prisma.user.create({
+    data: {
+      phone: options.phone,
+      email: options.email,
+      passwordHash: await bcrypt.hash(options.password, 10),
+      role: options.role,
+      isAdmin: Boolean(options.isAdmin),
+      employeeId: options.employeeId ?? null,
+      status: "APPROVED",
+      verifiedAt: new Date(),
+      phoneVerifiedAt: new Date()
+    }
+  });
+}
+
 beforeEach(async () => {
   await resetDb();
 });
@@ -547,18 +570,12 @@ describe("Admin authorization", () => {
 describe("Verification concierge flow", () => {
   it("allows admin to send a Meet link and approve a verification request", async () => {
     const adminPhone = "5559000000";
-    const passwordHash = await bcrypt.hash("Admin@123", 10);
-    const admin = await prisma.user.create({
-      data: {
-        phone: adminPhone,
-        email: "admin2@example.com",
-        passwordHash,
-        role: "ADMIN",
-        isAdmin: true,
-        status: "APPROVED",
-        verifiedAt: new Date(),
-        phoneVerifiedAt: new Date()
-      }
+    const admin = await createStaffUser({
+      phone: adminPhone,
+      password: "Admin@123",
+      email: "admin2@example.com",
+      role: "ADMIN",
+      isAdmin: true
     });
 
     const userPhone = "5559001111";
@@ -576,26 +593,30 @@ describe("Verification concierge flow", () => {
     });
 
     const agent = request.agent(app);
-    await agent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
+    const adminLogin = await agent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
+    const adminToken = adminLogin.body.accessToken as string;
 
     const userAgent = request.agent(app);
-    await userAgent.post("/auth/login").send({ phone: userPhone, password: "Password@1" });
+    const userLogin = await userAgent.post("/auth/login").send({ phone: userPhone, password: "Password@1" });
+    const userToken = userLogin.body.accessToken as string;
 
-    const createRequest = await userAgent.post("/verification-requests");
+    const createRequest = await withAuth(userAgent.post("/verification-requests"), userToken);
     expect(createRequest.status).toBe(200);
     const requestId = createRequest.body.request.id;
 
-    const start = await agent
-      .post(`/admin/verification-requests/${requestId}/start`)
+    const assign = await withAuth(agent.post(`/admin/verification-requests/${requestId}/assign`), adminToken).send({});
+    expect(assign.status).toBe(200);
+
+    const start = await withAuth(agent.post(`/admin/verification-requests/${requestId}/start`), adminToken)
       .send({ meetUrl: "https://meet.google.com/abc-defg-hij" });
     expect(start.status).toBe(200);
 
-    const statusResponse = await userAgent.get("/me/verification-status");
+    const statusResponse = await withAuth(userAgent.get("/me/verification-status"), userToken);
     expect(statusResponse.status).toBe(200);
     expect(statusResponse.body.status).toBe("IN_PROGRESS");
     expect(statusResponse.body.meetUrl).toBe("https://meet.google.com/abc-defg-hij");
 
-    const approve = await agent.post(`/admin/verification-requests/${requestId}/approve`);
+    const approve = await withAuth(agent.post(`/admin/verification-requests/${requestId}/approve`), adminToken).send({});
     expect(approve.status).toBe(200);
 
     const updatedUser = await prisma.user.findUnique({ where: { phone: userPhone } });
@@ -604,6 +625,127 @@ describe("Verification concierge flow", () => {
     expect(updatedUser?.onboardingStep).toBe("VIDEO_VERIFIED");
     expect(updatedRequest?.status).toBe("COMPLETED");
     expect(admin.id).toBeDefined();
+  });
+
+  it("persists assignment on claim and blocks a second employee from taking the same request", async () => {
+    const employeeOne = await createStaffUser({
+      phone: "5559000101",
+      password: "Employee@123",
+      email: "employee-one@example.com",
+      role: "EMPLOYEE",
+      employeeId: "EMP001"
+    });
+    await createStaffUser({
+      phone: "5559000102",
+      password: "Employee@123",
+      email: "employee-two@example.com",
+      role: "EMPLOYEE",
+      employeeId: "EMP002"
+    });
+
+    const userAgent = request.agent(app);
+    const userToken = await registerAndLogin(userAgent, "5559000103", "Password@1");
+    const user = await prisma.user.findUnique({ where: { phone: "5559000103" } });
+    if (!user) throw new Error("User not found");
+
+    const employeeOneAgent = request.agent(app);
+    const employeeOneLogin = await employeeOneAgent.post("/auth/login").send({ phone: "5559000101", password: "Employee@123" });
+    const employeeOneToken = employeeOneLogin.body.accessToken as string;
+
+    const employeeTwoAgent = request.agent(app);
+    const employeeTwoLogin = await employeeTwoAgent.post("/auth/login").send({ phone: "5559000102", password: "Employee@123" });
+    const employeeTwoToken = employeeTwoLogin.body.accessToken as string;
+
+    const createRequest = await withAuth(userAgent.post("/verification-requests"), userToken);
+    expect(createRequest.status).toBe(200);
+    const requestId = createRequest.body.request.id as string;
+
+    const claim = await withAuth(employeeOneAgent.post(`/admin/verification-requests/${requestId}/assign`), employeeOneToken).send({});
+    expect(claim.status).toBe(200);
+    expect(claim.body.request.status).toBe("ASSIGNED");
+    expect(claim.body.request.assignedEmployeeId).toBe(employeeOne.id);
+
+    const storedRequest = await prisma.verificationRequest.findUnique({ where: { id: requestId } });
+    const storedUser = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(storedRequest?.status).toBe("ASSIGNED");
+    expect(storedRequest?.assignedEmployeeId).toBe(employeeOne.id);
+    expect(storedUser?.assignedEmployeeId).toBe(employeeOne.id);
+    expect(storedUser?.videoVerificationStatus).toBe("PENDING");
+
+    const secondQueue = await withAuth(employeeTwoAgent.get("/admin/verification-requests?statusView=ACTIVE"), employeeTwoToken);
+    expect(secondQueue.status).toBe(200);
+    const queuedRequest = secondQueue.body.requests.find((requestItem: { id: string }) => requestItem.id === requestId);
+    expect(queuedRequest).toBeTruthy();
+    expect(queuedRequest.assignedEmployeeId).toBe(employeeOne.id);
+
+    const secondClaim = await withAuth(employeeTwoAgent.post(`/admin/verification-requests/${requestId}/assign`), employeeTwoToken).send({});
+    expect(secondClaim.status).toBe(409);
+  });
+
+  it("requires an employee to claim a request before sending a meeting link", async () => {
+    await createStaffUser({
+      phone: "5559000111",
+      password: "Employee@123",
+      email: "employee-link@example.com",
+      role: "EMPLOYEE",
+      employeeId: "EMP003"
+    });
+
+    const userAgent = request.agent(app);
+    const userToken = await registerAndLogin(userAgent, "5559000112", "Password@1");
+
+    const employeeAgent = request.agent(app);
+    const employeeLogin = await employeeAgent.post("/auth/login").send({ phone: "5559000111", password: "Employee@123" });
+    const employeeToken = employeeLogin.body.accessToken as string;
+
+    const createRequest = await withAuth(userAgent.post("/verification-requests"), userToken);
+    expect(createRequest.status).toBe(200);
+    const requestId = createRequest.body.request.id as string;
+
+    const start = await withAuth(employeeAgent.post(`/admin/verification-requests/${requestId}/start`), employeeToken).send({
+      meetUrl: "https://meet.google.com/claim-first"
+    });
+    expect(start.status).toBe(409);
+  });
+
+  it("keeps a claimed request assigned after the five-minute waiting window", async () => {
+    const employee = await createStaffUser({
+      phone: "5559000121",
+      password: "Employee@123",
+      email: "employee-timeout@example.com",
+      role: "EMPLOYEE",
+      employeeId: "EMP004"
+    });
+
+    const userAgent = request.agent(app);
+    const userToken = await registerAndLogin(userAgent, "5559000122", "Password@1");
+    const user = await prisma.user.findUnique({ where: { phone: "5559000122" } });
+    if (!user) throw new Error("User not found");
+
+    await prisma.verificationRequest.create({
+      data: {
+        userId: user.id,
+        status: "ASSIGNED",
+        assignedEmployeeId: employee.id,
+        assignedAt: new Date(Date.now() - 6 * 60 * 1000),
+        createdAt: new Date(Date.now() - 6 * 60 * 1000)
+      }
+    });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        assignedEmployeeId: employee.id,
+        assignedAt: new Date(Date.now() - 6 * 60 * 1000),
+        videoVerificationStatus: "PENDING",
+        onboardingStep: "VIDEO_VERIFICATION_PENDING"
+      }
+    });
+
+    const statusResponse = await withAuth(userAgent.get("/me/verification-status"), userToken);
+    expect(statusResponse.status).toBe(200);
+    expect(statusResponse.body.status).toBe("ASSIGNED");
+    expect(statusResponse.body.meetUrl).toBeNull();
   });
 
   it("does not return expired links to the user", async () => {
@@ -659,17 +801,12 @@ describe("Verification concierge flow", () => {
 
   it("requeues WhatsApp help requests into the active employee queue after timeout", async () => {
     const adminPhone = "5552223355";
-    await prisma.user.create({
-      data: {
-        phone: adminPhone,
-        email: "admin-help@example.com",
-        passwordHash: await bcrypt.hash("Admin@123", 10),
-        role: "ADMIN",
-        isAdmin: true,
-        status: "APPROVED",
-        verifiedAt: new Date(),
-        phoneVerifiedAt: new Date()
-      }
+    await createStaffUser({
+      phone: adminPhone,
+      password: "Admin@123",
+      email: "admin-help@example.com",
+      role: "ADMIN",
+      isAdmin: true
     });
 
     const userAgent = request.agent(app);
@@ -707,20 +844,50 @@ describe("Verification concierge flow", () => {
     expect(queue.body.requests.some((requestItem: { id: string }) => requestItem.id === latest?.id)).toBe(true);
   });
 
+  it("rejects WhatsApp help before timeout and after a request has already been claimed", async () => {
+    const employee = await createStaffUser({
+      phone: "5559000201",
+      password: "Employee@123",
+      email: "employee-whatsapp@example.com",
+      role: "EMPLOYEE",
+      employeeId: "EMP005"
+    });
+
+    const userAgent = request.agent(app);
+    const userToken = await registerAndLogin(userAgent, "5559000202", "Password@1");
+    const user = await prisma.user.findUnique({ where: { phone: "5559000202" } });
+    if (!user) throw new Error("User not found");
+
+    const employeeAgent = request.agent(app);
+    const employeeLogin = await employeeAgent.post("/auth/login").send({ phone: "5559000201", password: "Employee@123" });
+    const employeeToken = employeeLogin.body.accessToken as string;
+
+    const createRequest = await withAuth(userAgent.post("/verification-requests"), userToken);
+    expect(createRequest.status).toBe(200);
+    const requestId = createRequest.body.request.id as string;
+
+    const helpBeforeTimeout = await withAuth(userAgent.post("/verification/help/whatsapp"), userToken);
+    expect(helpBeforeTimeout.status).toBe(409);
+
+    const claim = await withAuth(employeeAgent.post(`/admin/verification-requests/${requestId}/assign`), employeeToken).send({});
+    expect(claim.status).toBe(200);
+
+    const helpAfterClaim = await withAuth(userAgent.post("/verification/help/whatsapp"), userToken);
+    expect(helpAfterClaim.status).toBe(409);
+
+    const currentRequest = await prisma.verificationRequest.findUnique({ where: { id: requestId } });
+    expect(currentRequest?.assignedEmployeeId).toBe(employee.id);
+    expect(currentRequest?.status).toBe("ASSIGNED");
+  });
+
   it("allows admin to reject a verification request", async () => {
     const adminPhone = "5559000001";
-    const passwordHash = await bcrypt.hash("Admin@123", 10);
-    await prisma.user.create({
-      data: {
-        phone: adminPhone,
-        email: "admin3@example.com",
-        passwordHash,
-        role: "ADMIN",
-        isAdmin: true,
-        status: "APPROVED",
-        verifiedAt: new Date(),
-        phoneVerifiedAt: new Date()
-      }
+    await createStaffUser({
+      phone: adminPhone,
+      password: "Admin@123",
+      email: "admin3@example.com",
+      role: "ADMIN",
+      isAdmin: true
     });
 
     const userPhone = "5559001112";
@@ -738,17 +905,25 @@ describe("Verification concierge flow", () => {
     });
 
     const adminAgent = request.agent(app);
-    await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
+    const adminLogin = await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
+    const adminToken = adminLogin.body.accessToken as string;
 
     const userAgent = request.agent(app);
-    await userAgent.post("/auth/login").send({ phone: userPhone, password: "Password@1" });
+    const userLogin = await userAgent.post("/auth/login").send({ phone: userPhone, password: "Password@1" });
+    const userToken = userLogin.body.accessToken as string;
 
-    const createRequest = await userAgent.post("/verification-requests");
+    const createRequest = await withAuth(userAgent.post("/verification-requests"), userToken);
     const requestId = createRequest.body.request.id;
 
-    await adminAgent.post(`/admin/verification-requests/${requestId}/start`).send({ meetUrl: "https://meet.google.com/reject-link" });
+    const assign = await withAuth(adminAgent.post(`/admin/verification-requests/${requestId}/assign`), adminToken).send({});
+    expect(assign.status).toBe(200);
 
-    const reject = await adminAgent.post(`/admin/verification-requests/${requestId}/reject`).send({
+    const start = await withAuth(adminAgent.post(`/admin/verification-requests/${requestId}/start`), adminToken).send({
+      meetUrl: "https://meet.google.com/reject-link"
+    });
+    expect(start.status).toBe(200);
+
+    const reject = await withAuth(adminAgent.post(`/admin/verification-requests/${requestId}/reject`), adminToken).send({
       reason: "No-show"
     });
     expect(reject.status).toBe(200);

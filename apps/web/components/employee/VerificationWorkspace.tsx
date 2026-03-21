@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Link as LinkIcon, Loader2, RefreshCcw, ShieldBan, UserCheck } from "lucide-react";
-import { ApiError } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
+import { ApiError } from "@/lib/api";
 import {
   approveVerificationRequest,
   assignVerificationRequest,
@@ -23,7 +24,15 @@ const VIEWS: Array<{ value: VerificationQueueView; label: string }> = [
   { value: "ALL", label: "All" }
 ];
 
+function getOwnershipLabel(request: WorkerVerificationRequest, actorUserId: string | null) {
+  if (!request.assignedEmployeeId) return "Unassigned";
+  if (request.assignedEmployeeId === actorUserId) return "Assigned to you";
+  return "Assigned to another executive";
+}
+
 export function VerificationWorkspace() {
+  const { user } = useAuth();
+  const actorUserId = user?.id ?? null;
   const [view, setView] = useState<VerificationQueueView>("ACTIVE");
   const [requests, setRequests] = useState<WorkerVerificationRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -40,8 +49,12 @@ export function VerificationWorkspace() {
     if (!selected?.reason?.startsWith("WHATSAPP_HELP_REQUESTED:")) return null;
     return selected.reason.replace("WHATSAPP_HELP_REQUESTED:", "");
   }, [selected?.reason]);
-
   const isValidMeetUrl = useMemo(() => isValidGoogleMeetUrl(meetUrl), [meetUrl]);
+  const selectedAssignedToCurrentActor = Boolean(selected && actorUserId && selected.assignedEmployeeId === actorUserId);
+  const selectedAssignedToAnotherActor = Boolean(selected?.assignedEmployeeId && selected.assignedEmployeeId !== actorUserId);
+  const canClaimSelected = Boolean(selected && selected.status === "REQUESTED" && !selected.assignedEmployeeId && !isBusy);
+  const canSendLinkSelected = Boolean(selected && selectedAssignedToCurrentActor && ["ASSIGNED", "IN_PROGRESS"].includes(selected.status) && !isBusy);
+  const canResolveSelected = Boolean(selected && selectedAssignedToCurrentActor && ["ASSIGNED", "IN_PROGRESS"].includes(selected.status) && !isBusy);
 
   const refresh = useCallback(async (targetView = view) => {
     const data = await listVerificationRequestsForWorker(targetView);
@@ -68,7 +81,7 @@ export function VerificationWorkspace() {
     enabled: true,
     refresh: () => refresh(),
     eventTypes: ["admin.verification.queue.changed"],
-    fallbackIntervalMs: 60_000
+    fallbackIntervalMs: 5_000
   });
 
   const runAction = async (key: string, action: () => Promise<void>, successMessage: string) => {
@@ -90,7 +103,7 @@ export function VerificationWorkspace() {
   };
 
   return (
-    <div className="p-8 space-y-6 text-white">
+    <div className="space-y-6 p-8 text-white">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-serif tracking-wide">Video Verification Operations</h1>
@@ -120,30 +133,32 @@ export function VerificationWorkspace() {
       {error ? <div className="rounded-xl border border-red-500/35 bg-red-500/10 px-4 py-3 text-xs text-red-300">{error}</div> : null}
 
       {loading ? (
-        <div className="rounded-xl border border-[#1f222b] bg-[#0d1016] p-6 text-sm text-white/65 inline-flex items-center gap-2">
+        <div className="inline-flex items-center gap-2 rounded-xl border border-[#1f222b] bg-[#0d1016] p-6 text-sm text-white/65">
           <Loader2 size={16} className="animate-spin" /> Loading verification queue...
         </div>
       ) : requests.length === 0 ? (
         <div className="rounded-xl border border-[#1f222b] bg-[#0d1016] p-8 text-sm text-white/60">No verification requests in this view.</div>
       ) : (
         <div className="grid grid-cols-12 gap-5">
-          <aside className="col-span-4 rounded-xl border border-[#1f222b] bg-[#0d1016] p-3 space-y-2 max-h-[70vh] overflow-y-auto">
-            {requests.map((request) => (
-              <button
-                key={request.id}
-                onClick={() => setSelectedId(request.id)}
-                className={`w-full rounded-lg border p-3 text-left ${selectedId === request.id ? "border-[#C89B90]/45 bg-[#C89B90]/10" : "border-[#2a2f3b]"}`}
-              >
-                <p className="text-sm">{request.user.phone}</p>
-                <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-white/50">{request.status.replaceAll("_", " ")}</p>
-                {request.reason?.startsWith("WHATSAPP_HELP_REQUESTED:") ? (
-                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-300">WhatsApp Help Requested</p>
-                ) : null}
-                {request.assignedEmployeeId
-                  ? <p className="mt-1 text-[10px] text-white/45">Assigned {request.assignedAt ? new Date(request.assignedAt).toLocaleString() : ""}</p>
-                  : <p className="mt-1 text-[10px] text-white/45">Unassigned</p>}
-              </button>
-            ))}
+          <aside className="col-span-4 max-h-[70vh] space-y-2 overflow-y-auto rounded-xl border border-[#1f222b] bg-[#0d1016] p-3">
+            {requests.map((request) => {
+              const ownershipLabel = getOwnershipLabel(request, actorUserId);
+              return (
+                <button
+                  key={request.id}
+                  onClick={() => setSelectedId(request.id)}
+                  className={`w-full rounded-lg border p-3 text-left ${selectedId === request.id ? "border-[#C89B90]/45 bg-[#C89B90]/10" : "border-[#2a2f3b]"}`}
+                >
+                  <p className="text-sm">{request.user.phone}</p>
+                  <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-white/50">{request.status.replaceAll("_", " ")}</p>
+                  <p className="mt-1 text-[10px] text-white/45">{ownershipLabel}</p>
+                  {request.reason?.startsWith("WHATSAPP_HELP_REQUESTED:") ? (
+                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-300">WhatsApp Help Requested</p>
+                  ) : null}
+                  {request.assignedAt ? <p className="mt-1 text-[10px] text-white/45">Updated {new Date(request.assignedAt).toLocaleString()}</p> : null}
+                </button>
+              );
+            })}
           </aside>
 
           <section className="col-span-8 rounded-xl border border-[#1f222b] bg-[#0d1016] p-6">
@@ -167,16 +182,23 @@ export function VerificationWorkspace() {
                 ) : null}
 
                 <div className="rounded-xl border border-[#2a2f3b] p-3 text-xs text-white/65">
-                  Verification is always human-led. Share only approved Google Meet links and record every decision through queue actions.
+                  {selectedAssignedToAnotherActor
+                    ? "This request is already owned by another executive. It remains visible here for queue awareness, but only the owner can send the link or close it."
+                    : selectedAssignedToCurrentActor
+                      ? "You own this request. Send the meeting link when ready, then record the final decision here."
+                      : "This request is waiting for an executive to claim it. Claim it first to move the verification forward."}
                 </div>
 
                 <div className="space-y-3 pt-1">
                   <button
-                    disabled={isBusy || !["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(selected.status)}
+                    disabled={!canClaimSelected}
                     onClick={() => void runAction("assign", async () => { await assignVerificationRequest(selected.id); }, "Request assigned to you.")}
                     className="w-full rounded-lg border border-[#C89B90]/40 px-3 py-2 text-xs uppercase tracking-[0.15em] text-[#f0c8be] disabled:opacity-45"
                   >
-                    <span className="inline-flex items-center gap-2"><UserCheck size={14} /> Claim request</span>
+                    <span className="inline-flex items-center gap-2">
+                      <UserCheck size={14} />
+                      {selectedAssignedToCurrentActor ? "Assigned to you" : selectedAssignedToAnotherActor ? "Already assigned" : "Assign to me"}
+                    </span>
                   </button>
 
                   <div className="flex gap-2">
@@ -187,7 +209,7 @@ export function VerificationWorkspace() {
                       className="flex-1 rounded-lg border border-[#2a2f3b] bg-black/30 px-3 py-2 text-sm"
                     />
                     <button
-                      disabled={isBusy || !isValidMeetUrl || !["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(selected.status)}
+                      disabled={!canSendLinkSelected || !isValidMeetUrl}
                       onClick={() => void runAction("start", async () => { await startVerificationRequest(selected.id, meetUrl.trim()); }, "Meet link sent and case moved to in-progress.")}
                       className="rounded-lg border border-primary/40 px-4 py-2 text-xs uppercase tracking-[0.15em] text-primary disabled:opacity-45"
                     >
@@ -202,7 +224,7 @@ export function VerificationWorkspace() {
                   ) : null}
 
                   <button
-                    disabled={isBusy || ["COMPLETED", "REJECTED", "TIMED_OUT"].includes(selected.status)}
+                    disabled={!canResolveSelected}
                     onClick={() => void runAction("approve", async () => { await approveVerificationRequest(selected.id); }, "Verification approved and member progression updated.")}
                     className="w-full rounded-lg border border-emerald-500/40 px-3 py-2 text-xs uppercase tracking-[0.15em] text-emerald-300 disabled:opacity-45"
                   >
@@ -217,7 +239,7 @@ export function VerificationWorkspace() {
                       className="flex-1 rounded-lg border border-[#2a2f3b] bg-black/30 px-3 py-2 text-sm"
                     />
                     <button
-                      disabled={isBusy || !rejectionReason.trim() || ["COMPLETED", "REJECTED", "TIMED_OUT"].includes(selected.status)}
+                      disabled={!canResolveSelected || !rejectionReason.trim()}
                       onClick={() => void runAction("reject", async () => { await rejectVerificationRequest(selected.id, rejectionReason.trim()); }, "Verification rejected and member notified.")}
                       className="rounded-lg border border-red-500/40 px-4 py-2 text-xs uppercase tracking-[0.15em] text-red-300 disabled:opacity-45"
                     >
@@ -225,7 +247,7 @@ export function VerificationWorkspace() {
                     </button>
                   </div>
 
-                  {busyAction ? <p className="text-xs text-white/60 inline-flex items-center gap-2"><Loader2 size={13} className="animate-spin" /> Processing action...</p> : null}
+                  {busyAction ? <p className="inline-flex items-center gap-2 text-xs text-white/60"><Loader2 size={13} className="animate-spin" /> Processing action...</p> : null}
                 </div>
               </div>
             )}

@@ -38,7 +38,7 @@ function ensureVerificationUploadsDir() {
 }
 
 function isRequestExpired(request: { status: VerificationRequestStatus; createdAt: Date }) {
-  if (request.status !== "REQUESTED" && request.status !== "ASSIGNED") return false;
+  if (request.status !== "REQUESTED") return false;
   return request.createdAt.getTime() + RESPONSE_TIMEOUT_MS <= Date.now();
 }
 
@@ -97,10 +97,11 @@ async function reopenExpiredMeetLinkIfNeeded(request: NonNullable<VerificationRe
   if (!request.linkExpiresAt || request.linkExpiresAt.getTime() > Date.now()) return request;
 
   const updated = await prisma.$transaction(async (tx) => {
+    const nextStatus = request.assignedEmployeeId ? "ASSIGNED" : "REQUESTED";
     const updated = await tx.verificationRequest.update({
       where: { id: request.id },
       data: {
-        status: "REQUESTED",
+        status: nextStatus,
         verificationLink: null,
         meetUrl: null,
         linkExpiresAt: null
@@ -149,7 +150,7 @@ export async function synchronizeVerificationRequests(options?: { userId?: strin
   const expiredWaitingRequests = await prisma.verificationRequest.findMany({
     where: {
       ...requestScope,
-      status: { in: ["REQUESTED", "ASSIGNED"] },
+      status: "REQUESTED",
       createdAt: { lte: waitingCutoff }
     }
   });
@@ -323,7 +324,7 @@ export async function getVerificationStatusPayload(userId: string) {
   }
 
   const remainingMs =
-    request.status === "REQUESTED" || request.status === "ASSIGNED"
+    request.status === "REQUESTED"
       ? Math.max(0, request.createdAt.getTime() + RESPONSE_TIMEOUT_MS - Date.now())
       : 0;
 
@@ -349,6 +350,29 @@ export async function requestWhatsAppVerificationHelp(userId: string) {
 
   if (!latest) {
     throw new HttpError(400, { message: "Please request verification first." });
+  }
+
+  const existingHelpRequestedAt = getWhatsAppHelpRequestedAt(latest.reason);
+  if (latest.status === "REQUESTED" && existingHelpRequestedAt) {
+    return { ok: true, requestedAt: existingHelpRequestedAt };
+  }
+
+  if (latest.status === "REQUESTED") {
+    throw new HttpError(409, {
+      message: "Please wait for an executive to accept your request before escalating to WhatsApp."
+    });
+  }
+
+  if (latest.status === "ASSIGNED") {
+    throw new HttpError(409, {
+      message: "An executive has already accepted your request. Your meeting link will arrive shortly."
+    });
+  }
+
+  if (latest.status === "IN_PROGRESS") {
+    throw new HttpError(409, {
+      message: "Your verification session is already in progress."
+    });
   }
 
   const timestamp = new Date().toISOString();
@@ -380,7 +404,7 @@ export async function requestWhatsAppVerificationHelp(userId: string) {
     });
 
     targetRequestId = reopened.id;
-  } else if (!getWhatsAppHelpRequestedAt(latest.reason)) {
+  } else if (!existingHelpRequestedAt) {
     await prisma.verificationRequest.update({
       where: { id: latest.id },
       data: {
@@ -389,8 +413,7 @@ export async function requestWhatsAppVerificationHelp(userId: string) {
     });
   }
 
-  const existingHelpRequestedAt = latest.status === "TIMED_OUT" ? null : getWhatsAppHelpRequestedAt(latest.reason);
-  const requestedAt = existingHelpRequestedAt ?? timestamp;
+  const requestedAt = latest.status === "TIMED_OUT" ? timestamp : existingHelpRequestedAt ?? timestamp;
 
   const user = await prisma.user.findUnique({
     where: { id: userId },

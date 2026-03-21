@@ -45,11 +45,15 @@ export function resolveRouteRedirect(options: {
   if (!options.isAuthResolved) return null;
 
   const appStateCode = options.appStateCode;
-  const appStateRedirect = options.appStateRedirectTo;
+  const appStateRedirect =
+    typeof options.appStateRedirectTo === "string" &&
+    options.appStateRedirectTo.startsWith("/")
+      ? options.appStateRedirectTo
+      : null;
   const defaultAuthenticatedRoute =
     options.userRole === "EMPLOYEE" || options.userRole === "ADMIN"
       ? "/employee/verification"
-      : routeForFrontendOnboardingStep(options.onboardingStep);
+      : appStateRedirect ?? routeForFrontendOnboardingStep(options.onboardingStep);
 
   if (options.scope === "auth") {
     if (!options.isAuthenticated) {

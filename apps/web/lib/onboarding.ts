@@ -38,9 +38,20 @@ export function routeForAuthenticatedUser(input: {
   onboardingStep?: BackendOnboardingStep | null;
   profileCompletedAt?: Date | string | null;
   photoCount?: number;
+  redirectTo?: string | null;
+  appState?: { redirectTo?: string | null } | null;
 }) {
   if (input.role === "EMPLOYEE" || input.role === "ADMIN") {
     return "/employee/verification";
+  }
+
+  const explicitRedirect = (
+    input.appState?.redirectTo ??
+    input.redirectTo ??
+    ""
+  ).trim();
+  if (explicitRedirect.startsWith("/")) {
+    return explicitRedirect;
   }
 
   const backendStep = input.backendStep ?? input.onboardingStep;
