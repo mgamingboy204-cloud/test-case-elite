@@ -472,6 +472,7 @@ export function useCaseActivityData(caseType: OpsCaseType, caseId: string | null
 
 function getVerificationInvalidationKeys(requestId: string) {
   return [
+    queryKeys.ops.verification.all(),
     queryKeys.ops.employee.all(),
     queryKeys.ops.admin.dashboard(),
     queryKeys.ops.admin.members(),
@@ -508,6 +509,12 @@ export function useAssignVerificationRequestMutation() {
 
   return useMutation({
     mutationFn: assignVerificationRequest,
+    onMutate: async () => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.ops.verification.all(),
+        exact: false
+      });
+    },
     onSuccess: async (result) => {
       syncVerificationRequestCaches(queryClient, result.request);
       await invalidateQueryKeys(queryClient, getVerificationInvalidationKeys(result.request.id));
@@ -521,6 +528,12 @@ export function useStartVerificationRequestMutation() {
   return useMutation({
     mutationFn: ({ requestId, meetUrl }: { requestId: string; meetUrl: string }) =>
       startVerificationRequest(requestId, meetUrl),
+    onMutate: async () => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.ops.verification.all(),
+        exact: false
+      });
+    },
     onSuccess: async (result) => {
       syncVerificationRequestCaches(queryClient, result.request);
       await invalidateQueryKeys(queryClient, getVerificationInvalidationKeys(result.request.id));
@@ -533,6 +546,12 @@ export function useApproveVerificationRequestMutation() {
 
   return useMutation({
     mutationFn: approveVerificationRequest,
+    onMutate: async () => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.ops.verification.all(),
+        exact: false
+      });
+    },
     onSuccess: async (result) => {
       syncVerificationRequestCaches(queryClient, result.request);
       await invalidateQueryKeys(queryClient, getVerificationInvalidationKeys(result.request.id));
@@ -546,6 +565,12 @@ export function useRejectVerificationRequestMutation() {
   return useMutation({
     mutationFn: ({ requestId, reason }: { requestId: string; reason: string }) =>
       rejectVerificationRequest(requestId, reason),
+    onMutate: async () => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.ops.verification.all(),
+        exact: false
+      });
+    },
     onSuccess: async (result) => {
       syncVerificationRequestCaches(queryClient, result.request);
       await invalidateQueryKeys(queryClient, getVerificationInvalidationKeys(result.request.id));
