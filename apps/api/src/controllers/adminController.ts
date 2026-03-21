@@ -17,9 +17,6 @@ import {
   approveVerificationRequest,
   rejectVerificationRequest,
   rejectUser,
-  approveVerificationForUser,
-  rejectVerificationForUser,
-  setVerificationMeetLink,
   startVerificationRequest,
   shiftPaymentDate
 } from "../services/adminService";
@@ -122,24 +119,6 @@ export async function approveVerificationRequestHandler(req: Request, res: Respo
 export async function rejectVerificationRequestHandler(req: Request, res: Response) {
   const { reason } = req.body as { reason: string };
   const result = await rejectVerificationRequest(req.params.requestId, res.locals.user.id, reason, Boolean(res.locals.user.isAdmin || res.locals.user.role === "ADMIN"));
-  return res.json(result);
-}
-
-export async function setVerificationMeetLinkHandler(req: Request, res: Response) {
-  const { meetUrl } = req.body as { meetUrl: string };
-  const result = await setVerificationMeetLink(req.params.userId, meetUrl, res.locals.user.id);
-  return res.json(result);
-}
-
-export async function approveVerificationForUserHandler(req: Request, res: Response) {
-  const { reason } = req.body as { reason?: string | null };
-  const result = await approveVerificationForUser(req.params.userId, res.locals.user.id, reason);
-  return res.json(result);
-}
-
-export async function rejectVerificationForUserHandler(req: Request, res: Response) {
-  const { reason } = req.body as { reason: string };
-  const result = await rejectVerificationForUser(req.params.userId, res.locals.user.id, reason);
   return res.json(result);
 }
 

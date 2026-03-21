@@ -604,19 +604,19 @@ describe("Verification concierge flow", () => {
     expect(createRequest.status).toBe(200);
     const requestId = createRequest.body.request.id;
 
-    const assign = await withAuth(agent.post(`/admin/verification-requests/${requestId}/assign`), adminToken).send({});
+    const assign = await withAuth(agent.post(`/ops/verification-requests/${requestId}/assign`), adminToken).send({});
     expect(assign.status).toBe(200);
 
-    const start = await withAuth(agent.post(`/admin/verification-requests/${requestId}/start`), adminToken)
+    const start = await withAuth(agent.post(`/ops/verification-requests/${requestId}/start`), adminToken)
       .send({ meetUrl: "https://meet.google.com/abc-defg-hij" });
     expect(start.status).toBe(200);
 
-    const statusResponse = await withAuth(userAgent.get("/me/verification-status"), userToken);
+    const statusResponse = await withAuth(userAgent.get("/verification/status"), userToken);
     expect(statusResponse.status).toBe(200);
     expect(statusResponse.body.status).toBe("IN_PROGRESS");
     expect(statusResponse.body.meetUrl).toBe("https://meet.google.com/abc-defg-hij");
 
-    const approve = await withAuth(agent.post(`/admin/verification-requests/${requestId}/approve`), adminToken).send({});
+    const approve = await withAuth(agent.post(`/ops/verification-requests/${requestId}/approve`), adminToken).send({});
     expect(approve.status).toBe(200);
 
     const updatedUser = await prisma.user.findUnique({ where: { phone: userPhone } });
@@ -660,7 +660,7 @@ describe("Verification concierge flow", () => {
     expect(createRequest.status).toBe(200);
     const requestId = createRequest.body.request.id as string;
 
-    const claim = await withAuth(employeeOneAgent.post(`/admin/verification-requests/${requestId}/assign`), employeeOneToken).send({});
+    const claim = await withAuth(employeeOneAgent.post(`/ops/verification-requests/${requestId}/assign`), employeeOneToken).send({});
     expect(claim.status).toBe(200);
     expect(claim.body.request.status).toBe("ASSIGNED");
     expect(claim.body.request.assignedEmployeeId).toBe(employeeOne.id);
@@ -672,13 +672,13 @@ describe("Verification concierge flow", () => {
     expect(storedUser?.assignedEmployeeId).toBe(employeeOne.id);
     expect(storedUser?.videoVerificationStatus).toBe("PENDING");
 
-    const secondQueue = await withAuth(employeeTwoAgent.get("/admin/verification-requests?statusView=ACTIVE"), employeeTwoToken);
+    const secondQueue = await withAuth(employeeTwoAgent.get("/ops/verification-requests?statusView=ACTIVE"), employeeTwoToken);
     expect(secondQueue.status).toBe(200);
     const queuedRequest = secondQueue.body.requests.find((requestItem: { id: string }) => requestItem.id === requestId);
     expect(queuedRequest).toBeTruthy();
     expect(queuedRequest.assignedEmployeeId).toBe(employeeOne.id);
 
-    const secondClaim = await withAuth(employeeTwoAgent.post(`/admin/verification-requests/${requestId}/assign`), employeeTwoToken).send({});
+    const secondClaim = await withAuth(employeeTwoAgent.post(`/ops/verification-requests/${requestId}/assign`), employeeTwoToken).send({});
     expect(secondClaim.status).toBe(409);
   });
 
@@ -702,7 +702,7 @@ describe("Verification concierge flow", () => {
     expect(createRequest.status).toBe(200);
     const requestId = createRequest.body.request.id as string;
 
-    const start = await withAuth(employeeAgent.post(`/admin/verification-requests/${requestId}/start`), employeeToken).send({
+    const start = await withAuth(employeeAgent.post(`/ops/verification-requests/${requestId}/start`), employeeToken).send({
       meetUrl: "https://meet.google.com/claim-first"
     });
     expect(start.status).toBe(409);
@@ -742,7 +742,7 @@ describe("Verification concierge flow", () => {
       }
     });
 
-    const statusResponse = await withAuth(userAgent.get("/me/verification-status"), userToken);
+    const statusResponse = await withAuth(userAgent.get("/verification/status"), userToken);
     expect(statusResponse.status).toBe(200);
     expect(statusResponse.body.status).toBe("ASSIGNED");
     expect(statusResponse.body.meetUrl).toBeNull();
@@ -764,42 +764,34 @@ describe("Verification concierge flow", () => {
       }
     });
 
-    const response = await withAuth(agent.get("/me/verification-status"), token);
+    const response = await withAuth(agent.get("/verification/status"), token);
     expect(response.status).toBe(200);
-    expect(response.body.status).toBe("REQUESTED");
+    expect(response.body.status).toBe("PENDING");
     expect(response.body.meetUrl).toBeNull();
   });
 
-  it("creates a fresh verification request on the first retry after timeout", async () => {
+  it("keeps an unclaimed request pending after the five-minute waiting window", async () => {
     const agent = request.agent(app);
     const token = await registerAndLogin(agent, "5552223344", "Password@1");
     const user = await prisma.user.findUnique({ where: { phone: "5552223344" } });
     if (!user) throw new Error("User not found");
 
-    const expiredRequest = await prisma.verificationRequest.create({
+    await prisma.verificationRequest.create({
       data: {
         userId: user.id,
-        status: "REQUESTED",
+        status: "PENDING",
         createdAt: new Date(Date.now() - 6 * 60 * 1000)
       }
     });
 
-    const response = await withAuth(agent.post("/verification-requests"), token);
+    const response = await withAuth(agent.get("/verification/status"), token);
     expect(response.status).toBe(200);
-    expect(response.body.request.id).not.toBe(expiredRequest.id);
-    expect(response.body.request.status).toBe("REQUESTED");
-
-    const requests = await prisma.verificationRequest.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: "desc" }
-    });
-
-    expect(requests).toHaveLength(2);
-    expect(requests[0]?.status).toBe("REQUESTED");
-    expect(requests[1]?.status).toBe("TIMED_OUT");
+    expect(response.body.status).toBe("PENDING");
+    expect(response.body.remainingSeconds).toBe(0);
+    expect(response.body.escalationRequestedAt).toBeNull();
   });
 
-  it("requeues WhatsApp help requests into the active employee queue after timeout", async () => {
+  it("creates an escalation request after five minutes and surfaces it in the active queue", async () => {
     const adminPhone = "5552223355";
     await createStaffUser({
       phone: adminPhone,
@@ -817,10 +809,8 @@ describe("Verification concierge flow", () => {
     await prisma.verificationRequest.create({
       data: {
         userId: user.id,
-        status: "TIMED_OUT",
-        createdAt: new Date(Date.now() - 10 * 60 * 1000),
-        decidedAt: new Date(Date.now() - 4 * 60 * 1000),
-        reason: "Timed out without employee response"
+        status: "PENDING",
+        createdAt: new Date(Date.now() - 10 * 60 * 1000)
       }
     });
 
@@ -832,16 +822,24 @@ describe("Verification concierge flow", () => {
       where: { userId: user.id },
       orderBy: { createdAt: "desc" }
     });
-    expect(latest?.status).toBe("REQUESTED");
-    expect(latest?.reason).toContain("WHATSAPP_HELP_REQUESTED:");
+    expect(latest?.status).toBe("ESCALATED");
+
+    const escalation = await prisma.escalationRequest.findUnique({
+      where: { verificationRequestId: latest?.id ?? "" }
+    });
+    expect(escalation).toBeTruthy();
+    expect(escalation?.status).toBe("OPEN");
 
     const adminAgent = request.agent(app);
     const adminLogin = await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
     const adminToken = adminLogin.body.accessToken as string;
 
-    const queue = await withAuth(adminAgent.get("/admin/verification-requests?statusView=ACTIVE"), adminToken);
+    const queue = await withAuth(adminAgent.get("/ops/verification-requests?statusView=ACTIVE"), adminToken);
     expect(queue.status).toBe(200);
-    expect(queue.body.requests.some((requestItem: { id: string }) => requestItem.id === latest?.id)).toBe(true);
+    const queueItem = queue.body.requests.find((requestItem: { id: string }) => requestItem.id === latest?.id);
+    expect(queueItem).toBeTruthy();
+    expect(queueItem.status).toBe("ESCALATED");
+    expect(typeof queueItem.escalationRequestedAt).toBe("string");
   });
 
   it("rejects WhatsApp help before timeout and after a request has already been claimed", async () => {
@@ -869,7 +867,7 @@ describe("Verification concierge flow", () => {
     const helpBeforeTimeout = await withAuth(userAgent.post("/verification/help/whatsapp"), userToken);
     expect(helpBeforeTimeout.status).toBe(409);
 
-    const claim = await withAuth(employeeAgent.post(`/admin/verification-requests/${requestId}/assign`), employeeToken).send({});
+    const claim = await withAuth(employeeAgent.post(`/ops/verification-requests/${requestId}/assign`), employeeToken).send({});
     expect(claim.status).toBe(200);
 
     const helpAfterClaim = await withAuth(userAgent.post("/verification/help/whatsapp"), userToken);
@@ -915,15 +913,15 @@ describe("Verification concierge flow", () => {
     const createRequest = await withAuth(userAgent.post("/verification-requests"), userToken);
     const requestId = createRequest.body.request.id;
 
-    const assign = await withAuth(adminAgent.post(`/admin/verification-requests/${requestId}/assign`), adminToken).send({});
+    const assign = await withAuth(adminAgent.post(`/ops/verification-requests/${requestId}/assign`), adminToken).send({});
     expect(assign.status).toBe(200);
 
-    const start = await withAuth(adminAgent.post(`/admin/verification-requests/${requestId}/start`), adminToken).send({
+    const start = await withAuth(adminAgent.post(`/ops/verification-requests/${requestId}/start`), adminToken).send({
       meetUrl: "https://meet.google.com/reject-link"
     });
     expect(start.status).toBe(200);
 
-    const reject = await withAuth(adminAgent.post(`/admin/verification-requests/${requestId}/reject`), adminToken).send({
+    const reject = await withAuth(adminAgent.post(`/ops/verification-requests/${requestId}/reject`), adminToken).send({
       reason: "No-show"
     });
     expect(reject.status).toBe(200);
@@ -934,57 +932,7 @@ describe("Verification concierge flow", () => {
     expect(updatedRequest?.status).toBe("REJECTED");
   });
 
-  it("sets meet link and approves verification via user endpoints", async () => {
-    const adminPhone = "5559002222";
-    await prisma.user.create({
-      data: {
-        phone: adminPhone,
-        email: "admin4@example.com",
-        passwordHash: await bcrypt.hash("Admin@123", 10),
-        role: "ADMIN",
-        isAdmin: true,
-        status: "APPROVED",
-        verifiedAt: new Date(),
-        phoneVerifiedAt: new Date()
-      }
-    });
-
-    const userAgent = request.agent(app);
-    await registerAndLogin(userAgent, "5559002223", "Password@1");
-    const user = await prisma.user.findUnique({ where: { phone: "5559002223" } });
-    if (!user) throw new Error("User not found");
-
-    const adminAgent = request.agent(app);
-    await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
-
-    const meetLink = await adminAgent.post(`/admin/verifications/${user.id}/meet-link`).send({
-      meetUrl: "https://meet.google.com/meet-link-123"
-    });
-    expect(meetLink.status).toBe(200);
-
-    const statusResponse = await userAgent.get("/me/verification-status");
-    expect(statusResponse.status).toBe(200);
-    expect(statusResponse.body.status).toBe("IN_PROGRESS");
-    expect(statusResponse.body.meetUrl).toBe("https://meet.google.com/meet-link-123");
-
-    const notification = await prisma.notification.findFirst({
-      where: { userId: user.id, type: "VIDEO_VERIFICATION_UPDATE" }
-    });
-    expect(notification).toBeTruthy();
-
-    const approve = await adminAgent.post(`/admin/verifications/${user.id}/approve`).send({
-      reason: "Verified"
-    });
-    expect(approve.status).toBe(200);
-
-    const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
-    const updatedRequest = await prisma.verificationRequest.findFirst({ where: { userId: user.id }, orderBy: { createdAt: "desc" } });
-    expect(updatedUser?.status).toBe("APPROVED");
-    expect(updatedUser?.videoVerificationStatus).toBe("APPROVED");
-    expect(updatedRequest?.status).toBe("COMPLETED");
-  });
-
-  it("requires a rejection reason for admin verification rejection", async () => {
+  it("requires a rejection reason for queue-based verification rejection", async () => {
     const adminPhone = "5559003333";
     await prisma.user.create({
       data: {
@@ -1000,7 +948,7 @@ describe("Verification concierge flow", () => {
     });
 
     const userAgent = request.agent(app);
-    await registerAndLogin(userAgent, "5559003334", "Password@1");
+    const userToken = await registerAndLogin(userAgent, "5559003334", "Password@1");
     const user = await prisma.user.findUnique({ where: { phone: "5559003334" } });
     if (!user) throw new Error("User not found");
 
@@ -1008,7 +956,14 @@ describe("Verification concierge flow", () => {
     const adminLogin = await adminAgent.post("/auth/login").send({ phone: adminPhone, password: "Admin@123" });
     const adminToken = adminLogin.body.accessToken as string;
 
-    const response = await withAuth(adminAgent.post(`/admin/verifications/${user.id}/reject`), adminToken).send({ reason: "" });
+    const createRequest = await withAuth(userAgent.post("/verification-requests"), userToken);
+    expect(createRequest.status).toBe(200);
+    const requestId = createRequest.body.request.id as string;
+
+    const assign = await withAuth(adminAgent.post(`/ops/verification-requests/${requestId}/assign`), adminToken).send({});
+    expect(assign.status).toBe(200);
+
+    const response = await withAuth(adminAgent.post(`/ops/verification-requests/${requestId}/reject`), adminToken).send({ reason: "" });
     expect(response.status).toBe(400);
   });
 });

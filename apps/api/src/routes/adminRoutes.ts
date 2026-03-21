@@ -17,9 +17,6 @@ import {
   approveVerificationRequestHandler,
   rejectVerificationRequestHandler,
   rejectUserHandler,
-  approveVerificationForUserHandler,
-  rejectVerificationForUserHandler,
-  setVerificationMeetLinkHandler,
   shiftPaymentDateHandler,
   startVerificationRequestHandler,
   createStaffHandler,
@@ -235,31 +232,6 @@ router.post(
   validateParams(z.object({ requestId: z.string().uuid() })),
   validateBody(z.object({ reason: z.string().min(1) })),
   asyncHandler(rejectVerificationRequestHandler)
-);
-
-router.post(
-  "/admin/verifications/:userId/meet-link",
-  requireAuth,
-  requireAdmin,
-  validateParams(z.object({ userId: z.string() })),
-  validateBody(z.object({ meetUrl: meetUrlSchema })),
-  asyncHandler(setVerificationMeetLinkHandler)
-);
-router.post(
-  "/admin/verifications/:userId/approve",
-  requireAuth,
-  requireAdmin,
-  validateParams(z.object({ userId: z.string() })),
-  validateBody(z.object({ reason: z.string().min(1).nullish() })),
-  asyncHandler(approveVerificationForUserHandler)
-);
-router.post(
-  "/admin/verifications/:userId/reject",
-  requireAuth,
-  requireAdmin,
-  validateParams(z.object({ userId: z.string() })),
-  validateBody(z.object({ reason: z.string().min(1) })),
-  asyncHandler(rejectVerificationForUserHandler)
 );
 
 router.post(

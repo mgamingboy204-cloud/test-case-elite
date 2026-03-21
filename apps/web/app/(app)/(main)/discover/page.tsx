@@ -17,7 +17,11 @@ import {
   type DiscoverFeedState,
   type DiscoverFilters
 } from "@/lib/discoverFeed";
-import { DISCOVER_BACKGROUND_SYNC_INTERVAL_MS, syncAfterMatchCreated } from "@/lib/resourceSync";
+import {
+  DISCOVER_BACKGROUND_SYNC_INTERVAL_MS,
+  removeIncomingLikeFromCache,
+  syncAfterMatchCreated
+} from "@/lib/resourceSync";
 
 type PageStatus = "loading" | "success" | "empty" | "error";
 type PendingAction = { id: string; action: "LIKE" | "PASS" };
@@ -240,6 +244,7 @@ export default function DiscoverPage() {
     setActionError(null);
 
     persistFeedState((state) => applyDiscoverActionToState(state, current.id));
+    removeIncomingLikeFromCache(current.id);
     const optimisticState = feedStateRef.current;
     if (optimisticState.cards.length === 0 && !optimisticState.nextCursor) {
       setStatus("empty");

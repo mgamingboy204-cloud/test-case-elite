@@ -1,9 +1,9 @@
 import { apiRequestAuth } from "./api";
 import { API_ENDPOINTS } from "./api/endpoints";
 
-export type VerificationQueueView = "ACTIVE" | "COMPLETED" | "REJECTED" | "TIMEOUT" | "ALL";
+export type VerificationQueueView = "ACTIVE" | "ESCALATED" | "COMPLETED" | "REJECTED" | "ALL";
 
-export type VerificationRequestStatus = "REQUESTED" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED" | "TIMED_OUT";
+export type VerificationRequestStatus = "PENDING" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED" | "ESCALATED";
 
 export type WorkerVerificationRequest = {
   id: string;
@@ -13,6 +13,7 @@ export type WorkerVerificationRequest = {
   reason: string | null;
   createdAt: string;
   assignedAt: string | null;
+  escalationRequestedAt: string | null;
   user: {
     id: string;
     phone: string;
@@ -33,32 +34,32 @@ export function isValidGoogleMeetUrl(rawValue: string) {
 }
 
 export async function listVerificationRequestsForWorker(statusView: VerificationQueueView = "ACTIVE") {
-  return apiRequestAuth<{ statusView: VerificationQueueView; requests: WorkerVerificationRequest[] }>(API_ENDPOINTS.admin.verification.list(statusView));
+  return apiRequestAuth<{ statusView: VerificationQueueView; requests: WorkerVerificationRequest[] }>(API_ENDPOINTS.ops.verification.list(statusView));
 }
 
 export async function assignVerificationRequest(requestId: string) {
-  return apiRequestAuth<{ request: WorkerVerificationRequest }>(API_ENDPOINTS.admin.verification.assign(requestId), {
+  return apiRequestAuth<{ request: WorkerVerificationRequest }>(API_ENDPOINTS.ops.verification.assign(requestId), {
     method: "POST",
     body: JSON.stringify({})
   });
 }
 
 export async function startVerificationRequest(requestId: string, meetUrl: string) {
-  return apiRequestAuth<{ request: WorkerVerificationRequest }>(API_ENDPOINTS.admin.verification.start(requestId), {
+  return apiRequestAuth<{ request: WorkerVerificationRequest }>(API_ENDPOINTS.ops.verification.start(requestId), {
     method: "POST",
     body: JSON.stringify({ meetUrl })
   });
 }
 
 export async function approveVerificationRequest(requestId: string) {
-  return apiRequestAuth<{ request: WorkerVerificationRequest }>(API_ENDPOINTS.admin.verification.approve(requestId), {
+  return apiRequestAuth<{ request: WorkerVerificationRequest }>(API_ENDPOINTS.ops.verification.approve(requestId), {
     method: "POST",
     body: JSON.stringify({})
   });
 }
 
 export async function rejectVerificationRequest(requestId: string, reason: string) {
-  return apiRequestAuth<{ request: WorkerVerificationRequest }>(API_ENDPOINTS.admin.verification.reject(requestId), {
+  return apiRequestAuth<{ request: WorkerVerificationRequest }>(API_ENDPOINTS.ops.verification.reject(requestId), {
     method: "POST",
     body: JSON.stringify({ reason })
   });

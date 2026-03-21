@@ -10,13 +10,12 @@ import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { VERIFICATION_STATUS_FALLBACK_MS } from "@/lib/resourceSync";
 
 type VerificationPayload = {
-  status: "NOT_REQUESTED" | "REQUESTED" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED" | "TIMED_OUT";
-  displayStatus: "PENDING" | "ASSIGNED" | "APPROVED" | "REJECTED" | "TIMED_OUT";
+  status: "NOT_REQUESTED" | "PENDING" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED" | "ESCALATED";
+  displayStatus: "PENDING" | "ASSIGNED" | "APPROVED" | "REJECTED";
   meetUrl: string | null;
-  canRetry: boolean;
   remainingSeconds: number;
   requestedAt: string | null;
-  whatsappHelpRequestedAt: string | null;
+  escalationRequestedAt: string | null;
 };
 
 type MemberVerificationStage =
@@ -24,8 +23,8 @@ type MemberVerificationStage =
   | "requesting"
   | "waiting"
   | "assigned"
+  | "needs_help"
   | "help_requested"
-  | "timed_out"
   | "in_progress"
   | "approved_redirect"
   | "rejected";
@@ -46,10 +45,9 @@ function formatCountdown(value: number) {
 function deriveStage(payload: VerificationPayload | null, requesting: boolean, remainingSeconds: number): MemberVerificationStage {
   if (requesting) return "requesting";
   if (!payload || payload.status === "NOT_REQUESTED") return "intro";
-  if (payload.status === "REQUESTED" && payload.whatsappHelpRequestedAt) return "help_requested";
-  if (payload.status === "REQUESTED") return remainingSeconds > 0 ? "waiting" : "timed_out";
+  if (payload.status === "ESCALATED") return "help_requested";
+  if (payload.status === "PENDING") return remainingSeconds > 0 ? "waiting" : "needs_help";
   if (payload.status === "ASSIGNED") return "assigned";
-  if (payload.status === "TIMED_OUT") return "timed_out";
   if (payload.status === "IN_PROGRESS") return "in_progress";
   if (payload.status === "COMPLETED") return "approved_redirect";
   if (payload.status === "REJECTED") return "rejected";
@@ -93,21 +91,21 @@ export default function VideoVerificationPage() {
     enabled: Boolean(payloadStatus),
     refresh: loadStatus,
     eventTypes: ["verification.status.changed"],
-    fallbackIntervalMs: ["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(payloadStatus ?? "") ? VERIFICATION_STATUS_FALLBACK_MS : undefined
+    fallbackIntervalMs: ["PENDING", "ESCALATED", "ASSIGNED", "IN_PROGRESS"].includes(payloadStatus ?? "") ? VERIFICATION_STATUS_FALLBACK_MS : undefined
   });
 
   useEffect(() => {
-    if (payloadStatus !== "REQUESTED" || Boolean(payload?.whatsappHelpRequestedAt)) return;
+    if (payloadStatus !== "PENDING" || Boolean(payload?.escalationRequestedAt)) return;
     setClockTickMs(Date.now());
     const id = window.setInterval(() => {
       setClockTickMs(Date.now());
     }, 1000);
     return () => window.clearInterval(id);
-  }, [payload?.whatsappHelpRequestedAt, payloadRequestedAt, payloadStatus]);
+  }, [payload?.escalationRequestedAt, payloadRequestedAt, payloadStatus]);
 
   const effectiveRemainingSeconds = useMemo(() => {
     if (!payload) return WAIT_WINDOW_SECONDS;
-    if (payload.status !== "REQUESTED" || payload.whatsappHelpRequestedAt) return payload.remainingSeconds;
+    if (payload.status !== "PENDING" || payload.escalationRequestedAt) return payload.remainingSeconds;
     if (!payload.requestedAt) return payload.remainingSeconds;
 
     const requestedAtMs = new Date(payload.requestedAt).getTime();
@@ -118,10 +116,10 @@ export default function VideoVerificationPage() {
   }, [clockTickMs, payload]);
 
   useEffect(() => {
-    if (payloadStatus !== "REQUESTED" || Boolean(payload?.whatsappHelpRequestedAt)) return;
+    if (payloadStatus !== "PENDING" || Boolean(payload?.escalationRequestedAt)) return;
     if (effectiveRemainingSeconds > 0) return;
     void loadStatus().catch(() => undefined);
-  }, [effectiveRemainingSeconds, loadStatus, payload?.whatsappHelpRequestedAt, payloadStatus]);
+  }, [effectiveRemainingSeconds, loadStatus, payload?.escalationRequestedAt, payloadStatus]);
 
   useEffect(() => {
     if (payloadDisplayStatus !== "APPROVED") return;
@@ -157,7 +155,7 @@ export default function VideoVerificationPage() {
       });
       await refreshCurrentUser().catch(() => undefined);
       const latest = await loadStatus();
-      if (!latest.whatsappHelpRequestedAt) {
+      if (!latest.escalationRequestedAt) {
         throw new Error("Request failed. Please try again.");
       }
       setMessage("Your request has been received. A VAEL executive will coordinate with you personally on WhatsApp.");
@@ -169,7 +167,7 @@ export default function VideoVerificationPage() {
   };
 
   const stage = useMemo(() => deriveStage(payload, requesting, effectiveRemainingSeconds), [effectiveRemainingSeconds, payload, requesting]);
-  const showWhatsAppCta = stage === "timed_out";
+  const showWhatsAppCta = stage === "needs_help";
 
   if (loading) {
     return (
@@ -187,7 +185,7 @@ export default function VideoVerificationPage() {
           {stage === "help_requested" ? <MessageCircleWarning className="text-primary/80" /> : null}
           {stage === "in_progress" ? <ShieldCheck className="text-primary" /> : null}
           {stage === "approved_redirect" ? <ShieldCheck className="text-primary" /> : null}
-          {stage === "timed_out" ? <Clock3 className="text-amber-300" /> : null}
+          {stage === "needs_help" ? <Clock3 className="text-amber-300" /> : null}
           {stage === "rejected" ? <XCircle className="text-red-400" /> : null}
         </div>
 
@@ -214,8 +212,8 @@ export default function VideoVerificationPage() {
           <p className="text-sm text-foreground/80">WhatsApp help requested. A VAEL executive will coordinate with you personally and your verification request remains active.</p>
         ) : null}
 
-        {stage === "timed_out" ? (
-          <p className="text-sm text-foreground/80">No executive is available right now. We will notify you when one is ready.</p>
+        {stage === "needs_help" ? (
+          <p className="text-sm text-foreground/80">No executive accepted your request within five minutes. You can now request WhatsApp verification help.</p>
         ) : null}
 
         {stage === "in_progress" && payload?.meetUrl ? (
@@ -236,7 +234,7 @@ export default function VideoVerificationPage() {
         {error ? <p className="text-center text-sm text-red-400">{error}</p> : null}
         {message ? <p className="text-center text-sm text-primary">{message}</p> : null}
 
-        {stage === "intro" || stage === "timed_out" ? (
+        {stage === "intro" ? (
           <motion.button whileTap={{ scale: 0.98 }} disabled={requesting} onClick={createRequest} className="btn-vael-primary">
             {requesting ? "Requesting..." : "Request Verification"}
           </motion.button>
@@ -245,13 +243,13 @@ export default function VideoVerificationPage() {
         {showWhatsAppCta ? (
           <motion.button
             whileTap={{ scale: 0.98 }}
-            disabled={helping || Boolean(payload?.whatsappHelpRequestedAt)}
+            disabled={helping || Boolean(payload?.escalationRequestedAt)}
             onClick={requestWhatsAppHelp}
             className="w-full rounded-xl border border-primary/25 px-4 py-3 text-xs uppercase tracking-[0.18em] text-primary disabled:opacity-45"
           >
             <span className="inline-flex items-center gap-2">
               <MessageCircleWarning size={14} />
-              {payload?.whatsappHelpRequestedAt ? "Help request submitted" : helping ? "Requesting..." : "Need help? Notify on WhatsApp"}
+              {payload?.escalationRequestedAt ? "Help request submitted" : helping ? "Requesting..." : "Need help? Verify via WhatsApp"}
             </span>
           </motion.button>
         ) : null}

@@ -106,12 +106,21 @@ enum RefundStatus {
 }
 
 enum VerificationRequestStatus {
-  REQUESTED
+  PENDING
   ASSIGNED
   IN_PROGRESS
   COMPLETED
   REJECTED
-  TIMED_OUT
+  ESCALATED
+}
+
+enum EscalationRequestType {
+  VERIFICATION_WHATSAPP
+}
+
+enum EscalationRequestStatus {
+  OPEN
+  RESOLVED
 }
 
 enum NotificationType {
@@ -284,6 +293,7 @@ model User {
   refunds       RefundRequest[]
   verificationSlots VerificationSlot[]
   verificationRequests VerificationRequest[]
+  escalationRequests EscalationRequest[] @relation("UserEscalationRequests")
   notifications Notification[] @relation("userNotifications")
   notificationsSent Notification[] @relation("notificationActors")
   auditLogs     AuditLog[] @relation("actorLogs")
@@ -682,7 +692,7 @@ model VerificationSlot {
 model VerificationRequest {
   id        String @id @default(uuid())
   userId    String
-  status    VerificationRequestStatus @default(REQUESTED)
+  status    VerificationRequestStatus @default(PENDING)
   // Nullable while requests are in progress or finalized.
   verificationLink String?
   meetUrl   String?
@@ -697,6 +707,25 @@ model VerificationRequest {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+  escalationRequest EscalationRequest?
+}
+
+model EscalationRequest {
+  id                    String @id @default(uuid())
+  verificationRequestId String @unique
+  userId                String
+  type                  EscalationRequestType @default(VERIFICATION_WHATSAPP)
+  status                EscalationRequestStatus @default(OPEN)
+  requestedAt           DateTime @default(now())
+  resolvedAt            DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  verificationRequest VerificationRequest @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
+  user User @relation("UserEscalationRequests", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, requestedAt])
+  @@index([userId, status])
 }
 
 model Notification {

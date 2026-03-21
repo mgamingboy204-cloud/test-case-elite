@@ -11,11 +11,6 @@ type CacheRecord<T> = {
 
 const memoryCache = new Map<string, CacheRecord<unknown>>();
 const PERSISTED_KEYS = new Set([
-  "discover-feed",
-  "likes-incoming",
-  "matches",
-  "alerts",
-  "profile",
   "onboarding-draft",
   "profile-draft",
   "viewed-profiles"
@@ -26,6 +21,7 @@ function getStorageKey(key: string) {
 }
 
 function readPersisted<T>(key: string): CacheRecord<T> | null {
+  if (!PERSISTED_KEYS.has(key)) return null;
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(getStorageKey(key));
@@ -71,9 +67,13 @@ export function clearAllCaches() {
 }
 
 export function readCache<T>(key: string): CacheRecord<T> | null {
-  const queryData = getQueryClient().getQueryData<T>([key]);
-  if (queryData !== undefined) {
-    const live = { value: queryData, updatedAt: Date.now() };
+  const queryClient = getQueryClient();
+  const queryState = queryClient.getQueryState<T>([key]);
+  if (queryState?.data !== undefined) {
+    const live = {
+      value: queryState.data,
+      updatedAt: queryState.dataUpdatedAt || Date.now()
+    };
     memoryCache.set(key, live);
     return live;
   }
@@ -83,7 +83,7 @@ export function readCache<T>(key: string): CacheRecord<T> | null {
   const persisted = readPersisted<T>(key);
   if (persisted) {
     memoryCache.set(key, persisted);
-    getQueryClient().setQueryData([key], persisted.value);
+    queryClient.setQueryData([key], persisted.value);
   }
   return persisted;
 }

@@ -20,9 +20,9 @@ import { CaseActivityPanel } from "@/components/operations/CaseActivityPanel";
 
 const VIEWS: Array<{ value: VerificationQueueView; label: string }> = [
   { value: "ACTIVE", label: "Active" },
+  { value: "ESCALATED", label: "Escalated" },
   { value: "COMPLETED", label: "Completed" },
   { value: "REJECTED", label: "Rejected" },
-  { value: "TIMEOUT", label: "Timeout" },
   { value: "ALL", label: "All" }
 ];
 
@@ -47,14 +47,11 @@ export function VerificationWorkspace({ mode = "employee" }: { mode?: "employee"
   const isBusy = busyAction !== null;
 
   const selected = useMemo(() => requests.find((item) => item.id === selectedId) ?? null, [requests, selectedId]);
-  const selectedWhatsAppHelpAt = useMemo(() => {
-    if (!selected?.reason?.startsWith("WHATSAPP_HELP_REQUESTED:")) return null;
-    return selected.reason.replace("WHATSAPP_HELP_REQUESTED:", "");
-  }, [selected?.reason]);
+  const selectedWhatsAppHelpAt = selected?.escalationRequestedAt ?? null;
   const isValidMeetUrl = useMemo(() => isValidGoogleMeetUrl(meetUrl), [meetUrl]);
   const selectedAssignedToCurrentActor = Boolean(selected && actorUserId && selected.assignedEmployeeId === actorUserId);
   const selectedAssignedToAnotherActor = Boolean(selected?.assignedEmployeeId && selected.assignedEmployeeId !== actorUserId);
-  const canClaimSelected = Boolean(selected && selected.status === "REQUESTED" && !selected.assignedEmployeeId && !isBusy);
+  const canClaimSelected = Boolean(selected && ["PENDING", "ESCALATED"].includes(selected.status) && !selected.assignedEmployeeId && !isBusy);
   const canSendLinkSelected = Boolean(selected && selectedAssignedToCurrentActor && ["ASSIGNED", "IN_PROGRESS"].includes(selected.status) && !isBusy);
   const canResolveSelected = Boolean(selected && selectedAssignedToCurrentActor && ["ASSIGNED", "IN_PROGRESS"].includes(selected.status) && !isBusy);
 
@@ -158,7 +155,7 @@ export function VerificationWorkspace({ mode = "employee" }: { mode?: "employee"
                   <p className="text-sm">{request.user.phone}</p>
                   <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-white/50">{request.status.replaceAll("_", " ")}</p>
                   <p className="mt-1 text-[10px] text-white/45">{ownershipLabel}</p>
-                  {request.reason?.startsWith("WHATSAPP_HELP_REQUESTED:") ? (
+                  {request.escalationRequestedAt ? (
                     <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-300">WhatsApp Help Requested</p>
                   ) : null}
                   {request.assignedAt ? <p className="mt-1 text-[10px] text-white/45">Updated {new Date(request.assignedAt).toLocaleString()}</p> : null}

@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { normalizeApiError } from "@/lib/apiErrors";
 import { respondToIncomingLike, type LikesIncomingProfile } from "@/lib/likes";
 import { useLikesResource } from "@/lib/appData";
-import { syncAfterMatchCreated } from "@/lib/resourceSync";
+import { applyOptimisticMemberActionToCaches, syncAfterMatchCreated } from "@/lib/resourceSync";
 import { X, Check, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { motion, type PanInfo } from "framer-motion";
@@ -62,6 +62,7 @@ export default function LikesPage() {
     setPendingProfileId(current.profileId);
     setActionError(null);
     persist(nextCards);
+    applyOptimisticMemberActionToCaches(current.profileId);
 
     try {
       const response = await respondToIncomingLike({ targetUserId: current.profileId, action });

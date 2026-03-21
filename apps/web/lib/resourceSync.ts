@@ -1,5 +1,7 @@
 "use client";
 
+import { applyDiscoverActionToCache } from "@/lib/discoverFeed";
+import type { LikesIncomingProfile } from "@/lib/likes";
 import { fetchIncomingLikes } from "@/lib/likes";
 import { fetchAlerts, fetchMatches, fetchProfile } from "@/lib/queries";
 import { primeCache, readCache } from "@/lib/cache";
@@ -104,7 +106,24 @@ export async function refreshMemberResources(names: MemberResourceName[]) {
   await Promise.all(names.map((name) => refreshMemberResource(name)));
 }
 
+export function removeIncomingLikeFromCache(targetUserId: string) {
+  if (!targetUserId) return;
+
+  const current = readCache<LikesIncomingProfile[]>("likes-incoming")?.value;
+  if (!current) return;
+
+  const next = current.filter((item) => item.profileId !== targetUserId);
+  if (next.length === current.length) return;
+  primeCache("likes-incoming", next);
+}
+
+export function applyOptimisticMemberActionToCaches(targetUserId: string) {
+  if (!targetUserId) return;
+  applyDiscoverActionToCache(targetUserId);
+  removeIncomingLikeFromCache(targetUserId);
+}
+
 export async function syncAfterMatchCreated(matchId: string | null | undefined) {
   if (!matchId) return;
-  await refreshMemberResources(["matches", "alerts"]);
+  await refreshMemberResources(["likes", "matches", "alerts"]);
 }

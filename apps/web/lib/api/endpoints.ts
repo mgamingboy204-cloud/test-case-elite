@@ -41,6 +41,13 @@ export const API_ENDPOINTS = {
   ops: {
     caseActivity: (caseType: string, caseId: string) => `/ops/cases/${caseType}/${caseId}/activity`,
     addCaseNote: (caseType: string, caseId: string) => `/ops/cases/${caseType}/${caseId}/notes`,
+    verification: {
+      list: (statusView?: string) => `/ops/verification-requests${statusView ? `?statusView=${statusView}` : ""}`,
+      assign: (requestId: string) => `/ops/verification-requests/${requestId}/assign`,
+      start: (requestId: string) => `/ops/verification-requests/${requestId}/start`,
+      approve: (requestId: string) => `/ops/verification-requests/${requestId}/approve`,
+      reject: (requestId: string) => `/ops/verification-requests/${requestId}/reject`,
+    },
   },
 
   // USER
@@ -148,13 +155,6 @@ export const API_ENDPOINTS = {
     },
     escalations: "/admin/escalations",
     auditLogs: "/admin/audit-logs",
-    verification: {
-      list: (statusView?: string) => `/ops/verification-requests${statusView ? `?statusView=${statusView}` : ""}`,
-      assign: (requestId: string) => `/ops/verification-requests/${requestId}/assign`,
-      start: (requestId: string) => `/ops/verification-requests/${requestId}/start`,
-      approve: (requestId: string) => `/ops/verification-requests/${requestId}/approve`,
-      reject: (requestId: string) => `/ops/verification-requests/${requestId}/reject`,
-    },
   },
 
   // PAYMENTS
@@ -168,7 +168,6 @@ export const API_ENDPOINTS = {
 
   // VERIFICATION
   verification: {
-    video: "/verification/video",
     request: "/verification-requests",
     status: "/verification/status",
     whatsapp: "/verification/help/whatsapp",

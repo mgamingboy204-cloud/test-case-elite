@@ -25,9 +25,23 @@ import {
   emitVerificationStatusChanged
 } from "../live/liveEventBroker";
 
-type VerificationRequestListItem = Prisma.VerificationRequestGetPayload<{
-  include: { user: { select: { id: true; phone: true; email: true } } };
-}>;
+type VerificationRequestListItem = {
+  id: string;
+  status: VerificationRequestStatus;
+  verificationLink: string | null;
+  meetUrl: string | null;
+  createdAt: Date;
+  assignedAt: Date | null;
+  assignedEmployeeId: string | null;
+  reason: string | null;
+  updatedAt: Date;
+  escalationRequestedAt: string | null;
+  user: {
+    id: string;
+    phone: string;
+    email: string | null;
+  };
+};
 type UserListItem = Prisma.UserGetPayload<{
   select: {
     id: true;
@@ -58,7 +72,7 @@ type RefundListItem = Prisma.RefundRequestGetPayload<{
   include: { user: { select: { id: true; phone: true; email: true } } };
 }>;
 
-type VerificationWorkerView = "ACTIVE" | "COMPLETED" | "REJECTED" | "TIMEOUT" | "ALL";
+type VerificationWorkerView = "ACTIVE" | "ESCALATED" | "COMPLETED" | "REJECTED" | "ALL";
 
 const ADMIN_NOTIFICATION_TYPES = [
   NotificationType.VIDEO_VERIFICATION_UPDATE,
@@ -81,10 +95,10 @@ function isAdminNotificationType(type: NotificationType): type is AdminNotificat
 }
 
 const VERIFICATION_VIEW_STATUS_MAP: Record<Exclude<VerificationWorkerView, "ALL">, VerificationRequestStatus[]> = {
-  ACTIVE: ["REQUESTED", "ASSIGNED", "IN_PROGRESS"],
+  ACTIVE: ["PENDING", "ESCALATED", "ASSIGNED", "IN_PROGRESS"],
+  ESCALATED: ["ESCALATED"],
   COMPLETED: ["COMPLETED"],
-  REJECTED: ["REJECTED"],
-  TIMEOUT: ["TIMED_OUT"]
+  REJECTED: ["REJECTED"]
 };
 
 function resolveVerificationWorkerView(value?: string): VerificationWorkerView {
@@ -164,7 +178,7 @@ export async function listUsers(status?: string): Promise<{ users: UserListItem[
 
 export async function getDashboard() {
   const activeSubscriptionStatuses: SubscriptionStatus[] = ["ACTIVE"];
-  const pendingVerificationStatuses: VerificationRequestStatus[] = ["REQUESTED", "ASSIGNED", "IN_PROGRESS"];
+  const pendingVerificationStatuses: VerificationRequestStatus[] = ["PENDING", "ESCALATED", "ASSIGNED", "IN_PROGRESS"];
   const pendingOfflineStatuses: OfflineMeetCoordinationStatus[] = [
     "REQUESTED",
     "ACCEPTED",
@@ -214,7 +228,7 @@ export async function getDashboard() {
     unreadOperationalAlerts
   ] = await Promise.all([
     prisma.user.count({ where: { deletedAt: null } }),
-    prisma.user.count({ where: { deletedAt: null, status: "APPROVED", isVideoVerified: true } }),
+    prisma.user.count({ where: { deletedAt: null, status: "APPROVED", videoVerificationStatus: "APPROVED" } }),
     prisma.user.count({ where: { deletedAt: null, status: "BANNED" } }),
     prisma.user.count({ where: { deletedAt: null, status: "REJECTED" } }),
     prisma.user.count({ where: { deletedAt: null, onboardingStep: "ACTIVE" } }),
@@ -483,9 +497,25 @@ async function pushVerificationAlert(options: {
 }
 
 function assertRequestIsActive(status: VerificationRequestStatus) {
-  if (["COMPLETED", "REJECTED", "TIMED_OUT"].includes(status)) {
+  if (["COMPLETED", "REJECTED"].includes(status)) {
     throw new HttpError(409, { message: "This verification request is already closed." });
   }
+}
+
+async function resolveVerificationEscalationForRequest(options: {
+  db: Prisma.TransactionClient;
+  requestId: string;
+}) {
+  await options.db.escalationRequest.updateMany({
+    where: {
+      verificationRequestId: options.requestId,
+      status: "OPEN"
+    },
+    data: {
+      status: "RESOLVED",
+      resolvedAt: new Date()
+    }
+  });
 }
 
 async function syncVerificationAssignmentOnUser(options: {
@@ -548,7 +578,7 @@ export async function listVerificationRequestsForActor(options: {
 
   const statusView = resolveVerificationWorkerView(options.statusView);
   const statusInView = statusView === "ALL" ? undefined : VERIFICATION_VIEW_STATUS_MAP[statusView];
-  const requests: VerificationRequestListItem[] = await prisma.verificationRequest.findMany({
+  const records = await prisma.verificationRequest.findMany({
     where: {
       ...(options.statusFilter && options.statusFilter !== "ALL"
         ? { status: options.statusFilter as VerificationRequestStatus }
@@ -556,9 +586,55 @@ export async function listVerificationRequestsForActor(options: {
         ? { status: { in: statusInView } }
         : {})
     },
-    include: { user: { select: { id: true, phone: true, email: true } } },
-    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }]
+    include: {
+      user: { select: { id: true, phone: true, email: true } },
+      escalationRequest: {
+        select: {
+          requestedAt: true,
+          status: true
+        }
+      }
+    },
+    orderBy: [{ createdAt: "asc" }]
   });
+
+  const requests: VerificationRequestListItem[] = records
+    .map((request) => ({
+      id: request.id,
+      status: request.status,
+      verificationLink: request.verificationLink,
+      meetUrl: request.meetUrl,
+      createdAt: request.createdAt,
+      assignedAt: request.assignedAt,
+      assignedEmployeeId: request.assignedEmployeeId,
+      reason: request.reason,
+      updatedAt: request.updatedAt,
+      escalationRequestedAt:
+        request.status === "ESCALATED" && request.escalationRequest
+          ? request.escalationRequest.requestedAt.toISOString()
+          : null,
+      user: request.user
+    }))
+    .sort((left, right) => {
+      const priority = (request: VerificationRequestListItem) => {
+        if (request.status === "ESCALATED") return 0;
+        if (request.status === "PENDING") return 1;
+        if (request.status === "ASSIGNED") return 2;
+        if (request.status === "IN_PROGRESS") return 3;
+        if (request.status === "COMPLETED") return 4;
+        return 5;
+      };
+
+      const priorityDelta = priority(left) - priority(right);
+      if (priorityDelta !== 0) return priorityDelta;
+
+      if (left.status === "ESCALATED" || left.status === "PENDING") {
+        return left.createdAt.getTime() - right.createdAt.getTime();
+      }
+
+      return right.updatedAt.getTime() - left.updatedAt.getTime();
+    });
+
   return { statusView, requests };
 }
 
@@ -585,7 +661,7 @@ export async function startVerificationRequest(requestId: string, meetUrl: strin
   if (!existing) throw new HttpError(404, { message: "Verification request not found" });
   assertRequestIsActive(existing.status);
   ensureRequestOwnedByActor(existing, actorUserId, "sending the meeting link");
-  if (existing.status === "REQUESTED") {
+  if (existing.status === "PENDING" || existing.status === "ESCALATED") {
     throw new HttpError(409, { message: "Claim this request before sending the meeting link." });
   }
   if (existing.status === "IN_PROGRESS" && existing.assignedEmployeeId === actorUserId && existing.meetUrl === meetUrl) {
@@ -622,6 +698,10 @@ export async function startVerificationRequest(requestId: string, meetUrl: strin
       actorUserId,
       assignedAt: updated.assignedAt ?? new Date(),
       verificationStatus: "IN_PROGRESS"
+    });
+    await resolveVerificationEscalationForRequest({
+      db: tx,
+      requestId: updated.id
     });
     await tx.auditLog.create({
       data: {
@@ -689,7 +769,7 @@ export async function assignVerificationRequest(requestId: string, actorUserId: 
     const claimResult = await tx.verificationRequest.updateMany({
       where: {
         id: requestId,
-        status: { in: ["REQUESTED", "ASSIGNED"] },
+        status: { in: ["PENDING", "ESCALATED", "ASSIGNED"] },
         OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: actorUserId }]
       },
       data: {
@@ -709,6 +789,10 @@ export async function assignVerificationRequest(requestId: string, actorUserId: 
       actorUserId,
       assignedAt: updated.assignedAt ?? assignedAt,
       verificationStatus: "PENDING"
+    });
+    await resolveVerificationEscalationForRequest({
+      db: tx,
+      requestId: updated.id
     });
     await tx.auditLog.create({
       data: {
@@ -771,12 +855,17 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
       data: {
         status: "APPROVED",
         verifiedAt: now,
+        isVideoVerified: true,
         videoVerificationStatus: "APPROVED",
         onboardingStep: "VIDEO_VERIFIED",
         verifiedByEmployeeId: actorUserId,
         assignedEmployeeId: actorUserId,
         assignedAt: existing.assignedAt ?? now
       }
+    });
+    await resolveVerificationEscalationForRequest({
+      db: tx,
+      requestId: updated.id
     });
     await tx.auditLog.create({
       data: {
@@ -840,9 +929,14 @@ export async function rejectVerificationRequest(requestId: string, actorUserId: 
       where: { id: updated.userId },
       data: {
         status: marksFraud ? "BANNED" : "REJECTED",
+        isVideoVerified: false,
         videoVerificationStatus: "REJECTED",
         onboardingStep: "VIDEO_VERIFICATION_PENDING"
       }
+    });
+    await resolveVerificationEscalationForRequest({
+      db: tx,
+      requestId: updated.id
     });
     await tx.auditLog.create({
       data: {
@@ -871,195 +965,6 @@ export async function rejectVerificationRequest(requestId: string, actorUserId: 
   emitVerificationQueueChanged(request.id);
   emitAdminDashboardChanged();
   return { request };
-}
-
-async function findOrCreateVerificationRequest(userId: string) {
-  await synchronizeVerificationRequests({ userId });
-
-  const existing = await prisma.verificationRequest.findFirst({
-    where: { userId },
-    orderBy: { createdAt: "desc" }
-  });
-  if (existing && existing.status !== "TIMED_OUT") return existing;
-  return prisma.verificationRequest.create({
-    data: { userId, status: "REQUESTED" }
-  });
-}
-
-export async function setVerificationMeetLink(userId: string, meetUrl: string, actorUserId: string) {
-  const request = await findOrCreateVerificationRequest(userId);
-  const updated = await prisma.$transaction(async (tx) => {
-    const refreshed = await tx.verificationRequest.findUnique({ where: { id: request.id } });
-    if (!refreshed) throw new HttpError(404, { message: "Verification request not found" });
-    assertRequestIsActive(refreshed.status);
-    const assignedAt = refreshed.assignedAt ?? new Date();
-    const startResult = await tx.verificationRequest.updateMany({
-      where: {
-        id: refreshed.id,
-        status: { in: ["REQUESTED", "ASSIGNED", "IN_PROGRESS"] },
-        OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: actorUserId }]
-      },
-      data: {
-        status: "IN_PROGRESS",
-        assignedEmployeeId: actorUserId,
-        assignedAt,
-        verificationLink: meetUrl,
-        meetUrl,
-        linkExpiresAt: new Date(Date.now() + 5 * 60 * 1000)
-      }
-    });
-    if (startResult.count === 0) {
-      throw new HttpError(409, { message: "This request is already assigned to another employee." });
-    }
-    const inProgress = await tx.verificationRequest.findUnique({ where: { id: refreshed.id } });
-    if (!inProgress) throw new HttpError(404, { message: "Verification request not found" });
-    await syncVerificationAssignmentOnUser({
-      db: tx,
-      userId,
-      actorUserId,
-      assignedAt: inProgress.assignedAt ?? assignedAt,
-      verificationStatus: "IN_PROGRESS"
-    });
-    await tx.auditLog.create({
-      data: {
-        actorUserId,
-        action: "verification_link_set",
-        targetType: "VerificationRequest",
-        targetId: inProgress.id,
-        metadata: { meetUrl }
-      }
-    });
-    await pushVerificationAlert({
-      db: tx,
-      userId,
-      actorUserId,
-      title: "Verification Session Assigned",
-      message: "Your video verification session has been scheduled. Please join using the secure link.",
-      metadata: { eventType: "VERIFICATION_ASSIGNED", meetUrl, cta: "Join verification call" }
-    });
-    return inProgress;
-  });
-  emitAlertsChanged([userId]);
-  emitVerificationStatusChanged({ userId, requestId: updated.id, status: updated.status });
-  emitSessionStateChanged([userId], "verification_started");
-  emitAdminAuditLogsChanged();
-  emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: updated.id });
-  emitVerificationQueueChanged(updated.id);
-  emitAdminDashboardChanged();
-  return { request: updated };
-}
-
-export async function approveVerificationForUser(userId: string, actorUserId: string, reason?: string | null) {
-  const request = await findOrCreateVerificationRequest(userId);
-  const now = new Date();
-  const updated = await prisma.verificationRequest.update({
-    where: { id: request.id },
-    data: {
-      status: "COMPLETED",
-      completedAt: now,
-      meetUrl: undefined,
-      verificationLink: undefined,
-      linkExpiresAt: undefined,
-      decidedAt: now,
-      decidedBy: actorUserId,
-      assignedEmployeeId: request.assignedEmployeeId ?? actorUserId,
-      assignedAt: request.assignedAt ?? now,
-      reason: reason?.trim() || undefined
-    }
-
-  });
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      status: "APPROVED",
-      verifiedAt: now,
-      videoVerificationStatus: "APPROVED",
-      onboardingStep: "VIDEO_VERIFIED",
-      verifiedByEmployeeId: actorUserId,
-      assignedEmployeeId: actorUserId,
-      assignedAt: request.assignedAt ?? now
-    }
-  });
-  await prisma.auditLog.create({
-    data: {
-      actorUserId,
-      action: "verification_approved",
-      targetType: "VerificationRequest",
-      targetId: updated.id,
-      metadata: { reason: reason?.trim() || undefined }
-
-    }
-  });
-  await pushVerificationAlert({
-    userId,
-    actorUserId,
-    title: "Verification Approved",
-    message: "Your video verification is complete. Please proceed with membership payment.",
-    metadata: { eventType: "VERIFICATION_APPROVED" }
-  });
-  emitAlertsChanged([userId]);
-  emitVerificationStatusChanged({ userId, requestId: updated.id, status: updated.status });
-  emitSessionStateChanged([userId], "verification_approved");
-  emitAdminAuditLogsChanged();
-  emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: updated.id });
-  emitVerificationQueueChanged(updated.id);
-  emitAdminDashboardChanged();
-  return { request: updated };
-}
-
-export async function rejectVerificationForUser(userId: string, actorUserId: string, reason: string) {
-  const request = await findOrCreateVerificationRequest(userId);
-  const normalizedReason = reason.trim();
-  const marksFraud = /(fake|fraud|impersonat|scam)/i.test(normalizedReason);
-  const now = new Date();
-  const updated = await prisma.verificationRequest.update({
-    where: { id: request.id },
-   data: {
-      status: "REJECTED",
-      completedAt: now,
-      meetUrl: undefined,
-      verificationLink: undefined,
-      linkExpiresAt: undefined,
-      decidedAt: now,
-      decidedBy: actorUserId,
-      assignedEmployeeId: request.assignedEmployeeId ?? actorUserId,
-      assignedAt: request.assignedAt ?? now,
-      reason: normalizedReason
-    }
-
-  });
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      status: marksFraud ? "BANNED" : "REJECTED",
-      videoVerificationStatus: "REJECTED",
-      onboardingStep: "VIDEO_VERIFICATION_PENDING"
-    }
-  });
-  await prisma.auditLog.create({
-    data: {
-      actorUserId,
-      action: "verification_rejected",
-      targetType: "VerificationRequest",
-      targetId: updated.id,
-      metadata: { reason: normalizedReason, markedFraud: marksFraud }
-    }
-  });
-  await pushVerificationAlert({
-    userId,
-    actorUserId,
-    title: "Verification Needs Attention",
-    message: "Your verification could not be approved yet. Please review the update and reconnect with support.",
-    metadata: { eventType: "VERIFICATION_REJECTED", reason: normalizedReason }
-  });
-  emitAlertsChanged([userId]);
-  emitVerificationStatusChanged({ userId, requestId: updated.id, status: updated.status });
-  emitSessionStateChanged([userId], "verification_rejected");
-  emitAdminAuditLogsChanged();
-  emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: updated.id });
-  emitVerificationQueueChanged(updated.id);
-  emitAdminDashboardChanged();
-  return { request: updated };
 }
 
 export async function shiftPaymentDate(options: { userId: string; daysBack: number }) {

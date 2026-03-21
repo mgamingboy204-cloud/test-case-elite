@@ -15,8 +15,7 @@ import {
   emitOpsCaseActivityChanged
 } from "../live/liveEventBroker";
 
-const WHATSAPP_HELP_PREFIX = "WHATSAPP_HELP_REQUESTED:";
-const ACTIVE_VERIFICATION_STATUSES: VerificationRequestStatus[] = ["REQUESTED", "ASSIGNED", "IN_PROGRESS"];
+const ACTIVE_VERIFICATION_STATUSES: VerificationRequestStatus[] = ["PENDING", "ESCALATED", "ASSIGNED", "IN_PROGRESS"];
 const ACTIVE_OFFLINE_STATUSES: OfflineMeetCoordinationStatus[] = [
   "REQUESTED",
   "ACCEPTED",
@@ -125,7 +124,7 @@ async function assertCaseExists(caseType: OpsCaseType, caseId: string) {
 export async function getEmployeeDashboard(actorUserId: string) {
   const [pendingVerificationRequests, myVerificationCases, myOfflineCases, myOnlineCases, memberLoad, escalations] = await Promise.all([
     prisma.verificationRequest.count({
-      where: { status: "REQUESTED", assignedEmployeeId: null }
+      where: { status: { in: ["PENDING", "ESCALATED"] }, assignedEmployeeId: null }
     }),
     prisma.verificationRequest.count({
       where: {
@@ -152,11 +151,8 @@ export async function getEmployeeDashboard(actorUserId: string) {
         deactivatedAt: null
       }
     }),
-    prisma.verificationRequest.count({
-      where: {
-        reason: { startsWith: WHATSAPP_HELP_PREFIX },
-        status: { in: ACTIVE_VERIFICATION_STATUSES }
-      }
+    prisma.escalationRequest.count({
+      where: { status: "OPEN" }
     })
   ]);
 
@@ -284,11 +280,20 @@ export async function listAssignedCases(actorUserId: string) {
 }
 
 export async function listOperationalEscalations() {
-  const requests = await prisma.verificationRequest.findMany({
+  const requests = await prisma.escalationRequest.findMany({
     where: {
-      reason: { startsWith: WHATSAPP_HELP_PREFIX }
+      status: "OPEN",
+      type: "VERIFICATION_WHATSAPP"
     },
     include: {
+      verificationRequest: {
+        select: {
+          id: true,
+          status: true,
+          assignedEmployeeId: true,
+          updatedAt: true
+        }
+      },
       user: {
         select: {
           id: true,
@@ -300,17 +305,17 @@ export async function listOperationalEscalations() {
         }
       }
     },
-    orderBy: [{ updatedAt: "desc" }]
+    orderBy: [{ requestedAt: "desc" }]
   });
 
   return {
     escalations: requests.map((request) => ({
-      id: request.id,
+      id: request.verificationRequest.id,
       type: "VERIFICATION_WHATSAPP" as const,
-      status: request.status,
-      requestedAt: request.reason?.replace(WHATSAPP_HELP_PREFIX, "") ?? request.updatedAt.toISOString(),
-      updatedAt: request.updatedAt.toISOString(),
-      assignedEmployeeId: request.assignedEmployeeId,
+      status: request.verificationRequest.status,
+      requestedAt: request.requestedAt.toISOString(),
+      updatedAt: request.verificationRequest.updatedAt.toISOString(),
+      assignedEmployeeId: request.verificationRequest.assignedEmployeeId,
       member: {
         id: request.user.id,
         name: formatMemberName(request.user),
