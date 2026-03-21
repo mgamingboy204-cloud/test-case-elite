@@ -32,6 +32,31 @@ export function routeForFrontendOnboardingStep(step: FrontendOnboardingStep) {
   return routeMap[step];
 }
 
+function resolveRouteFromAuthenticatedMemberState(input: {
+  backendStep?: BackendOnboardingStep | null;
+  redirectTo?: string | null;
+  appState?: { redirectTo?: string | null } | null;
+}) {
+  const explicitRedirect = (
+    input.appState?.redirectTo ??
+    input.redirectTo ??
+    ""
+  ).trim();
+  if (explicitRedirect.startsWith("/")) {
+    return explicitRedirect;
+  }
+
+  const backendStep = input.backendStep;
+  if (backendStep === "ACTIVE") return "/discover";
+  if (backendStep === "PAYMENT_PENDING" || backendStep === "VIDEO_VERIFIED") {
+    return "/onboarding/payment";
+  }
+  if (backendStep === "PAID" || backendStep === "PROFILE_PENDING") {
+    return "/onboarding/details";
+  }
+  return "/onboarding/verification";
+}
+
 export function routeForAuthenticatedUser(input: {
   role?: "USER" | "EMPLOYEE" | "ADMIN" | null;
   mustResetPassword?: boolean;
@@ -49,34 +74,19 @@ export function routeForAuthenticatedUser(input: {
     return input.role === "ADMIN" ? "/admin" : "/employee";
   }
 
-  const explicitRedirect = (
-    input.appState?.redirectTo ??
-    input.redirectTo ??
-    ""
-  ).trim();
-  if (explicitRedirect.startsWith("/")) {
-    return explicitRedirect;
-  }
-
-  const backendStep = input.backendStep ?? input.onboardingStep;
-
-  return routeForFrontendOnboardingStep(
-    resolveFrontendOnboardingStep({
-      isAuthenticated: true,
-      backendStep,
-      profileCompletedAt: input.profileCompletedAt,
-      photoCount: input.photoCount
-    })
-  );
+  return resolveRouteFromAuthenticatedMemberState({
+    backendStep: input.backendStep ?? input.onboardingStep,
+    redirectTo: input.redirectTo,
+    appState: input.appState
+  });
 }
 
 export function resolveFrontendOnboardingStep(input: {
   isAuthenticated: boolean;
   pendingPhone?: string | null;
   signupToken?: string | null;
+  authenticatedRoute?: string | null;
   backendStep?: BackendOnboardingStep | null;
-  profileCompletedAt?: Date | string | null;
-  photoCount?: number;
 }): FrontendOnboardingStep {
   if (!input.isAuthenticated) {
     if (input.signupToken) return "PASSWORD";
@@ -84,19 +94,16 @@ export function resolveFrontendOnboardingStep(input: {
     return "PHONE";
   }
 
-  const backendStep = input.backendStep;
-  // Production gating: main app should only unlock when backend confirms ACTIVE.
-  if (backendStep === "ACTIVE") return "COMPLETED";
+  const authenticatedRoute = (
+    input.authenticatedRoute ??
+    resolveRouteFromAuthenticatedMemberState({
+      backendStep: input.backendStep
+    })
+  ).trim();
 
-  if (backendStep === "PAID" || backendStep === "PROFILE_PENDING") {
-    // Even if profile/photos look done, keep the user in onboarding until backend marks ACTIVE.
-    // This prevents UI showing main app pages that will 403 under API `requireActive`.
-    if (input.profileCompletedAt && (input.photoCount ?? 0) >= 1) return "PHOTOS";
-    if (input.profileCompletedAt && (input.photoCount ?? 0) < 1) return "PHOTOS";
-    return "PROFILE";
-  }
-
-  if (backendStep === "PAYMENT_PENDING" || backendStep === "VIDEO_VERIFIED") return "PAYMENT";
-
-  return "VERIFICATION";
+  if (authenticatedRoute.startsWith("/onboarding/photos")) return "PHOTOS";
+  if (authenticatedRoute.startsWith("/onboarding/details")) return "PROFILE";
+  if (authenticatedRoute.startsWith("/onboarding/payment")) return "PAYMENT";
+  if (authenticatedRoute.startsWith("/onboarding/verification")) return "VERIFICATION";
+  return "COMPLETED";
 }

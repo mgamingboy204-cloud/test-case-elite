@@ -8,7 +8,6 @@ export type AppStateCode =
   | "payment_required"
   | "profile_incomplete"
   | "matching_ineligible"
-  | "profile_data_missing"
   | "eligible";
 
 export function resolvePendingAuthRoute(options: {
@@ -33,32 +32,26 @@ export function resolveRouteRedirect(options: {
   pathname: string;
   isAuthenticated: boolean;
   isAuthResolved: boolean;
-  onboardingStep: FrontendOnboardingStep;
+  onboardingStep?: FrontendOnboardingStep;
+  authenticatedRoute?: string | null;
   scope: "auth" | "onboarding" | "main";
   userRole?: "USER" | "EMPLOYEE" | "ADMIN" | null;
   mustResetPassword?: boolean;
-  appStateCode?: AppStateCode | null;
-  appStateRedirectTo?: string | null;
   authFlowMode?: AuthFlowMode | null;
   pendingPhone?: string | null;
   signupToken?: string | null;
 }) {
   if (!options.isAuthResolved) return null;
 
-  const appStateCode = options.appStateCode;
-  const appStateRedirect =
-    typeof options.appStateRedirectTo === "string" &&
-    options.appStateRedirectTo.startsWith("/")
-      ? options.appStateRedirectTo
-      : null;
   const defaultAuthenticatedRoute =
-    (options.userRole === "ADMIN" || options.userRole === "EMPLOYEE") && options.mustResetPassword
+    options.authenticatedRoute ??
+    ((options.userRole === "ADMIN" || options.userRole === "EMPLOYEE") && options.mustResetPassword
       ? "/staff/password-reset"
       : options.userRole === "ADMIN"
       ? "/admin"
       : options.userRole === "EMPLOYEE"
         ? "/employee"
-      : appStateRedirect ?? routeForFrontendOnboardingStep(options.onboardingStep);
+      : routeForFrontendOnboardingStep(options.onboardingStep ?? "COMPLETED"));
 
   if (options.scope === "auth") {
     if (!options.isAuthenticated) {
@@ -80,20 +73,22 @@ export function resolveRouteRedirect(options: {
     return defaultAuthenticatedRoute;
   }
 
-  const expected = routeForFrontendOnboardingStep(options.onboardingStep);
+  const expected = defaultAuthenticatedRoute;
+  const isOnboardingRoute = expected.startsWith("/onboarding/");
 
   if (options.scope === "onboarding") {
-    if (options.onboardingStep === "COMPLETED") return "/discover";
+    if (!isOnboardingRoute) return expected;
     return options.pathname === expected ? null : expected;
   }
 
-  if (options.onboardingStep !== "COMPLETED") return expected;
+  if (isOnboardingRoute) return expected;
 
-  if (appStateCode === "matching_ineligible" || appStateCode === "profile_data_missing" || appStateCode === "profile_incomplete") {
-    const target = appStateRedirect ?? "/profile";
-    if (options.pathname !== target && (options.pathname === "/discover" || options.pathname === "/likes" || options.pathname === "/matches")) {
-      return target;
-    }
+  if (expected === "/profile") {
+    const isRestrictedMainRoute =
+      options.pathname === "/discover" ||
+      options.pathname === "/likes" ||
+      options.pathname === "/matches";
+    if (isRestrictedMainRoute) return expected;
   }
 
   return null;

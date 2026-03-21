@@ -20,7 +20,7 @@ const NAV_ITEMS = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isAuthResolved, onboardingStep, logout, appStateCode, appStateRedirectTo, user } = useAuth();
+  const { isAuthenticated, isAuthResolved, onboardingStep, logout, authenticatedRoute, user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [mounted] = useState(() => typeof window !== "undefined");
@@ -64,18 +64,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       pathname,
       isAuthenticated,
       isAuthResolved,
+      authenticatedRoute,
       onboardingStep,
       scope: "main",
       userRole: user?.role ?? null,
-      mustResetPassword: user?.mustResetPassword ?? false,
-      appStateCode,
-      appStateRedirectTo
+      mustResetPassword: user?.mustResetPassword ?? false
     });
 
     if (redirect && pathname !== redirect) {
       router.replace(redirect);
     }
-  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router, appStateCode, appStateRedirectTo, user?.mustResetPassword, user?.role]);
+  }, [authenticatedRoute, isAuthResolved, isAuthenticated, onboardingStep, pathname, router, user?.mustResetPassword, user?.role]);
 
   if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
 

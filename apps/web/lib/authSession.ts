@@ -21,7 +21,7 @@ export type CurrentUser = {
   photoCount?: number;
   onboardingToken?: string | null;
   appState?: {
-    code: "guest" | "onboarding_required" | "verification_required" | "payment_required" | "profile_incomplete" | "matching_ineligible" | "profile_data_missing" | "eligible";
+    code: "guest" | "onboarding_required" | "verification_required" | "payment_required" | "profile_incomplete" | "matching_ineligible" | "eligible";
     redirectTo?: string | null;
     reasons?: string[];
   };

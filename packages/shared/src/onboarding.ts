@@ -7,6 +7,13 @@ export type BackendOnboardingStep =
   | "PROFILE_PENDING"
   | "ACTIVE";
 
+export type BackendOnboardingRedirect =
+  | "/discover"
+  | "/onboarding/verification"
+  | "/onboarding/payment"
+  | "/onboarding/details"
+  | "/onboarding/photos";
+
 export type VideoVerificationStatus = "NOT_REQUESTED" | "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED";
 export type PaymentStatus = "NOT_STARTED" | "PENDING" | "PAID" | "FAILED" | "CANCELED";
 
@@ -61,13 +68,25 @@ export function resolveBackendOnboardingStep(input: {
   return "PHONE_VERIFIED";
 }
 
-export function onboardingRedirectForBackendStep(step: BackendOnboardingStep) {
-  if (step === "ACTIVE") return "/discover";
-  if (step === "PAID" || step === "PROFILE_PENDING") return "/onboarding/details";
-  if (step === "PAYMENT_PENDING" || step === "VIDEO_VERIFIED") return "/onboarding/payment";
-  return "/onboarding/verification";
-}
+export function resolveBackendOnboardingRedirect(input: {
+  onboardingStep?: string | null;
+  videoVerificationStatus?: VideoVerificationStatus | string | null;
+  paymentStatus?: PaymentStatus | string | null;
+  profileCompletedAt?: Date | string | null;
+  subscriptionEndsAt?: Date | string | null;
+  photoCount?: number;
+}): BackendOnboardingRedirect {
+  const resolvedStep = resolveBackendOnboardingStep(input);
+  const photoCount = input.photoCount ?? 0;
+  const hasCompletedProfile = Boolean(input.profileCompletedAt);
 
-export function onboardingRedirectForFrontendStep(step: BackendOnboardingStep) {
-  return onboardingRedirectForBackendStep(step);
+  if (resolvedStep === "ACTIVE") return "/discover";
+  if (resolvedStep === "PROFILE_PENDING" || resolvedStep === "PAID") {
+    if (hasCompletedProfile && photoCount < 1) return "/onboarding/photos";
+    return "/onboarding/details";
+  }
+  if (resolvedStep === "PAYMENT_PENDING" || resolvedStep === "VIDEO_VERIFIED") {
+    return "/onboarding/payment";
+  }
+  return "/onboarding/verification";
 }

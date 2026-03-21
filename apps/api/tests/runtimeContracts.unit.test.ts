@@ -4,6 +4,7 @@ import { createLikeHandler } from "../src/controllers/likeController";
 import { createLike } from "../src/services/likeService";
 import { getDiscoverFeed } from "../src/services/discoverService";
 import { likeLimiter } from "../src/middlewares/rateLimiters";
+import { resolveUserAppState } from "@vael/shared";
 import express from "express";
 import request from "supertest";
 
@@ -118,5 +119,55 @@ describe("runtime contracts", () => {
     const where = (prisma.profile.findMany as any).mock.calls[0][0].where;
     expect(JSON.stringify(where)).toContain("likesReceived");
     expect(JSON.stringify(where)).toContain("actorUserId");
+  });
+
+  it("routes paid members with completed details but no photos to the photo step", () => {
+    const state = resolveUserAppState({
+      isAuthenticated: true,
+      onboardingStep: "PROFILE_PENDING",
+      videoVerificationStatus: "APPROVED",
+      paymentStatus: "PAID",
+      profileCompletedAt: new Date().toISOString(),
+      subscriptionEndsAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      photoCount: 0,
+      userStatus: "APPROVED"
+    });
+
+    expect(state.code).toBe("onboarding_required");
+    expect(state.redirectTo).toBe("/onboarding/photos");
+    expect(state.reasons).toContain("photos_required");
+  });
+
+  it("routes paid members without profile details to the details step", () => {
+    const state = resolveUserAppState({
+      isAuthenticated: true,
+      onboardingStep: "PAID",
+      videoVerificationStatus: "APPROVED",
+      paymentStatus: "PAID",
+      profileCompletedAt: null,
+      subscriptionEndsAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      photoCount: 0,
+      userStatus: "APPROVED"
+    });
+
+    expect(state.code).toBe("onboarding_required");
+    expect(state.redirectTo).toBe("/onboarding/details");
+  });
+
+  it("keeps active approved members on discover even if a stale caller passes profile-record flags", () => {
+    const state = resolveUserAppState({
+      isAuthenticated: true,
+      onboardingStep: "ACTIVE",
+      videoVerificationStatus: "APPROVED",
+      paymentStatus: "PAID",
+      profileCompletedAt: new Date().toISOString(),
+      subscriptionEndsAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      photoCount: 2,
+      userStatus: "APPROVED",
+      hasProfileRecord: false
+    } as any);
+
+    expect(state.code).toBe("eligible");
+    expect(state.redirectTo).toBe("/discover");
   });
 });

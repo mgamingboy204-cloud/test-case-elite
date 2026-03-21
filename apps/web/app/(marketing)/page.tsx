@@ -7,16 +7,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
-import { routeForAuthenticatedUser } from "@/lib/onboarding";
 
 export default function Home() {
-  const { isAuthenticated, isAuthResolved, user } = useAuth();
+  const { isAuthenticated, isAuthResolved, authenticatedRoute } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthResolved || !isAuthenticated || !user) return;
-    router.replace(routeForAuthenticatedUser(user));
-  }, [isAuthResolved, isAuthenticated, router, user]);
+    if (!isAuthResolved || !isAuthenticated || !authenticatedRoute) return;
+    router.replace(authenticatedRoute);
+  }, [authenticatedRoute, isAuthResolved, isAuthenticated, router]);
+
+  if (!isAuthResolved) {
+    return <div className="min-h-screen w-full bg-background" />;
+  }
 
   // No target/container needed — the marketing layout owns the scroll context.
   // useScroll() defaults to tracking window scroll, which is what we want here.

@@ -34,7 +34,7 @@ import {
 } from "@/lib/authSession";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
-const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
+const AUTH_BOOTSTRAP_RETRY_DELAY_MS = 3000;
 
 export type OnboardingStep = FrontendOnboardingStep;
 export type SessionRole = "USER" | "EMPLOYEE" | "ADMIN";
@@ -47,7 +47,6 @@ type AppState = {
     | "payment_required"
     | "profile_incomplete"
     | "matching_ineligible"
-    | "profile_data_missing"
     | "eligible";
   redirectTo?: string | null;
   reasons?: string[];
@@ -76,6 +75,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAuthResolved: boolean;
   user: User | null;
+  authenticatedRoute: string | null;
   authFlowMode: AuthFlowMode | null;
   onboardingStep: OnboardingStep;
   pendingPhone: string | null;
@@ -135,6 +135,15 @@ function debugError(message: string, details?: unknown) {
   console.error(message, details);
 }
 
+function isRetryableBootstrapError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    Number((error as { status?: unknown }).status) === 0
+  );
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authFlowMode, setAuthFlowMode] = useState<AuthFlowMode | null>(null);
@@ -147,17 +156,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = Boolean(user);
   const appStateCode = user?.appState?.code ?? null;
   const appStateRedirectTo = user?.appState?.redirectTo ?? null;
+  const authenticatedRoute = useMemo(
+    () => (user ? routeForAuthenticatedUser(user) : null),
+    [user]
+  );
   const onboardingStep = useMemo(
     () =>
       resolveFrontendOnboardingStep({
         isAuthenticated,
         pendingPhone,
         signupToken,
+        authenticatedRoute,
         backendStep: user?.onboardingStep,
-        profileCompletedAt: user?.profileCompletedAt,
-        photoCount: user?.photoCount,
       }),
-    [isAuthenticated, pendingPhone, signupToken, user]
+    [authenticatedRoute, isAuthenticated, pendingPhone, signupToken, user?.onboardingStep]
   );
 
   const clearPendingAuthFlow = () => {
@@ -233,7 +245,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let retryTimeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const scheduleRetry = () => {
+      if (cancelled || retryTimeoutId !== undefined) return;
+      retryTimeoutId = setTimeout(() => {
+        retryTimeoutId = undefined;
+        void hydrate();
+      }, AUTH_BOOTSTRAP_RETRY_DELAY_MS);
+    };
 
     const hydrate = async () => {
       const bootstrapRevision = authStateRevisionRef.current;
@@ -245,15 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSignupToken(storedSignupToken);
 
       try {
-        const restoredUser = await Promise.race([
-          bootstrapSession<User>(),
-          new Promise<null>((_, reject) => {
-            timeoutId = setTimeout(
-              () => reject(new Error("Auth bootstrap timeout")),
-              AUTH_BOOTSTRAP_TIMEOUT_MS
-            );
-          }),
-        ]);
+        const restoredUser = await bootstrapSession<User>();
 
         if (cancelled) {
           return;
@@ -267,6 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (restoredUser) {
           setUser(restoredUser);
           clearPendingAuthFlow();
+          setIsInitialized(true);
         } else {
           clearMemberSessionState();
           setUser(null);
@@ -282,26 +295,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        clearMemberSessionState();
-        setUser(null);
-        setIsInitialized(true);
-        if (
-          error instanceof Error &&
-          error.message === "Auth bootstrap timeout"
-        ) {
-          if (authDebug) {
-            console.warn(
-              "[auth] Bootstrap timeout; proceeding as unauthenticated"
-            );
-          }
+        if (isRetryableBootstrapError(error)) {
+          debugLog("[auth] Bootstrap network failure; retrying session restore", error);
         } else {
-          debugError("[auth] failed to bootstrap session", error);
+          debugError("[auth] Session bootstrap failed; keeping auth unresolved and retrying", error);
         }
-      } finally {
-        if (!cancelled) {
-          setIsInitialized(true);
-        }
-        if (timeoutId !== undefined) clearTimeout(timeoutId);
+        scheduleRetry();
       }
     };
 
@@ -309,7 +308,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
-      if (timeoutId !== undefined) clearTimeout(timeoutId);
+      if (retryTimeoutId !== undefined) clearTimeout(retryTimeoutId);
     };
   }, []);
 
@@ -551,6 +550,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isAuthResolved: isInitialized,
         user,
+        authenticatedRoute,
         authFlowMode,
         onboardingStep,
         pendingPhone,

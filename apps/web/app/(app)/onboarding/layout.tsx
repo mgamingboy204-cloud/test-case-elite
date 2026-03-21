@@ -20,7 +20,7 @@ const STEP_LABELS = ['Identity', 'Funding', 'Essence', 'Presence'];
 export default function OnboardingLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
-  const { onboardingStep, isAuthenticated, isAuthResolved, appStateCode, appStateRedirectTo, user } = useAuth();
+  const { onboardingStep, isAuthenticated, isAuthResolved, authenticatedRoute, user } = useAuth();
 
   const currentIndex = ORDERED_ROUTES.findIndex(r => pathname.includes(r));
   const progress = Math.max(0, Math.min(100, ((currentIndex + 1) / ORDERED_ROUTES.length) * 100));
@@ -33,17 +33,16 @@ export default function OnboardingLayout({ children }: { children: ReactNode }) 
       pathname,
       isAuthenticated,
       isAuthResolved,
+      authenticatedRoute,
       onboardingStep,
       scope: "onboarding",
       userRole: user?.role ?? null,
-      mustResetPassword: user?.mustResetPassword ?? false,
-      appStateCode,
-      appStateRedirectTo
+      mustResetPassword: user?.mustResetPassword ?? false
     });
     if (redirect && pathname !== redirect) {
       router.replace(redirect);
     }
-  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router, appStateCode, appStateRedirectTo, user?.mustResetPassword, user?.role]);
+  }, [authenticatedRoute, isAuthResolved, isAuthenticated, onboardingStep, pathname, router, user?.mustResetPassword, user?.role]);
 
   if (!isAuthResolved) {
     return <div className="w-full h-[100dvh] bg-background" />;

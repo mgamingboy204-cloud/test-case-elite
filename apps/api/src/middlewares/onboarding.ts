@@ -23,8 +23,7 @@ export function requireActive(req: Request, res: Response, next: NextFunction) {
     profileCompletedAt: user?.profileCompletedAt,
     subscriptionEndsAt: user?.subscriptionEndsAt,
     userStatus: user?.status,
-    photoCount: user?.photoCount ?? 0,
-    hasProfileRecord: true
+    photoCount: user?.photoCount ?? 0
   });
 
   if (state.code === "guest") {
@@ -49,8 +48,7 @@ export function requireMatchingEligible(req: Request, res: Response, next: NextF
     profileCompletedAt: user?.profileCompletedAt,
     subscriptionEndsAt: user?.subscriptionEndsAt,
     userStatus: user?.status,
-    photoCount: user?.photoCount ?? 0,
-    hasProfileRecord: true
+    photoCount: user?.photoCount ?? 0
   });
 
   if (state.code === "guest") {

@@ -1,4 +1,8 @@
-import { type BackendOnboardingStep, onboardingRedirectForBackendStep, resolveBackendOnboardingStep } from "./onboarding";
+import {
+  type BackendOnboardingStep,
+  resolveBackendOnboardingRedirect,
+  resolveBackendOnboardingStep
+} from "./onboarding";
 
 export type UserAppStateCode =
   | "guest"
@@ -7,7 +11,6 @@ export type UserAppStateCode =
   | "payment_required"
   | "profile_incomplete"
   | "matching_ineligible"
-  | "profile_data_missing"
   | "eligible";
 
 export type UserAppState = {
@@ -28,7 +31,6 @@ export function resolveUserAppState(input: {
   subscriptionEndsAt?: Date | string | null;
   photoCount?: number;
   userStatus?: string | null;
-  hasProfileRecord?: boolean;
 }) : UserAppState {
   if (!input.isAuthenticated) {
     return {
@@ -51,7 +53,14 @@ export function resolveUserAppState(input: {
   });
 
   if (resolvedOnboardingStep !== "ACTIVE") {
-    const redirectTo = onboardingRedirectForBackendStep(resolvedOnboardingStep);
+    const redirectTo = resolveBackendOnboardingRedirect({
+      onboardingStep: input.onboardingStep,
+      videoVerificationStatus: input.videoVerificationStatus,
+      paymentStatus: input.paymentStatus,
+      profileCompletedAt: input.profileCompletedAt,
+      subscriptionEndsAt: input.subscriptionEndsAt,
+      photoCount: input.photoCount
+    });
 
     if (resolvedOnboardingStep === "VIDEO_VERIFICATION_PENDING" || resolvedOnboardingStep === "PHONE_VERIFIED") {
       return {
@@ -81,18 +90,7 @@ export function resolveUserAppState(input: {
       onboardingStep: resolvedOnboardingStep,
       matchingEligible: false,
       redirectTo,
-      reasons: ["onboarding_incomplete"]
-    };
-  }
-
-  if (input.hasProfileRecord === false) {
-    return {
-      code: "profile_data_missing",
-      isAuthenticated: true,
-      onboardingStep: resolvedOnboardingStep,
-      matchingEligible: false,
-      redirectTo: "/profile",
-      reasons: ["profile_record_missing"]
+      reasons: redirectTo === "/onboarding/photos" ? ["photos_required"] : ["onboarding_incomplete"]
     };
   }
 

@@ -13,9 +13,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   const {
     isAuthenticated,
     isAuthResolved,
+    authenticatedRoute,
     onboardingStep,
-    appStateCode,
-    appStateRedirectTo,
     user,
     authFlowMode,
     pendingPhone,
@@ -27,12 +26,11 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       pathname,
       isAuthenticated,
       isAuthResolved,
+      authenticatedRoute,
       onboardingStep,
       scope: "auth",
       userRole: user?.role ?? null,
       mustResetPassword: user?.mustResetPassword ?? false,
-      appStateCode,
-      appStateRedirectTo,
       authFlowMode,
       pendingPhone,
       signupToken
@@ -41,8 +39,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       router.replace(redirect);
     }
   }, [
-    appStateCode,
-    appStateRedirectTo,
+    authenticatedRoute,
     authFlowMode,
     isAuthResolved,
     isAuthenticated,

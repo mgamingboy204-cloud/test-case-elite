@@ -115,10 +115,7 @@ export async function buildSessionUserPayload(userId: string): Promise<SessionUs
 
   assertSessionEligible(user);
 
-  const [photoCount, profileRecord] = await Promise.all([
-    prisma.photo.count({ where: { userId: user.id } }),
-    prisma.profile.findUnique({ where: { userId: user.id }, select: { userId: true } })
-  ]);
+  const photoCount = await prisma.photo.count({ where: { userId: user.id } });
 
   const resolvedOnboardingStep = resolveOnboardingStep({
     onboardingStep: user.onboardingStep,
@@ -154,8 +151,7 @@ export async function buildSessionUserPayload(userId: string): Promise<SessionUs
     profileCompletedAt: nextUser.profileCompletedAt,
     subscriptionEndsAt: nextUser.subscriptionEndsAt,
     userStatus: nextUser.status,
-    photoCount,
-    hasProfileRecord: Boolean(profileRecord)
+    photoCount
   });
 
   return {
