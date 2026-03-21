@@ -5,8 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ApiError, apiRequestAuth } from "@/lib/api";
 import { normalizeApiError } from "@/lib/apiErrors";
 import { ProtectedState } from "@/components/ui/protected-state";
-import { fetchProfile, type ProfileViewModel } from "@/lib/queries";
-import { useStaleWhileRevalidate } from "@/lib/cache";
+import { type ProfileViewModel } from "@/lib/queries";
+import { useProfileResource } from "@/lib/appData";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { Loader2, PencilLine, ShieldCheck, UserRoundCheck, ImagePlus, Trash2, KeyRound } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -93,12 +93,7 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
 
-  const profileQuery = useStaleWhileRevalidate({
-    key: "profile",
-    fetcher: fetchProfile,
-    enabled: isAuthenticated && onboardingStep === "COMPLETED",
-    staleTimeMs: 60_000
-  });
+  const profileQuery = useProfileResource(isAuthenticated && onboardingStep === "COMPLETED");
 
   if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
 

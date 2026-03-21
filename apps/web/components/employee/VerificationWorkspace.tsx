@@ -15,6 +15,7 @@ import {
   type VerificationQueueView,
   type WorkerVerificationRequest
 } from "@/lib/workerVerification";
+import { EMPLOYEE_QUEUE_FALLBACK_MS } from "@/lib/resourceSync";
 
 const VIEWS: Array<{ value: VerificationQueueView; label: string }> = [
   { value: "ACTIVE", label: "Active" },
@@ -81,7 +82,7 @@ export function VerificationWorkspace() {
     enabled: true,
     refresh: () => refresh(),
     eventTypes: ["admin.verification.queue.changed"],
-    fallbackIntervalMs: 5_000
+    fallbackIntervalMs: EMPLOYEE_QUEUE_FALLBACK_MS
   });
 
   const runAction = async (key: string, action: () => Promise<void>, successMessage: string) => {

@@ -27,6 +27,7 @@ import {
   type OnlineMeetStatusView
 } from "@/lib/onlineMeet";
 import { ApiError } from "@/lib/api";
+import { EMPLOYEE_COORDINATION_FALLBACK_MS } from "@/lib/resourceSync";
 
 type MeetMode = "OFFLINE" | "ONLINE";
 
@@ -217,7 +218,7 @@ export function MatchHandlerWorkspace() {
     enabled: true,
     refresh: refreshActive,
     eventTypes: ["admin.offline_meets.changed", "admin.online_meets.changed"],
-    fallbackIntervalMs: 60_000
+    fallbackIntervalMs: EMPLOYEE_COORDINATION_FALLBACK_MS
   });
 
   const withAction = async (key: string, run: () => Promise<unknown>, successMessage: string) => {

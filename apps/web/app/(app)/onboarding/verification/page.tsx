@@ -7,6 +7,7 @@ import { apiRequestAuth } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import { VERIFICATION_STATUS_FALLBACK_MS } from "@/lib/resourceSync";
 
 type VerificationPayload = {
   status: "NOT_REQUESTED" | "REQUESTED" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED" | "TIMED_OUT";
@@ -92,7 +93,7 @@ export default function VideoVerificationPage() {
     enabled: Boolean(payloadStatus),
     refresh: loadStatus,
     eventTypes: ["verification.status.changed"],
-    fallbackIntervalMs: ["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(payloadStatus ?? "") ? 5_000 : undefined
+    fallbackIntervalMs: ["REQUESTED", "ASSIGNED", "IN_PROGRESS"].includes(payloadStatus ?? "") ? VERIFICATION_STATUS_FALLBACK_MS : undefined
   });
 
   useEffect(() => {

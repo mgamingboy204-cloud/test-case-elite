@@ -4,9 +4,9 @@ import { env } from "../config/env";
 type TokenPayload = JwtPayload & {
   sub: string;
   type: "access" | "refresh" | "signup";
-  rememberMe?: boolean;
   phone?: string;
   tokenVersion?: number;
+  sessionId?: string;
 };
 
 export function signAccessToken(userId: string, options?: { rememberMe?: boolean; tokenVersion?: number }) {
@@ -16,10 +16,10 @@ export function signAccessToken(userId: string, options?: { rememberMe?: boolean
   });
 }
 
-export function signRefreshToken(userId: string, options?: { rememberMe?: boolean; tokenVersion?: number }) {
+export function signRefreshToken(userId: string, options: { rememberMe?: boolean; tokenVersion?: number; sessionId: string }) {
   const rememberMe = options?.rememberMe ?? false;
   const ttlDays = rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
-  return jwt.sign({ sub: userId, type: "refresh", rememberMe, tokenVersion: options?.tokenVersion ?? 0 }, env.JWT_REFRESH_SECRET, {
+  return jwt.sign({ sub: userId, type: "refresh", sessionId: options.sessionId, tokenVersion: options?.tokenVersion ?? 0 }, env.JWT_REFRESH_SECRET, {
     expiresIn: `${ttlDays}d`
   });
 }
@@ -34,10 +34,10 @@ export function verifyAccessToken(token: string) {
 
 export function verifyRefreshToken(token: string) {
   const payload = jwt.verify(token, env.JWT_REFRESH_SECRET) as TokenPayload;
-  if (!payload?.sub || payload.type !== "refresh") {
+  if (!payload?.sub || payload.type !== "refresh" || !payload.sessionId) {
     throw new Error("Invalid refresh token");
   }
-  return { userId: payload.sub, rememberMe: payload.rememberMe ?? false, tokenVersion: payload.tokenVersion ?? 0 };
+  return { userId: payload.sub, sessionId: payload.sessionId, tokenVersion: payload.tokenVersion ?? 0 };
 }
 
 export function signSignupToken(phone: string) {

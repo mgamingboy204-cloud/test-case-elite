@@ -1,13 +1,12 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ApiError, apiRequestAuth } from "@/lib/api";
-import { fetchAlerts, type Alert } from "@/lib/queries";
-import { useStaleWhileRevalidate } from "@/lib/cache";
+import { type Alert } from "@/lib/queries";
+import { useAlertsResource } from "@/lib/appData";
 import { Bell, Heart, MapPin, Phone, Sparkles, Share2, Video, MessageSquareText, type LucideIcon } from "lucide-react";
 
 function relativeTimeFromNow(isoOrDate: string): string {
@@ -67,18 +66,7 @@ export default function AlertsPage() {
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [markAllPending, setMarkAllPending] = useState(false);
 
-  const alertsQuery = useStaleWhileRevalidate({
-    key: "alerts",
-    fetcher: fetchAlerts,
-    enabled: isAuthenticated && onboardingStep === "COMPLETED",
-    staleTimeMs: 30_000
-  });
-
-  useLiveResourceRefresh({
-    enabled: isAuthenticated && onboardingStep === "COMPLETED",
-    refresh: () => alertsQuery.refresh(true),
-    fallbackIntervalMs: 60_000
-  });
+  const alertsQuery = useAlertsResource(isAuthenticated && onboardingStep === "COMPLETED");
 
   const alerts = alertsQuery.data ?? [];
   const unreadCount = useMemo(() => alerts.filter((item) => item.isUnread).length, [alerts]);

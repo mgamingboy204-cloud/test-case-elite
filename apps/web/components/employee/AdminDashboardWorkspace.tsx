@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api";
 import { fetchAdminDashboard, type AdminDashboardPayload } from "@/lib/adminDashboard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
+import { ADMIN_DASHBOARD_FALLBACK_MS } from "@/lib/resourceSync";
 
 function StatCard({ label, value, tone = "default" }: { label: string; value: number; tone?: "default" | "warn" | "danger" }) {
   const toneClass = tone === "danger" ? "text-red-300" : tone === "warn" ? "text-amber-200" : "text-[#f0c8be]";
@@ -63,7 +64,7 @@ export function AdminDashboardWorkspace() {
     enabled: isAuthResolved && hasAdminAccess,
     refresh: () => load(true),
     eventTypes: ["admin.dashboard.changed"],
-    fallbackIntervalMs: 60_000
+    fallbackIntervalMs: ADMIN_DASHBOARD_FALLBACK_MS
   });
 
   const employeeRows = useMemo(() => data?.employeeWorkload.perEmployee ?? [], [data]);

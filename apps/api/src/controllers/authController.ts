@@ -21,7 +21,11 @@ import {
   buildSessionUserPayload,
   clearAuthCookies,
   createSessionEnvelope,
-  issueSessionTokens
+  issueSessionTokens,
+  getActiveAuthSession,
+  touchAuthSession,
+  revokeAuthSession,
+  revokeAllAuthSessionsForUser
 } from "../services/sessionService";
 
 function logSessionEvent(event: string, details: Record<string, unknown>) {
@@ -78,7 +82,7 @@ async function restoreSessionFromRefreshToken(req: Request, res: Response, optio
     };
   }
 
-  let verifiedRefresh: { userId: string; rememberMe: boolean; tokenVersion: number };
+  let verifiedRefresh: { userId: string; sessionId: string; tokenVersion: number };
   try {
     verifiedRefresh = verifyRefreshToken(refreshToken);
   } catch (error) {
@@ -137,16 +141,30 @@ async function restoreSessionFromRefreshToken(req: Request, res: Response, optio
     };
   }
 
+  const authSession = await getActiveAuthSession(verifiedRefresh.sessionId);
+  if (!authSession || authSession.userId !== user.id) {
+    clearAuthCookies(res);
+    logSessionEvent("refresh.fail", { requestId, userId: user.id, reason: "session_not_found" });
+    return {
+      ok: false as const,
+      status: 401,
+      body: { message: "Invalid refresh token", reason: "session_not_found" }
+    };
+  }
+
+  const rotatedSession = await touchAuthSession(authSession.id, authSession.rememberMe);
+
   const session = issueSessionTokens(res, {
     userId: user.id,
-    rememberMe: verifiedRefresh.rememberMe,
-    tokenVersion: user.tokenVersion
+    rememberMe: rotatedSession.rememberMe,
+    tokenVersion: user.tokenVersion,
+    sessionId: rotatedSession.id
   });
 
   logSessionEvent("refresh.success", {
     requestId,
     userId: user.id,
-    rememberMe: verifiedRefresh.rememberMe,
+    rememberMe: rotatedSession.rememberMe,
     refreshTtlDays: session.refreshTtlDays,
     refreshCookie: session.refreshCookie
   });
@@ -330,6 +348,18 @@ export async function employeeLogin(req: Request, res: Response) {
 }
 
 export async function logout(req: Request, res: Response) {
+  const cookies = parseCookies(req.headers.cookie);
+  const refreshToken = cookies[refreshCookieName];
+
+  if (refreshToken) {
+    try {
+      const verifiedRefresh = verifyRefreshToken(refreshToken);
+      await revokeAuthSession(verifiedRefresh.sessionId, "logout");
+    } catch {
+      // Best-effort only. Invalid cookies should still be cleared.
+    }
+  }
+
   clearAuthCookies(res);
   return res.json({ ok: true });
 }
@@ -379,6 +409,7 @@ export async function changePasswordHandler(req: Request, res: Response) {
       tokenVersion: { increment: 1 }
     }
   });
+  await revokeAllAuthSessionsForUser(userId, "password_changed");
 
   return res.json({ updated: true });
 }

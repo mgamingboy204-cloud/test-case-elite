@@ -272,6 +272,7 @@ model User {
   photos        Photo[]
   payments      Payment[]
   deviceTokens  DeviceToken[]
+  authSessions  AuthSession[]
   likesSent     Like[]   @relation("likesSent")
   likesReceived Like[]   @relation("likesReceived")
   matchesA      Match[]  @relation("matchesA")
@@ -388,6 +389,22 @@ model DeviceToken {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+model AuthSession {
+  id           String   @id @default(uuid())
+  userId       String
+  rememberMe   Boolean  @default(false)
+  expiresAt    DateTime
+  lastUsedAt   DateTime?
+  revokedAt    DateTime?
+  revokeReason String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, revokedAt, expiresAt])
 }
 
 model Like {

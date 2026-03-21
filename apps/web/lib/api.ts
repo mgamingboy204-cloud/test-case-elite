@@ -142,6 +142,12 @@ export async function apiRequest<T>(
       const retry = await runRequest();
       response = retry.response;
       body = retry.body;
+    } else if (refreshStatus === "offline") {
+      if (apiDebug)
+        console.warn("[api] Refresh skipped because the client appears offline", {
+          method,
+          path,
+        });
     } else {
       handleAuthFailure();
       if (apiDebug)

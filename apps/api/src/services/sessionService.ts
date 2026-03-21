@@ -32,6 +32,14 @@ function describeCookieOptions(options: ReturnType<typeof buildRefreshCookieOpti
   };
 }
 
+function resolveRefreshTtlDays(rememberMe: boolean) {
+  return rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
+}
+
+function resolveAuthSessionExpiry(rememberMe: boolean) {
+  return new Date(Date.now() + resolveRefreshTtlDays(rememberMe) * 24 * 60 * 60 * 1000);
+}
+
 async function ensureOnboardingAccess(user: {
   id: string;
   onboardingStep?: string | null;
@@ -181,12 +189,69 @@ export function clearAuthCookies(res: Response) {
   res.clearCookie(LEGACY_ACCESS_COOKIE_NAME, buildLegacyAccessCookieOptions());
 }
 
+export async function createAuthSessionRecord(options: { userId: string; rememberMe: boolean }) {
+  return prisma.authSession.create({
+    data: {
+      userId: options.userId,
+      rememberMe: options.rememberMe,
+      expiresAt: resolveAuthSessionExpiry(options.rememberMe),
+      lastUsedAt: new Date()
+    }
+  });
+}
+
+export async function getActiveAuthSession(sessionId: string) {
+  const session = await prisma.authSession.findUnique({ where: { id: sessionId } });
+  if (!session) return null;
+  if (session.revokedAt) return null;
+  if (session.expiresAt.getTime() <= Date.now()) return null;
+  return session;
+}
+
+export async function touchAuthSession(sessionId: string, rememberMe: boolean) {
+  return prisma.authSession.update({
+    where: { id: sessionId },
+    data: {
+      rememberMe,
+      expiresAt: resolveAuthSessionExpiry(rememberMe),
+      lastUsedAt: new Date()
+    }
+  });
+}
+
+export async function revokeAuthSession(sessionId: string, reason: string) {
+  await prisma.authSession.updateMany({
+    where: {
+      id: sessionId,
+      revokedAt: null
+    },
+    data: {
+      revokedAt: new Date(),
+      revokeReason: reason
+    }
+  });
+}
+
+export async function revokeAllAuthSessionsForUser(userId: string, reason: string) {
+  await prisma.authSession.updateMany({
+    where: {
+      userId,
+      revokedAt: null
+    },
+    data: {
+      revokedAt: new Date(),
+      revokeReason: reason
+    }
+  });
+}
+
 export function issueSessionTokens(
   res: Response,
   options: {
     userId: string;
     rememberMe: boolean;
     tokenVersion: number;
+    sessionId: string;
   }
 ) {
   const accessToken = signAccessToken(options.userId, {
@@ -195,9 +260,10 @@ export function issueSessionTokens(
   });
   const refreshToken = signRefreshToken(options.userId, {
     rememberMe: options.rememberMe,
-    tokenVersion: options.tokenVersion
+    tokenVersion: options.tokenVersion,
+    sessionId: options.sessionId
   });
-  const refreshTtlDays = options.rememberMe ? env.REFRESH_TOKEN_TTL_DAYS : env.REFRESH_TOKEN_TTL_DAYS_SHORT;
+  const refreshTtlDays = resolveRefreshTtlDays(options.rememberMe);
   const refreshOptions = buildRefreshCookieOptions(refreshTtlDays);
 
   res.cookie(refreshCookieName, refreshToken, refreshOptions);
@@ -216,15 +282,26 @@ export async function createSessionEnvelope(
     userId: string;
     rememberMe: boolean;
     tokenVersion: number;
+    sessionId?: string;
   }
 ) {
   const user = await buildSessionUserPayload(options.userId);
-  const session = issueSessionTokens(res, options);
+  const sessionRecord = options.sessionId
+    ? await touchAuthSession(options.sessionId, options.rememberMe)
+    : await createAuthSessionRecord({
+        userId: options.userId,
+        rememberMe: options.rememberMe
+      });
+  const session = issueSessionTokens(res, {
+    ...options,
+    sessionId: sessionRecord.id
+  });
 
   return {
     ok: true as const,
     accessToken: session.accessToken,
     user,
+    sessionId: sessionRecord.id,
     cookies: {
       refreshCookie: session.refreshCookie
     }

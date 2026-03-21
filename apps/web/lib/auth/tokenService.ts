@@ -13,8 +13,13 @@ const DEBUG = process.env.NODE_ENV !== "production";
 let accessToken: string | null = null;
 let authGeneration = 0;
 const authFailureListeners = new Set<() => void>();
-let refreshPromise: Promise<"success" | "unauthorized" | "forbidden"> | null =
-  null;
+let refreshPromise: Promise<
+  "success" | "unauthorized" | "forbidden" | "offline"
+> | null = null;
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+const REFRESH_LEEWAY_MS = 60_000;
+const MIN_REFRESH_DELAY_MS = 5_000;
 
 type JwtPayload = {
   exp?: number;
@@ -42,6 +47,42 @@ function isTokenExpired(token: string | null): boolean {
   const payload = decodeJwtPayload(token);
   if (!payload?.exp) return false;
   return payload.exp * 1000 < Date.now();
+}
+
+function clearScheduledRefresh() {
+  if (!refreshTimer) return;
+  clearTimeout(refreshTimer);
+  refreshTimer = null;
+}
+
+function scheduleSilentRefresh(token: string) {
+  clearScheduledRefresh();
+
+  const payload = decodeJwtPayload(token);
+  if (!payload?.exp) return;
+
+  const expiresAtMs = payload.exp * 1000;
+  const refreshAtMs = expiresAtMs - REFRESH_LEEWAY_MS;
+  const delayMs = Math.max(MIN_REFRESH_DELAY_MS, refreshAtMs - Date.now());
+  const generationAtSchedule = authGeneration;
+  const tokenAtSchedule = token;
+
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null;
+
+    if (authGeneration !== generationAtSchedule) return;
+    if (!accessToken || accessToken !== tokenAtSchedule) return;
+
+    void refreshAccessToken({ allowMissingSession: true }).then((status) => {
+      if (authGeneration !== generationAtSchedule) return;
+      if (status === "offline" && accessToken === tokenAtSchedule) {
+        scheduleSilentRefresh(tokenAtSchedule);
+        return;
+      }
+      if (status === "success") return;
+      notifyAuthFailure();
+    });
+  }, delayMs);
 }
 
 export function subscribeToAuthFailure(listener: () => void): () => void {
@@ -72,6 +113,7 @@ export function setAccessToken(token: string | null): void {
   if (!token) {
     authGeneration += 1;
     accessToken = null;
+    clearScheduledRefresh();
     if (DEBUG) console.info("[auth] Cleared access token");
     return;
   }
@@ -80,11 +122,13 @@ export function setAccessToken(token: string | null): void {
   if (!normalized || !isLikelyJwt(normalized) || isTokenExpired(normalized)) {
     authGeneration += 1;
     accessToken = null;
+    clearScheduledRefresh();
     if (DEBUG) console.warn("[auth] Rejected invalid access token");
     return;
   }
 
   accessToken = normalized;
+  scheduleSilentRefresh(normalized);
 }
 
 export function clearAccessToken(): void {
@@ -97,7 +141,7 @@ export function getAuthGeneration(): number {
 
 export async function refreshAccessToken(options?: {
   allowMissingSession?: boolean;
-}): Promise<"success" | "unauthorized" | "forbidden"> {
+}): Promise<"success" | "unauthorized" | "forbidden" | "offline"> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
@@ -140,13 +184,12 @@ export async function refreshAccessToken(options?: {
       if (DEBUG) console.info("[auth] Token refreshed successfully");
       return "success";
     } catch (error) {
-      clearAccessToken();
       if (DEBUG)
         console.error("[auth] Refresh token request failed", {
           url: `${API_BASE_URL}/auth/token/refresh`,
           error,
         });
-      return "unauthorized";
+      return "offline";
     } finally {
       refreshPromise = null;
     }

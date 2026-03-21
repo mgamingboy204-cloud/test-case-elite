@@ -14,10 +14,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { API_BASE_URL, refreshAccessToken } from "@/lib/api";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { applyDiscoverActionToCache } from "@/lib/discoverFeed";
-import { fetchAlerts, fetchMatches, fetchProfile } from "@/lib/queries";
-import { fetchIncomingLikes } from "@/lib/likes";
 import { primeCache } from "@/lib/cache";
 import { getAccessToken } from "@/lib/auth/tokenService";
+import { getMemberResourceConfig, getMemberResourceNameForLiveEvent } from "@/lib/resourceSync";
 
 type LiveConnectionState = "idle" | "connecting" | "connected" | "reconnecting" | "offline";
 
@@ -158,14 +157,12 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
       applyDiscoverActionToCache(event.payload.targetUserId);
     } else if (event.type === "session.state.changed") {
       void refreshSessionState();
-    } else if (event.type === "alerts.changed") {
-      void refreshResource("alerts", fetchAlerts);
-    } else if (event.type === "likes.changed") {
-      void refreshResource("likes-incoming", fetchIncomingLikes);
-    } else if (event.type === "matches.changed") {
-      void refreshResource("matches", fetchMatches);
-    } else if (event.type === "profile.changed") {
-      void refreshResource("profile", fetchProfile);
+    } else {
+      const resourceName = getMemberResourceNameForLiveEvent(event.type);
+      if (resourceName) {
+        const config = getMemberResourceConfig(resourceName);
+        void refreshResource(config.cacheKey, config.fetcher);
+      }
     }
 
     for (const listener of listenersRef.current) {
@@ -333,18 +330,31 @@ export function useLiveResourceRefresh(options: {
   refresh: () => Promise<unknown> | unknown;
   eventTypes?: LiveEventType[];
   fallbackIntervalMs?: number;
+  refreshOnForeground?: boolean;
 }) {
   const { connectionState } = useLiveUpdates();
   const refreshRef = useRef(options.refresh);
+  const inFlightRefreshRef = useRef<Promise<unknown> | null>(null);
 
   useEffect(() => {
     refreshRef.current = options.refresh;
   }, [options.refresh]);
 
+  const invokeRefresh = useCallback(() => {
+    if (inFlightRefreshRef.current) return inFlightRefreshRef.current;
+
+    const next = Promise.resolve(refreshRef.current()).finally(() => {
+      inFlightRefreshRef.current = null;
+    });
+
+    inFlightRefreshRef.current = next;
+    return next;
+  }, []);
+
   useLiveEventSubscription(
     options.eventTypes ?? [],
     () => {
-      void refreshRef.current();
+      void invokeRefresh();
     },
     options.enabled
   );
@@ -352,17 +362,42 @@ export function useLiveResourceRefresh(options: {
   useEffect(() => {
     if (!options.enabled) return;
     if (connectionState !== "connected") return;
-    void refreshRef.current();
-  }, [connectionState, options.enabled]);
+    void invokeRefresh();
+  }, [connectionState, invokeRefresh, options.enabled]);
+
+  useEffect(() => {
+    if (!options.enabled) return;
+    if (options.refreshOnForeground === false) return;
+
+    const refreshOnResume = () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      void invokeRefresh();
+    };
+
+    const refreshOnVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      void invokeRefresh();
+    };
+
+    window.addEventListener("focus", refreshOnResume);
+    window.addEventListener("online", refreshOnResume);
+    document.addEventListener("visibilitychange", refreshOnVisible);
+
+    return () => {
+      window.removeEventListener("focus", refreshOnResume);
+      window.removeEventListener("online", refreshOnResume);
+      document.removeEventListener("visibilitychange", refreshOnVisible);
+    };
+  }, [invokeRefresh, options.enabled, options.refreshOnForeground]);
 
   useEffect(() => {
     if (!options.enabled || !options.fallbackIntervalMs) return;
     if (connectionState === "connected") return;
 
     const id = window.setInterval(() => {
-      void refreshRef.current();
+      void invokeRefresh();
     }, options.fallbackIntervalMs);
 
     return () => window.clearInterval(id);
-  }, [connectionState, options.enabled, options.fallbackIntervalMs]);
+  }, [connectionState, invokeRefresh, options.enabled, options.fallbackIntervalMs]);
 }

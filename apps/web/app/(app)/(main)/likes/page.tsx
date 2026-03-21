@@ -1,35 +1,22 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 import { normalizeApiError } from "@/lib/apiErrors";
-import { fetchIncomingLikes, respondToIncomingLike, type LikesIncomingProfile } from "@/lib/likes";
-import { fetchAlerts, fetchMatches } from "@/lib/queries";
-import { primeCache, useStaleWhileRevalidate } from "@/lib/cache";
+import { respondToIncomingLike, type LikesIncomingProfile } from "@/lib/likes";
+import { useLikesResource } from "@/lib/appData";
+import { syncAfterMatchCreated } from "@/lib/resourceSync";
 import { X, Check, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { motion, type PanInfo } from "framer-motion";
 
 type ViewState = "loading" | "success" | "empty" | "error";
-const LIKES_CACHE_KEY = "likes-incoming";
 
 export default function LikesPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
   const [pendingProfileId, setPendingProfileId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const likesQuery = useStaleWhileRevalidate({
-    key: LIKES_CACHE_KEY,
-    fetcher: fetchIncomingLikes,
-    enabled: isAuthenticated && onboardingStep === "COMPLETED",
-    staleTimeMs: 60_000
-  });
-
-  useLiveResourceRefresh({
-    enabled: isAuthenticated && onboardingStep === "COMPLETED",
-    refresh: () => likesQuery.refresh(true),
-    fallbackIntervalMs: 60_000
-  });
+  const likesQuery = useLikesResource(isAuthenticated && onboardingStep === "COMPLETED");
 
   const profiles = likesQuery.data ?? [];
   const state: ViewState = useMemo(() => {
@@ -79,8 +66,7 @@ export default function LikesPage() {
     try {
       const response = await respondToIncomingLike({ targetUserId: current.profileId, action });
       if (response.matchId) {
-        void fetchMatches().then((data) => primeCache("matches", data));
-        void fetchAlerts().then((data) => primeCache("alerts", data));
+        void syncAfterMatchCreated(response.matchId);
       }
     } catch (error) {
       persist(previousCards);

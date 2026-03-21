@@ -5,13 +5,11 @@ import { Compass, Heart, Bell, User, Sparkles, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchAlerts, fetchMatches, fetchProfile } from "@/lib/queries";
-import { primeCache, readCache } from "@/lib/cache";
+import { readCache } from "@/lib/cache";
 import { motion } from "framer-motion";
 import { resolveRouteRedirect } from "@/lib/navigationGuard";
-import { fetchIncomingLikes } from "@/lib/likes";
-import { getQueryClient } from "@/lib/queryClient";
 import { OfflineIndicator } from "@/components/pwa/offline-indicator";
+import { getMemberResourceNameForRoute, prefetchMemberResource } from "@/lib/resourceSync";
 
 const NAV_ITEMS = [
   { href: "/discover", icon: Compass, label: "Discover" },
@@ -30,52 +28,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const prefetchRouteBundle = useCallback((href: string) => {
     router.prefetch(href);
-    const queryClient = getQueryClient();
-    if (href === "/likes") {
-      if (readCache("likes-incoming")?.value) return;
-      void queryClient
-        .prefetchQuery({ queryKey: ["likes-incoming"], queryFn: fetchIncomingLikes })
-        .then(() => {
-          const data = queryClient.getQueryData(["likes-incoming"]);
-          if (data) primeCache("likes-incoming", data);
-        })
-        .catch(() => null);
-      return;
-    }
-
-    if (href === "/matches") {
-      if (readCache("matches")?.value) return;
-      void queryClient
-        .prefetchQuery({ queryKey: ["matches"], queryFn: fetchMatches })
-        .then(() => {
-          const data = queryClient.getQueryData(["matches"]);
-          if (data) primeCache("matches", data);
-        })
-        .catch(() => null);
-      return;
-    }
-
-    if (href === "/alerts") {
-      if (readCache("alerts")?.value) return;
-      void queryClient
-        .prefetchQuery({ queryKey: ["alerts"], queryFn: fetchAlerts })
-        .then(() => {
-          const data = queryClient.getQueryData(["alerts"]);
-          if (data) primeCache("alerts", data);
-        })
-        .catch(() => null);
-      return;
-    }
-
-    if (href === "/profile") {
-      if (readCache("profile")?.value) return;
-      void queryClient
-        .prefetchQuery({ queryKey: ["profile"], queryFn: fetchProfile })
-        .then(() => {
-          const data = queryClient.getQueryData(["profile"]);
-          if (data) primeCache("profile", data);
-        })
-        .catch(() => null);
+    const resourceName = getMemberResourceNameForRoute(href);
+    if (resourceName) {
+      const cacheKey = resourceName === "likes" ? "likes-incoming" : resourceName;
+      if (readCache(cacheKey)?.value) return;
+      void prefetchMemberResource(resourceName).catch(() => null);
       return;
     }
 

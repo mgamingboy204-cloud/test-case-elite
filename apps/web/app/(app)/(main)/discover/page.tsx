@@ -1,19 +1,13 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useLiveEventSubscription } from "@/contexts/LiveUpdatesContext";
+import { useLiveEventSubscription, useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 import { Briefcase, Ruler, X, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import { normalizeApiError } from "@/lib/apiErrors";
 import { sendLikeAction } from "@/lib/likes";
-import {
-  fetchAlerts,
-  fetchDiscoverFeedPageWithFilters,
-  fetchMatches,
-  mapLegacyFeedItemToCard
-} from "@/lib/queries";
-import { primeCache } from "@/lib/cache";
+import { fetchDiscoverFeedPageWithFilters, mapLegacyFeedItemToCard } from "@/lib/queries";
 import {
   applyDiscoverActionToState,
   mergeDiscoverFeedPage,
@@ -23,6 +17,7 @@ import {
   type DiscoverFeedState,
   type DiscoverFilters
 } from "@/lib/discoverFeed";
+import { DISCOVER_BACKGROUND_SYNC_INTERVAL_MS, syncAfterMatchCreated } from "@/lib/resourceSync";
 
 type PageStatus = "loading" | "success" | "empty" | "error";
 type PendingAction = { id: string; action: "LIKE" | "PASS" };
@@ -211,25 +206,18 @@ export default function DiscoverPage() {
     cards.slice(1, 4).forEach((card) => preloadImage(card.imageUrl));
   }, [cards, nextCursor, refillBuffer, status]);
 
-  useEffect(() => {
-    if (!isAuthenticated || onboardingStep !== "COMPLETED") return undefined;
-
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-
+  useLiveResourceRefresh({
+    enabled: isAuthenticated && onboardingStep === "COMPLETED",
+    refresh: async () => {
       const current = feedStateRef.current;
       if (current.nextCursor && current.cards.length <= REFILL_THRESHOLD) {
-        void refillBuffer();
+        await refillBuffer();
         return;
       }
-
-      if (!current.nextCursor) {
-        void syncFromTail();
-      }
-    }, 45_000);
-
-    return () => window.clearInterval(intervalId);
-  }, [isAuthenticated, onboardingStep, refillBuffer, syncFromTail]);
+      await syncFromTail();
+    },
+    fallbackIntervalMs: DISCOVER_BACKGROUND_SYNC_INTERVAL_MS
+  });
 
   useLiveEventSubscription(["discover.action_applied"], () => {
     const next = readDiscoverFeedState();
@@ -260,8 +248,7 @@ export default function DiscoverPage() {
     try {
       const response = await sendLikeAction({ actionId, targetUserId: current.id, action });
       if (response.matchId) {
-        void fetchMatches().then((data) => primeCache("matches", data));
-        void fetchAlerts().then((data) => primeCache("alerts", data));
+        void syncAfterMatchCreated(response.matchId);
       }
       if (feedStateRef.current.cards.length > 0) {
         setStatus("success");
