@@ -13,7 +13,6 @@ import {
 import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { listEmployeeWorkloads } from "./employeeService";
-import { notificationDedupeKey } from "../utils/notificationDedupe";
 import { synchronizeVerificationRequests } from "./verificationService";
 import {
   emitAdminAuditLogsChanged,
@@ -87,6 +86,7 @@ type RefundListItem = Prisma.RefundRequestGetPayload<{
 }>;
 
 type VerificationWorkerView = "ACTIVE" | "ESCALATED" | "COMPLETED" | "REJECTED" | "ALL";
+type VerificationAlertEventType = "VERIFICATION_ASSIGNED" | "VERIFICATION_APPROVED" | "VERIFICATION_REJECTED";
 
 const ADMIN_NOTIFICATION_TYPES = [
   NotificationType.VIDEO_VERIFICATION_UPDATE,
@@ -532,31 +532,45 @@ async function pushVerificationAlert(options: {
   db?: Prisma.TransactionClient;
   userId: string;
   actorUserId: string;
+  eventType: VerificationAlertEventType;
   title: string;
   message: string;
   metadata?: Prisma.InputJsonValue;
 }) {
   const db = options.db ?? prisma;
-  await db.notification.createMany({
-    data: [
-      {
-        userId: options.userId,
-        actorUserId: options.actorUserId,
-        matchId: null,
-        type: "VIDEO_VERIFICATION_UPDATE",
-        dedupeKey: notificationDedupeKey({
-          userId: options.userId,
-          type: "VIDEO_VERIFICATION_UPDATE",
-          actorUserId: options.actorUserId,
-          matchId: null
-        }),
-        title: options.title,
-        message: options.message,
-        metadata: options.metadata ?? {},
-        deepLinkUrl: "/onboarding/verification"
-      }
-    ],
-    skipDuplicates: true
+  const metadataSource = options.metadata;
+  const metadata: Prisma.InputJsonValue =
+    typeof metadataSource === "object" && metadataSource !== null && !Array.isArray(metadataSource)
+      ? { ...(metadataSource as Prisma.InputJsonObject), eventType: options.eventType }
+      : { eventType: options.eventType };
+  const dedupeKey = `${options.userId}:VIDEO_VERIFICATION_UPDATE:verification`;
+  const deepLinkUrl =
+    options.eventType === "VERIFICATION_APPROVED"
+      ? "/onboarding/payment"
+      : "/onboarding/verification";
+
+  await db.notification.upsert({
+    where: { dedupeKey },
+    update: {
+      actorUserId: options.actorUserId,
+      title: options.title,
+      message: options.message,
+      metadata,
+      deepLinkUrl,
+      isRead: false,
+      readAt: null
+    },
+    create: {
+      userId: options.userId,
+      actorUserId: options.actorUserId,
+      matchId: null,
+      type: "VIDEO_VERIFICATION_UPDATE",
+      dedupeKey,
+      title: options.title,
+      message: options.message,
+      metadata,
+      deepLinkUrl
+    }
   });
 }
 
@@ -741,9 +755,10 @@ export async function startVerificationRequest(requestId: string, meetUrl: strin
       db: tx,
       userId: updated.userId,
       actorUserId,
+      eventType: "VERIFICATION_ASSIGNED",
       title: "Verification Session Assigned",
       message: "Your video verification session has been scheduled. Please join using the secure link.",
-      metadata: { eventType: "VERIFICATION_ASSIGNED", meetUrl, cta: "Join verification call" }
+      metadata: { meetUrl, cta: "Join verification call" }
     });
     return updated;
   });
@@ -836,9 +851,10 @@ export async function assignVerificationRequest(requestId: string, actorUserId: 
       db: tx,
       userId: updated.userId,
       actorUserId,
+      eventType: "VERIFICATION_ASSIGNED",
       title: "Verification Assigned",
       message: "Our team has assigned your verification case and will guide the next step shortly.",
-      metadata: { eventType: "VERIFICATION_ASSIGNED" }
+      metadata: {}
     });
     return updated;
   });
@@ -911,9 +927,10 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
       db: tx,
       userId: updated.userId,
       actorUserId,
+      eventType: "VERIFICATION_APPROVED",
       title: "Verification Approved",
       message: "Your video verification is complete. Please proceed with membership payment.",
-      metadata: { eventType: "VERIFICATION_APPROVED" }
+      metadata: {}
     });
     return updated;
   });
@@ -984,9 +1001,10 @@ export async function rejectVerificationRequest(requestId: string, actorUserId: 
       db: tx,
       userId: updated.userId,
       actorUserId,
+      eventType: "VERIFICATION_REJECTED",
       title: "Verification Needs Attention",
       message: "Your verification could not be approved yet. Please review the update and reconnect with support.",
-      metadata: { eventType: "VERIFICATION_REJECTED", reason: normalizedReason }
+      metadata: { reason: normalizedReason }
     });
     return updated;
   });

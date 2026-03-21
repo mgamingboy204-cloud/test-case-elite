@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { canAccessMemberMainRoute } from "@/lib/navigationGuard";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -60,17 +61,18 @@ function iconForAlertType(type: string): { Icon: LucideIcon; accentClass: string
 }
 
 export default function AlertsPage() {
-  const { isAuthenticated, onboardingStep } = useAuth();
+  const { isAuthenticated, appStateCode } = useAuth();
   const router = useRouter();
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [markAllPending, setMarkAllPending] = useState(false);
-  const alertsQuery = useAlertsData(isAuthenticated && onboardingStep === "COMPLETED");
+  const canAccessPage = isAuthenticated && canAccessMemberMainRoute("/alerts", appStateCode);
+  const alertsQuery = useAlertsData(canAccessPage);
   const markAlertReadMutation = useMarkAlertReadMutation();
   const markAllAlertsReadMutation = useMarkAllAlertsReadMutation();
   const alerts = alertsQuery.data ?? [];
   const unreadCount = useMemo(() => alerts.filter((item) => item.isUnread).length, [alerts]);
 
-  if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
+  if (!canAccessPage) return null;
 
   const markSingleRead = async (alertId: string) => {
     if (pendingIds.has(alertId)) return;

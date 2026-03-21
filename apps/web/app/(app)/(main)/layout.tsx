@@ -7,7 +7,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readCache } from "@/lib/cache";
 import { motion } from "framer-motion";
-import { resolveRouteRedirect } from "@/lib/navigationGuard";
+import {
+  canAccessMemberMainRoute,
+  canShowMemberNavRoute,
+  hasMemberMainShellAccess,
+  resolveRouteRedirect
+} from "@/lib/navigationGuard";
 import { OfflineIndicator } from "@/components/pwa/offline-indicator";
 import { getMemberResourceNameForRoute, prefetchMemberResource } from "@/lib/resourceSync";
 
@@ -20,11 +25,20 @@ const NAV_ITEMS = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isAuthResolved, onboardingStep, logout, authenticatedRoute, user } = useAuth();
+  const {
+    isAuthenticated,
+    isAuthResolved,
+    logout,
+    authenticatedRoute,
+    user,
+    appStateCode,
+    appStateRedirectTo
+  } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [mounted] = useState(() => typeof window !== "undefined");
   const prefetchedRef = useRef(false);
+  const visibleNavItems = NAV_ITEMS.filter((item) => canShowMemberNavRoute(item.href, appStateCode));
 
   const prefetchRouteBundle = useCallback((href: string) => {
     router.prefetch(href);
@@ -65,7 +79,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       isAuthenticated,
       isAuthResolved,
       authenticatedRoute,
-      onboardingStep,
+      appStateCode,
+      appStateRedirectTo,
       scope: "main",
       userRole: user?.role ?? null,
       mustResetPassword: user?.mustResetPassword ?? false
@@ -74,9 +89,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (redirect && pathname !== redirect) {
       router.replace(redirect);
     }
-  }, [authenticatedRoute, isAuthResolved, isAuthenticated, onboardingStep, pathname, router, user?.mustResetPassword, user?.role]);
+  }, [
+    appStateCode,
+    appStateRedirectTo,
+    authenticatedRoute,
+    isAuthResolved,
+    isAuthenticated,
+    pathname,
+    router,
+    user?.mustResetPassword,
+    user?.role
+  ]);
 
-  if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
+  if (
+    !mounted ||
+    !isAuthResolved ||
+    !isAuthenticated ||
+    !hasMemberMainShellAccess(appStateCode) ||
+    !canAccessMemberMainRoute(pathname, appStateCode)
+  ) {
+    return null;
+  }
 
   return (
     <div className="flex flex-row h-[100dvh] w-screen bg-background transition-colors duration-500 overflow-hidden mobile-container desktop-container">
@@ -92,7 +125,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 flex flex-col gap-1 px-3 xl:px-4 pt-6">
-          {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+          {visibleNavItems.map(({ href, icon: Icon, label }) => {
             const isActive = pathname === href;
             return (
               <Link
@@ -154,7 +187,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               VAEL
             </span>
             <span className="hidden min-[769px]:block text-[11px] uppercase tracking-[0.4em] text-foreground/40 font-medium">
-              {NAV_ITEMS.find(n => n.href === pathname)?.label ?? 'VAEL'}
+              {visibleNavItems.find((n) => n.href === pathname)?.label ?? "VAEL"}
             </span>
 
             <Link href="/profile" aria-label="Open profile and account settings" className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-foreground/5 transition-colors">
@@ -187,7 +220,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           
           {/* Exactly 50px tall, icons perfectly centered inside */}
           <div className="flex h-[50px] items-center justify-around px-2">
-            {NAV_ITEMS.map(({ href, icon: Icon }) => {
+            {visibleNavItems.map(({ href, icon: Icon }) => {
               const isActive = pathname === href;
               return (
                 <Link

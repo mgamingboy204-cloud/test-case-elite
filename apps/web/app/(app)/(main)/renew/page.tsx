@@ -13,7 +13,6 @@ import {
 } from "@/lib/payments";
 import { motion } from "framer-motion";
 import { Check, ShieldCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 type RazorpayVerificationPayload = {
   razorpay_order_id: string;
@@ -71,8 +70,7 @@ async function ensureRazorpayCheckoutLoaded() {
 }
 
 export default function RenewMembershipPage() {
-  const router = useRouter();
-  const { refreshCurrentUser } = useAuth();
+  const { refreshCurrentUserAndRoute } = useAuth();
 
   const [error, setError] = useState("");
   const [selectedTier, setSelectedTier] = useState<PlanId | "">("");
@@ -158,8 +156,7 @@ export default function RenewMembershipPage() {
         });
       }
 
-      await refreshCurrentUser();
-      router.push("/profile");
+      await refreshCurrentUserAndRoute();
     } catch (err) {
       setError(err instanceof Error ? err.message : FAILURE_MESSAGE);
     } finally {
@@ -179,8 +176,7 @@ export default function RenewMembershipPage() {
     try {
       await initiatePayment(selectedTier);
       await completeMockPayment();
-      await refreshCurrentUser();
-      router.push("/profile");
+      await refreshCurrentUserAndRoute();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Mock payment failed.");
       setProcessing(false);

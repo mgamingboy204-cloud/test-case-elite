@@ -167,6 +167,34 @@ const ALERT_MESSAGES: Record<NotificationType, string> = {
   PHONE_EXCHANGE_REVEALED: "Your match opened the phone number exchange panel."
 };
 
+function readNotificationEventType(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const eventType = (metadata as Record<string, unknown>).eventType;
+  return typeof eventType === "string" ? eventType : null;
+}
+
+function resolveVerificationAlertDeepLink(eventType: string | null) {
+  if (eventType === "VERIFICATION_APPROVED") {
+    return "/onboarding/payment";
+  }
+
+  return "/onboarding/verification";
+}
+
+function resolveNotificationDeepLink(input: {
+  type: NotificationType;
+  deepLinkUrl: string | null;
+  eventType: string | null;
+}) {
+  if (input.deepLinkUrl) return input.deepLinkUrl;
+
+  if (input.type === NotificationType.VIDEO_VERIFICATION_UPDATE) {
+    return resolveVerificationAlertDeepLink(input.eventType);
+  }
+
+  return ALERT_DEEP_LINKS[input.type];
+}
+
 export async function listNotifications(userId: string, options?: { cursor?: string; limit?: number }) {
   const take = Math.min(Math.max(options?.limit ?? 20, 1), 50);
 
@@ -193,28 +221,36 @@ export async function listNotifications(userId: string, options?: { cursor?: str
 
   const unreadCount = await prisma.notification.count({ where: { userId, isRead: false } });
 
-  const mapped = notifications.map((item) => ({
-    id: item.id,
-    type: item.type,
-    eventType: (typeof (item.metadata as Record<string, unknown> | null)?.eventType === "string"
-      ? (item.metadata as Record<string, unknown>).eventType
-      : PRODUCT_ALERT_TYPE_MAP[item.type]) as ProductAlertType,
-    isRead: item.isRead,
-    createdAt: item.createdAt,
-    readAt: item.readAt,
-    title: item.title ?? ALERT_TITLES[item.type],
-    message: item.message ?? ALERT_MESSAGES[item.type],
-    deepLinkUrl: item.deepLinkUrl ?? ALERT_DEEP_LINKS[item.type],
-    imageUrl: item.imageUrl ?? item.actor?.photos[0]?.url ?? null,
-    actor: item.actor
-      ? {
-          id: item.actor.id,
-          profile: item.actor.profile,
-          photos: item.actor.photos
-        }
-      : null,
-    metadata: item.metadata
-  }));
+  const mapped = notifications.map((item) => {
+    const eventType =
+      readNotificationEventType(item.metadata) ??
+      PRODUCT_ALERT_TYPE_MAP[item.type];
+
+    return {
+      id: item.id,
+      type: item.type,
+      eventType: eventType as ProductAlertType,
+      isRead: item.isRead,
+      createdAt: item.createdAt,
+      readAt: item.readAt,
+      title: item.title ?? ALERT_TITLES[item.type],
+      message: item.message ?? ALERT_MESSAGES[item.type],
+      deepLinkUrl: resolveNotificationDeepLink({
+        type: item.type,
+        deepLinkUrl: item.deepLinkUrl ?? null,
+        eventType
+      }),
+      imageUrl: item.imageUrl ?? item.actor?.photos[0]?.url ?? null,
+      actor: item.actor
+        ? {
+            id: item.actor.id,
+            profile: item.actor.profile,
+            photos: item.actor.photos
+          }
+        : null,
+      metadata: item.metadata
+    };
+  });
 
   return {
     notifications: mapped,

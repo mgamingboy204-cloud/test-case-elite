@@ -6,7 +6,8 @@ import { ApiError, apiRequestAuth } from "@/lib/api";
 import { normalizeApiError } from "@/lib/apiErrors";
 import { ProtectedState } from "@/components/ui/protected-state";
 import { type ProfileViewModel } from "@/lib/queries";
-import { useProfileResource } from "@/lib/appData";
+import { canAccessMemberMainRoute } from "@/lib/navigationGuard";
+import { useProfileData } from "@/lib/memberState";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { Loader2, PencilLine, ShieldCheck, UserRoundCheck, ImagePlus, Trash2, KeyRound } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -72,7 +73,7 @@ function fileToDataUrl(file: File) {
 }
 
 export default function ProfilePage() {
-  const { isAuthenticated, onboardingStep, logout, user } = useAuth();
+  const { isAuthenticated, appStateCode, logout, user } = useAuth();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -93,9 +94,10 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
 
-  const profileQuery = useProfileResource(isAuthenticated && onboardingStep === "COMPLETED");
+  const canAccessPage = isAuthenticated && canAccessMemberMainRoute("/profile", appStateCode);
+  const profileQuery = useProfileData(canAccessPage);
 
-  if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
+  if (!canAccessPage) return null;
 
   if (profileQuery.isLoading && !profileQuery.data) {
     return <ProfileSkeleton />;
@@ -158,7 +160,7 @@ export default function ProfilePage() {
         });
       }
       setSettingsMessage("Settings saved.");
-      await profileQuery.refresh(true);
+      await profileQuery.refetch();
     } catch (error) {
       setSettingsError(error instanceof ApiError ? error.message : "Unable to save this setting right now.");
     } finally {
@@ -241,7 +243,7 @@ export default function ProfilePage() {
         profile={profile}
         onUpdated={async (message) => {
           setPhotoMessage(message);
-          await profileQuery.refresh(true);
+          await profileQuery.refetch();
         }}
       />
 
@@ -254,7 +256,7 @@ export default function ProfilePage() {
           onSaved={async (message) => {
             setSaveMessage(message);
             setEditing(false);
-            await profileQuery.refresh(true);
+            await profileQuery.refetch();
           }}
         />
       ) : (

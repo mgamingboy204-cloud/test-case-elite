@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useLiveEventSubscription, useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
+import { isEligibleMemberAppState } from "@/lib/navigationGuard";
 import { Briefcase, Ruler, X, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
@@ -47,7 +48,7 @@ function toDraftAge(value: number | undefined) {
 }
 
 export default function DiscoverPage() {
-  const { isAuthenticated, onboardingStep } = useAuth();
+  const { isAuthenticated, appStateCode } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   const initialFeedState = useMemo(() => readDiscoverFeedState(), []);
   const feedStateRef = useRef<DiscoverFeedState>(initialFeedState);
@@ -63,6 +64,7 @@ export default function DiscoverPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [draftCity, setDraftCity] = useState(initialFeedState.filters.city ?? "");
   const [draftAge, setDraftAge] = useState(toDraftAge(initialFeedState.filters.age));
+  const canAccessPage = isAuthenticated && isEligibleMemberAppState(appStateCode);
 
   useEffect(() => {
     feedStateRef.current = feedState;
@@ -187,7 +189,7 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     const bootstrap = async () => {
-      if (!isAuthenticated || onboardingStep !== "COMPLETED") return;
+      if (!canAccessPage) return;
       if (feedStateRef.current.cards.length > 0) {
         setStatus("success");
         if (feedStateRef.current.nextCursor) {
@@ -201,7 +203,7 @@ export default function DiscoverPage() {
     };
 
     void bootstrap();
-  }, [isAuthenticated, loadFirstPage, onboardingStep, refillBuffer, syncFromTail]);
+  }, [canAccessPage, loadFirstPage, refillBuffer, syncFromTail]);
 
   useEffect(() => {
     if (status === "success" && cards.length <= REFILL_THRESHOLD && nextCursor) {
@@ -211,7 +213,7 @@ export default function DiscoverPage() {
   }, [cards, nextCursor, refillBuffer, status]);
 
   useLiveResourceRefresh({
-    enabled: isAuthenticated && onboardingStep === "COMPLETED",
+    enabled: canAccessPage,
     refresh: async () => {
       const current = feedStateRef.current;
       if (current.nextCursor && current.cards.length <= REFILL_THRESHOLD) {
@@ -232,7 +234,7 @@ export default function DiscoverPage() {
     } else if (next.cards.length > 0) {
       setStatus("success");
     }
-  }, isAuthenticated && onboardingStep === "COMPLETED");
+  }, canAccessPage);
 
   const handleInteraction = async (action: "LIKE" | "PASS") => {
     const current = feedStateRef.current.cards[0];
@@ -280,7 +282,7 @@ export default function DiscoverPage() {
     return null;
   }, [status]);
 
-  if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
+  if (!canAccessPage) return null;
 
   return (
     <div className="w-full h-full relative bg-background transition-colors duration-500 overflow-hidden flex flex-col">

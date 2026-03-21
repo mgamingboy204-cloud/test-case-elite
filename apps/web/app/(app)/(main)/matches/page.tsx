@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Clock3, Link2, Loader2, MapPin, Phone, RefreshCcw, ShieldCheck, UserMinus, Video } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { isEligibleMemberAppState } from "@/lib/navigationGuard";
 import { ApiError } from "@/lib/api";
 import { normalizeApiError } from "@/lib/apiErrors";
 import { type SocialExchangeCase } from "@/lib/matches";
@@ -121,12 +122,13 @@ function toAwaitingResponse(interaction: MatchInteraction) {
 }
 
 export default function MatchesPage() {
-  const { isAuthenticated, onboardingStep, user } = useAuth();
+  const { isAuthenticated, appStateCode, user } = useAuth();
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [offlineDraftByMatch, setOfflineDraftByMatch] = useState<Record<string, { cafes: string[]; timeSlots: string[] }>>({});
   const [onlineDraftByMatch, setOnlineDraftByMatch] = useState<Record<string, { platform: MeetPlatform | null; timeSlots: string[] }>>({});
-  const matchesQuery = useMatchesData(isAuthenticated && onboardingStep === "COMPLETED");
+  const canAccessPage = isAuthenticated && isEligibleMemberAppState(appStateCode);
+  const matchesQuery = useMatchesData(canAccessPage);
   const initiateInteractionMutation = useInitiateMatchInteractionMutation();
   const respondMatchConsentMutation = useRespondMatchConsentMutation();
   const requestSocialExchangeMutation = useRequestSocialExchangeMutation();
@@ -135,7 +137,7 @@ export default function MatchesPage() {
   const unmatchMutation = useUnmatchMutation();
   const matches = matchesQuery.data ?? [];
 
-  if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
+  if (!canAccessPage) return null;
 
   if (matchesQuery.error && matches.length === 0) {
     const normalized = normalizeApiError(matchesQuery.error);

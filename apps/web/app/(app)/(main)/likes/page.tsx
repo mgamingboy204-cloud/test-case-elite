@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { isEligibleMemberAppState } from "@/lib/navigationGuard";
 import { X, Check, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { motion, type PanInfo } from "framer-motion";
@@ -12,11 +13,12 @@ import { queryKeys } from "@/lib/queryKeys";
 type ViewState = "loading" | "success" | "empty" | "error";
 
 export default function LikesPage() {
-  const { isAuthenticated, onboardingStep } = useAuth();
+  const { isAuthenticated, appStateCode } = useAuth();
   const [pendingProfileId, setPendingProfileId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const likesQuery = useLikesData(isAuthenticated && onboardingStep === "COMPLETED");
+  const canAccessPage = isAuthenticated && isEligibleMemberAppState(appStateCode);
+  const likesQuery = useLikesData(canAccessPage);
   const respondMutation = useRespondToIncomingLikeMutation();
   const profiles = likesQuery.data ?? [];
 
@@ -79,7 +81,7 @@ export default function LikesPage() {
     return `${profiles.length} Incoming likes`;
   }, [profiles.length, state]);
 
-  if (!isAuthenticated || onboardingStep !== "COMPLETED") return null;
+  if (!canAccessPage) return null;
 
   return (
     <div className="w-full h-full flex flex-col relative">
