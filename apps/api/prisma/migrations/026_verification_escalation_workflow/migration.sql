@@ -19,12 +19,12 @@ ALTER TABLE "VerificationRequest"
   ALTER COLUMN "status" TYPE "VerificationRequestStatus_new"
   USING (
     CASE
-      WHEN "reason" LIKE 'WHATSAPP_HELP_REQUESTED:%' THEN 'ESCALATED'
-      WHEN "status"::text = 'REQUESTED' THEN 'PENDING'
-      WHEN "status"::text = 'TIMED_OUT' THEN 'PENDING'
-      ELSE "status"::text
+      WHEN "reason" LIKE 'WHATSAPP_HELP_REQUESTED:%' THEN 'ESCALATED'::"VerificationRequestStatus_new"
+      WHEN "status"::text = 'REQUESTED' THEN 'PENDING'::"VerificationRequestStatus_new"
+      WHEN "status"::text = 'TIMED_OUT' THEN 'PENDING'::"VerificationRequestStatus_new"
+      ELSE "status"::text::"VerificationRequestStatus_new"
     END
-  )::"VerificationRequestStatus_new";
+  );
 
 DROP TYPE "VerificationRequestStatus";
 ALTER TYPE "VerificationRequestStatus_new" RENAME TO "VerificationRequestStatus";
@@ -69,12 +69,12 @@ SELECT
   "userId",
   'VERIFICATION_WHATSAPP'::"EscalationRequestType",
   CASE
-    WHEN "status" = 'ESCALATED' AND "assignedEmployeeId" IS NULL THEN 'OPEN'::"EscalationRequestStatus"
+    WHEN "status"::text = 'ESCALATED' AND "assignedEmployeeId" IS NULL THEN 'OPEN'::"EscalationRequestStatus"
     ELSE 'RESOLVED'::"EscalationRequestStatus"
   END,
   COALESCE("updatedAt", "createdAt"),
   CASE
-    WHEN "status" = 'ESCALATED' AND "assignedEmployeeId" IS NULL THEN NULL
+    WHEN "status"::text = 'ESCALATED' AND "assignedEmployeeId" IS NULL THEN NULL
     ELSE COALESCE("updatedAt", "createdAt")
   END,
   COALESCE("createdAt", CURRENT_TIMESTAMP),

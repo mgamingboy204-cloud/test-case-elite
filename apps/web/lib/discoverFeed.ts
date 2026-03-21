@@ -1,6 +1,8 @@
 "use client";
 
 import { primeCache, readCache } from "@/lib/cache";
+import { getQueryClient } from "@/lib/queryClient";
+import { queryKeys } from "@/lib/queryKeys";
 import type { DiscoverCard } from "@/lib/queries";
 
 export const DISCOVER_CACHE_KEY = "discover-feed";
@@ -51,6 +53,7 @@ export function readDiscoverFeedState() {
 export function writeDiscoverFeedState(state: DiscoverFeedState) {
   const next = sanitizeState(state);
   primeCache(DISCOVER_CACHE_KEY, next);
+  getQueryClient().setQueryData(queryKeys.member.discoverFeed(), next);
   return next;
 }
 

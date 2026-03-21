@@ -1,13 +1,13 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { normalizeApiError } from "@/lib/apiErrors";
-import { respondToIncomingLike, type LikesIncomingProfile } from "@/lib/likes";
-import { useLikesResource } from "@/lib/appData";
-import { applyOptimisticMemberActionToCaches, syncAfterMatchCreated } from "@/lib/resourceSync";
 import { X, Check, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { motion, type PanInfo } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
+import { type LikesIncomingProfile } from "@/lib/likes";
+import { useLikesData, useRespondToIncomingLikeMutation } from "@/lib/memberState";
+import { queryKeys } from "@/lib/queryKeys";
 
 type ViewState = "loading" | "success" | "empty" | "error";
 
@@ -15,19 +15,23 @@ export default function LikesPage() {
   const { isAuthenticated, onboardingStep } = useAuth();
   const [pendingProfileId, setPendingProfileId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  const likesQuery = useLikesResource(isAuthenticated && onboardingStep === "COMPLETED");
-
+  const queryClient = useQueryClient();
+  const likesQuery = useLikesData(isAuthenticated && onboardingStep === "COMPLETED");
+  const respondMutation = useRespondToIncomingLikeMutation();
   const profiles = likesQuery.data ?? [];
+
   const state: ViewState = useMemo(() => {
-    if (likesQuery.isLoading && profiles.length === 0) return "loading";
+    if (likesQuery.isPending && profiles.length === 0) return "loading";
     if (likesQuery.error && profiles.length === 0) return "error";
     if (profiles.length === 0) return "empty";
     return "success";
-  }, [likesQuery.error, likesQuery.isLoading, profiles.length]);
+  }, [likesQuery.error, likesQuery.isPending, profiles.length]);
 
-  const persist = (items: LikesIncomingProfile[]) => {
-    likesQuery.setData(items);
+  const persist = (updater: LikesIncomingProfile[] | ((items: LikesIncomingProfile[]) => LikesIncomingProfile[])) => {
+    queryClient.setQueryData<LikesIncomingProfile[]>(queryKeys.member.likes.list(), (current) => {
+      const safeCurrent = current ?? [];
+      return typeof updater === "function" ? updater(safeCurrent) : updater;
+    });
   };
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -35,7 +39,7 @@ export default function LikesPage() {
 
     const swipeThreshold = 50;
     if (info.offset.x < -swipeThreshold) {
-      likesQuery.mutate((current = []) => {
+      persist((current) => {
         if (current.length <= 1) return current;
         const [first, ...rest] = current;
         return [...rest, first];
@@ -44,7 +48,7 @@ export default function LikesPage() {
     }
 
     if (info.offset.x > swipeThreshold) {
-      likesQuery.mutate((current = []) => {
+      persist((current) => {
         if (current.length <= 1) return current;
         const last = current[current.length - 1];
         const rest = current.slice(0, current.length - 1);
@@ -57,22 +61,13 @@ export default function LikesPage() {
     const current = profiles[0];
     if (!current || pendingProfileId) return;
 
-    const previousCards = profiles;
-    const nextCards = previousCards.slice(1);
     setPendingProfileId(current.profileId);
     setActionError(null);
-    persist(nextCards);
-    applyOptimisticMemberActionToCaches(current.profileId);
 
     try {
-      const response = await respondToIncomingLike({ targetUserId: current.profileId, action });
-      if (response.matchId) {
-        void syncAfterMatchCreated(response.matchId);
-      }
+      await respondMutation.mutateAsync({ targetUserId: current.profileId, action });
     } catch (error) {
-      persist(previousCards);
-      const normalized = normalizeApiError(error);
-      setActionError(normalized.message);
+      setActionError(error instanceof Error ? error.message : "Unable to update this like right now.");
     } finally {
       setPendingProfileId(null);
     }
@@ -98,9 +93,9 @@ export default function LikesPage() {
 
         {state === "error" && (
           <div className="flex flex-col items-center gap-3 text-center px-8">
-            <p className="text-sm text-foreground/70">We couldn’t load your likes right now.</p>
+            <p className="text-sm text-foreground/70">We couldn't load your likes right now.</p>
             <button
-              onClick={() => void likesQuery.refresh(true)}
+              onClick={() => void likesQuery.refetch()}
               className="rounded-full border border-primary/50 px-6 py-2 text-[11px] uppercase tracking-[0.2em] text-primary hover:bg-primary/10 transition-colors"
             >
               Retry
@@ -142,7 +137,7 @@ export default function LikesPage() {
                 <div className="flex flex-col mb-4 px-1 shrink-0">
                   <div className="flex items-center gap-2">
                     <h2 className="text-3xl font-serif text-white tracking-wide">
-                      {profile.name}, <span className="font-light">{profile.age || "—"}</span>
+                      {profile.name}, <span className="font-light">{profile.age || "-"}</span>
                     </h2>
                     <CheckVerifiedIcon />
                   </div>
@@ -188,7 +183,7 @@ export default function LikesPage() {
         </div>
       )}
 
-      {likesQuery.isRefreshing && state === "success" && (
+      {likesQuery.isFetching && state === "success" && (
         <div className="absolute right-6 top-7 text-foreground/40">
           <Loader2 size={16} className="animate-spin" />
         </div>

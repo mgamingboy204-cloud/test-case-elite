@@ -1,21 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Link as LinkIcon, Loader2, RefreshCcw, ShieldBan, UserCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 import { ApiError } from "@/lib/api";
 import {
-  approveVerificationRequest,
-  assignVerificationRequest,
   isValidGoogleMeetUrl,
-  listVerificationRequestsForWorker,
-  rejectVerificationRequest,
-  startVerificationRequest,
-  type VerificationQueueView,
-  type WorkerVerificationRequest
+  type VerificationQueueView
 } from "@/lib/workerVerification";
-import { EMPLOYEE_QUEUE_FALLBACK_MS } from "@/lib/resourceSync";
+import {
+  canAssignVerificationRequest,
+  canResolveVerificationRequest,
+  canStartVerificationRequest,
+  getVerificationOwnershipLabel,
+  useApproveVerificationRequestMutation,
+  useAssignVerificationRequestMutation,
+  useRejectVerificationRequestMutation,
+  useStartVerificationRequestMutation,
+  useVerificationQueue
+} from "@/lib/opsState";
 import { CaseActivityPanel } from "@/components/operations/CaseActivityPanel";
 
 const VIEWS: Array<{ value: VerificationQueueView; label: string }> = [
@@ -26,24 +29,22 @@ const VIEWS: Array<{ value: VerificationQueueView; label: string }> = [
   { value: "ALL", label: "All" }
 ];
 
-function getOwnershipLabel(request: WorkerVerificationRequest, actorUserId: string | null) {
-  if (!request.assignedEmployeeId) return "Unassigned";
-  if (request.assignedEmployeeId === actorUserId) return "Assigned to you";
-  return "Assigned to another executive";
-}
-
 export function VerificationWorkspace({ mode = "employee" }: { mode?: "employee" | "admin" }) {
   const { user } = useAuth();
   const actorUserId = user?.id ?? null;
   const [view, setView] = useState<VerificationQueueView>("ACTIVE");
-  const [requests, setRequests] = useState<WorkerVerificationRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [meetUrl, setMeetUrl] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
+  const requestsQuery = useVerificationQueue(view);
+  const assignMutation = useAssignVerificationRequestMutation();
+  const startMutation = useStartVerificationRequestMutation();
+  const approveMutation = useApproveVerificationRequestMutation();
+  const rejectMutation = useRejectVerificationRequestMutation();
+  const requests = requestsQuery.data ?? [];
   const isBusy = busyAction !== null;
 
   const selected = useMemo(() => requests.find((item) => item.id === selectedId) ?? null, [requests, selectedId]);
@@ -51,37 +52,22 @@ export function VerificationWorkspace({ mode = "employee" }: { mode?: "employee"
   const isValidMeetUrl = useMemo(() => isValidGoogleMeetUrl(meetUrl), [meetUrl]);
   const selectedAssignedToCurrentActor = Boolean(selected && actorUserId && selected.assignedEmployeeId === actorUserId);
   const selectedAssignedToAnotherActor = Boolean(selected?.assignedEmployeeId && selected.assignedEmployeeId !== actorUserId);
-  const canClaimSelected = Boolean(selected && ["PENDING", "ESCALATED"].includes(selected.status) && !selected.assignedEmployeeId && !isBusy);
-  const canSendLinkSelected = Boolean(selected && selectedAssignedToCurrentActor && ["ASSIGNED", "IN_PROGRESS"].includes(selected.status) && !isBusy);
-  const canResolveSelected = Boolean(selected && selectedAssignedToCurrentActor && ["ASSIGNED", "IN_PROGRESS"].includes(selected.status) && !isBusy);
-
-  const refresh = useCallback(async (targetView = view) => {
-    const data = await listVerificationRequestsForWorker(targetView);
-    setRequests(data.requests);
-    setSelectedId((prev) => (prev && data.requests.some((item) => item.id === prev) ? prev : data.requests[0]?.id ?? null));
-  }, [view]);
+  const canClaimSelected = canAssignVerificationRequest(selected, isBusy);
+  const canSendLinkSelected = canStartVerificationRequest(selected, actorUserId, isBusy);
+  const canResolveSelected = canResolveVerificationRequest(selected, actorUserId, isBusy);
+  const loadError = requestsQuery.error instanceof Error ? requestsQuery.error.message : null;
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        await refresh(view);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to load verification workspace.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    void load();
-  }, [refresh, view]);
+    setSelectedId((prev) => (prev && requests.some((item) => item.id === prev) ? prev : requests[0]?.id ?? null));
+  }, [requests]);
 
-  useLiveResourceRefresh({
-    enabled: true,
-    refresh: () => refresh(),
-    eventTypes: ["admin.verification.queue.changed"],
-    fallbackIntervalMs: EMPLOYEE_QUEUE_FALLBACK_MS
-  });
+  const refresh = async () => {
+    setError(null);
+    const result = await requestsQuery.refetch();
+    if (result.error) {
+      throw result.error;
+    }
+  };
 
   const runAction = async (key: string, action: () => Promise<void>, successMessage: string) => {
     if (isBusy) return;
@@ -90,7 +76,6 @@ export function VerificationWorkspace({ mode = "employee" }: { mode?: "employee"
     setFeedback(null);
     try {
       await action();
-      await refresh();
       setFeedback(successMessage);
       setMeetUrl("");
       setRejectionReason("");
@@ -113,10 +98,11 @@ export function VerificationWorkspace({ mode = "employee" }: { mode?: "employee"
           </p>
         </div>
         <button
-          onClick={() => void refresh()}
+          onClick={() => void refresh().catch((err) => setError(err instanceof Error ? err.message : "Unable to refresh verification workspace."))}
           className="inline-flex items-center gap-2 rounded-full border border-[#2a2f3b] px-3 py-1.5 text-[11px] uppercase tracking-[0.16em] text-white/75"
         >
-          <RefreshCcw size={13} /> Refresh
+          {requestsQuery.isFetching ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />}
+          Refresh
         </button>
       </div>
 
@@ -133,9 +119,9 @@ export function VerificationWorkspace({ mode = "employee" }: { mode?: "employee"
       </div>
 
       {feedback ? <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-300">{feedback}</div> : null}
-      {error ? <div className="rounded-xl border border-red-500/35 bg-red-500/10 px-4 py-3 text-xs text-red-300">{error}</div> : null}
+      {error ?? loadError ? <div className="rounded-xl border border-red-500/35 bg-red-500/10 px-4 py-3 text-xs text-red-300">{error ?? loadError}</div> : null}
 
-      {loading ? (
+      {requestsQuery.isPending && requests.length === 0 ? (
         <div className="inline-flex items-center gap-2 rounded-xl border border-[#1f222b] bg-[#0d1016] p-6 text-sm text-white/65">
           <Loader2 size={16} className="animate-spin" /> Loading verification queue...
         </div>
@@ -145,7 +131,7 @@ export function VerificationWorkspace({ mode = "employee" }: { mode?: "employee"
         <div className="grid grid-cols-12 gap-5">
           <aside className="col-span-4 max-h-[70vh] space-y-2 overflow-y-auto rounded-xl border border-[#1f222b] bg-[#0d1016] p-3">
             {requests.map((request) => {
-              const ownershipLabel = getOwnershipLabel(request, actorUserId);
+              const ownershipLabel = getVerificationOwnershipLabel(request, actorUserId);
               return (
                 <button
                   key={request.id}
@@ -196,7 +182,15 @@ export function VerificationWorkspace({ mode = "employee" }: { mode?: "employee"
                   <div className="space-y-3 pt-1">
                     <button
                       disabled={!canClaimSelected}
-                      onClick={() => void runAction("assign", async () => { await assignVerificationRequest(selected.id); }, "Request assigned to you.")}
+                      onClick={() =>
+                        void runAction(
+                          "assign",
+                          async () => {
+                            await assignMutation.mutateAsync(selected.id);
+                          },
+                          "Request assigned to you."
+                        )
+                      }
                       className="w-full rounded-lg border border-[#C89B90]/40 px-3 py-2 text-xs uppercase tracking-[0.15em] text-[#f0c8be] disabled:opacity-45"
                     >
                       <span className="inline-flex items-center gap-2">
@@ -214,7 +208,15 @@ export function VerificationWorkspace({ mode = "employee" }: { mode?: "employee"
                       />
                       <button
                         disabled={!canSendLinkSelected || !isValidMeetUrl}
-                        onClick={() => void runAction("start", async () => { await startVerificationRequest(selected.id, meetUrl.trim()); }, "Meet link sent and case moved to in-progress.")}
+                        onClick={() =>
+                          void runAction(
+                            "start",
+                            async () => {
+                              await startMutation.mutateAsync({ requestId: selected.id, meetUrl: meetUrl.trim() });
+                            },
+                            "Meet link sent and case moved to in-progress."
+                          )
+                        }
                         className="rounded-lg border border-primary/40 px-4 py-2 text-xs uppercase tracking-[0.15em] text-primary disabled:opacity-45"
                       >
                         <span className="inline-flex items-center gap-2"><LinkIcon size={14} /> Send link</span>
@@ -229,7 +231,15 @@ export function VerificationWorkspace({ mode = "employee" }: { mode?: "employee"
 
                     <button
                       disabled={!canResolveSelected}
-                      onClick={() => void runAction("approve", async () => { await approveVerificationRequest(selected.id); }, "Verification approved and member progression updated.")}
+                      onClick={() =>
+                        void runAction(
+                          "approve",
+                          async () => {
+                            await approveMutation.mutateAsync(selected.id);
+                          },
+                          "Verification approved and member progression updated."
+                        )
+                      }
                       className="w-full rounded-lg border border-emerald-500/40 px-3 py-2 text-xs uppercase tracking-[0.15em] text-emerald-300 disabled:opacity-45"
                     >
                       <span className="inline-flex items-center gap-2"><CheckCircle2 size={14} /> Mark approved</span>
@@ -244,7 +254,15 @@ export function VerificationWorkspace({ mode = "employee" }: { mode?: "employee"
                       />
                       <button
                         disabled={!canResolveSelected || !rejectionReason.trim()}
-                        onClick={() => void runAction("reject", async () => { await rejectVerificationRequest(selected.id, rejectionReason.trim()); }, "Verification rejected and member notified.")}
+                        onClick={() =>
+                          void runAction(
+                            "reject",
+                            async () => {
+                              await rejectMutation.mutateAsync({ requestId: selected.id, reason: rejectionReason.trim() });
+                            },
+                            "Verification rejected and member notified."
+                          )
+                        }
                         className="rounded-lg border border-red-500/40 px-4 py-2 text-xs uppercase tracking-[0.15em] text-red-300 disabled:opacity-45"
                       >
                         <span className="inline-flex items-center gap-2"><ShieldBan size={14} /> Reject</span>

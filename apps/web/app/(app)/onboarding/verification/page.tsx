@@ -1,22 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Clock3, ExternalLink, MessageCircleWarning, ShieldCheck, UserRoundCheck, XCircle } from "lucide-react";
 import { apiRequestAuth } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
-import { VERIFICATION_STATUS_FALLBACK_MS } from "@/lib/resourceSync";
-
-type VerificationPayload = {
-  status: "NOT_REQUESTED" | "PENDING" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED" | "ESCALATED";
-  displayStatus: "PENDING" | "ASSIGNED" | "APPROVED" | "REJECTED";
-  meetUrl: string | null;
-  remainingSeconds: number;
-  requestedAt: string | null;
-  escalationRequestedAt: string | null;
-};
+import { type VerificationPayload, useVerificationStatusData } from "@/lib/memberState";
 
 type MemberVerificationStage =
   | "intro"
@@ -56,43 +46,16 @@ function deriveStage(payload: VerificationPayload | null, requesting: boolean, r
 
 export default function VideoVerificationPage() {
   const { refreshCurrentUser, refreshCurrentUserAndRoute } = useAuth();
-  const [payload, setPayload] = useState<VerificationPayload | null>(null);
-  const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const [helping, setHelping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [clockTickMs, setClockTickMs] = useState(() => Date.now());
+  const verificationQuery = useVerificationStatusData();
+  const payload = verificationQuery.data ?? null;
   const payloadStatus = payload?.status ?? null;
   const payloadRequestedAt = payload?.requestedAt ?? null;
   const payloadDisplayStatus = payload?.displayStatus ?? null;
-
-  const loadStatus = useCallback(async () => {
-    const response = await apiRequestAuth<VerificationPayload>(API_ENDPOINTS.verification.status);
-    setPayload(response);
-    return response;
-  }, []);
-
-  useEffect(() => {
-    const run = async () => {
-      setLoading(true);
-      try {
-        await loadStatus();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Could not load verification status.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    void run();
-  }, [loadStatus]);
-
-  useLiveResourceRefresh({
-    enabled: Boolean(payloadStatus),
-    refresh: loadStatus,
-    eventTypes: ["verification.status.changed"],
-    fallbackIntervalMs: ["PENDING", "ESCALATED", "ASSIGNED", "IN_PROGRESS"].includes(payloadStatus ?? "") ? VERIFICATION_STATUS_FALLBACK_MS : undefined
-  });
 
   useEffect(() => {
     if (payloadStatus !== "PENDING" || Boolean(payload?.escalationRequestedAt)) return;
@@ -118,8 +81,8 @@ export default function VideoVerificationPage() {
   useEffect(() => {
     if (payloadStatus !== "PENDING" || Boolean(payload?.escalationRequestedAt)) return;
     if (effectiveRemainingSeconds > 0) return;
-    void loadStatus().catch(() => undefined);
-  }, [effectiveRemainingSeconds, loadStatus, payload?.escalationRequestedAt, payloadStatus]);
+    void verificationQuery.refetch().catch(() => undefined);
+  }, [effectiveRemainingSeconds, payload?.escalationRequestedAt, payloadStatus, verificationQuery]);
 
   useEffect(() => {
     if (payloadDisplayStatus !== "APPROVED") return;
@@ -136,7 +99,7 @@ export default function VideoVerificationPage() {
         body: JSON.stringify({})
       });
       await refreshCurrentUser().catch(() => undefined);
-      await loadStatus();
+      await verificationQuery.refetch();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to request video verification right now.");
     } finally {
@@ -154,8 +117,8 @@ export default function VideoVerificationPage() {
         body: JSON.stringify({})
       });
       await refreshCurrentUser().catch(() => undefined);
-      const latest = await loadStatus();
-      if (!latest.escalationRequestedAt) {
+      const latest = await verificationQuery.refetch();
+      if (!latest.data?.escalationRequestedAt) {
         throw new Error("Request failed. Please try again.");
       }
       setMessage("Your request has been received. A VAEL executive will coordinate with you personally on WhatsApp.");
@@ -169,7 +132,7 @@ export default function VideoVerificationPage() {
   const stage = useMemo(() => deriveStage(payload, requesting, effectiveRemainingSeconds), [effectiveRemainingSeconds, payload, requesting]);
   const showWhatsAppCta = stage === "needs_help";
 
-  if (loading) {
+  if (verificationQuery.isPending && !payload) {
     return (
       <div className="flex h-full items-center justify-center px-8">
         <p className="text-sm text-foreground/60">Loading verification status...</p>

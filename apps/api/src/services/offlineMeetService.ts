@@ -16,7 +16,12 @@ type TimeSlotOption = { id: string; label: string; startsAtIso: string | null };
 
 type OfflineMeetCaseWithMatch = Prisma.OfflineMeetCaseGetPayload<{
   include: {
-    match: { include: { userA: { include: { profile: true } }; userB: { include: { profile: true } } } };
+    match: {
+      include: {
+        userA: { include: { profile: true; photos: { orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }]; take: 1 } } };
+        userB: { include: { profile: true; photos: { orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }]; take: 1 } } };
+      };
+    };
   };
 }>;
 
@@ -105,6 +110,59 @@ function ensureAdminUser(userId: string, caseItem: { assignedEmployeeId: string 
   if (caseItem.assignedEmployeeId && caseItem.assignedEmployeeId !== userId) {
     throw new HttpError(403, { message: "This case is assigned to another employee." });
   }
+}
+
+function mapOfflineMeetEmployeeCase(entry: OfflineMeetCaseWithMatch) {
+  return {
+    id: entry.id,
+    matchId: entry.matchId,
+    status: entry.status,
+    createdAt: entry.createdAt.toISOString(),
+    updatedAt: entry.updatedAt.toISOString(),
+    assignedEmployeeId: entry.assignedEmployeeId,
+    responseDeadlineAt: entry.responseDeadlineAt,
+    cooldownUntil: entry.cooldownUntil,
+    finalCafe: entry.finalCafe,
+    finalTimeSlot: entry.finalTimeSlot,
+    users: [entry.match.userA, entry.match.userB].map((member) => ({
+      id: member.id,
+      name: member.profile?.name ?? "Member",
+      locationLabel: member.profile?.locationLabel ?? member.profile?.city ?? "Private Location",
+      city: member.profile?.city ?? null,
+      profession: member.profile?.profession ?? null,
+      photoUrl: member.photos[0]?.url ?? null
+    })),
+    options: {
+      cafes: asCafeOptions(entry.cafeOptions),
+      timeSlots: asTimeSlotOptions(entry.timeSlotOptions)
+    },
+    selections: {
+      requester: {
+        cafes: asStringArray(entry.requesterCafeSelections),
+        timeSlots: asStringArray(entry.requesterTimeSelections)
+      },
+      receiver: {
+        cafes: asStringArray(entry.receiverCafeSelections),
+        timeSlots: asStringArray(entry.receiverTimeSelections)
+      }
+    }
+  };
+}
+
+async function getOfflineMeetEmployeeCaseView(caseId: string) {
+  const entry = await prisma.offlineMeetCase.findUnique({
+    where: { id: caseId },
+    include: {
+      match: {
+        include: {
+          userA: { include: { profile: true, photos: { orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }], take: 1 } } },
+          userB: { include: { profile: true, photos: { orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }], take: 1 } } }
+        }
+      }
+    }
+  });
+
+  return entry ? mapOfflineMeetEmployeeCase(entry) : null;
 }
 
 async function createNotifications(userIds: string[], type: NotificationType, matchId: string, title: string, message: string) {
@@ -479,39 +537,7 @@ export async function listOfflineMeetCasesForEmployee(userId: string, requestedV
 
   return {
     statusView,
-    cases: refreshed.map((entry) => ({
-      id: entry.id,
-      matchId: entry.matchId,
-      status: entry.status,
-        createdAt: entry.createdAt.toISOString(),
-      assignedEmployeeId: entry.assignedEmployeeId,
-      responseDeadlineAt: entry.responseDeadlineAt,
-      cooldownUntil: entry.cooldownUntil,
-      finalCafe: entry.finalCafe,
-      finalTimeSlot: entry.finalTimeSlot,
-      users: [entry.match.userA, entry.match.userB].map((member) => ({
-        id: member.id,
-        name: member.profile?.name ?? "Member",
-        locationLabel: member.profile?.locationLabel ?? member.profile?.city ?? "Private Location",
-        city: member.profile?.city ?? null,
-        profession: member.profile?.profession ?? null,
-        photoUrl: member.photos[0]?.url ?? null
-      })),
-      options: {
-        cafes: asCafeOptions(entry.cafeOptions),
-        timeSlots: asTimeSlotOptions(entry.timeSlotOptions)
-      },
-      selections: {
-        requester: {
-          cafes: asStringArray(entry.requesterCafeSelections),
-          timeSlots: asStringArray(entry.requesterTimeSelections)
-        },
-        receiver: {
-          cafes: asStringArray(entry.receiverCafeSelections),
-          timeSlots: asStringArray(entry.receiverTimeSelections)
-        }
-      }
-    }))
+    cases: refreshed.map(mapOfflineMeetEmployeeCase)
   };
 }
 
@@ -544,7 +570,9 @@ export async function assignOfflineMeetCase(caseId: string, employeeUserId: stri
   });
   emitOfflineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
-  return updated;
+  const viewModel = await getOfflineMeetEmployeeCaseView(updated.id);
+  if (!viewModel) throw new HttpError(404, { message: "Case not found." });
+  return { case: viewModel };
 }
 
 export async function sendOfflineMeetOptions(params: {
@@ -597,7 +625,9 @@ export async function sendOfflineMeetOptions(params: {
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOfflineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
-  return updated;
+  const viewModel = await getOfflineMeetEmployeeCaseView(updated.id);
+  if (!viewModel) throw new HttpError(404, { message: "Case not found." });
+  return { case: viewModel };
 }
 
 export async function finalizeOfflineMeetCase(params: { caseId: string; employeeUserId: string; finalCafeId: string; finalTimeSlotId: string }) {
@@ -658,7 +688,9 @@ export async function finalizeOfflineMeetCase(params: { caseId: string; employee
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOfflineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
-  return updated;
+  const viewModel = await getOfflineMeetEmployeeCaseView(updated.id);
+  if (!viewModel) throw new HttpError(404, { message: "Case not found." });
+  return { case: viewModel };
 }
 
 export async function markOfflineMeetTimeout(params: { caseId: string; employeeUserId: string; nonResponderUserId: string }) {
@@ -701,7 +733,9 @@ export async function markOfflineMeetTimeout(params: { caseId: string; employeeU
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOfflineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
-  return updated;
+  const viewModel = await getOfflineMeetEmployeeCaseView(updated.id);
+  if (!viewModel) throw new HttpError(404, { message: "Case not found." });
+  return { case: viewModel };
 }
 
 export async function markOfflineMeetNoOverlap(params: { caseId: string; employeeUserId: string }) {
@@ -735,7 +769,9 @@ export async function markOfflineMeetNoOverlap(params: { caseId: string; employe
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOfflineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
-  return updated;
+  const viewModel = await getOfflineMeetEmployeeCaseView(updated.id);
+  if (!viewModel) throw new HttpError(404, { message: "Case not found." });
+  return { case: viewModel };
 }
 
 export async function updateOfflineMeetCancelOrReschedule(params: {
@@ -790,5 +826,7 @@ export async function updateOfflineMeetCancelOrReschedule(params: {
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOfflineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
-  return updated;
+  const viewModel = await getOfflineMeetEmployeeCaseView(updated.id);
+  if (!viewModel) throw new HttpError(404, { message: "Case not found." });
+  return { case: viewModel };
 }

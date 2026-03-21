@@ -12,6 +12,7 @@ export type WorkerVerificationRequest = {
   meetUrl: string | null;
   reason: string | null;
   createdAt: string;
+  updatedAt: string;
   assignedAt: string | null;
   escalationRequestedAt: string | null;
   user: {

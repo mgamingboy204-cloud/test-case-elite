@@ -55,6 +55,8 @@ export type OnlineMeetEmployeeCase = {
   id: string;
   matchId: string;
   status: OnlineMeetStatus;
+  createdAt: string;
+  updatedAt: string;
   assignedEmployeeId: string | null;
   responseDeadlineAt: string | null;
   cooldownUntil: string | null;
@@ -79,36 +81,36 @@ export async function listOnlineMeetCasesForEmployee(statusView: OnlineMeetStatu
 }
 
 export async function assignOnlineMeetCase(caseId: string) {
-  return apiRequestAuth(API_ENDPOINTS.onlineMeet.employeeActions.assign(caseId), { method: "POST" });
+  return apiRequestAuth<{ case: OnlineMeetEmployeeCase }>(API_ENDPOINTS.onlineMeet.employeeActions.assign(caseId), { method: "POST" });
 }
 
 export async function sendOnlineMeetOptions(caseId: string, payload: { platforms: MeetPlatform[]; timeSlots: Array<{ id: string; label: string; startsAtIso?: string | null }> }) {
-  return apiRequestAuth(API_ENDPOINTS.onlineMeet.employeeActions.sendOptions(caseId), {
+  return apiRequestAuth<{ case: OnlineMeetEmployeeCase }>(API_ENDPOINTS.onlineMeet.employeeActions.sendOptions(caseId), {
     method: "POST",
     body: JSON.stringify(payload)
   });
 }
 
 export async function finalizeOnlineMeet(caseId: string, payload: { finalPlatform: MeetPlatform; finalTimeSlotId: string; finalMeetingLink: string }) {
-  return apiRequestAuth(API_ENDPOINTS.onlineMeet.employeeActions.finalize(caseId), {
+  return apiRequestAuth<{ case: OnlineMeetEmployeeCase }>(API_ENDPOINTS.onlineMeet.employeeActions.finalize(caseId), {
     method: "POST",
     body: JSON.stringify(payload)
   });
 }
 
 export async function markOnlineMeetTimeout(caseId: string, nonResponderUserId: string) {
-  return apiRequestAuth(API_ENDPOINTS.onlineMeet.employeeActions.timeout(caseId), {
+  return apiRequestAuth<{ case: OnlineMeetEmployeeCase }>(API_ENDPOINTS.onlineMeet.employeeActions.timeout(caseId), {
     method: "POST",
     body: JSON.stringify({ nonResponderUserId })
   });
 }
 
 export async function markOnlineMeetNoOverlap(caseId: string) {
-  return apiRequestAuth(API_ENDPOINTS.onlineMeet.employeeActions.noOverlap(caseId), { method: "POST" });
+  return apiRequestAuth<{ case: OnlineMeetEmployeeCase }>(API_ENDPOINTS.onlineMeet.employeeActions.noOverlap(caseId), { method: "POST" });
 }
 
 export async function updateOnlineMeetCase(caseId: string, payload: { action: "CANCEL" | "RESCHEDULE"; reason: string; requestedByUserId?: string | null }) {
-  return apiRequestAuth(API_ENDPOINTS.onlineMeet.employeeActions.caseUpdate(caseId), {
+  return apiRequestAuth<{ case: OnlineMeetEmployeeCase }>(API_ENDPOINTS.onlineMeet.employeeActions.caseUpdate(caseId), {
     method: "POST",
     body: JSON.stringify(payload)
   });

@@ -3,6 +3,7 @@ import crypto from "crypto";
 import {
   OfflineMeetCoordinationStatus,
   OnlineMeetCoordinationStatus,
+  Prisma,
   Role,
   VerificationRequestStatus
 } from "@prisma/client";
@@ -70,6 +71,81 @@ function formatMemberName(user: {
   profile?: { name: string | null } | null;
 }) {
   return user.profile?.name ?? ([user.firstName, user.lastName].filter(Boolean).join(" ") || user.displayName || "Member");
+}
+
+type StaffListRecord = Prisma.UserGetPayload<{
+  select: {
+    id: true;
+    employeeId: true;
+    firstName: true;
+    lastName: true;
+    displayName: true;
+    phone: true;
+    email: true;
+    role: true;
+    isAdmin: true;
+    mustResetPassword: true;
+    deactivatedAt: true;
+    createdAt: true;
+    lastActiveAt: true;
+  };
+}>;
+
+type AuditLogWithActor = Prisma.AuditLogGetPayload<{
+  include: {
+    actor: {
+      select: {
+        id: true;
+        firstName: true;
+        lastName: true;
+        displayName: true;
+        role: true;
+        employeeId: true;
+      };
+    };
+  };
+}>;
+
+function mapStaffMember(member: StaffListRecord) {
+  return {
+    id: member.id,
+    employeeId: member.employeeId,
+    name: formatUserName(member),
+    phone: member.phone,
+    email: member.email,
+    role: member.role,
+    isAdmin: member.isAdmin,
+    mustResetPassword: member.mustResetPassword,
+    isActive: member.deactivatedAt === null,
+    createdAt: member.createdAt.toISOString(),
+    lastActiveAt: member.lastActiveAt.toISOString()
+  };
+}
+
+function mapCaseActivityEntry(entry: AuditLogWithActor) {
+  const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
+  const body =
+    typeof metadata.body === "string"
+      ? metadata.body
+      : typeof metadata.note === "string"
+        ? metadata.note
+        : null;
+
+  return {
+    id: entry.id,
+    action: entry.action,
+    createdAt: entry.createdAt.toISOString(),
+    actor: entry.actor
+      ? {
+          id: entry.actor.id,
+          name: formatUserName(entry.actor),
+          role: entry.actor.role,
+          employeeId: entry.actor.employeeId
+        }
+      : null,
+    body,
+    metadata
+  };
 }
 
 function randomTemporaryPassword() {
@@ -444,19 +520,7 @@ export async function listStaffMembers() {
   });
 
   return {
-    staff: staff.map((member) => ({
-      id: member.id,
-      employeeId: member.employeeId,
-      name: formatUserName(member),
-      phone: member.phone,
-      email: member.email,
-      role: member.role,
-      isAdmin: member.isAdmin,
-      mustResetPassword: member.mustResetPassword,
-      isActive: member.deactivatedAt === null,
-      createdAt: member.createdAt.toISOString(),
-      lastActiveAt: member.lastActiveAt.toISOString()
-    }))
+    staff: staff.map(mapStaffMember)
   };
 }
 
@@ -529,14 +593,7 @@ export async function createStaffMember(options: {
   emitAdminDashboardChanged();
 
   return {
-    staff: {
-      id: staff.id,
-      employeeId: staff.employeeId,
-      role: staff.role,
-      email: staff.email,
-      phone: staff.phone,
-      mustResetPassword: staff.mustResetPassword
-    },
+    staff: mapStaffMember(staff),
     temporaryPassword
   };
 }
@@ -564,7 +621,18 @@ export async function setStaffActivation(options: {
     },
     select: {
       id: true,
-      deactivatedAt: true
+      employeeId: true,
+      firstName: true,
+      lastName: true,
+      displayName: true,
+      phone: true,
+      email: true,
+      role: true,
+      isAdmin: true,
+      mustResetPassword: true,
+      deactivatedAt: true,
+      createdAt: true,
+      lastActiveAt: true
     }
   });
 
@@ -583,8 +651,7 @@ export async function setStaffActivation(options: {
   emitAdminDashboardChanged();
 
   return {
-    id: updated.id,
-    active: updated.deactivatedAt === null
+    staff: mapStaffMember(updated)
   };
 }
 
@@ -615,31 +682,7 @@ export async function listCaseActivity(caseTypeInput: string, caseId: string) {
   return {
     caseType,
     caseId,
-    entries: logs.map((entry) => {
-      const metadata = (entry.metadata ?? {}) as Record<string, unknown>;
-      const body =
-        typeof metadata.body === "string"
-          ? metadata.body
-          : typeof metadata.note === "string"
-            ? metadata.note
-            : null;
-
-      return {
-        id: entry.id,
-        action: entry.action,
-        createdAt: entry.createdAt.toISOString(),
-        actor: entry.actor
-          ? {
-              id: entry.actor.id,
-              name: formatUserName(entry.actor),
-              role: entry.actor.role,
-              employeeId: entry.actor.employeeId
-            }
-          : null,
-        body,
-        metadata
-      };
-    })
+    entries: logs.map(mapCaseActivityEntry)
   };
 }
 
@@ -676,11 +719,26 @@ export async function addCaseNote(options: {
     caseId: options.caseId
   });
 
+  const persisted = await prisma.auditLog.findUnique({
+    where: { id: note.id },
+    include: {
+      actor: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          displayName: true,
+          role: true,
+          employeeId: true
+        }
+      }
+    }
+  });
+  if (!persisted) {
+    throw new HttpError(500, { message: "Unable to load saved note." });
+  }
+
   return {
-    id: note.id,
-    caseType,
-    caseId: options.caseId,
-    body,
-    createdAt: note.createdAt.toISOString()
+    entry: mapCaseActivityEntry(persisted)
   };
 }

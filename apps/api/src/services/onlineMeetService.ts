@@ -16,7 +16,12 @@ type TimeSlotOption = { id: string; label: string; startsAtIso: string | null };
 
 type OnlineMeetCaseWithMatch = Prisma.OnlineMeetCaseGetPayload<{
   include: {
-    match: { include: { userA: { include: { profile: true } }; userB: { include: { profile: true } } } };
+    match: {
+      include: {
+        userA: { include: { profile: true; photos: { orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }]; take: 1 } } };
+        userB: { include: { profile: true; photos: { orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }]; take: 1 } } };
+      };
+    };
   };
 }>;
 
@@ -98,6 +103,54 @@ function ensureAssigned(employeeUserId: string, caseItem: { assignedEmployeeId: 
   if (caseItem.assignedEmployeeId && caseItem.assignedEmployeeId !== employeeUserId) {
     throw new HttpError(403, { message: "This case is assigned to another employee." });
   }
+}
+
+function mapOnlineMeetEmployeeCase(entry: OnlineMeetCaseWithMatch) {
+  return {
+    id: entry.id,
+    matchId: entry.matchId,
+    status: entry.status,
+    createdAt: entry.createdAt.toISOString(),
+    updatedAt: entry.updatedAt.toISOString(),
+    assignedEmployeeId: entry.assignedEmployeeId,
+    responseDeadlineAt: entry.responseDeadlineAt,
+    cooldownUntil: entry.cooldownUntil,
+    finalPlatform: entry.finalPlatform,
+    finalTimeSlot: entry.finalTimeSlot,
+    finalMeetingLink: entry.finalMeetingLink,
+    users: [entry.match.userA, entry.match.userB].map((member) => ({
+      id: member.id,
+      name: member.profile?.name ?? "Member",
+      locationLabel: member.profile?.locationLabel ?? member.profile?.city ?? "Private Location",
+      city: member.profile?.city ?? null,
+      profession: member.profile?.profession ?? null,
+      photoUrl: member.photos[0]?.url ?? null
+    })),
+    options: {
+      platforms: asPlatformOptions(entry.platformOptions),
+      timeSlots: asTimeSlotOptions(entry.timeSlotOptions)
+    },
+    selections: {
+      requester: { platform: entry.requesterPlatformPreference, timeSlots: asStringArray(entry.requesterTimeSelections) },
+      receiver: { platform: entry.receiverPlatformPreference, timeSlots: asStringArray(entry.receiverTimeSelections) }
+    }
+  };
+}
+
+async function getOnlineMeetEmployeeCaseView(caseId: string) {
+  const entry = await prisma.onlineMeetCase.findUnique({
+    where: { id: caseId },
+    include: {
+      match: {
+        include: {
+          userA: { include: { profile: true, photos: { orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }], take: 1 } } },
+          userB: { include: { profile: true, photos: { orderBy: [{ photoIndex: "asc" }, { createdAt: "asc" }], take: 1 } } }
+        }
+      }
+    }
+  });
+
+  return entry ? mapOnlineMeetEmployeeCase(entry) : null;
 }
 
 async function createNotifications(userIds: string[], type: NotificationType, matchId: string, title: string, message: string) {
@@ -449,34 +502,7 @@ export async function listOnlineMeetCasesForEmployee(userId: string, requestedVi
 
   return {
     statusView,
-    cases: refreshed.map((entry) => ({
-      id: entry.id,
-      matchId: entry.matchId,
-      status: entry.status,
-        createdAt: entry.createdAt.toISOString(),
-      assignedEmployeeId: entry.assignedEmployeeId,
-      responseDeadlineAt: entry.responseDeadlineAt,
-      cooldownUntil: entry.cooldownUntil,
-      finalPlatform: entry.finalPlatform,
-      finalTimeSlot: entry.finalTimeSlot,
-      finalMeetingLink: entry.finalMeetingLink,
-      users: [entry.match.userA, entry.match.userB].map((member) => ({
-        id: member.id,
-        name: member.profile?.name ?? "Member",
-        locationLabel: member.profile?.locationLabel ?? member.profile?.city ?? "Private Location",
-        city: member.profile?.city ?? null,
-        profession: member.profile?.profession ?? null,
-        photoUrl: member.photos[0]?.url ?? null
-      })),
-      options: {
-        platforms: asPlatformOptions(entry.platformOptions),
-        timeSlots: asTimeSlotOptions(entry.timeSlotOptions)
-      },
-      selections: {
-        requester: { platform: entry.requesterPlatformPreference, timeSlots: asStringArray(entry.requesterTimeSelections) },
-        receiver: { platform: entry.receiverPlatformPreference, timeSlots: asStringArray(entry.receiverTimeSelections) }
-      }
-    }))
+    cases: refreshed.map(mapOnlineMeetEmployeeCase)
   };
 }
 
@@ -509,7 +535,9 @@ export async function assignOnlineMeetCase(caseId: string, employeeUserId: strin
   });
   emitOnlineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
-  return updated;
+  const viewModel = await getOnlineMeetEmployeeCaseView(updated.id);
+  if (!viewModel) throw new HttpError(404, { message: "Case not found." });
+  return { case: viewModel };
 }
 
 export async function sendOnlineMeetOptions(params: {
@@ -562,7 +590,9 @@ export async function sendOnlineMeetOptions(params: {
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOnlineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
-  return updated;
+  const viewModel = await getOnlineMeetEmployeeCaseView(updated.id);
+  if (!viewModel) throw new HttpError(404, { message: "Case not found." });
+  return { case: viewModel };
 }
 
 export async function finalizeOnlineMeetCase(params: {
@@ -625,7 +655,9 @@ export async function finalizeOnlineMeetCase(params: {
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOnlineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
-  return updated;
+  const viewModel = await getOnlineMeetEmployeeCaseView(updated.id);
+  if (!viewModel) throw new HttpError(404, { message: "Case not found." });
+  return { case: viewModel };
 }
 
 export async function markOnlineMeetTimeout(params: { caseId: string; employeeUserId: string; nonResponderUserId: string }) {
@@ -667,7 +699,9 @@ export async function markOnlineMeetTimeout(params: { caseId: string; employeeUs
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOnlineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
-  return updated;
+  const viewModel = await getOnlineMeetEmployeeCaseView(updated.id);
+  if (!viewModel) throw new HttpError(404, { message: "Case not found." });
+  return { case: viewModel };
 }
 
 export async function markOnlineMeetNoOverlap(params: { caseId: string; employeeUserId: string }) {
@@ -701,7 +735,9 @@ export async function markOnlineMeetNoOverlap(params: { caseId: string; employee
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOnlineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
-  return updated;
+  const viewModel = await getOnlineMeetEmployeeCaseView(updated.id);
+  if (!viewModel) throw new HttpError(404, { message: "Case not found." });
+  return { case: viewModel };
 }
 
 export async function updateOnlineMeetCancelOrReschedule(params: {
@@ -758,5 +794,7 @@ export async function updateOnlineMeetCancelOrReschedule(params: {
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOnlineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
-  return updated;
+  const viewModel = await getOnlineMeetEmployeeCaseView(updated.id);
+  if (!viewModel) throw new HttpError(404, { message: "Case not found." });
+  return { case: viewModel };
 }

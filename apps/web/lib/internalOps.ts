@@ -144,14 +144,7 @@ export async function createStaffMember(input: {
   role: "EMPLOYEE" | "ADMIN";
 }) {
   return apiRequestAuth<{
-    staff: {
-      id: string;
-      employeeId: string | null;
-      role: "EMPLOYEE" | "ADMIN";
-      email: string | null;
-      phone: string;
-      mustResetPassword: boolean;
-    };
+    staff: StaffMember;
     temporaryPassword: string;
   }>(API_ENDPOINTS.admin.staff.create, {
     method: "POST",
@@ -160,14 +153,14 @@ export async function createStaffMember(input: {
 }
 
 export async function deactivateStaffMember(staffUserId: string) {
-  return apiRequestAuth<{ id: string; active: boolean }>(API_ENDPOINTS.admin.staff.deactivate(staffUserId), {
+  return apiRequestAuth<{ staff: StaffMember }>(API_ENDPOINTS.admin.staff.deactivate(staffUserId), {
     method: "POST",
     body: JSON.stringify({})
   });
 }
 
 export async function reactivateStaffMember(staffUserId: string) {
-  return apiRequestAuth<{ id: string; active: boolean }>(API_ENDPOINTS.admin.staff.reactivate(staffUserId), {
+  return apiRequestAuth<{ staff: StaffMember }>(API_ENDPOINTS.admin.staff.reactivate(staffUserId), {
     method: "POST",
     body: JSON.stringify({})
   });
@@ -186,7 +179,7 @@ export async function fetchCaseActivity(caseType: "VERIFICATION" | "OFFLINE_MEET
 }
 
 export async function addCaseNote(caseType: "VERIFICATION" | "OFFLINE_MEET" | "ONLINE_MEET", caseId: string, body: string) {
-  return apiRequestAuth<{ id: string; body: string; createdAt: string }>(API_ENDPOINTS.ops.addCaseNote(caseType, caseId), {
+  return apiRequestAuth<{ entry: CaseActivityEntry }>(API_ENDPOINTS.ops.addCaseNote(caseType, caseId), {
     method: "POST",
     body: JSON.stringify({ body })
   });

@@ -1,35 +1,36 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Loader2, RefreshCcw } from "lucide-react";
-import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
 import {
-  assignOfflineMeetCase,
-  finalizeOfflineMeet,
-  listOfflineMeetCasesForEmployee,
-  markOfflineMeetNoOverlap,
-  markOfflineMeetTimeout,
-  sendOfflineMeetOptions,
-  updateOfflineMeetCase,
   type OfflineMeetEmployeeCase,
   type OfflineMeetStatusView
 } from "@/lib/offlineMeet";
 import {
-  assignOnlineMeetCase,
-  finalizeOnlineMeet,
-  listOnlineMeetCasesForEmployee,
-  markOnlineMeetNoOverlap,
-  markOnlineMeetTimeout,
-  sendOnlineMeetOptions,
-  updateOnlineMeetCase,
   type MeetPlatform,
   type OnlineMeetEmployeeCase,
   type OnlineMeetStatusView
 } from "@/lib/onlineMeet";
 import { ApiError } from "@/lib/api";
-import { EMPLOYEE_COORDINATION_FALLBACK_MS } from "@/lib/resourceSync";
 import { CaseActivityPanel } from "@/components/operations/CaseActivityPanel";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  isCoordinationCaseActionable,
+  useAssignOfflineMeetCaseMutation,
+  useAssignOnlineMeetCaseMutation,
+  useFinalizeOfflineMeetMutation,
+  useFinalizeOnlineMeetMutation,
+  useMarkOfflineMeetNoOverlapMutation,
+  useMarkOfflineMeetTimeoutMutation,
+  useMarkOnlineMeetNoOverlapMutation,
+  useMarkOnlineMeetTimeoutMutation,
+  useOfflineMeetQueue,
+  useOnlineMeetQueue,
+  useSendOfflineMeetOptionsMutation,
+  useSendOnlineMeetOptionsMutation,
+  useUpdateOfflineMeetCaseMutation,
+  useUpdateOnlineMeetCaseMutation
+} from "@/lib/opsState";
 
 type MeetMode = "OFFLINE" | "ONLINE";
 
@@ -48,17 +49,6 @@ const OFFLINE_VIEWS: Array<{ value: OfflineMeetStatusView; label: string }> = [
 ];
 
 const ONLINE_VIEWS: Array<{ value: OnlineMeetStatusView; label: string }> = OFFLINE_VIEWS as Array<{ value: OnlineMeetStatusView; label: string }>;
-
-const activeStatuses = new Set([
-  "ACCEPTED",
-  "EMPLOYEE_PREPARING_OPTIONS",
-  "OPTIONS_SENT",
-  "AWAITING_USER_SELECTIONS",
-  "USER_ONE_RESPONDED",
-  "USER_TWO_RESPONDED",
-  "READY_FOR_FINALIZATION",
-  "RESCHEDULE_REQUESTED"
-]);
 
 function statusText(status: string) {
   return status.replaceAll("_", " ").toLowerCase();
@@ -99,11 +89,7 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
   const [mode, setMode] = useState<MeetMode>("OFFLINE");
   const [offlineView, setOfflineView] = useState<OfflineMeetStatusView>("ACTIVE");
   const [onlineView, setOnlineView] = useState<OnlineMeetStatusView>("ACTIVE");
-  const [offlineCases, setOfflineCases] = useState<OfflineMeetEmployeeCase[]>([]);
-  const [onlineCases, setOnlineCases] = useState<OnlineMeetEmployeeCase[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -111,11 +97,29 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
   const [offlineOptionsForm, setOfflineOptionsForm] = useState<OptionForm>(newDefaultOfflineOptions());
   const [onlineOptionsForm, setOnlineOptionsForm] = useState(newDefaultOnlineOptions());
   const [timeoutUserId, setTimeoutUserId] = useState<string | null>(null);
+  const offlineCasesQuery = useOfflineMeetQueue(offlineView, mode === "OFFLINE");
+  const onlineCasesQuery = useOnlineMeetQueue(onlineView, mode === "ONLINE");
+  const assignOfflineMutation = useAssignOfflineMeetCaseMutation();
+  const sendOfflineOptionsMutation = useSendOfflineMeetOptionsMutation();
+  const finalizeOfflineMutation = useFinalizeOfflineMeetMutation();
+  const markOfflineTimeoutMutation = useMarkOfflineMeetTimeoutMutation();
+  const markOfflineNoOverlapMutation = useMarkOfflineMeetNoOverlapMutation();
+  const updateOfflineMutation = useUpdateOfflineMeetCaseMutation();
+  const assignOnlineMutation = useAssignOnlineMeetCaseMutation();
+  const sendOnlineOptionsMutation = useSendOnlineMeetOptionsMutation();
+  const finalizeOnlineMutation = useFinalizeOnlineMeetMutation();
+  const markOnlineTimeoutMutation = useMarkOnlineMeetTimeoutMutation();
+  const markOnlineNoOverlapMutation = useMarkOnlineMeetNoOverlapMutation();
+  const updateOnlineMutation = useUpdateOnlineMeetCaseMutation();
+  const offlineCases = offlineCasesQuery.data ?? [];
+  const onlineCases = onlineCasesQuery.data ?? [];
 
   const activeView = mode === "OFFLINE" ? offlineView : onlineView;
   const activeItems = mode === "OFFLINE" ? offlineCases : onlineCases;
+  const activeQuery = mode === "OFFLINE" ? offlineCasesQuery : onlineCasesQuery;
   const selectedOffline = offlineCases.find((entry) => entry.id === selectedCaseId) ?? null;
   const selectedOnline = onlineCases.find((entry) => entry.id === selectedCaseId) ?? null;
+  const loadError = activeQuery.error instanceof Error ? activeQuery.error.message : null;
 
   const offlineOverlap = useMemo(() => {
     if (!selectedOffline) return { cafes: [], slots: [] };
@@ -146,33 +150,9 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
     };
   }, [selectedOnline]);
 
-  const loadCases = useCallback(async (targetMode: MeetMode, view = targetMode === "OFFLINE" ? offlineView : onlineView) => {
-    if (targetMode === "OFFLINE") {
-      const payload = await listOfflineMeetCasesForEmployee(view as OfflineMeetStatusView);
-      setOfflineCases(payload.cases);
-      setSelectedCaseId((prev) => (prev && payload.cases.some((item) => item.id === prev) ? prev : payload.cases[0]?.id ?? null));
-      return;
-    }
-
-    const payload = await listOnlineMeetCasesForEmployee(view as OnlineMeetStatusView);
-    setOnlineCases(payload.cases);
-    setSelectedCaseId((prev) => (prev && payload.cases.some((item) => item.id === prev) ? prev : payload.cases[0]?.id ?? null));
-  }, [offlineView, onlineView]);
-
   useEffect(() => {
-    const run = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        await loadCases(mode, activeView);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to load coordination desk.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    void run();
-  }, [activeView, loadCases, mode]);
+    setSelectedCaseId((prev) => (prev && activeItems.some((item) => item.id === prev) ? prev : activeItems[0]?.id ?? null));
+  }, [activeItems]);
 
   useEffect(() => {
     setFeedback(null);
@@ -207,23 +187,12 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
   }, [selectedOffline, selectedOnline]);
 
   const refreshActive = async () => {
-    setRefreshing(true);
     setError(null);
-    try {
-      await loadCases(mode, activeView);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to refresh queue.");
-    } finally {
-      setRefreshing(false);
+    const result = await activeQuery.refetch();
+    if (result.error) {
+      throw result.error;
     }
   };
-
-  useLiveResourceRefresh({
-    enabled: true,
-    refresh: refreshActive,
-    eventTypes: ["admin.offline_meets.changed", "admin.online_meets.changed"],
-    fallbackIntervalMs: EMPLOYEE_COORDINATION_FALLBACK_MS
-  });
 
   const withAction = async (key: string, run: () => Promise<unknown>, successMessage: string) => {
     setBusyAction(key);
@@ -231,7 +200,6 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
     setError(null);
     try {
       await run();
-      await refreshActive();
       setFeedback(successMessage);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Operation failed.");
@@ -244,10 +212,11 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
     mode === "OFFLINE"
       ? Boolean(selectedOffline?.assignedEmployeeId && selectedOffline.assignedEmployeeId !== actorUserId)
       : Boolean(selectedOnline?.assignedEmployeeId && selectedOnline.assignedEmployeeId !== actorUserId);
-  const canAct =
-    mode === "OFFLINE"
-      ? Boolean(selectedOffline && activeStatuses.has(selectedOffline.status) && !selectedOwnedByAnotherActor)
-      : Boolean(selectedOnline && activeStatuses.has(selectedOnline.status) && !selectedOwnedByAnotherActor);
+  const canAct = mode === "OFFLINE"
+    ? isCoordinationCaseActionable(selectedOffline, actorUserId)
+    : isCoordinationCaseActionable(selectedOnline, actorUserId);
+  const offlineAssignedToCurrentActor = Boolean(selectedOffline && selectedOffline.assignedEmployeeId === actorUserId);
+  const onlineAssignedToCurrentActor = Boolean(selectedOnline && selectedOnline.assignedEmployeeId === actorUserId);
 
   return (
     <div className="space-y-6">
@@ -260,14 +229,18 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
 
       <div className="grid gap-4 md:grid-cols-[240px,1fr]">
         <aside className="rounded-2xl border border-white/10 bg-[#121826] p-4 text-white">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex gap-2">
-              <button onClick={() => setMode("OFFLINE")} className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.14em] ${mode === "OFFLINE" ? "border-primary bg-primary/20 text-primary" : "border-white/20 text-white/70"}`}>Offline</button>
-              <button onClick={() => setMode("ONLINE")} className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.14em] ${mode === "ONLINE" ? "border-highlight bg-highlight/20 text-highlight" : "border-white/20 text-white/70"}`}>Online</button>
-            </div>
-            <button onClick={() => void refreshActive()} className="rounded-full border border-white/20 p-2" aria-label="Refresh">
-              {refreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCcw size={14} />}
-            </button>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex gap-2">
+                <button onClick={() => setMode("OFFLINE")} className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.14em] ${mode === "OFFLINE" ? "border-primary bg-primary/20 text-primary" : "border-white/20 text-white/70"}`}>Offline</button>
+                <button onClick={() => setMode("ONLINE")} className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.14em] ${mode === "ONLINE" ? "border-highlight bg-highlight/20 text-highlight" : "border-white/20 text-white/70"}`}>Online</button>
+              </div>
+              <button
+                onClick={() => void refreshActive().catch((err) => setError(err instanceof Error ? err.message : "Unable to refresh queue."))}
+                className="rounded-full border border-white/20 p-2"
+                aria-label="Refresh"
+              >
+                {activeQuery.isFetching ? <Loader2 size={14} className="animate-spin" /> : <RefreshCcw size={14} />}
+              </button>
           </div>
 
           <select
@@ -293,12 +266,12 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
                 <p className="mt-1 uppercase tracking-[0.12em] text-[10px] text-white/50">{statusText(entry.status)}</p>
               </button>
             ))}
-            {!loading && activeItems.length === 0 ? <p className="text-xs text-white/55">No cases in this view.</p> : null}
+            {!activeQuery.isPending && activeItems.length === 0 ? <p className="text-xs text-white/55">No cases in this view.</p> : null}
           </div>
         </aside>
 
         <section className="rounded-2xl border border-white/10 bg-[#121826] p-5 text-white">
-          {loading ? (
+          {activeQuery.isPending && activeItems.length === 0 ? (
             <div className="flex items-center gap-2 text-white/65"><Loader2 size={16} className="animate-spin" /> Loading...</div>
           ) : mode === "OFFLINE" && selectedOffline ? (
             <div className="space-y-4">
@@ -312,21 +285,84 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
               />
 
               <ActionBar disabled={!canAct}>
-                <button disabled={busyAction === "assign-offline"} onClick={() => void withAction("assign-offline", async () => {
-                  await assignOfflineMeetCase(selectedOffline.id);
-                }, "Case assigned.")}>Assign to me</button>
-                <button disabled={busyAction === "timeout-offline" || !timeoutUserId} onClick={() => void withAction("timeout-offline", async () => {
-                  await markOfflineMeetTimeout(selectedOffline.id, timeoutUserId ?? "");
-                }, "Timeout recorded.")}>Mark timeout</button>
-                <button disabled={busyAction === "no-overlap-offline"} onClick={() => void withAction("no-overlap-offline", async () => {
-                  await markOfflineMeetNoOverlap(selectedOffline.id);
-                }, "No-overlap recorded.")}>Mark no overlap</button>
-                <button disabled={busyAction === "reschedule-offline"} onClick={() => void withAction("reschedule-offline", async () => {
-                  await updateOfflineMeetCase(selectedOffline.id, { action: "RESCHEDULE", reason: "Serious-condition reschedule handled by concierge." });
-                }, "Reschedule recorded.")}>Reschedule</button>
-                <button disabled={busyAction === "cancel-offline"} onClick={() => void withAction("cancel-offline", async () => {
-                  await updateOfflineMeetCase(selectedOffline.id, { action: "CANCEL", reason: "Serious-condition cancellation handled by concierge." });
-                }, "Case canceled.")}>Cancel</button>
+                <button
+                  disabled={!canAct || busyAction === "assign-offline"}
+                  onClick={() =>
+                    void withAction(
+                      "assign-offline",
+                      async () => {
+                        await assignOfflineMutation.mutateAsync(selectedOffline.id);
+                      },
+                      offlineAssignedToCurrentActor ? "Case already assigned to you." : "Case assigned."
+                    )
+                  }
+                >
+                  {offlineAssignedToCurrentActor ? "Assigned to you" : selectedOwnedByAnotherActor ? "Owned by another" : "Assign to me"}
+                </button>
+                <button
+                  disabled={!canAct || busyAction === "timeout-offline" || !timeoutUserId}
+                  onClick={() =>
+                    void withAction(
+                      "timeout-offline",
+                      async () => {
+                        await markOfflineTimeoutMutation.mutateAsync({ caseId: selectedOffline.id, nonResponderUserId: timeoutUserId ?? "" });
+                      },
+                      "Timeout recorded."
+                    )
+                  }
+                >
+                  Mark timeout
+                </button>
+                <button
+                  disabled={!canAct || busyAction === "no-overlap-offline"}
+                  onClick={() =>
+                    void withAction(
+                      "no-overlap-offline",
+                      async () => {
+                        await markOfflineNoOverlapMutation.mutateAsync(selectedOffline.id);
+                      },
+                      "No-overlap recorded."
+                    )
+                  }
+                >
+                  Mark no overlap
+                </button>
+                <button
+                  disabled={!canAct || busyAction === "reschedule-offline"}
+                  onClick={() =>
+                    void withAction(
+                      "reschedule-offline",
+                      async () => {
+                        await updateOfflineMutation.mutateAsync({
+                          caseId: selectedOffline.id,
+                          action: "RESCHEDULE",
+                          reason: "Serious-condition reschedule handled by concierge."
+                        });
+                      },
+                      "Reschedule recorded."
+                    )
+                  }
+                >
+                  Reschedule
+                </button>
+                <button
+                  disabled={!canAct || busyAction === "cancel-offline"}
+                  onClick={() =>
+                    void withAction(
+                      "cancel-offline",
+                      async () => {
+                        await updateOfflineMutation.mutateAsync({
+                          caseId: selectedOffline.id,
+                          action: "CANCEL",
+                          reason: "Serious-condition cancellation handled by concierge."
+                        });
+                      },
+                      "Case canceled."
+                    )
+                  }
+                >
+                  Cancel
+                </button>
               </ActionBar>
 
               <MemberSelectionBlock users={selectedOffline.users} timeoutUserId={timeoutUserId} setTimeoutUserId={setTimeoutUserId} />
@@ -342,6 +378,7 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
               <div className="flex flex-wrap gap-2">
                 <button
                   className="rounded-full border border-primary/45 px-3 py-1 text-xs uppercase tracking-[0.14em] text-primary"
+                  disabled={!canAct || busyAction === "send-options-offline"}
                   onClick={() =>
                     void withAction(
                       "send-options-offline",
@@ -351,7 +388,7 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
                         if (cafes.length !== 3 || timeSlots.length < 3) {
                           throw new ApiError("Provide exactly 3 cafes and at least 3 time slots before sending options.", 400, null);
                         }
-                        await sendOfflineMeetOptions(selectedOffline.id, { cafes, timeSlots });
+                        await sendOfflineOptionsMutation.mutateAsync({ caseId: selectedOffline.id, cafes, timeSlots });
                       },
                       "Options sent to both members."
                     )
@@ -361,6 +398,7 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
                 </button>
                 <button
                   className="rounded-full border border-primary/45 px-3 py-1 text-xs uppercase tracking-[0.14em] text-primary"
+                  disabled={!canAct || busyAction === "finalize-offline"}
                   onClick={() =>
                     void withAction(
                       "finalize-offline",
@@ -368,7 +406,11 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
                         const cafe = offlineOverlap.cafes[0];
                         const slot = offlineOverlap.slots[0];
                         if (!cafe || !slot) throw new ApiError("No shared overlap available yet.", 409, null);
-                        await finalizeOfflineMeet(selectedOffline.id, cafe.id, slot.id);
+                        await finalizeOfflineMutation.mutateAsync({
+                          caseId: selectedOffline.id,
+                          finalCafeId: cafe.id,
+                          finalTimeSlotId: slot.id
+                        });
                       },
                       "Offline meet finalized and members notified."
                     )
@@ -399,21 +441,84 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
               />
 
               <ActionBar disabled={!canAct}>
-                <button disabled={busyAction === "assign-online"} onClick={() => void withAction("assign-online", async () => {
-                  await assignOnlineMeetCase(selectedOnline.id);
-                }, "Case assigned.")}>Assign to me</button>
-                <button disabled={busyAction === "timeout-online" || !timeoutUserId} onClick={() => void withAction("timeout-online", async () => {
-                  await markOnlineMeetTimeout(selectedOnline.id, timeoutUserId ?? "");
-                }, "Timeout recorded.")}>Mark timeout</button>
-                <button disabled={busyAction === "no-overlap-online"} onClick={() => void withAction("no-overlap-online", async () => {
-                  await markOnlineMeetNoOverlap(selectedOnline.id);
-                }, "No-overlap recorded.")}>Mark no overlap</button>
-                <button disabled={busyAction === "reschedule-online"} onClick={() => void withAction("reschedule-online", async () => {
-                  await updateOnlineMeetCase(selectedOnline.id, { action: "RESCHEDULE", reason: "Serious-condition reschedule handled by concierge." });
-                }, "Reschedule recorded.")}>Reschedule</button>
-                <button disabled={busyAction === "cancel-online"} onClick={() => void withAction("cancel-online", async () => {
-                  await updateOnlineMeetCase(selectedOnline.id, { action: "CANCEL", reason: "Serious-condition cancellation handled by concierge." });
-                }, "Case canceled.")}>Cancel</button>
+                <button
+                  disabled={!canAct || busyAction === "assign-online"}
+                  onClick={() =>
+                    void withAction(
+                      "assign-online",
+                      async () => {
+                        await assignOnlineMutation.mutateAsync(selectedOnline.id);
+                      },
+                      onlineAssignedToCurrentActor ? "Case already assigned to you." : "Case assigned."
+                    )
+                  }
+                >
+                  {onlineAssignedToCurrentActor ? "Assigned to you" : selectedOwnedByAnotherActor ? "Owned by another" : "Assign to me"}
+                </button>
+                <button
+                  disabled={!canAct || busyAction === "timeout-online" || !timeoutUserId}
+                  onClick={() =>
+                    void withAction(
+                      "timeout-online",
+                      async () => {
+                        await markOnlineTimeoutMutation.mutateAsync({ caseId: selectedOnline.id, nonResponderUserId: timeoutUserId ?? "" });
+                      },
+                      "Timeout recorded."
+                    )
+                  }
+                >
+                  Mark timeout
+                </button>
+                <button
+                  disabled={!canAct || busyAction === "no-overlap-online"}
+                  onClick={() =>
+                    void withAction(
+                      "no-overlap-online",
+                      async () => {
+                        await markOnlineNoOverlapMutation.mutateAsync(selectedOnline.id);
+                      },
+                      "No-overlap recorded."
+                    )
+                  }
+                >
+                  Mark no overlap
+                </button>
+                <button
+                  disabled={!canAct || busyAction === "reschedule-online"}
+                  onClick={() =>
+                    void withAction(
+                      "reschedule-online",
+                      async () => {
+                        await updateOnlineMutation.mutateAsync({
+                          caseId: selectedOnline.id,
+                          action: "RESCHEDULE",
+                          reason: "Serious-condition reschedule handled by concierge."
+                        });
+                      },
+                      "Reschedule recorded."
+                    )
+                  }
+                >
+                  Reschedule
+                </button>
+                <button
+                  disabled={!canAct || busyAction === "cancel-online"}
+                  onClick={() =>
+                    void withAction(
+                      "cancel-online",
+                      async () => {
+                        await updateOnlineMutation.mutateAsync({
+                          caseId: selectedOnline.id,
+                          action: "CANCEL",
+                          reason: "Serious-condition cancellation handled by concierge."
+                        });
+                      },
+                      "Case canceled."
+                    )
+                  }
+                >
+                  Cancel
+                </button>
               </ActionBar>
 
               <MemberSelectionBlock users={selectedOnline.users} timeoutUserId={timeoutUserId} setTimeoutUserId={setTimeoutUserId} />
@@ -456,6 +561,7 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
               <div className="flex flex-wrap gap-2">
                 <button
                   className="rounded-full border border-highlight/45 px-3 py-1 text-xs uppercase tracking-[0.14em] text-highlight"
+                  disabled={!canAct || busyAction === "send-options-online"}
                   onClick={() =>
                     void withAction(
                       "send-options-online",
@@ -464,7 +570,11 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
                         if (onlineOptionsForm.platforms.length === 0 || timeSlots.length < 3) {
                           throw new ApiError("Select at least one platform and 3 time slots before sending options.", 400, null);
                         }
-                        await sendOnlineMeetOptions(selectedOnline.id, { platforms: onlineOptionsForm.platforms, timeSlots });
+                        await sendOnlineOptionsMutation.mutateAsync({
+                          caseId: selectedOnline.id,
+                          platforms: onlineOptionsForm.platforms,
+                          timeSlots
+                        });
                       },
                       "Platform/time options sent."
                     )
@@ -475,6 +585,7 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
 
                 <button
                   className="rounded-full border border-highlight/45 px-3 py-1 text-xs uppercase tracking-[0.14em] text-highlight"
+                  disabled={!canAct || busyAction === "finalize-online"}
                   onClick={() =>
                     void withAction(
                       "finalize-online",
@@ -482,8 +593,9 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
                         const slot = onlineOverlap.slots[0];
                         if (!onlineOverlap.platform || !slot) throw new ApiError("No shared overlap available yet.", 409, null);
                         if (!onlineOptionsForm.finalMeetingLink.trim()) throw new ApiError("Final meeting link is required.", 400, null);
-                        await finalizeOnlineMeet(selectedOnline.id, {
+                        await finalizeOnlineMutation.mutateAsync({
                           finalPlatform: onlineOverlap.platform,
+                          caseId: selectedOnline.id,
                           finalTimeSlotId: slot.id,
                           finalMeetingLink: onlineOptionsForm.finalMeetingLink.trim()
                         });
@@ -510,7 +622,7 @@ export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mo
           )}
 
           {feedback ? <p className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-xs text-emerald-100">{feedback}</p> : null}
-          {error ? <p className="mt-4 rounded-xl border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-100">{error}</p> : null}
+          {error ?? loadError ? <p className="mt-4 rounded-xl border border-red-400/25 bg-red-400/10 px-3 py-2 text-xs text-red-100">{error ?? loadError}</p> : null}
         </section>
       </div>
     </div>

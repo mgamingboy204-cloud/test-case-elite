@@ -1,40 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { Loader2, RefreshCcw } from "lucide-react";
-import { ApiError } from "@/lib/api";
-import { fetchAdminAuditLogs } from "@/lib/internalOps";
-import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
-import { ADMIN_AUDIT_FALLBACK_MS } from "@/lib/resourceSync";
+import { useAdminAuditLogsData } from "@/lib/opsState";
 
 export default function AdminAuditPage() {
-  const [logs, setLogs] = useState<Awaited<ReturnType<typeof fetchAdminAuditLogs>>["logs"]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const payload = await fetchAdminAuditLogs();
-      setLogs(payload.logs);
-    } catch (err) {
-      const apiError = err instanceof ApiError ? err : null;
-      setError(apiError?.message ?? "Unable to load audit logs.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useLiveResourceRefresh({
-    enabled: true,
-    refresh: () => load(),
-    eventTypes: ["admin.audit_logs.changed"],
-    fallbackIntervalMs: ADMIN_AUDIT_FALLBACK_MS
-  });
+  const auditQuery = useAdminAuditLogsData();
+  const logs = auditQuery.data ?? [];
+  const error = auditQuery.error instanceof Error ? auditQuery.error.message : null;
 
   return (
     <div className="p-8 space-y-6 text-white">
@@ -45,14 +17,17 @@ export default function AdminAuditPage() {
         </div>
         <button
           type="button"
-          onClick={() => void load()}
+          onClick={() => void auditQuery.refetch()}
           className="rounded-full border border-white/20 px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-white/75"
         >
-          <span className="inline-flex items-center gap-2"><RefreshCcw size={14} /> Refresh</span>
+          <span className="inline-flex items-center gap-2">
+            {auditQuery.isFetching ? <Loader2 size={14} className="animate-spin" /> : <RefreshCcw size={14} />}
+            Refresh
+          </span>
         </button>
       </div>
 
-      {loading ? (
+      {auditQuery.isPending && logs.length === 0 ? (
         <div className="inline-flex items-center gap-2 text-sm text-white/65"><Loader2 size={16} className="animate-spin" /> Loading audit logs...</div>
       ) : error ? (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>
@@ -74,7 +49,7 @@ export default function AdminAuditPage() {
                   ) : null}
                 </div>
                 <div>{entry.actor ? `${entry.actor.name} (${entry.actor.role})` : "System"}</div>
-                <div>{entry.targetType} • {entry.targetId}</div>
+                <div>{entry.targetType} - {entry.targetId}</div>
                 <div>{new Date(entry.createdAt).toLocaleString()}</div>
               </div>
             ))}

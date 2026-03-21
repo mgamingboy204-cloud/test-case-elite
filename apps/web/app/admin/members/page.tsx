@@ -1,40 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Loader2, RefreshCcw } from "lucide-react";
-import { ApiError } from "@/lib/api";
-import { fetchAdminUsers, type AdminMember } from "@/lib/internalOps";
-import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
-import { ADMIN_DASHBOARD_FALLBACK_MS } from "@/lib/resourceSync";
+import { useAdminMembersData } from "@/lib/opsState";
 
 export default function AdminMembersPage() {
-  const [members, setMembers] = useState<AdminMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const payload = await fetchAdminUsers();
-      setMembers(payload.users.filter((user) => user.role === "USER"));
-    } catch (err) {
-      const apiError = err instanceof ApiError ? err : null;
-      setError(apiError?.message ?? "Unable to load members.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useLiveResourceRefresh({
-    enabled: true,
-    refresh: () => load(),
-    eventTypes: ["admin.dashboard.changed", "admin.verification.queue.changed"],
-    fallbackIntervalMs: ADMIN_DASHBOARD_FALLBACK_MS
-  });
+  const membersQuery = useAdminMembersData();
+  const members = membersQuery.data ?? [];
+  const error = membersQuery.error instanceof Error ? membersQuery.error.message : null;
 
   const stats = useMemo(() => ({
     total: members.length,
@@ -52,10 +25,13 @@ export default function AdminMembersPage() {
         </div>
         <button
           type="button"
-          onClick={() => void load()}
+          onClick={() => void membersQuery.refetch()}
           className="rounded-full border border-white/20 px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-white/75"
         >
-          <span className="inline-flex items-center gap-2"><RefreshCcw size={14} /> Refresh</span>
+          <span className="inline-flex items-center gap-2">
+            {membersQuery.isFetching ? <Loader2 size={14} className="animate-spin" /> : <RefreshCcw size={14} />}
+            Refresh
+          </span>
         </button>
       </div>
 
@@ -73,7 +49,7 @@ export default function AdminMembersPage() {
         ))}
       </div>
 
-      {loading ? (
+      {membersQuery.isPending && members.length === 0 ? (
         <div className="inline-flex items-center gap-2 text-sm text-white/65">
           <Loader2 size={16} className="animate-spin" /> Loading members...
         </div>
@@ -95,7 +71,7 @@ export default function AdminMembersPage() {
                   <p className="truncate">
                     {member.profile?.name ?? ([member.firstName, member.lastName].filter(Boolean).join(" ") || member.displayName || member.phone)}
                   </p>
-                  <p className="mt-1 text-xs text-white/45">{member.phone}{member.email ? ` • ${member.email}` : ""}</p>
+                  <p className="mt-1 text-xs text-white/45">{member.phone}{member.email ? ` - ${member.email}` : ""}</p>
                 </div>
                 <div>{member.status}</div>
                 <div>{member.onboardingStep.replaceAll("_", " ")}</div>

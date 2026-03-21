@@ -6,6 +6,7 @@ import { fetchIncomingLikes } from "@/lib/likes";
 import { fetchAlerts, fetchMatches, fetchProfile } from "@/lib/queries";
 import { primeCache, readCache } from "@/lib/cache";
 import { getQueryClient } from "@/lib/queryClient";
+import { queryKeys } from "@/lib/queryKeys";
 
 type MemberResourceConfig<TData> = {
   cacheKey: string;
@@ -59,6 +60,13 @@ export type MemberResourceDataMap = {
   profile: Awaited<ReturnType<typeof fetchProfile>>;
 };
 
+function getMemberResourceQueryKey(name: MemberResourceName) {
+  if (name === "likes") return queryKeys.member.likes.list();
+  if (name === "matches") return queryKeys.member.matches.list();
+  if (name === "alerts") return queryKeys.member.alerts.list();
+  return queryKeys.member.profile.detail();
+}
+
 export function getMemberResourceConfig<TName extends MemberResourceName>(name: TName) {
   return MEMBER_RESOURCE_CONFIG[name] as MemberResourceConfig<MemberResourceDataMap[TName]>;
 }
@@ -84,12 +92,13 @@ export async function prefetchMemberResource<TName extends MemberResourceName>(n
   if (readCache(config.cacheKey)?.value !== undefined) return;
 
   const queryClient = getQueryClient();
+  const queryKey = getMemberResourceQueryKey(name);
   await queryClient.prefetchQuery({
-    queryKey: [config.cacheKey],
+    queryKey,
     queryFn: config.fetcher
   });
 
-  const data = queryClient.getQueryData<MemberResourceDataMap[TName]>([config.cacheKey]);
+  const data = queryClient.getQueryData<MemberResourceDataMap[TName]>(queryKey);
   if (data !== undefined) {
     primeCache(config.cacheKey, data);
   }
@@ -99,6 +108,7 @@ export async function refreshMemberResource<TName extends MemberResourceName>(na
   const config = getMemberResourceConfig(name);
   const data = await config.fetcher();
   primeCache(config.cacheKey, data);
+  getQueryClient().setQueryData(getMemberResourceQueryKey(name), data);
   return data;
 }
 
@@ -110,20 +120,30 @@ export function removeIncomingLikeFromCache(targetUserId: string) {
   if (!targetUserId) return;
 
   const current = readCache<LikesIncomingProfile[]>("likes-incoming")?.value;
-  if (!current) return;
+  const next = current?.filter((item) => item.profileId !== targetUserId) ?? [];
+  if (current && next.length !== current.length) {
+    primeCache("likes-incoming", next);
+  }
 
-  const next = current.filter((item) => item.profileId !== targetUserId);
-  if (next.length === current.length) return;
-  primeCache("likes-incoming", next);
+  getQueryClient().setQueryData<LikesIncomingProfile[]>(queryKeys.member.likes.list(), (items) =>
+    (items ?? []).filter((item) => item.profileId !== targetUserId)
+  );
 }
 
 export function applyOptimisticMemberActionToCaches(targetUserId: string) {
   if (!targetUserId) return;
-  applyDiscoverActionToCache(targetUserId);
+  const nextDiscoverFeed = applyDiscoverActionToCache(targetUserId);
+  getQueryClient().setQueryData(queryKeys.member.discoverFeed(), nextDiscoverFeed);
   removeIncomingLikeFromCache(targetUserId);
 }
 
 export async function syncAfterMatchCreated(matchId: string | null | undefined) {
   if (!matchId) return;
   await refreshMemberResources(["likes", "matches", "alerts"]);
+  const queryClient = getQueryClient();
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.member.likes.all(), refetchType: "active" }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.member.matches.all(), refetchType: "active" }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.member.alerts.all(), refetchType: "active" })
+  ]);
 }

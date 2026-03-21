@@ -4,10 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ApiError, apiRequestAuth } from "@/lib/api";
 import { type Alert } from "@/lib/queries";
-import { useAlertsResource } from "@/lib/appData";
-import { Bell, Heart, MapPin, Phone, Sparkles, Share2, Video, MessageSquareText, type LucideIcon } from "lucide-react";
+import { useAlertsData, useMarkAlertReadMutation, useMarkAllAlertsReadMutation } from "@/lib/memberState";
+import { Bell, Heart, MapPin, Phone, Sparkles, Share2, Video, MessageSquareText, Loader2, type LucideIcon } from "lucide-react";
 
 function relativeTimeFromNow(isoOrDate: string): string {
   const ts = new Date(isoOrDate).getTime();
@@ -65,9 +64,9 @@ export default function AlertsPage() {
   const router = useRouter();
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [markAllPending, setMarkAllPending] = useState(false);
-
-  const alertsQuery = useAlertsResource(isAuthenticated && onboardingStep === "COMPLETED");
-
+  const alertsQuery = useAlertsData(isAuthenticated && onboardingStep === "COMPLETED");
+  const markAlertReadMutation = useMarkAlertReadMutation();
+  const markAllAlertsReadMutation = useMarkAllAlertsReadMutation();
   const alerts = alertsQuery.data ?? [];
   const unreadCount = useMemo(() => alerts.filter((item) => item.isUnread).length, [alerts]);
 
@@ -75,15 +74,10 @@ export default function AlertsPage() {
 
   const markSingleRead = async (alertId: string) => {
     if (pendingIds.has(alertId)) return;
-    const previous = alertsQuery.data;
-
     setPendingIds((current) => new Set(current).add(alertId));
-    alertsQuery.mutate((current) => (current ?? []).map((entry) => (entry.id === alertId ? { ...entry, isUnread: false } : entry)));
 
     try {
-      await apiRequestAuth(`/alerts/${alertId}/read`, { method: "POST" });
-    } catch (error) {
-      alertsQuery.mutate(previous ?? []);
+      await markAlertReadMutation.mutateAsync(alertId);
     } finally {
       setPendingIds((current) => {
         const next = new Set(current);
@@ -95,13 +89,9 @@ export default function AlertsPage() {
 
   const markAllRead = async () => {
     if (markAllPending || unreadCount === 0) return;
-    const previous = alertsQuery.data;
     setMarkAllPending(true);
-    alertsQuery.mutate((current) => (current ?? []).map((entry) => ({ ...entry, isUnread: false })));
     try {
-      await apiRequestAuth("/alerts/read-all", { method: "POST" });
-    } catch (_error) {
-      alertsQuery.mutate(previous ?? []);
+      await markAllAlertsReadMutation.mutateAsync();
     } finally {
       setMarkAllPending(false);
     }
@@ -119,8 +109,8 @@ export default function AlertsPage() {
     router.push("/matches");
   };
 
-  const isInitialLoading = alertsQuery.isLoading && alerts.length === 0;
-  const errorMessage = alertsQuery.error instanceof ApiError ? alertsQuery.error.message : "We couldn’t load your alerts.";
+  const isInitialLoading = alertsQuery.isPending && alerts.length === 0;
+  const errorMessage = alertsQuery.error instanceof Error ? alertsQuery.error.message : "We couldn't load your alerts.";
 
   return (
     <div className="w-full h-full relative">
@@ -128,11 +118,11 @@ export default function AlertsPage() {
         <h1 className="text-xl tracking-[0.4em] font-medium text-primary drop-shadow-sm uppercase">Alerts</h1>
         {unreadCount > 0 ? (
           <button
-            onClick={markAllRead}
+            onClick={() => void markAllRead()}
             disabled={markAllPending}
             className="text-xs text-primary/80 hover:text-primary transition disabled:opacity-50"
           >
-            {markAllPending ? "Updating…" : `Mark all as read (${unreadCount})`}
+            {markAllPending ? "Updating..." : `Mark all as read (${unreadCount})`}
           </button>
         ) : null}
       </div>
@@ -147,13 +137,13 @@ export default function AlertsPage() {
         )}
 
         {!!alertsQuery.error && !isInitialLoading && (
-  <div className="rounded-3xl border border-red-200/20 bg-red-950/10 p-6 text-center">
-    <p className="text-sm text-foreground/80">{errorMessage}</p>
-    <button onClick={() => alertsQuery.revalidate()} className="mt-4 text-xs text-primary hover:text-primary/80 transition">
-      Retry
-    </button>
-  </div>
-)}
+          <div className="rounded-3xl border border-red-200/20 bg-red-950/10 p-6 text-center">
+            <p className="text-sm text-foreground/80">{errorMessage}</p>
+            <button onClick={() => void alertsQuery.refetch()} className="mt-4 text-xs text-primary hover:text-primary/80 transition">
+              Retry
+            </button>
+          </div>
+        )}
 
         {!alertsQuery.error && !isInitialLoading && alerts.length === 0 && (
           <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-8 text-center">
@@ -171,7 +161,7 @@ export default function AlertsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03, duration: 0.3 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => handleAlertClick(alert)}
+                onClick={() => void handleAlertClick(alert)}
                 className={`w-full text-left p-5 rounded-[2rem] border transition-all flex items-start gap-4 ${
                   alert.isUnread ? "bg-primary/5 border-primary/20 shadow-md" : "bg-transparent border-transparent hover:bg-primary/5"
                 }`}

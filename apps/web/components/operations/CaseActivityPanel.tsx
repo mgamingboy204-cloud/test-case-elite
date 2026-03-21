@@ -1,11 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, MessageSquarePlus } from "lucide-react";
 import { ApiError } from "@/lib/api";
-import { addCaseNote, fetchCaseActivity, type CaseActivityEntry } from "@/lib/internalOps";
-import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
-import { EMPLOYEE_SUMMARY_FALLBACK_MS } from "@/lib/resourceSync";
+import { useAddCaseNoteMutation, useCaseActivityData } from "@/lib/opsState";
 
 type CaseType = "VERIFICATION" | "OFFLINE_MEET" | "ONLINE_MEET";
 
@@ -18,55 +16,27 @@ export function CaseActivityPanel(props: {
   caseId: string | null;
   title?: string;
 }) {
-  const [entries, setEntries] = useState<CaseActivityEntry[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    if (!props.caseId) {
-      setEntries([]);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    try {
-      const payload = await fetchCaseActivity(props.caseType, props.caseId);
-      setEntries(payload.entries);
-    } catch (err) {
-      const apiError = err instanceof ApiError ? err : null;
-      setError(apiError?.message ?? "Unable to load case activity.");
-    } finally {
-      setLoading(false);
-    }
-  }, [props.caseId, props.caseType]);
+  const activityQuery = useCaseActivityData(props.caseType, props.caseId);
+  const addNoteMutation = useAddCaseNoteMutation(props.caseType, props.caseId);
+  const entries = activityQuery.data ?? [];
+  const loadError = activityQuery.error instanceof Error ? activityQuery.error.message : null;
 
   useEffect(() => {
-    void load();
-  }, [load]);
-
-  useLiveResourceRefresh({
-    enabled: Boolean(props.caseId),
-    refresh: () => load(),
-    eventTypes: ["ops.case_activity.changed", "admin.verification.queue.changed", "admin.offline_meets.changed", "admin.online_meets.changed"],
-    fallbackIntervalMs: EMPLOYEE_SUMMARY_FALLBACK_MS
-  });
+    setNote("");
+    setError(null);
+  }, [props.caseId, props.caseType]);
 
   const submitNote = async () => {
     if (!props.caseId || !note.trim()) return;
-    setSubmitting(true);
     setError(null);
     try {
-      await addCaseNote(props.caseType, props.caseId, note.trim());
+      await addNoteMutation.mutateAsync(note.trim());
       setNote("");
-      await load();
     } catch (err) {
       const apiError = err instanceof ApiError ? err : null;
       setError(apiError?.message ?? "Unable to save note.");
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -89,18 +59,18 @@ export function CaseActivityPanel(props: {
             />
             <button
               type="button"
-              disabled={submitting || !note.trim()}
+              disabled={addNoteMutation.isPending || !note.trim()}
               onClick={() => void submitNote()}
               className="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1.5 text-[11px] uppercase tracking-[0.15em] text-white/80 disabled:opacity-45"
             >
-              {submitting ? <Loader2 size={14} className="animate-spin" /> : <MessageSquarePlus size={14} />}
+              {addNoteMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <MessageSquarePlus size={14} />}
               Add note
             </button>
           </div>
 
-          {error ? <p className="text-xs text-red-300">{error}</p> : null}
+          {error ?? loadError ? <p className="text-xs text-red-300">{error ?? loadError}</p> : null}
 
-          {loading ? (
+          {activityQuery.isPending && entries.length === 0 ? (
             <p className="inline-flex items-center gap-2 text-xs text-white/55">
               <Loader2 size={14} className="animate-spin" /> Loading activity...
             </p>

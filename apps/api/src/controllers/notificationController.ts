@@ -52,11 +52,18 @@ export async function listAlertsHandler(req: Request, res: Response) {
 
 export async function markAlertReadHandler(req: Request, res: Response) {
   const { alertId } = req.params as { alertId: string };
-  await markNotificationsRead(res.locals.user.id, [alertId]);
-  return res.json({ read: true });
+  const result = await markNotificationsRead(res.locals.user.id, [alertId]);
+  return res.json({
+    alertId,
+    updatedCount: result.updatedCount,
+    unreadCount: result.unreadCount
+  });
 }
 
 export async function markAlertsReadAllHandler(req: Request, res: Response) {
   const result = await markNotificationsRead(res.locals.user.id);
-  return res.json({ updated: result.updatedCount });
+  return res.json({
+    updatedCount: result.updatedCount,
+    unreadCount: result.unreadCount
+  });
 }

@@ -1,12 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { AlertCircle, Loader2, RefreshCcw } from "lucide-react";
-import { ApiError } from "@/lib/api";
-import { fetchAdminDashboard, type AdminDashboardPayload } from "@/lib/adminDashboard";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
-import { ADMIN_DASHBOARD_FALLBACK_MS } from "@/lib/resourceSync";
+import { useAdminDashboardData } from "@/lib/opsState";
 
 function StatCard({ label, value, tone = "default" }: { label: string; value: number; tone?: "default" | "warn" | "danger" }) {
   const toneClass = tone === "danger" ? "text-red-300" : tone === "warn" ? "text-amber-200" : "text-[#f0c8be]";
@@ -20,56 +17,13 @@ function StatCard({ label, value, tone = "default" }: { label: string; value: nu
 
 export function AdminDashboardWorkspace() {
   const { isAuthResolved, user } = useAuth();
-  const [data, setData] = useState<AdminDashboardPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [forbidden, setForbidden] = useState(false);
   const hasAdminAccess = user?.role === "ADMIN" || Boolean(user?.isAdmin);
-
-  const load = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
-
-    try {
-      if (!hasAdminAccess) {
-        setForbidden(true);
-        setData(null);
-        return;
-      }
-      setForbidden(false);
-      const payload = await fetchAdminDashboard();
-      setData(payload);
-    } catch (err) {
-      const apiError = err instanceof ApiError ? err : null;
-      if (apiError?.status === 403) {
-        setForbidden(true);
-        setData(null);
-      } else {
-        setError(apiError?.message ?? "Unable to load admin dashboard.");
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [hasAdminAccess]);
-
-  useEffect(() => {
-    if (!isAuthResolved) return;
-    void load(false);
-  }, [isAuthResolved, load]);
-
-  useLiveResourceRefresh({
-    enabled: isAuthResolved && hasAdminAccess,
-    refresh: () => load(true),
-    eventTypes: ["admin.dashboard.changed"],
-    fallbackIntervalMs: ADMIN_DASHBOARD_FALLBACK_MS
-  });
-
+  const dashboardQuery = useAdminDashboardData(isAuthResolved && hasAdminAccess);
+  const data = dashboardQuery.data ?? null;
+  const error = dashboardQuery.error instanceof Error ? dashboardQuery.error.message : null;
   const employeeRows = useMemo(() => data?.employeeWorkload.perEmployee ?? [], [data]);
 
-  if (loading) {
+  if (!isAuthResolved || (dashboardQuery.isPending && !data && hasAdminAccess)) {
     return (
       <div className="p-10 text-white/70 inline-flex items-center gap-3">
         <Loader2 className="animate-spin" size={18} /> Loading admin overview...
@@ -77,7 +31,7 @@ export function AdminDashboardWorkspace() {
     );
   }
 
-  if (forbidden) {
+  if (!hasAdminAccess) {
     return (
       <div className="p-10">
         <div className="max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-red-100">
@@ -97,7 +51,7 @@ export function AdminDashboardWorkspace() {
           </p>
           <p className="mt-3 text-sm text-amber-100/80">{error}</p>
           <button
-            onClick={() => void load(false)}
+            onClick={() => void dashboardQuery.refetch()}
             className="mt-4 rounded-lg border border-amber-200/30 px-4 py-2 text-xs uppercase tracking-[0.15em] text-amber-100"
           >
             Retry
@@ -121,11 +75,11 @@ export function AdminDashboardWorkspace() {
           <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/45">Business health, queue pressure, and staff workload</p>
         </div>
         <button
-          disabled={refreshing}
-          onClick={() => void load(true)}
+          disabled={dashboardQuery.isFetching}
+          onClick={() => void dashboardQuery.refetch()}
           className="rounded-lg border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.15em] text-white/80 disabled:opacity-50"
         >
-          <span className="inline-flex items-center gap-2">{refreshing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />} Refresh</span>
+          <span className="inline-flex items-center gap-2">{dashboardQuery.isFetching ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />} Refresh</span>
         </button>
       </header>
 

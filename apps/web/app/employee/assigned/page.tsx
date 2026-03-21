@@ -1,41 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
 import { Loader2, RefreshCcw } from "lucide-react";
-import { ApiError } from "@/lib/api";
-import { fetchAssignedCases, type AssignedCase } from "@/lib/internalOps";
-import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
-import { EMPLOYEE_SUMMARY_FALLBACK_MS } from "@/lib/resourceSync";
+import { useAssignedCasesData } from "@/lib/opsState";
 
 export default function EmployeeAssignedCasesPage() {
-  const [cases, setCases] = useState<AssignedCase[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const payload = await fetchAssignedCases();
-      setCases(payload.cases);
-    } catch (err) {
-      const apiError = err instanceof ApiError ? err : null;
-      setError(apiError?.message ?? "Unable to load assigned cases.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useLiveResourceRefresh({
-    enabled: true,
-    refresh: () => load(),
-    eventTypes: ["admin.verification.queue.changed", "admin.offline_meets.changed", "admin.online_meets.changed"],
-    fallbackIntervalMs: EMPLOYEE_SUMMARY_FALLBACK_MS
-  });
+  const assignedCasesQuery = useAssignedCasesData();
+  const cases = assignedCasesQuery.data ?? [];
+  const error = assignedCasesQuery.error instanceof Error ? assignedCasesQuery.error.message : null;
 
   return (
     <div className="p-8 space-y-6 text-white">
@@ -46,14 +18,14 @@ export default function EmployeeAssignedCasesPage() {
         </div>
         <button
           type="button"
-          onClick={() => void load()}
+          onClick={() => void assignedCasesQuery.refetch()}
           className="rounded-full border border-white/20 px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-white/75"
         >
-          <span className="inline-flex items-center gap-2"><RefreshCcw size={14} /> Refresh</span>
+          <span className="inline-flex items-center gap-2">{assignedCasesQuery.isFetching ? <Loader2 size={14} className="animate-spin" /> : <RefreshCcw size={14} />} Refresh</span>
         </button>
       </div>
 
-      {loading ? (
+      {assignedCasesQuery.isPending && cases.length === 0 ? (
         <div className="inline-flex items-center gap-2 text-sm text-white/65"><Loader2 size={16} className="animate-spin" /> Loading cases...</div>
       ) : error ? (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>

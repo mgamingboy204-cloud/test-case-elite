@@ -1,17 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2, RefreshCcw } from "lucide-react";
 import { ApiError } from "@/lib/api";
-import {
-  createStaffMember,
-  deactivateStaffMember,
-  fetchStaffMembers,
-  reactivateStaffMember,
-  type StaffMember
-} from "@/lib/internalOps";
-import { useLiveResourceRefresh } from "@/contexts/LiveUpdatesContext";
-import { ADMIN_STAFF_FALLBACK_MS } from "@/lib/resourceSync";
+import { useCreateStaffMemberMutation, useSetStaffActivationMutation, useStaffMembersData, type StaffMember } from "@/lib/opsState";
 
 type FormState = {
   firstName: string;
@@ -32,47 +24,24 @@ const EMPTY_FORM: FormState = {
 };
 
 export default function AdminStaffPage() {
-  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const payload = await fetchStaffMembers();
-      setStaff(payload.staff);
-    } catch (err) {
-      const apiError = err instanceof ApiError ? err : null;
-      setError(apiError?.message ?? "Unable to load staff.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useLiveResourceRefresh({
-    enabled: true,
-    refresh: () => load(),
-    eventTypes: ["admin.staff.changed"],
-    fallbackIntervalMs: ADMIN_STAFF_FALLBACK_MS
-  });
+  const staffQuery = useStaffMembersData();
+  const createStaffMutation = useCreateStaffMemberMutation();
+  const setStaffActivationMutation = useSetStaffActivationMutation();
+  const staff = staffQuery.data ?? [];
+  const loadError = staffQuery.error instanceof Error ? staffQuery.error.message : null;
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setSubmitting(true);
     setError(null);
     setSuccess(null);
     setTemporaryPassword(null);
     try {
-      const payload = await createStaffMember({
+      const payload = await createStaffMutation.mutateAsync({
         firstName: form.firstName || null,
         lastName: form.lastName || null,
         displayName: form.displayName || null,
@@ -83,12 +52,9 @@ export default function AdminStaffPage() {
       setSuccess(`Created ${payload.staff.role.toLowerCase()} ${payload.staff.employeeId}.`);
       setTemporaryPassword(payload.temporaryPassword);
       setForm(EMPTY_FORM);
-      await load();
     } catch (err) {
       const apiError = err instanceof ApiError ? err : null;
       setError(apiError?.message ?? "Unable to create staff member.");
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -97,14 +63,12 @@ export default function AdminStaffPage() {
     setError(null);
     setSuccess(null);
     try {
-      if (member.isActive) {
-        await deactivateStaffMember(member.id);
-        setSuccess(`Deactivated ${member.name}.`);
-      } else {
-        await reactivateStaffMember(member.id);
-        setSuccess(`Reactivated ${member.name}.`);
-      }
-      await load();
+      const payload = await setStaffActivationMutation.mutateAsync({
+        staffUserId: member.id,
+        active: !member.isActive
+      });
+      const nextName = payload.staff.name || member.name;
+      setSuccess(member.isActive ? `Deactivated ${nextName}.` : `Reactivated ${nextName}.`);
     } catch (err) {
       const apiError = err instanceof ApiError ? err : null;
       setError(apiError?.message ?? "Unable to update staff member.");
@@ -129,10 +93,10 @@ export default function AdminStaffPage() {
         </div>
         <button
           type="button"
-          onClick={() => void load()}
+          onClick={() => void staffQuery.refetch().catch((err) => setError(err instanceof Error ? err.message : "Unable to refresh staff."))}
           className="rounded-full border border-white/20 px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-white/75"
         >
-          <span className="inline-flex items-center gap-2"><RefreshCcw size={14} /> Refresh</span>
+          <span className="inline-flex items-center gap-2">{staffQuery.isFetching ? <Loader2 size={14} className="animate-spin" /> : <RefreshCcw size={14} />} Refresh</span>
         </button>
       </div>
 
@@ -170,7 +134,7 @@ export default function AdminStaffPage() {
               <option value="ADMIN" className="text-black">Admin</option>
             </select>
 
-            {error ? <p className="text-sm text-red-300">{error}</p> : null}
+            {error ?? loadError ? <p className="text-sm text-red-300">{error ?? loadError}</p> : null}
             {success ? <p className="text-sm text-emerald-300">{success}</p> : null}
             {temporaryPassword ? (
               <div className="rounded-xl border border-amber-300/35 bg-amber-500/10 p-3 text-sm text-amber-100">
@@ -178,8 +142,8 @@ export default function AdminStaffPage() {
               </div>
             ) : null}
 
-            <button type="submit" disabled={submitting} className="btn-vael-primary disabled:opacity-60">
-              {submitting ? "Creating..." : "Create staff account"}
+            <button type="submit" disabled={createStaffMutation.isPending} className="btn-vael-primary disabled:opacity-60">
+              {createStaffMutation.isPending ? "Creating..." : "Create staff account"}
             </button>
           </form>
         </section>
@@ -191,7 +155,7 @@ export default function AdminStaffPage() {
             <div>State</div>
             <div />
           </div>
-          {loading ? (
+          {staffQuery.isPending && staff.length === 0 ? (
             <div className="p-4 text-sm text-white/65 inline-flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Loading staff...</div>
           ) : (
             <div className="divide-y divide-white/5">
@@ -199,7 +163,7 @@ export default function AdminStaffPage() {
                 <div key={member.id} className="grid grid-cols-[1.3fr,0.8fr,0.9fr,0.8fr] gap-3 px-4 py-3 items-center">
                   <div className="min-w-0">
                     <p className="truncate">{member.name}</p>
-                    <p className="mt-1 text-xs text-white/45">{member.employeeId}{member.email ? ` • ${member.email}` : ""}</p>
+                    <p className="mt-1 text-xs text-white/45">{member.employeeId}{member.email ? ` - ${member.email}` : ""}</p>
                   </div>
                   <div className="text-sm">{member.role}</div>
                   <div className="text-sm text-white/70">{member.isActive ? (member.mustResetPassword ? "Needs reset" : "Active") : "Deactivated"}</div>

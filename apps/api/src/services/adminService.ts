@@ -42,6 +42,20 @@ type VerificationRequestListItem = {
     email: string | null;
   };
 };
+
+const verificationRequestInclude = {
+  user: { select: { id: true, phone: true, email: true } },
+  escalationRequest: {
+    select: {
+      requestedAt: true,
+      status: true
+    }
+  }
+} satisfies Prisma.VerificationRequestInclude;
+
+type VerificationRequestWithRelations = Prisma.VerificationRequestGetPayload<{
+  include: typeof verificationRequestInclude;
+}>;
 type UserListItem = Prisma.UserGetPayload<{
   select: {
     id: true;
@@ -109,6 +123,56 @@ function resolveVerificationWorkerView(value?: string): VerificationWorkerView {
     return normalized as keyof typeof VERIFICATION_VIEW_STATUS_MAP;
   }
   throw new HttpError(400, { message: "Invalid verification status view." });
+}
+
+function mapVerificationRequestListItem(request: VerificationRequestWithRelations): VerificationRequestListItem {
+  return {
+    id: request.id,
+    status: request.status,
+    verificationLink: request.verificationLink,
+    meetUrl: request.meetUrl,
+    createdAt: request.createdAt,
+    assignedAt: request.assignedAt,
+    assignedEmployeeId: request.assignedEmployeeId,
+    reason: request.reason,
+    updatedAt: request.updatedAt,
+    escalationRequestedAt:
+      request.status === "ESCALATED" && request.escalationRequest
+        ? request.escalationRequest.requestedAt.toISOString()
+        : null,
+    user: request.user
+  };
+}
+
+function sortVerificationRequests(left: VerificationRequestListItem, right: VerificationRequestListItem) {
+  const priority = (request: VerificationRequestListItem) => {
+    if (request.status === "ESCALATED") return 0;
+    if (request.status === "PENDING") return 1;
+    if (request.status === "ASSIGNED") return 2;
+    if (request.status === "IN_PROGRESS") return 3;
+    if (request.status === "COMPLETED") return 4;
+    return 5;
+  };
+
+  const priorityDelta = priority(left) - priority(right);
+  if (priorityDelta !== 0) return priorityDelta;
+
+  if (left.status === "ESCALATED" || left.status === "PENDING") {
+    return left.createdAt.getTime() - right.createdAt.getTime();
+  }
+
+  return right.updatedAt.getTime() - left.updatedAt.getTime();
+}
+
+async function getVerificationRequestListItemById(
+  requestId: string,
+  db: Prisma.TransactionClient | typeof prisma = prisma
+) {
+  const request = await db.verificationRequest.findUnique({
+    where: { id: requestId },
+    include: verificationRequestInclude
+  });
+  return request ? mapVerificationRequestListItem(request) : null;
 }
 
 export async function approveUser(userId: string, actorUserId: string) {
@@ -586,54 +650,13 @@ export async function listVerificationRequestsForActor(options: {
         ? { status: { in: statusInView } }
         : {})
     },
-    include: {
-      user: { select: { id: true, phone: true, email: true } },
-      escalationRequest: {
-        select: {
-          requestedAt: true,
-          status: true
-        }
-      }
-    },
+    include: verificationRequestInclude,
     orderBy: [{ createdAt: "asc" }]
   });
 
   const requests: VerificationRequestListItem[] = records
-    .map((request) => ({
-      id: request.id,
-      status: request.status,
-      verificationLink: request.verificationLink,
-      meetUrl: request.meetUrl,
-      createdAt: request.createdAt,
-      assignedAt: request.assignedAt,
-      assignedEmployeeId: request.assignedEmployeeId,
-      reason: request.reason,
-      updatedAt: request.updatedAt,
-      escalationRequestedAt:
-        request.status === "ESCALATED" && request.escalationRequest
-          ? request.escalationRequest.requestedAt.toISOString()
-          : null,
-      user: request.user
-    }))
-    .sort((left, right) => {
-      const priority = (request: VerificationRequestListItem) => {
-        if (request.status === "ESCALATED") return 0;
-        if (request.status === "PENDING") return 1;
-        if (request.status === "ASSIGNED") return 2;
-        if (request.status === "IN_PROGRESS") return 3;
-        if (request.status === "COMPLETED") return 4;
-        return 5;
-      };
-
-      const priorityDelta = priority(left) - priority(right);
-      if (priorityDelta !== 0) return priorityDelta;
-
-      if (left.status === "ESCALATED" || left.status === "PENDING") {
-        return left.createdAt.getTime() - right.createdAt.getTime();
-      }
-
-      return right.updatedAt.getTime() - left.updatedAt.getTime();
-    });
+    .map(mapVerificationRequestListItem)
+    .sort(sortVerificationRequests);
 
   return { statusView, requests };
 }
@@ -678,7 +701,9 @@ export async function startVerificationRequest(requestId: string, meetUrl: strin
       return current;
     });
     if (!request) throw new HttpError(404, { message: "Verification request not found" });
-    return { request };
+    const viewModel = await getVerificationRequestListItemById(request.id);
+    if (!viewModel) throw new HttpError(404, { message: "Verification request not found" });
+    return { request: viewModel };
   }
 
   const request = await prisma.$transaction(async (tx) => {
@@ -729,7 +754,9 @@ export async function startVerificationRequest(requestId: string, meetUrl: strin
   emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: request.id });
   emitVerificationQueueChanged(request.id);
   emitAdminDashboardChanged();
-  return { request };
+  const viewModel = await getVerificationRequestListItemById(request.id);
+  if (!viewModel) throw new HttpError(404, { message: "Verification request not found" });
+  return { request: viewModel };
 }
 
 export async function assignVerificationRequest(requestId: string, actorUserId: string) {
@@ -761,7 +788,9 @@ export async function assignVerificationRequest(requestId: string, actorUserId: 
       return current;
     });
     if (!request) throw new HttpError(404, { message: "Verification request not found" });
-    return { request };
+    const viewModel = await getVerificationRequestListItemById(request.id);
+    if (!viewModel) throw new HttpError(404, { message: "Verification request not found" });
+    return { request: viewModel };
   }
   const now = new Date();
   const assignedAt = existing.assignedEmployeeId === actorUserId ? existing.assignedAt ?? now : now;
@@ -821,7 +850,9 @@ export async function assignVerificationRequest(requestId: string, actorUserId: 
   emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: request.id });
   emitVerificationQueueChanged(request.id);
   emitAdminDashboardChanged();
-  return { request };
+  const viewModel = await getVerificationRequestListItemById(request.id);
+  if (!viewModel) throw new HttpError(404, { message: "Verification request not found" });
+  return { request: viewModel };
 }
 
 export async function approveVerificationRequest(requestId: string, actorUserId: string, _isPrivileged: boolean) {
@@ -893,7 +924,9 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
   emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: request.id });
   emitVerificationQueueChanged(request.id);
   emitAdminDashboardChanged();
-  return { request };
+  const viewModel = await getVerificationRequestListItemById(request.id);
+  if (!viewModel) throw new HttpError(404, { message: "Verification request not found" });
+  return { request: viewModel };
 }
 
 export async function rejectVerificationRequest(requestId: string, actorUserId: string, reason: string, _isPrivileged: boolean) {
@@ -964,7 +997,9 @@ export async function rejectVerificationRequest(requestId: string, actorUserId: 
   emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: request.id });
   emitVerificationQueueChanged(request.id);
   emitAdminDashboardChanged();
-  return { request };
+  const viewModel = await getVerificationRequestListItemById(request.id);
+  if (!viewModel) throw new HttpError(404, { message: "Verification request not found" });
+  return { request: viewModel };
 }
 
 export async function shiftPaymentDate(options: { userId: string; daysBack: number }) {

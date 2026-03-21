@@ -56,6 +56,8 @@ export type OfflineMeetEmployeeCase = {
   id: string;
   matchId: string;
   status: OfflineMeetStatus;
+  createdAt: string;
+  updatedAt: string;
   assignedEmployeeId: string | null;
   responseDeadlineAt: string | null;
   cooldownUntil: string | null;
@@ -79,33 +81,33 @@ export async function listOfflineMeetCasesForEmployee(statusView: OfflineMeetSta
 }
 
 export async function assignOfflineMeetCase(caseId: string) {
-  return apiRequestAuth(API_ENDPOINTS.offlineMeet.employeeActions.assign(caseId), { method: "POST" });
+  return apiRequestAuth<{ case: OfflineMeetEmployeeCase }>(API_ENDPOINTS.offlineMeet.employeeActions.assign(caseId), { method: "POST" });
 }
 
 export async function sendOfflineMeetOptions(caseId: string, payload: { cafes: Array<{ id: string; name: string; address: string }>; timeSlots: Array<{ id: string; label: string; startsAtIso?: string | null }> }) {
-  return apiRequestAuth(API_ENDPOINTS.offlineMeet.employeeActions.sendOptions(caseId), { method: "POST", body: JSON.stringify(payload) });
+  return apiRequestAuth<{ case: OfflineMeetEmployeeCase }>(API_ENDPOINTS.offlineMeet.employeeActions.sendOptions(caseId), { method: "POST", body: JSON.stringify(payload) });
 }
 
 export async function finalizeOfflineMeet(caseId: string, finalCafeId: string, finalTimeSlotId: string) {
-  return apiRequestAuth(API_ENDPOINTS.offlineMeet.employeeActions.finalize(caseId), {
+  return apiRequestAuth<{ case: OfflineMeetEmployeeCase }>(API_ENDPOINTS.offlineMeet.employeeActions.finalize(caseId), {
     method: "POST",
     body: JSON.stringify({ finalCafeId, finalTimeSlotId })
   });
 }
 
 export async function markOfflineMeetTimeout(caseId: string, nonResponderUserId: string) {
-  return apiRequestAuth(API_ENDPOINTS.offlineMeet.employeeActions.timeout(caseId), {
+  return apiRequestAuth<{ case: OfflineMeetEmployeeCase }>(API_ENDPOINTS.offlineMeet.employeeActions.timeout(caseId), {
     method: "POST",
     body: JSON.stringify({ nonResponderUserId })
   });
 }
 
 export async function markOfflineMeetNoOverlap(caseId: string) {
-  return apiRequestAuth(API_ENDPOINTS.offlineMeet.employeeActions.noOverlap(caseId), { method: "POST" });
+  return apiRequestAuth<{ case: OfflineMeetEmployeeCase }>(API_ENDPOINTS.offlineMeet.employeeActions.noOverlap(caseId), { method: "POST" });
 }
 
 export async function updateOfflineMeetCase(caseId: string, payload: { action: "CANCEL" | "RESCHEDULE"; reason: string; requestedByUserId?: string | null }) {
-  return apiRequestAuth(API_ENDPOINTS.offlineMeet.employeeActions.caseUpdate(caseId), {
+  return apiRequestAuth<{ case: OfflineMeetEmployeeCase }>(API_ENDPOINTS.offlineMeet.employeeActions.caseUpdate(caseId), {
     method: "POST",
     body: JSON.stringify(payload)
   });
