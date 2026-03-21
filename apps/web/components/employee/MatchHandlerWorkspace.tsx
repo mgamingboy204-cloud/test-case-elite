@@ -28,6 +28,8 @@ import {
 } from "@/lib/onlineMeet";
 import { ApiError } from "@/lib/api";
 import { EMPLOYEE_COORDINATION_FALLBACK_MS } from "@/lib/resourceSync";
+import { CaseActivityPanel } from "@/components/operations/CaseActivityPanel";
+import { useAuth } from "@/contexts/AuthContext";
 
 type MeetMode = "OFFLINE" | "ONLINE";
 
@@ -91,7 +93,9 @@ function newDefaultOnlineOptions() {
   };
 }
 
-export function MatchHandlerWorkspace() {
+export function MatchHandlerWorkspace({ mode: workspaceMode = "employee" }: { mode?: "employee" | "admin" }) {
+  const { user } = useAuth();
+  const actorUserId = user?.id ?? null;
   const [mode, setMode] = useState<MeetMode>("OFFLINE");
   const [offlineView, setOfflineView] = useState<OfflineMeetStatusView>("ACTIVE");
   const [onlineView, setOnlineView] = useState<OnlineMeetStatusView>("ACTIVE");
@@ -236,13 +240,22 @@ export function MatchHandlerWorkspace() {
     }
   };
 
-  const canAct = mode === "OFFLINE" ? Boolean(selectedOffline && activeStatuses.has(selectedOffline.status)) : Boolean(selectedOnline && activeStatuses.has(selectedOnline.status));
+  const selectedOwnedByAnotherActor =
+    mode === "OFFLINE"
+      ? Boolean(selectedOffline?.assignedEmployeeId && selectedOffline.assignedEmployeeId !== actorUserId)
+      : Boolean(selectedOnline?.assignedEmployeeId && selectedOnline.assignedEmployeeId !== actorUserId);
+  const canAct =
+    mode === "OFFLINE"
+      ? Boolean(selectedOffline && activeStatuses.has(selectedOffline.status) && !selectedOwnedByAnotherActor)
+      : Boolean(selectedOnline && activeStatuses.has(selectedOnline.status) && !selectedOwnedByAnotherActor);
 
   return (
     <div className="space-y-6">
       <header className="rounded-2xl border border-white/10 bg-[#121826] p-6 text-white">
-        <h1 className="text-2xl tracking-[0.2em] uppercase">Match Handler Desk</h1>
-        <p className="mt-2 text-[11px] uppercase tracking-[0.16em] text-white/45">Employee-managed offline / online coordination</p>
+        <h1 className="text-2xl tracking-[0.2em] uppercase">{workspaceMode === "admin" ? "Match Oversight" : "Match Handler Desk"}</h1>
+        <p className="mt-2 text-[11px] uppercase tracking-[0.16em] text-white/45">
+          {workspaceMode === "admin" ? "Admin oversight across offline and online coordination" : "Employee-managed offline / online coordination"}
+        </p>
       </header>
 
       <div className="grid gap-4 md:grid-cols-[240px,1fr]">
@@ -371,6 +384,8 @@ export function MatchHandlerWorkspace() {
                   `Shared time slots: ${offlineOverlap.slots.map((entry) => entry.label).join(", ") || "none"}`
                 ]}
               />
+
+              <CaseActivityPanel caseType="OFFLINE_MEET" caseId={selectedOffline.id} />
             </div>
           ) : mode === "ONLINE" && selectedOnline ? (
             <div className="space-y-4">
@@ -487,6 +502,8 @@ export function MatchHandlerWorkspace() {
                   `Shared time slots: ${onlineOverlap.slots.map((entry) => entry.label).join(", ") || "none"}`
                 ]}
               />
+
+              <CaseActivityPanel caseType="ONLINE_MEET" caseId={selectedOnline.id} />
             </div>
           ) : (
             <p className="text-sm text-white/65">Select a case to view details.</p>
@@ -532,7 +549,7 @@ function DeskSummary(props: {
 function ActionBar({ disabled, children }: { disabled: boolean; children: ReactNode }) {
   return (
     <div className="flex flex-wrap gap-2 [&>button]:rounded-full [&>button]:border [&>button]:border-white/20 [&>button]:px-3 [&>button]:py-1 [&>button]:text-xs [&>button]:uppercase [&>button]:tracking-[0.14em] [&>button]:disabled:opacity-45">
-      {disabled ? <p className="w-full text-[11px] uppercase tracking-[0.15em] text-white/45">Case is not in active desk state.</p> : null}
+      {disabled ? <p className="w-full text-[11px] uppercase tracking-[0.15em] text-white/45">Case is not actionable from your desk in its current state.</p> : null}
       {children}
     </div>
   );

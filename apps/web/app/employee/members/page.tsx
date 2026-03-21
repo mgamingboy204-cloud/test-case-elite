@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { apiRequestAuth } from "@/lib/api";
-import { ApiError } from "@/lib/api";
+import { apiRequestAuth, ApiError } from "@/lib/api";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { Loader2 } from "lucide-react";
 
@@ -54,9 +52,12 @@ export default function EmployeeMembersPage() {
   }, []);
 
   const approachingBadge = useMemo(() => {
-    if (!capacity) return null;
-    if (!capacity.approaching) return null;
-    return <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-amber-500/10 px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-amber-200">Approaching capacity</span>;
+    if (!capacity?.approaching) return null;
+    return (
+      <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-amber-500/10 px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-amber-200">
+        Approaching capacity
+      </span>
+    );
   }, [capacity]);
 
   return (
@@ -73,7 +74,7 @@ export default function EmployeeMembersPage() {
 
       {loading ? (
         <div className="rounded-xl border border-white/10 bg-[#0d1016] p-6 text-sm text-white/65 inline-flex items-center gap-2">
-          <Loader2 size={16} className="animate-spin" /> Loading members…
+          <Loader2 size={16} className="animate-spin" /> Loading members...
         </div>
       ) : error ? (
         <div className="rounded-xl border border-red-500/35 bg-red-500/10 p-6 text-xs text-red-200">{error}</div>
@@ -81,35 +82,27 @@ export default function EmployeeMembersPage() {
         <div className="rounded-xl border border-[#1f222b] bg-[#0d1016] p-8 text-sm text-white/60">No assigned members yet.</div>
       ) : (
         <div className="rounded-xl border border-[#1f222b] bg-[#0d1016] overflow-hidden">
-          <div className="grid grid-cols-[1.6fr,0.8fr,0.8fr,1fr,0.8fr] gap-2 px-4 py-3 text-[10px] uppercase tracking-[0.14em] text-white/45 border-b border-white/5">
+          <div className="grid grid-cols-[1.8fr,0.8fr,0.8fr,1fr] gap-2 px-4 py-3 text-[10px] uppercase tracking-[0.14em] text-white/45 border-b border-white/5">
             <div>Name</div>
             <div>Status</div>
             <div>Plan</div>
             <div>Last activity</div>
-            <div />
           </div>
           <div className="divide-y divide-white/5">
-            {members.map((m) => (
+            {members.map((member) => (
               <div
-                key={m.id}
-                className="grid grid-cols-[1.6fr,0.8fr,0.8fr,1fr,0.8fr] gap-2 px-4 py-3 items-center"
+                key={member.id}
+                className="grid grid-cols-[1.8fr,0.8fr,0.8fr,1fr] gap-2 px-4 py-3 items-center"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{m.name}</p>
-                  <p className="text-[10px] text-white/45 mt-1">Expires: {m.subscriptionEndsAt ? new Date(m.subscriptionEndsAt).toLocaleDateString("en-IN") : "—"}</p>
+                  <p className="text-sm font-medium truncate">{member.name}</p>
+                  <p className="text-[10px] text-white/45 mt-1">
+                    Expires: {member.subscriptionEndsAt ? new Date(member.subscriptionEndsAt).toLocaleDateString("en-IN") : "-"}
+                  </p>
                 </div>
-                <div className="text-sm text-white/85">{m.status}</div>
-                <div className="text-sm text-[#C89B90]">{m.plan}</div>
-                <div className="text-sm text-white/70">{formatRelativeTime(m.lastActivityAt)}</div>
-                <div className="flex justify-end">
-                  <Link
-                    href="/profile"
-                    className="rounded-lg border border-white/15 px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-white/75 hover:text-white hover:bg-white/5"
-                    title="View profile"
-                  >
-                    View
-                  </Link>
-                </div>
+                <div className="text-sm text-white/85">{member.status}</div>
+                <div className="text-sm text-[#C89B90]">{member.plan}</div>
+                <div className="text-sm text-white/70">{formatRelativeTime(member.lastActivityAt)}</div>
               </div>
             ))}
           </div>
@@ -118,4 +111,3 @@ export default function EmployeeMembersPage() {
     </div>
   );
 }
-

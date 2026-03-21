@@ -72,7 +72,7 @@ export function AdminDashboardWorkspace() {
   if (loading) {
     return (
       <div className="p-10 text-white/70 inline-flex items-center gap-3">
-        <Loader2 className="animate-spin" size={18} /> Loading founder dashboard...
+        <Loader2 className="animate-spin" size={18} /> Loading admin overview...
       </div>
     );
   }
@@ -82,7 +82,7 @@ export function AdminDashboardWorkspace() {
       <div className="p-10">
         <div className="max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-red-100">
           <p className="text-sm font-medium uppercase tracking-[0.14em]">Access denied</p>
-          <p className="mt-3 text-sm text-red-100/80">This dashboard is restricted to founder/admin users only.</p>
+          <p className="mt-3 text-sm text-red-100/80">This dashboard is restricted to admin users only.</p>
         </div>
       </div>
     );
@@ -117,8 +117,8 @@ export function AdminDashboardWorkspace() {
     <div className="p-8 space-y-8">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-serif uppercase tracking-[0.14em] text-white">Founder Operations Dashboard</h1>
-          <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/45">Business health, queues, and team workload</p>
+          <h1 className="text-2xl font-serif uppercase tracking-[0.14em] text-white">Admin Operations Overview</h1>
+          <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/45">Business health, queue pressure, and staff workload</p>
         </div>
         <button
           disabled={refreshing}

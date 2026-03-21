@@ -2,7 +2,6 @@
 
 import AdminDashboardWorkspace from "@/components/employee/AdminDashboardWorkspace";
 
-export default function EmployeeAdminPage() {
+export default function AdminOverviewPage() {
   return <AdminDashboardWorkspace />;
 }
-

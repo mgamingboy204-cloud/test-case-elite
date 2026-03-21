@@ -34,6 +34,7 @@ export function routeForFrontendOnboardingStep(step: FrontendOnboardingStep) {
 
 export function routeForAuthenticatedUser(input: {
   role?: "USER" | "EMPLOYEE" | "ADMIN" | null;
+  mustResetPassword?: boolean;
   backendStep?: BackendOnboardingStep | null;
   onboardingStep?: BackendOnboardingStep | null;
   profileCompletedAt?: Date | string | null;
@@ -42,7 +43,10 @@ export function routeForAuthenticatedUser(input: {
   appState?: { redirectTo?: string | null } | null;
 }) {
   if (input.role === "EMPLOYEE" || input.role === "ADMIN") {
-    return "/employee/verification";
+    if (input.mustResetPassword) {
+      return "/staff/password-reset";
+    }
+    return input.role === "ADMIN" ? "/admin" : "/employee";
   }
 
   const explicitRedirect = (

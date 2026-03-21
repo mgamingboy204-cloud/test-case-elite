@@ -67,6 +67,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       onboardingStep,
       scope: "main",
       userRole: user?.role ?? null,
+      mustResetPassword: user?.mustResetPassword ?? false,
       appStateCode,
       appStateRedirectTo
     });
@@ -74,7 +75,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (redirect && pathname !== redirect) {
       router.replace(redirect);
     }
-  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router, appStateCode, appStateRedirectTo, user?.role]);
+  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router, appStateCode, appStateRedirectTo, user?.mustResetPassword, user?.role]);
 
   if (!mounted || !isAuthResolved || !isAuthenticated || onboardingStep !== "COMPLETED") return null;
 

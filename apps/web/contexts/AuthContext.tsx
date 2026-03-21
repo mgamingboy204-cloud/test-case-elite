@@ -63,6 +63,7 @@ interface User {
   gender?: string | null;
   role: SessionRole;
   isAdmin?: boolean;
+  mustResetPassword?: boolean;
   status?: string;
   onboardingStep: BackendOnboardingStep;
   profileCompletedAt?: string | null;
@@ -528,7 +529,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     const nextRoute =
       user?.role === "EMPLOYEE" || user?.role === "ADMIN"
-        ? "/employee/login"
+        ? "/staff/login"
         : "/signin";
 
     try {

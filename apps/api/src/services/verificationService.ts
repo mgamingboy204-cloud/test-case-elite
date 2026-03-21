@@ -6,7 +6,9 @@ import { prisma } from "../db/prisma";
 import { env } from "../config/env";
 import { HttpError } from "../utils/httpErrors";
 import {
+  emitAdminAuditLogsChanged,
   emitAdminDashboardChanged,
+  emitOpsCaseActivityChanged,
   emitSessionStateChanged,
   emitVerificationQueueChanged,
   emitVerificationStatusChanged
@@ -433,6 +435,11 @@ export async function requestWhatsAppVerificationHelp(userId: string) {
         verificationStatus: latest.status
       }
     }
+  });
+  emitAdminAuditLogsChanged();
+  emitOpsCaseActivityChanged({
+    caseType: "VERIFICATION",
+    caseId: targetRequestId
   });
 
   emitSessionStateChanged([userId], "verification_help_requested");

@@ -32,6 +32,9 @@ type LiveEventPayloadMap = {
   "admin.offline_meets.changed": { caseId: string | null };
   "admin.online_meets.changed": { caseId: string | null };
   "admin.dashboard.changed": Record<string, never>;
+  "admin.staff.changed": Record<string, never>;
+  "admin.audit_logs.changed": Record<string, never>;
+  "ops.case_activity.changed": { caseType: string; caseId: string };
 };
 
 export type LiveEventType = keyof LiveEventPayloadMap;

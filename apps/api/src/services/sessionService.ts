@@ -91,6 +91,7 @@ export type SessionUserPayload = {
   gender: string | null;
   role: string;
   isAdmin: boolean;
+  mustResetPassword: boolean;
   status: string;
   verifiedAt: Date | null;
   phoneVerifiedAt: Date | null;
@@ -167,6 +168,7 @@ export async function buildSessionUserPayload(userId: string): Promise<SessionUs
     gender: nextUser.gender,
     role: nextUser.role,
     isAdmin: nextUser.isAdmin,
+    mustResetPassword: nextUser.mustResetPassword,
     status: nextUser.status,
     verifiedAt: nextUser.verifiedAt,
     phoneVerifiedAt: nextUser.phoneVerifiedAt,

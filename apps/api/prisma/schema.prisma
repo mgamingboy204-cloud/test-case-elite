@@ -237,6 +237,7 @@ model User {
   role         Role     @default(USER)
   employeeId   String?  @unique
   isAdmin      Boolean  @default(false)
+  mustResetPassword Boolean @default(false)
   status       UserStatus @default(PENDING)
   onboardingStep OnboardingStep @default(PHONE_VERIFIED)
   videoVerificationStatus VideoVerificationStatus @default(NOT_REQUESTED)

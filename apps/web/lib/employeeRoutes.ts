@@ -1,7 +1,8 @@
 export const EMPLOYEE_ROUTES = {
-  login: "/employee/login",
+  home: "/employee",
   verification: "/employee/verification",
   matches: "/employee/matches",
   members: "/employee/members",
-  admin: "/employee/admin"
+  assigned: "/employee/assigned",
+  incidents: "/employee/incidents"
 } as const;

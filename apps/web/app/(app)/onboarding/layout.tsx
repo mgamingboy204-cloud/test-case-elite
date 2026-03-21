@@ -36,13 +36,14 @@ export default function OnboardingLayout({ children }: { children: ReactNode }) 
       onboardingStep,
       scope: "onboarding",
       userRole: user?.role ?? null,
+      mustResetPassword: user?.mustResetPassword ?? false,
       appStateCode,
       appStateRedirectTo
     });
     if (redirect && pathname !== redirect) {
       router.replace(redirect);
     }
-  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router, appStateCode, appStateRedirectTo, user?.role]);
+  }, [isAuthResolved, isAuthenticated, onboardingStep, pathname, router, appStateCode, appStateRedirectTo, user?.mustResetPassword, user?.role]);
 
   if (!isAuthResolved) {
     return <div className="w-full h-[100dvh] bg-background" />;

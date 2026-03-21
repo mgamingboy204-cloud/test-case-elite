@@ -406,6 +406,7 @@ export async function changePasswordHandler(req: Request, res: Response) {
     where: { id: userId },
     data: {
       passwordHash: nextPasswordHash,
+      mustResetPassword: false,
       tokenVersion: { increment: 1 }
     }
   });

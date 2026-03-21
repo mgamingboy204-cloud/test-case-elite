@@ -30,6 +30,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       onboardingStep,
       scope: "auth",
       userRole: user?.role ?? null,
+      mustResetPassword: user?.mustResetPassword ?? false,
       appStateCode,
       appStateRedirectTo,
       authFlowMode,
@@ -50,6 +51,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     pendingPhone,
     router,
     signupToken,
+    user?.mustResetPassword,
     user?.role
   ]);
 

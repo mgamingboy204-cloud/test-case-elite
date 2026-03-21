@@ -16,8 +16,10 @@ import { listEmployeeWorkloads } from "./employeeService";
 import { notificationDedupeKey } from "../utils/notificationDedupe";
 import { synchronizeVerificationRequests } from "./verificationService";
 import {
+  emitAdminAuditLogsChanged,
   emitAdminDashboardChanged,
   emitAlertsChanged,
+  emitOpsCaseActivityChanged,
   emitSessionStateChanged,
   emitVerificationQueueChanged,
   emitVerificationStatusChanged
@@ -643,6 +645,8 @@ export async function startVerificationRequest(requestId: string, meetUrl: strin
   emitAlertsChanged([request.userId]);
   emitVerificationStatusChanged({ userId: request.userId, requestId: request.id, status: request.status });
   emitSessionStateChanged([request.userId], "verification_started");
+  emitAdminAuditLogsChanged();
+  emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: request.id });
   emitVerificationQueueChanged(request.id);
   emitAdminDashboardChanged();
   return { request };
@@ -729,6 +733,8 @@ export async function assignVerificationRequest(requestId: string, actorUserId: 
   emitAlertsChanged([request.userId]);
   emitVerificationStatusChanged({ userId: request.userId, requestId: request.id, status: request.status });
   emitSessionStateChanged([request.userId], "verification_assigned");
+  emitAdminAuditLogsChanged();
+  emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: request.id });
   emitVerificationQueueChanged(request.id);
   emitAdminDashboardChanged();
   return { request };
@@ -794,6 +800,8 @@ export async function approveVerificationRequest(requestId: string, actorUserId:
   emitAlertsChanged([request.userId]);
   emitVerificationStatusChanged({ userId: request.userId, requestId: request.id, status: request.status });
   emitSessionStateChanged([request.userId], "verification_approved");
+  emitAdminAuditLogsChanged();
+  emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: request.id });
   emitVerificationQueueChanged(request.id);
   emitAdminDashboardChanged();
   return { request };
@@ -858,6 +866,8 @@ export async function rejectVerificationRequest(requestId: string, actorUserId: 
   emitAlertsChanged([request.userId]);
   emitVerificationStatusChanged({ userId: request.userId, requestId: request.id, status: request.status });
   emitSessionStateChanged([request.userId], "verification_rejected");
+  emitAdminAuditLogsChanged();
+  emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: request.id });
   emitVerificationQueueChanged(request.id);
   emitAdminDashboardChanged();
   return { request };
@@ -932,6 +942,8 @@ export async function setVerificationMeetLink(userId: string, meetUrl: string, a
   emitAlertsChanged([userId]);
   emitVerificationStatusChanged({ userId, requestId: updated.id, status: updated.status });
   emitSessionStateChanged([userId], "verification_started");
+  emitAdminAuditLogsChanged();
+  emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: updated.id });
   emitVerificationQueueChanged(updated.id);
   emitAdminDashboardChanged();
   return { request: updated };
@@ -988,6 +1000,8 @@ export async function approveVerificationForUser(userId: string, actorUserId: st
   emitAlertsChanged([userId]);
   emitVerificationStatusChanged({ userId, requestId: updated.id, status: updated.status });
   emitSessionStateChanged([userId], "verification_approved");
+  emitAdminAuditLogsChanged();
+  emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: updated.id });
   emitVerificationQueueChanged(updated.id);
   emitAdminDashboardChanged();
   return { request: updated };
@@ -1041,6 +1055,8 @@ export async function rejectVerificationForUser(userId: string, actorUserId: str
   emitAlertsChanged([userId]);
   emitVerificationStatusChanged({ userId, requestId: updated.id, status: updated.status });
   emitSessionStateChanged([userId], "verification_rejected");
+  emitAdminAuditLogsChanged();
+  emitOpsCaseActivityChanged({ caseType: "VERIFICATION", caseId: updated.id });
   emitVerificationQueueChanged(updated.id);
   emitAdminDashboardChanged();
   return { request: updated };

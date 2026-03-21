@@ -23,6 +23,11 @@ import {
   startVerificationRequest,
   shiftPaymentDate
 } from "../services/adminService";
+import {
+  createStaffMember,
+  listStaffMembers,
+  setStaffActivation
+} from "../services/opsService";
 
 export async function approveUserHandler(req: Request, res: Response) {
   const result = await approveUser(req.params.id, res.locals.user.id);
@@ -144,5 +149,51 @@ export async function shiftPaymentDateHandler(req: Request, res: Response) {
   }
   const { userId, daysBack } = req.body as { userId: string; daysBack: number };
   const result = await shiftPaymentDate({ userId, daysBack });
+  return res.json(result);
+}
+
+export async function listStaffHandler(_req: Request, res: Response) {
+  const result = await listStaffMembers();
+  return res.json(result);
+}
+
+export async function createStaffHandler(req: Request, res: Response) {
+  const { firstName, lastName, displayName, phone, email, role } = req.body as {
+    firstName?: string | null;
+    lastName?: string | null;
+    displayName?: string | null;
+    phone: string;
+    email?: string | null;
+    role: "EMPLOYEE" | "ADMIN";
+  };
+
+  const result = await createStaffMember({
+    actorUserId: res.locals.user.id,
+    firstName,
+    lastName,
+    displayName,
+    phone,
+    email,
+    role
+  });
+
+  return res.status(201).json(result);
+}
+
+export async function deactivateStaffHandler(req: Request, res: Response) {
+  const result = await setStaffActivation({
+    actorUserId: res.locals.user.id,
+    staffUserId: req.params.id,
+    active: false
+  });
+  return res.json(result);
+}
+
+export async function reactivateStaffHandler(req: Request, res: Response) {
+  const result = await setStaffActivation({
+    actorUserId: res.locals.user.id,
+    staffUserId: req.params.id,
+    active: true
+  });
   return res.json(result);
 }

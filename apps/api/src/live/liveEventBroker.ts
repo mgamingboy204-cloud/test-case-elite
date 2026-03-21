@@ -12,7 +12,10 @@ export type LiveEventType =
   | "admin.verification.queue.changed"
   | "admin.offline_meets.changed"
   | "admin.online_meets.changed"
-  | "admin.dashboard.changed";
+  | "admin.dashboard.changed"
+  | "admin.staff.changed"
+  | "admin.audit_logs.changed"
+  | "ops.case_activity.changed";
 
 type LiveAudience = {
   userIds?: string[];
@@ -185,4 +188,22 @@ export function emitOnlineMeetQueueChanged(caseId?: string) {
 
 export function emitAdminDashboardChanged() {
   emitEvent({ admins: true }, "admin.dashboard.changed", {});
+}
+
+export function emitAdminStaffChanged() {
+  emitEvent({ admins: true }, "admin.staff.changed", {});
+}
+
+export function emitAdminAuditLogsChanged() {
+  emitEvent({ admins: true }, "admin.audit_logs.changed", {});
+}
+
+export function emitOpsCaseActivityChanged(options: {
+  caseType: string;
+  caseId: string;
+}) {
+  emitEvent({ employees: true }, "ops.case_activity.changed", {
+    caseType: options.caseType,
+    caseId: options.caseId
+  });
 }

@@ -16,6 +16,7 @@ import {
   type WorkerVerificationRequest
 } from "@/lib/workerVerification";
 import { EMPLOYEE_QUEUE_FALLBACK_MS } from "@/lib/resourceSync";
+import { CaseActivityPanel } from "@/components/operations/CaseActivityPanel";
 
 const VIEWS: Array<{ value: VerificationQueueView; label: string }> = [
   { value: "ACTIVE", label: "Active" },
@@ -31,7 +32,7 @@ function getOwnershipLabel(request: WorkerVerificationRequest, actorUserId: stri
   return "Assigned to another executive";
 }
 
-export function VerificationWorkspace() {
+export function VerificationWorkspace({ mode = "employee" }: { mode?: "employee" | "admin" }) {
   const { user } = useAuth();
   const actorUserId = user?.id ?? null;
   const [view, setView] = useState<VerificationQueueView>("ACTIVE");
@@ -107,8 +108,12 @@ export function VerificationWorkspace() {
     <div className="space-y-6 p-8 text-white">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-serif tracking-wide">Video Verification Operations</h1>
-          <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-white/50">Human-managed identity validation queue</p>
+          <h1 className="text-3xl font-serif tracking-wide">
+            {mode === "admin" ? "Verification Oversight" : "Video Verification Operations"}
+          </h1>
+          <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-white/50">
+            {mode === "admin" ? "Admin visibility, intervention, and workflow control" : "Human-managed identity validation queue"}
+          </p>
         </div>
         <button
           onClick={() => void refresh()}
@@ -190,65 +195,69 @@ export function VerificationWorkspace() {
                       : "This request is waiting for an executive to claim it. Claim it first to move the verification forward."}
                 </div>
 
-                <div className="space-y-3 pt-1">
-                  <button
-                    disabled={!canClaimSelected}
-                    onClick={() => void runAction("assign", async () => { await assignVerificationRequest(selected.id); }, "Request assigned to you.")}
-                    className="w-full rounded-lg border border-[#C89B90]/40 px-3 py-2 text-xs uppercase tracking-[0.15em] text-[#f0c8be] disabled:opacity-45"
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <UserCheck size={14} />
-                      {selectedAssignedToCurrentActor ? "Assigned to you" : selectedAssignedToAnotherActor ? "Already assigned" : "Assign to me"}
-                    </span>
-                  </button>
-
-                  <div className="flex gap-2">
-                    <input
-                      value={meetUrl}
-                      onChange={(event) => setMeetUrl(event.target.value)}
-                      placeholder="https://meet.google.com/..."
-                      className="flex-1 rounded-lg border border-[#2a2f3b] bg-black/30 px-3 py-2 text-sm"
-                    />
+                <div className="grid gap-4 xl:grid-cols-[1.2fr,0.8fr]">
+                  <div className="space-y-3 pt-1">
                     <button
-                      disabled={!canSendLinkSelected || !isValidMeetUrl}
-                      onClick={() => void runAction("start", async () => { await startVerificationRequest(selected.id, meetUrl.trim()); }, "Meet link sent and case moved to in-progress.")}
-                      className="rounded-lg border border-primary/40 px-4 py-2 text-xs uppercase tracking-[0.15em] text-primary disabled:opacity-45"
+                      disabled={!canClaimSelected}
+                      onClick={() => void runAction("assign", async () => { await assignVerificationRequest(selected.id); }, "Request assigned to you.")}
+                      className="w-full rounded-lg border border-[#C89B90]/40 px-3 py-2 text-xs uppercase tracking-[0.15em] text-[#f0c8be] disabled:opacity-45"
                     >
-                      <span className="inline-flex items-center gap-2"><LinkIcon size={14} /> Send link</span>
+                      <span className="inline-flex items-center gap-2">
+                        <UserCheck size={14} />
+                        {selectedAssignedToCurrentActor ? "Assigned to you" : selectedAssignedToAnotherActor ? "Already assigned" : "Assign to me"}
+                      </span>
                     </button>
+
+                    <div className="flex gap-2">
+                      <input
+                        value={meetUrl}
+                        onChange={(event) => setMeetUrl(event.target.value)}
+                        placeholder="https://meet.google.com/..."
+                        className="flex-1 rounded-lg border border-[#2a2f3b] bg-black/30 px-3 py-2 text-sm"
+                      />
+                      <button
+                        disabled={!canSendLinkSelected || !isValidMeetUrl}
+                        onClick={() => void runAction("start", async () => { await startVerificationRequest(selected.id, meetUrl.trim()); }, "Meet link sent and case moved to in-progress.")}
+                        className="rounded-lg border border-primary/40 px-4 py-2 text-xs uppercase tracking-[0.15em] text-primary disabled:opacity-45"
+                      >
+                        <span className="inline-flex items-center gap-2"><LinkIcon size={14} /> Send link</span>
+                      </button>
+                    </div>
+
+                    {!isValidMeetUrl && meetUrl.trim() ? (
+                      <p className="mt-1 text-[11px] text-amber-300/80">
+                        Meet link must start with https://meet.google.com/ and include the meeting path.
+                      </p>
+                    ) : null}
+
+                    <button
+                      disabled={!canResolveSelected}
+                      onClick={() => void runAction("approve", async () => { await approveVerificationRequest(selected.id); }, "Verification approved and member progression updated.")}
+                      className="w-full rounded-lg border border-emerald-500/40 px-3 py-2 text-xs uppercase tracking-[0.15em] text-emerald-300 disabled:opacity-45"
+                    >
+                      <span className="inline-flex items-center gap-2"><CheckCircle2 size={14} /> Mark approved</span>
+                    </button>
+
+                    <div className="flex gap-2">
+                      <input
+                        value={rejectionReason}
+                        onChange={(event) => setRejectionReason(event.target.value)}
+                        placeholder="Rejection reason"
+                        className="flex-1 rounded-lg border border-[#2a2f3b] bg-black/30 px-3 py-2 text-sm"
+                      />
+                      <button
+                        disabled={!canResolveSelected || !rejectionReason.trim()}
+                        onClick={() => void runAction("reject", async () => { await rejectVerificationRequest(selected.id, rejectionReason.trim()); }, "Verification rejected and member notified.")}
+                        className="rounded-lg border border-red-500/40 px-4 py-2 text-xs uppercase tracking-[0.15em] text-red-300 disabled:opacity-45"
+                      >
+                        <span className="inline-flex items-center gap-2"><ShieldBan size={14} /> Reject</span>
+                      </button>
+                    </div>
+
+                    {busyAction ? <p className="inline-flex items-center gap-2 text-xs text-white/60"><Loader2 size={13} className="animate-spin" /> Processing action...</p> : null}
                   </div>
 
-                  {!isValidMeetUrl && meetUrl.trim() ? (
-                    <p className="mt-1 text-[11px] text-amber-300/80">
-                      Meet link must start with https://meet.google.com/ and include the meeting path.
-                    </p>
-                  ) : null}
-
-                  <button
-                    disabled={!canResolveSelected}
-                    onClick={() => void runAction("approve", async () => { await approveVerificationRequest(selected.id); }, "Verification approved and member progression updated.")}
-                    className="w-full rounded-lg border border-emerald-500/40 px-3 py-2 text-xs uppercase tracking-[0.15em] text-emerald-300 disabled:opacity-45"
-                  >
-                    <span className="inline-flex items-center gap-2"><CheckCircle2 size={14} /> Mark approved</span>
-                  </button>
-
-                  <div className="flex gap-2">
-                    <input
-                      value={rejectionReason}
-                      onChange={(event) => setRejectionReason(event.target.value)}
-                      placeholder="Rejection reason"
-                      className="flex-1 rounded-lg border border-[#2a2f3b] bg-black/30 px-3 py-2 text-sm"
-                    />
-                    <button
-                      disabled={!canResolveSelected || !rejectionReason.trim()}
-                      onClick={() => void runAction("reject", async () => { await rejectVerificationRequest(selected.id, rejectionReason.trim()); }, "Verification rejected and member notified.")}
-                      className="rounded-lg border border-red-500/40 px-4 py-2 text-xs uppercase tracking-[0.15em] text-red-300 disabled:opacity-45"
-                    >
-                      <span className="inline-flex items-center gap-2"><ShieldBan size={14} /> Reject</span>
-                    </button>
-                  </div>
-
-                  {busyAction ? <p className="inline-flex items-center gap-2 text-xs text-white/60"><Loader2 size={13} className="animate-spin" /> Processing action...</p> : null}
+                  <CaseActivityPanel caseType="VERIFICATION" caseId={selected.id} />
                 </div>
               </div>
             )}

@@ -36,6 +36,7 @@ export function resolveRouteRedirect(options: {
   onboardingStep: FrontendOnboardingStep;
   scope: "auth" | "onboarding" | "main";
   userRole?: "USER" | "EMPLOYEE" | "ADMIN" | null;
+  mustResetPassword?: boolean;
   appStateCode?: AppStateCode | null;
   appStateRedirectTo?: string | null;
   authFlowMode?: AuthFlowMode | null;
@@ -51,8 +52,12 @@ export function resolveRouteRedirect(options: {
       ? options.appStateRedirectTo
       : null;
   const defaultAuthenticatedRoute =
-    options.userRole === "EMPLOYEE" || options.userRole === "ADMIN"
-      ? "/employee/verification"
+    (options.userRole === "ADMIN" || options.userRole === "EMPLOYEE") && options.mustResetPassword
+      ? "/staff/password-reset"
+      : options.userRole === "ADMIN"
+      ? "/admin"
+      : options.userRole === "EMPLOYEE"
+        ? "/employee"
       : appStateRedirect ?? routeForFrontendOnboardingStep(options.onboardingStep);
 
   if (options.scope === "auth") {

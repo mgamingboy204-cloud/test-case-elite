@@ -3,10 +3,12 @@ import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { notificationDedupeKey } from "../utils/notificationDedupe";
 import {
+  emitAdminAuditLogsChanged,
   emitAdminDashboardChanged,
   emitAlertsChanged,
   emitMatchesChanged,
-  emitOnlineMeetQueueChanged
+  emitOnlineMeetQueueChanged,
+  emitOpsCaseActivityChanged
 } from "../live/liveEventBroker";
 
 type MeetPlatform = "ZOOM" | "GOOGLE_MEET";
@@ -113,6 +115,28 @@ async function createNotifications(userIds: string[], type: NotificationType, ma
     skipDuplicates: true
   });
   emitAlertsChanged(userIds);
+}
+
+async function logOnlineMeetActivity(options: {
+  actorUserId: string;
+  caseId: string;
+  action: string;
+  metadata?: Prisma.InputJsonValue;
+}) {
+  await prisma.auditLog.create({
+    data: {
+      actorUserId: options.actorUserId,
+      action: options.action,
+      targetType: "OnlineMeetCase",
+      targetId: options.caseId,
+      metadata: options.metadata ?? {}
+    }
+  });
+  emitAdminAuditLogsChanged();
+  emitOpsCaseActivityChanged({
+    caseType: "ONLINE_MEET",
+    caseId: options.caseId
+  });
 }
 
 async function evaluateTimeout(caseId: string) {
@@ -384,14 +408,14 @@ export async function submitOnlineMeetSelections(params: {
 }
 
 export async function listOnlineMeetCasesForEmployee(userId: string, requestedView?: string) {
+  void userId;
   const statusView = parseOnlineStatusView(requestedView);
   const statusFilter = statusView === "ALL"
     ? [...ACTIVE_COORDINATION_STATUSES, ...TERMINAL_OR_COOLDOWN_STATUSES]
     : ONLINE_STATUS_VIEW_MAP[statusView];
   const cases = await prisma.onlineMeetCase.findMany({
     where: {
-      status: { in: statusFilter },
-      OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: userId }]
+      status: { in: statusFilter }
     },
     include: {
       match: {
@@ -410,8 +434,7 @@ export async function listOnlineMeetCasesForEmployee(userId: string, requestedVi
 
   const refreshed = await prisma.onlineMeetCase.findMany({
     where: {
-      status: { in: statusFilter },
-      OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: userId }]
+      status: { in: statusFilter }
     },
     include: {
       match: {
@@ -479,6 +502,11 @@ export async function assignOnlineMeetCase(caseId: string, employeeUserId: strin
   }
   const updated = await prisma.onlineMeetCase.findUnique({ where: { id: caseId } });
   if (!updated) throw new HttpError(404, { message: "Case not found." });
+  await logOnlineMeetActivity({
+    actorUserId: employeeUserId,
+    caseId: updated.id,
+    action: "online_meet_assigned"
+  });
   emitOnlineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
   return updated;
@@ -520,6 +548,16 @@ export async function sendOnlineMeetOptions(params: {
     "Online Meet Options Ready",
     "Your match handler shared platform and timing options. Please submit your preferences within 12 hours."
   );
+
+  await logOnlineMeetActivity({
+    actorUserId: params.employeeUserId,
+    caseId: updated.id,
+    action: "online_meet_options_sent",
+    metadata: {
+      platformCount: params.platforms.length,
+      timeSlotCount: params.timeSlots.length
+    }
+  });
 
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOnlineMeetQueueChanged(updated.id);
@@ -574,6 +612,16 @@ export async function finalizeOnlineMeetCase(params: {
     `Your online meeting is confirmed on ${params.finalPlatform.replace("_", " ")} at ${finalTime.label}. Concierge may follow up personally if needed.`
   );
 
+  await logOnlineMeetActivity({
+    actorUserId: params.employeeUserId,
+    caseId: updated.id,
+    action: "online_meet_finalized",
+    metadata: {
+      finalPlatform: params.finalPlatform,
+      finalTimeSlotId: params.finalTimeSlotId
+    }
+  });
+
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOnlineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
@@ -607,6 +655,15 @@ export async function markOnlineMeetTimeout(params: { caseId: string; employeeUs
     "The other member did not submit preferences in time. Please retry after cooldown if needed."
   );
 
+  await logOnlineMeetActivity({
+    actorUserId: params.employeeUserId,
+    caseId: updated.id,
+    action: "online_meet_timeout_marked",
+    metadata: {
+      nonResponderUserId: params.nonResponderUserId
+    }
+  });
+
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOnlineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
@@ -634,6 +691,12 @@ export async function markOnlineMeetNoOverlap(params: { caseId: string; employee
     "Online Meet Not Compatible",
     "No compatible platform/time overlap was found in this round. You may retry after one day."
   );
+
+  await logOnlineMeetActivity({
+    actorUserId: params.employeeUserId,
+    caseId: updated.id,
+    action: "online_meet_no_overlap_marked"
+  });
 
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOnlineMeetQueueChanged(updated.id);
@@ -681,6 +744,16 @@ export async function updateOnlineMeetCancelOrReschedule(params: {
       ? "Your online meeting was canceled under serious-condition concierge handling."
       : "Concierge received a serious-condition reschedule request and will follow up privately."
   );
+
+  await logOnlineMeetActivity({
+    actorUserId: params.employeeUserId,
+    caseId: updated.id,
+    action: params.action === "CANCEL" ? "online_meet_canceled" : "online_meet_reschedule_requested",
+    metadata: {
+      reason: params.reason,
+      requestedByUserId: params.requestedByUserId ?? null
+    }
+  });
 
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOnlineMeetQueueChanged(updated.id);

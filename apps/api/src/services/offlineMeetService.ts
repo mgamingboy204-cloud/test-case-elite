@@ -3,10 +3,12 @@ import { prisma } from "../db/prisma";
 import { HttpError } from "../utils/httpErrors";
 import { notificationDedupeKey } from "../utils/notificationDedupe";
 import {
+  emitAdminAuditLogsChanged,
   emitAdminDashboardChanged,
   emitAlertsChanged,
   emitMatchesChanged,
-  emitOfflineMeetQueueChanged
+  emitOfflineMeetQueueChanged,
+  emitOpsCaseActivityChanged
 } from "../live/liveEventBroker";
 
 type CafeOption = { id: string; name: string; address: string };
@@ -120,6 +122,28 @@ async function createNotifications(userIds: string[], type: NotificationType, ma
     skipDuplicates: true
   });
   emitAlertsChanged(userIds);
+}
+
+async function logOfflineMeetActivity(options: {
+  actorUserId: string;
+  caseId: string;
+  action: string;
+  metadata?: Prisma.InputJsonValue;
+}) {
+  await prisma.auditLog.create({
+    data: {
+      actorUserId: options.actorUserId,
+      action: options.action,
+      targetType: "OfflineMeetCase",
+      targetId: options.caseId,
+      metadata: options.metadata ?? {}
+    }
+  });
+  emitAdminAuditLogsChanged();
+  emitOpsCaseActivityChanged({
+    caseType: "OFFLINE_MEET",
+    caseId: options.caseId
+  });
 }
 
 async function evaluateTimeout(caseId: string) {
@@ -414,14 +438,14 @@ export async function submitOfflineMeetSelections(params: { matchId: string; use
 }
 
 export async function listOfflineMeetCasesForEmployee(userId: string, requestedView?: string) {
+  void userId;
   const statusView = parseOfflineStatusView(requestedView);
   const statusFilter = statusView === "ALL"
     ? [...ACTIVE_COORDINATION_STATUSES, ...TERMINAL_OR_COOLDOWN_STATUSES]
     : OFFLINE_STATUS_VIEW_MAP[statusView];
   const cases = await prisma.offlineMeetCase.findMany({
     where: {
-      status: { in: statusFilter },
-      OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: userId }]
+      status: { in: statusFilter }
     },
     include: {
       match: {
@@ -440,8 +464,7 @@ export async function listOfflineMeetCasesForEmployee(userId: string, requestedV
 
   const refreshed = await prisma.offlineMeetCase.findMany({
     where: {
-      status: { in: statusFilter },
-      OR: [{ assignedEmployeeId: null }, { assignedEmployeeId: userId }]
+      status: { in: statusFilter }
     },
     include: {
       match: {
@@ -514,6 +537,11 @@ export async function assignOfflineMeetCase(caseId: string, employeeUserId: stri
   }
   const updated = await prisma.offlineMeetCase.findUnique({ where: { id: caseId } });
   if (!updated) throw new HttpError(404, { message: "Case not found." });
+  await logOfflineMeetActivity({
+    actorUserId: employeeUserId,
+    caseId: updated.id,
+    action: "offline_meet_assigned"
+  });
   emitOfflineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
   return updated;
@@ -555,6 +583,16 @@ export async function sendOfflineMeetOptions(params: {
     "Offline Meet Options Ready",
     "Your match handler shared curated cafés and time windows. Please submit your preferences within 12 hours."
   );
+
+  await logOfflineMeetActivity({
+    actorUserId: params.employeeUserId,
+    caseId: updated.id,
+    action: "offline_meet_options_sent",
+    metadata: {
+      cafeCount: params.cafes.length,
+      timeSlotCount: params.timeSlots.length
+    }
+  });
 
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOfflineMeetQueueChanged(updated.id);
@@ -607,6 +645,16 @@ export async function finalizeOfflineMeetCase(params: { caseId: string; employee
     `Your in-person meeting is confirmed at ${finalCafe.name} — ${finalTimeSlot.label}. Concierge will follow up if required.`
   );
 
+  await logOfflineMeetActivity({
+    actorUserId: params.employeeUserId,
+    caseId: updated.id,
+    action: "offline_meet_finalized",
+    metadata: {
+      finalCafeId: params.finalCafeId,
+      finalTimeSlotId: params.finalTimeSlotId
+    }
+  });
+
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOfflineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
@@ -641,6 +689,15 @@ export async function markOfflineMeetTimeout(params: { caseId: string; employeeU
     "The other member did not submit preferences in time. Please retry after cooldown if you still wish to proceed."
   );
 
+  await logOfflineMeetActivity({
+    actorUserId: params.employeeUserId,
+    caseId: updated.id,
+    action: "offline_meet_timeout_marked",
+    metadata: {
+      nonResponderUserId: params.nonResponderUserId
+    }
+  });
+
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOfflineMeetQueueChanged(updated.id);
   emitAdminDashboardChanged();
@@ -668,6 +725,12 @@ export async function markOfflineMeetNoOverlap(params: { caseId: string; employe
     "Offline Meet Not Compatible",
     "No overlapping options were found this round. You may try again after one day."
   );
+
+  await logOfflineMeetActivity({
+    actorUserId: params.employeeUserId,
+    caseId: updated.id,
+    action: "offline_meet_no_overlap_marked"
+  });
 
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOfflineMeetQueueChanged(updated.id);
@@ -713,6 +776,16 @@ export async function updateOfflineMeetCancelOrReschedule(params: {
     params.action === "CANCEL" ? "Offline Meet Canceled" : "Offline Meet Reschedule Requested",
     params.action === "CANCEL" ? "Your meet has been canceled by concierge under serious-condition protocol." : "Concierge received a serious-condition reschedule request and will follow up privately."
   );
+
+  await logOfflineMeetActivity({
+    actorUserId: params.employeeUserId,
+    caseId: updated.id,
+    action: params.action === "CANCEL" ? "offline_meet_canceled" : "offline_meet_reschedule_requested",
+    metadata: {
+      reason: params.reason,
+      requestedByUserId: params.requestedByUserId ?? null
+    }
+  });
 
   emitMatchesChanged([updated.requesterUserId, updated.receiverUserId]);
   emitOfflineMeetQueueChanged(updated.id);

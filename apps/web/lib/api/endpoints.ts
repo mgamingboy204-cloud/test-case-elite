@@ -33,6 +33,14 @@ export const API_ENDPOINTS = {
       login: "/employee/auth/login",
     },
     members: "/employee/members",
+    dashboard: "/employee/dashboard",
+    assignedCases: "/employee/assigned-cases",
+    escalations: "/employee/escalations",
+  },
+
+  ops: {
+    caseActivity: (caseType: string, caseId: string) => `/ops/cases/${caseType}/${caseId}/activity`,
+    addCaseNote: (caseType: string, caseId: string) => `/ops/cases/${caseType}/${caseId}/notes`,
   },
 
   // USER
@@ -83,33 +91,33 @@ export const API_ENDPOINTS = {
 
   // OFFLINE MEET
   offlineMeet: {
-    list: (statusView?: string) => `/admin/offline-meets${statusView ? `?statusView=${statusView}` : ""}`,
+    list: (statusView?: string) => `/ops/offline-meets${statusView ? `?statusView=${statusView}` : ""}`,
     get: (matchId: string) => `/offline-meet-cases/${matchId}`,
     submitSelections: (matchId: string) => `/offline-meet-cases/${matchId}/selections`,
     employeeActions: {
-      list: (statusView?: string) => `/admin/offline-meets${statusView ? `?statusView=${statusView}` : ""}`,
-      assign: (caseId: string) => `/admin/offline-meets/${caseId}/assign`,
-      sendOptions: (caseId: string) => `/admin/offline-meets/${caseId}/options`,
-      finalize: (caseId: string) => `/admin/offline-meets/${caseId}/finalize`,
-      timeout: (caseId: string) => `/admin/offline-meets/${caseId}/timeout`,
-      noOverlap: (caseId: string) => `/admin/offline-meets/${caseId}/no-overlap`,
-      caseUpdate: (caseId: string) => `/admin/offline-meets/${caseId}/case-update`,
+      list: (statusView?: string) => `/ops/offline-meets${statusView ? `?statusView=${statusView}` : ""}`,
+      assign: (caseId: string) => `/ops/offline-meets/${caseId}/assign`,
+      sendOptions: (caseId: string) => `/ops/offline-meets/${caseId}/options`,
+      finalize: (caseId: string) => `/ops/offline-meets/${caseId}/finalize`,
+      timeout: (caseId: string) => `/ops/offline-meets/${caseId}/timeout`,
+      noOverlap: (caseId: string) => `/ops/offline-meets/${caseId}/no-overlap`,
+      caseUpdate: (caseId: string) => `/ops/offline-meets/${caseId}/case-update`,
     },
   },
 
   // ONLINE MEET
   onlineMeet: {
-    list: (statusView?: string) => `/admin/online-meets${statusView ? `?statusView=${statusView}` : ""}`,
+    list: (statusView?: string) => `/ops/online-meets${statusView ? `?statusView=${statusView}` : ""}`,
     get: (matchId: string) => `/online-meet-cases/${matchId}`,
     submitSelections: (matchId: string) => `/online-meet-cases/${matchId}/selections`,
     employeeActions: {
-      list: (statusView?: string) => `/admin/online-meets${statusView ? `?statusView=${statusView}` : ""}`,
-      assign: (caseId: string) => `/admin/online-meets/${caseId}/assign`,
-      sendOptions: (caseId: string) => `/admin/online-meets/${caseId}/options`,
-      finalize: (caseId: string) => `/admin/online-meets/${caseId}/finalize`,
-      timeout: (caseId: string) => `/admin/online-meets/${caseId}/timeout`,
-      noOverlap: (caseId: string) => `/admin/online-meets/${caseId}/no-overlap`,
-      caseUpdate: (caseId: string) => `/admin/online-meets/${caseId}/case-update`,
+      list: (statusView?: string) => `/ops/online-meets${statusView ? `?statusView=${statusView}` : ""}`,
+      assign: (caseId: string) => `/ops/online-meets/${caseId}/assign`,
+      sendOptions: (caseId: string) => `/ops/online-meets/${caseId}/options`,
+      finalize: (caseId: string) => `/ops/online-meets/${caseId}/finalize`,
+      timeout: (caseId: string) => `/ops/online-meets/${caseId}/timeout`,
+      noOverlap: (caseId: string) => `/ops/online-meets/${caseId}/no-overlap`,
+      caseUpdate: (caseId: string) => `/ops/online-meets/${caseId}/case-update`,
     },
   },
 
@@ -132,12 +140,20 @@ export const API_ENDPOINTS = {
   admin: {
     dashboard: "/admin/dashboard",
     users: "/admin/users",
+    staff: {
+      list: "/admin/staff",
+      create: "/admin/staff",
+      deactivate: (staffUserId: string) => `/admin/staff/${staffUserId}/deactivate`,
+      reactivate: (staffUserId: string) => `/admin/staff/${staffUserId}/reactivate`,
+    },
+    escalations: "/admin/escalations",
+    auditLogs: "/admin/audit-logs",
     verification: {
-      list: (statusView?: string) => `/admin/verification-requests${statusView ? `?statusView=${statusView}` : ""}`,
-      assign: (requestId: string) => `/admin/verification-requests/${requestId}/assign`,
-      start: (requestId: string) => `/admin/verification-requests/${requestId}/start`,
-      approve: (requestId: string) => `/admin/verification-requests/${requestId}/approve`,
-      reject: (requestId: string) => `/admin/verification-requests/${requestId}/reject`,
+      list: (statusView?: string) => `/ops/verification-requests${statusView ? `?statusView=${statusView}` : ""}`,
+      assign: (requestId: string) => `/ops/verification-requests/${requestId}/assign`,
+      start: (requestId: string) => `/ops/verification-requests/${requestId}/start`,
+      approve: (requestId: string) => `/ops/verification-requests/${requestId}/approve`,
+      reject: (requestId: string) => `/ops/verification-requests/${requestId}/reject`,
     },
   },
 
