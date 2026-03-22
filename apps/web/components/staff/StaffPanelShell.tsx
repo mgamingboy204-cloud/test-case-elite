@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, type LucideIcon } from "lucide-react";
 
-type NavItem = {
+export type StaffNavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
@@ -14,7 +14,7 @@ export function StaffPanelShell(props: {
   title: string;
   subtitle: string;
   name: string;
-  navItems: NavItem[];
+  navItems: StaffNavItem[];
   onLogout: () => void | Promise<void>;
   children: React.ReactNode;
 }) {
@@ -30,7 +30,8 @@ export function StaffPanelShell(props: {
 
         <nav className="flex-1 px-4 flex flex-col gap-2">
           {props.navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive =
+              pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
             return (
               <Link

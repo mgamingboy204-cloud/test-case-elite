@@ -1,22 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { routeForAuthenticatedUser } from "@/lib/onboarding";
+import { useStaffRouteGate } from "@/lib/useStaffRouteGate";
 
 export default function StaffLoginPage() {
-  const router = useRouter();
-  const { startEmployeeLogin, isAuthResolved, isAuthenticated, user } = useAuth();
+  const { startEmployeeLogin } = useAuth();
+  const { isLoading, isReady } = useStaffRouteGate("login");
   const [employeeId, setEmployeeId] = useState("VAEL-EMP-001");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!isAuthResolved || !isAuthenticated || !user) return;
-    router.replace(routeForAuthenticatedUser(user));
-  }, [isAuthResolved, isAuthenticated, router, user]);
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -33,6 +27,18 @@ export default function StaffLoginPage() {
       setLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0c10] text-white/70 flex items-center justify-center">
+        Checking staff session...
+      </div>
+    );
+  }
+
+  if (!isReady) {
+    return <div className="min-h-screen bg-[#0a0c10]" />;
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0c10] text-white flex items-center justify-center px-4">

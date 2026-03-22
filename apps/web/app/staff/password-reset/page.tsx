@@ -1,38 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { apiRequestAuth, ApiError } from "@/lib/api";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { useAuth } from "@/contexts/AuthContext";
-import { routeForAuthenticatedUser } from "@/lib/onboarding";
-import { STAFF_ROUTES } from "@/lib/staffRoutes";
+import { useStaffRouteGate } from "@/lib/useStaffRouteGate";
 
 export default function StaffPasswordResetPage() {
-  const router = useRouter();
-  const { isAuthResolved, isAuthenticated, user, logout } = useAuth();
+  const { logout } = useAuth();
+  const { isLoading, isReady } = useStaffRouteGate("password-reset");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isAuthResolved) return;
-    if (!isAuthenticated || !user || (user.role !== "EMPLOYEE" && user.role !== "ADMIN")) {
-      router.replace(STAFF_ROUTES.login);
-      return;
-    }
-    if (!user.mustResetPassword) {
-      router.replace(routeForAuthenticatedUser(user));
-    }
-  }, [isAuthResolved, isAuthenticated, router, user]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
-    setSuccess(null);
 
     if (newPassword.length < 8) {
       setError("New password must be at least 8 characters.");
@@ -52,7 +37,6 @@ export default function StaffPasswordResetPage() {
           newPassword
         })
       });
-      setSuccess("Password updated. Please sign in again.");
       await logout();
     } catch (err) {
       const apiError = err instanceof ApiError ? err : null;
@@ -62,7 +46,15 @@ export default function StaffPasswordResetPage() {
     }
   };
 
-  if (!isAuthResolved || !isAuthenticated || !user || !user.mustResetPassword) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0c10] text-white/70 flex items-center justify-center">
+        Checking staff access...
+      </div>
+    );
+  }
+
+  if (!isReady) {
     return <div className="min-h-screen bg-[#0a0c10]" />;
   }
 
@@ -76,7 +68,6 @@ export default function StaffPasswordResetPage() {
 
         <form onSubmit={submit} className="mt-6 space-y-4">
           {error ? <p className="text-sm text-red-300">{error}</p> : null}
-          {success ? <p className="text-sm text-emerald-300">{success}</p> : null}
 
           <div>
             <label className="block text-[10px] uppercase tracking-[0.14em] text-white/50 mb-2">Current password</label>

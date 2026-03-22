@@ -15,8 +15,8 @@ import {
   type BackendOnboardingStep,
   type FrontendOnboardingStep,
   resolveFrontendOnboardingStep,
-  routeForAuthenticatedUser,
 } from "@/lib/onboarding";
+import { routeForAuthenticatedSession } from "@/lib/sessionRoutes";
 import {
   type AuthFlowMode,
   readStoredAuthFlowMode,
@@ -29,10 +29,14 @@ import {
 import {
   bootstrapSession,
   clearClientAuthState,
-  clearMemberSessionState,
+  clearSessionState,
   subscribeToSessionInvalidation,
 } from "@/lib/authSession";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import {
+  isStaffRole,
+  resolveStaffLandingRoute,
+} from "@/lib/staffNavigation";
 
 const AUTH_BOOTSTRAP_RETRY_DELAY_MS = 3000;
 
@@ -73,9 +77,12 @@ interface User {
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  isStaffAuthenticated: boolean;
+  isMemberAuthenticated: boolean;
   isAuthResolved: boolean;
   user: User | null;
   authenticatedRoute: string | null;
+  staffHomeRoute: string | null;
   authFlowMode: AuthFlowMode | null;
   onboardingStep: OnboardingStep;
   pendingPhone: string | null;
@@ -154,10 +161,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const isAuthenticated = Boolean(user);
+  const isStaffAuthenticated = Boolean(user && isStaffRole(user.role));
+  const isMemberAuthenticated = Boolean(user && user.role === "USER");
   const appStateCode = user?.appState?.code ?? null;
   const appStateRedirectTo = user?.appState?.redirectTo ?? null;
+  const staffHomeRoute = useMemo(
+    () =>
+      user
+        ? resolveStaffLandingRoute({
+            role: user.role,
+            mustResetPassword: user.mustResetPassword,
+          })
+        : null,
+    [user]
+  );
   const authenticatedRoute = useMemo(
-    () => (user ? routeForAuthenticatedUser(user) : null),
+    () => (user ? routeForAuthenticatedSession(user) : null),
     [user]
   );
   const onboardingStep = useMemo(
@@ -218,7 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshCurrentUserAndRoute = async (options?: { replace?: boolean }) => {
     const me = await refreshCurrentUser();
-    const nextRoute = routeForAuthenticatedUser(me);
+    const nextRoute = routeForAuthenticatedSession(me);
 
     if (options?.replace === false) {
       router.push(nextRoute);
@@ -281,7 +300,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           clearPendingAuthFlow();
           setIsInitialized(true);
         } else {
-          clearMemberSessionState();
+          clearSessionState();
           setUser(null);
           setIsInitialized(true);
         }
@@ -404,7 +423,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     applyAuthenticatedUser(response.accessToken, response.user);
-    router.push(routeForAuthenticatedUser(response.user));
+    router.push(routeForAuthenticatedSession(response.user));
     void maybeSaveFcmToken();
   };
 
@@ -428,7 +447,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     applyAuthenticatedUser(response.accessToken, response.user);
-    router.push(routeForAuthenticatedUser(response.user));
+    router.push(routeForAuthenticatedSession(response.user));
     void maybeSaveFcmToken();
     return { otpRequired: false };
   };
@@ -447,7 +466,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     applyAuthenticatedUser(response.accessToken, response.user);
-    router.push(routeForAuthenticatedUser(response.user));
+    router.push(routeForAuthenticatedSession(response.user));
   };
 
   const verifySigninOtp = async (otp: string) => {
@@ -473,7 +492,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     applyAuthenticatedUser(response.accessToken, response.user);
-    router.push(routeForAuthenticatedUser(response.user));
+    router.push(routeForAuthenticatedSession(response.user));
     void maybeSaveFcmToken();
   };
 
@@ -509,7 +528,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     applyAuthenticatedUser(response.accessToken, response.user);
-    router.push(routeForAuthenticatedUser(response.user));
+    router.push(routeForAuthenticatedSession(response.user));
     void maybeSaveFcmToken();
   };
 
@@ -526,10 +545,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    const nextRoute =
-      user?.role === "EMPLOYEE" || user?.role === "ADMIN"
-        ? "/staff/login"
-        : "/signin";
+    const nextRoute = isStaffRole(user?.role) ? "/staff/login" : "/signin";
 
     try {
       await apiRequest<{ ok: true }>(API_ENDPOINTS.auth.logout, {
@@ -548,9 +564,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         isAuthenticated,
+        isStaffAuthenticated,
+        isMemberAuthenticated,
         isAuthResolved: isInitialized,
         user,
         authenticatedRoute,
+        staffHomeRoute,
         authFlowMode,
         onboardingStep,
         pendingPhone,

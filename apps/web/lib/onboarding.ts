@@ -32,7 +32,7 @@ export function routeForFrontendOnboardingStep(step: FrontendOnboardingStep) {
   return routeMap[step];
 }
 
-function resolveRouteFromAuthenticatedMemberState(input: {
+export function routeForAuthenticatedMember(input: {
   backendStep?: BackendOnboardingStep | null;
   redirectTo?: string | null;
   appState?: { redirectTo?: string | null } | null;
@@ -57,30 +57,6 @@ function resolveRouteFromAuthenticatedMemberState(input: {
   return "/onboarding/verification";
 }
 
-export function routeForAuthenticatedUser(input: {
-  role?: "USER" | "EMPLOYEE" | "ADMIN" | null;
-  mustResetPassword?: boolean;
-  backendStep?: BackendOnboardingStep | null;
-  onboardingStep?: BackendOnboardingStep | null;
-  profileCompletedAt?: Date | string | null;
-  photoCount?: number;
-  redirectTo?: string | null;
-  appState?: { redirectTo?: string | null } | null;
-}) {
-  if (input.role === "EMPLOYEE" || input.role === "ADMIN") {
-    if (input.mustResetPassword) {
-      return "/staff/password-reset";
-    }
-    return input.role === "ADMIN" ? "/admin" : "/employee";
-  }
-
-  return resolveRouteFromAuthenticatedMemberState({
-    backendStep: input.backendStep ?? input.onboardingStep,
-    redirectTo: input.redirectTo,
-    appState: input.appState
-  });
-}
-
 export function resolveFrontendOnboardingStep(input: {
   isAuthenticated: boolean;
   pendingPhone?: string | null;
@@ -96,7 +72,7 @@ export function resolveFrontendOnboardingStep(input: {
 
   const authenticatedRoute = (
     input.authenticatedRoute ??
-    resolveRouteFromAuthenticatedMemberState({
+    routeForAuthenticatedMember({
       backendStep: input.backendStep
     })
   ).trim();

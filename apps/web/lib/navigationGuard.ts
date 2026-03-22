@@ -1,5 +1,9 @@
 import { routeForFrontendOnboardingStep, type FrontendOnboardingStep } from "@/lib/onboarding";
 import type { AuthFlowMode } from "@/lib/auth/flowStorage";
+import {
+  resolveStaffLandingRoute,
+  type SessionRole,
+} from "@/lib/staffNavigation";
 
 export type AppStateCode =
   | "guest"
@@ -42,7 +46,7 @@ function matchesAnyRoute(pathname: string, routes: readonly string[]) {
 function resolveDefaultAuthenticatedRoute(options: {
   authenticatedRoute?: string | null;
   onboardingStep?: FrontendOnboardingStep;
-  userRole?: "USER" | "EMPLOYEE" | "ADMIN" | null;
+  userRole?: SessionRole | null;
   mustResetPassword?: boolean;
   appStateRedirectTo?: string | null;
 }) {
@@ -50,12 +54,11 @@ function resolveDefaultAuthenticatedRoute(options: {
     return options.authenticatedRoute;
   }
 
-  if ((options.userRole === "ADMIN" || options.userRole === "EMPLOYEE") && options.mustResetPassword) {
-    return "/staff/password-reset";
-  }
-
-  if (options.userRole === "ADMIN") return "/admin";
-  if (options.userRole === "EMPLOYEE") return "/employee";
+  const staffRoute = resolveStaffLandingRoute({
+    role: options.userRole,
+    mustResetPassword: options.mustResetPassword,
+  });
+  if (staffRoute) return staffRoute;
 
   if (options.appStateRedirectTo?.startsWith("/")) {
     return options.appStateRedirectTo;
@@ -112,7 +115,7 @@ export function resolveRouteRedirect(options: {
   appStateCode?: AppStateCode | null;
   appStateRedirectTo?: string | null;
   scope: "auth" | "onboarding" | "main";
-  userRole?: "USER" | "EMPLOYEE" | "ADMIN" | null;
+  userRole?: SessionRole | null;
   mustResetPassword?: boolean;
   authFlowMode?: AuthFlowMode | null;
   pendingPhone?: string | null;

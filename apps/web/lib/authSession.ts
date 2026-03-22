@@ -45,19 +45,19 @@ export async function bootstrapSession<TUser extends CurrentUser>() {
   return session.user;
 }
 
-export function clearMemberSessionState() {
+export function clearSessionState() {
   clearAccessToken();
   clearAllCaches();
 }
 
 export function clearClientAuthState() {
-  clearMemberSessionState();
+  clearSessionState();
   clearAuthFlowStorage();
 }
 
 export function subscribeToSessionInvalidation(listener: () => void) {
   return subscribeToAuthFailure(() => {
-    clearMemberSessionState();
+    clearSessionState();
     listener();
   });
 }
